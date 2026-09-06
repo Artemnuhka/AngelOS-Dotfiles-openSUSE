@@ -1,0 +1,6 @@
+[shell]
+polkit_agent = true
+
+[theme.templates]
+enable_community_templates = true
+community_ids = ["telegram"]

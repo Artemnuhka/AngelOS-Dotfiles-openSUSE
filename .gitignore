@@ -1,0 +1,25 @@
+# Secrets / junk
+*.env
+*.key
+*.pem
+.cache/
+__pycache__/
+*.pyc
+*.log
+*.AppImage
+
+# Nested accidental copy
+/home/
+
+# Heavy / optional fonts (install separately)
+.local/share/fonts/SF-Pro/
+.local/share/fonts/SF-Pro/**
+
+# Voxtype binaries
+voxtype
+voxtype.real
+**/voxtype
+**/voxtype.real
+
+# Media not part of rice
+Videos/

@@ -1,0 +1,38 @@
+    prefer-no-csd
+    screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
+
+    environment {
+        PATH "@HOME@/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/var/lib/flatpak/exports/bin:/usr/bin/site_perl:/usr/bin/vendor_perl:/usr/bin/core_perl"
+        ELECTRON_OZONE_PLATFORM_HINT "auto"
+        QT_QPA_PLATFORM "wayland"
+        QT_QPA_PLATFORMTHEME "gtk3"
+        QT_WAYLAND_DISABLE_WINDOWDECORATION "1"
+        XDG_CURRENT_DESKTOP "niri"
+        XDG_SESSION_TYPE "wayland"
+        LIBVA_DRIVER_NAME "nvidia"
+        NVD_BACKEND "direct"
+        __GLX_VENDOR_LIBRARY_NAME "nvidia"
+        GDK_BACKEND "wayland"
+        GSK_RENDERER "ngl"
+    }
+
+    cursor {
+        xcursor-theme "capitaine-cursors"
+        xcursor-size 24
+    }
+
+    blur {
+        passes 2        // more passes = stronger blur (default: 3)
+        offset 3.0      // sample distance per pass (default: 3.0)
+        noise 0.03      // grain overlay (default: 0.02)
+        saturation 1.0  // color saturation boost (default: 1.5)
+    }
+
+    debug {
+        // Allows notification actions and window activation from Noctalia.
+        honor-xdg-activation-with-invalid-serial
+    }
+
+    hotkey-overlay {
+       skip-at-startup
+    }

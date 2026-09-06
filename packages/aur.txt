@@ -1,0 +1,5 @@
+lrc_tty
+millennium
+nexusmods-app-bin
+openai-codex-bin
+throne-bin

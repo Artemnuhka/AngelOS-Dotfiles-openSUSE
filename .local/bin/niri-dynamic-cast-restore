@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+"""Keep niri Dynamic Cast aimed at DP-1. New/empty streams after sleep start blank."""
+from __future__ import annotations
+
+import json
+import subprocess
+import sys
+import time
+
+OUTPUT = "DP-1"
+
+
+def niri_json(*args):
+    raw = subprocess.check_output(["niri", "msg", "--json", *args], stderr=subprocess.DEVNULL)
+    return json.loads(raw)
+
+
+def restore() -> bool:
+    try:
+        casts = niri_json("casts") or []
+    except (subprocess.CalledProcessError, json.JSONDecodeError, FileNotFoundError):
+        return False
+    changed = False
+    for c in casts:
+        if not c.get("is_dynamic_target"):
+            continue
+        target = c.get("target") or {}
+        if "Nothing" in target or target == {}:
+            subprocess.check_call(
+                ["niri", "msg", "action", "set-dynamic-cast-monitor", OUTPUT]
+            )
+            changed = True
+            break
+    return changed
+
+
+def main() -> None:
+    watch = "--watch" in sys.argv
+    if not watch:
+        restore()
+        return
+    while True:
+        restore()
+        time.sleep(1.5)
+
+
+if __name__ == "__main__":
+    main()
