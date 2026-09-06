@@ -3,6 +3,7 @@
 *.key
 *.pem
 .cache/
+.local/state/
 __pycache__/
 *.pyc
 *.log
@@ -23,3 +24,4 @@ voxtype.real
 
 # Media not part of rice
 Videos/
+Pictures/Screenshots/

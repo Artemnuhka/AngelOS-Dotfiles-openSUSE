@@ -3,7 +3,6 @@ alacritty
 alsa-firmware
 alsa-plugins
 alsa-utils
-amd-ucode
 arch-install-scripts
 awesome-terminal-fonts
 base
@@ -82,13 +81,10 @@ iwd
 jfsutils
 kdenlive
 less
-lib32-nvidia-utils
-lib32-opencl-nvidia
 lib32-vulkan-icd-loader
 libdvdcss
 libgsf
 libopenraw
-libva-nvidia-driver
 limine
 limine-mkinitcpio-hook
 limine-snapper-sync
@@ -96,8 +92,6 @@ linux-cachyos
 linux-cachyos-headers
 linux-cachyos-lts
 linux-cachyos-lts-headers
-linux-cachyos-lts-nvidia-open
-linux-cachyos-nvidia-open
 linux-firmware
 logrotate
 lrc_tty
@@ -130,11 +124,7 @@ noto-fonts
 noto-fonts-cjk
 noto-fonts-emoji
 nss-mdns
-nvidia-settings
-nvidia-utils
-nwg-displays
 openai-codex-bin
-opencl-nvidia
 openssh
 os-prober
 pacman-contrib

@@ -19,7 +19,6 @@ btop
 btrfs-assistant
 btrfs-progs
 cantarell-fonts
-capitaine-cursors
 chwd
 cliphist
 cpupower
@@ -99,7 +98,6 @@ noto-fonts
 noto-fonts-cjk
 noto-fonts-emoji
 nss-mdns
-nwg-displays
 openssh
 os-prober
 pacman-contrib
