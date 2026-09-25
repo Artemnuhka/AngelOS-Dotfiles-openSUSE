@@ -2,7 +2,11 @@
 
 Portable CachyOS/Niri dotfiles with a dark pixel-inspired look, practical keybindings, and small Wayland helpers for screenshots, recording, OCR, privacy, and voice input.
 
-![Desktop preview](docs/screenshots/desktop-preview.png)
+![Live desktop preview](docs/screenshots/desktop-live.png)
+
+Live preview from the working CachyOS + Niri + Noctalia session. It was reviewed
+before publishing and contains no browser profiles, chats, credentials, or personal
+files.
 
 ## What is included
 
@@ -15,11 +19,13 @@ Portable CachyOS/Niri dotfiles with a dark pixel-inspired look, practical keybin
 
 The configuration is intentionally portable. It does not include monitor names, resolutions, refresh rates, positions, mouse sensitivity, cursor preferences, GPU driver variables, or desktop runtime state.
 
-## Preview
+## Included tools
 
 ![Included tools](docs/screenshots/tools-preview.png)
 
-These are repository preview mockups made from the included visual style and configuration. They are not screenshots of a specific user's desktop.
+Screenshot, recording, OCR, and screencast privacy helpers are included with the
+configuration. The tools image is a safe repository mockup; the desktop image above
+is a real, reviewed screenshot from the working rice.
 
 ## Requirements
 
