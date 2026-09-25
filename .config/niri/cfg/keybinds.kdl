@@ -9,8 +9,8 @@ binds {
     Mod+Shift+ESCAPE                     { show-hotkey-overlay; }
 
     // ─── Applications ───
-    Mod+T                          hotkey-overlay-title="Open Terminal: kitty" { spawn "@HOME@/.local/bin/kitty"; }
-    Mod+B                               hotkey-overlay-title="Open Browser: Helium" { spawn "helium-browser"; }
+    Mod+T                          hotkey-overlay-title="Open Terminal: kitty" { spawn "kitty"; }
+    Mod+B                               hotkey-overlay-title="Open Browser: default" { spawn-sh "xdg-open about:blank"; }
 
     // --- Noctalia ---
     Mod+Shift+Return                    hotkey-overlay-title="Open Wallpaper Selector: noctalia wallpaper toggle" { spawn-sh "noctalia msg panel-toggle wallpaper"; }

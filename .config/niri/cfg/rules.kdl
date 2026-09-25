@@ -11,25 +11,38 @@ window-rule {
     default-floating-position x=10 y=10 relative-to="bottom-right"
 }
 
-
+// Liquid Glass base style for normal windows.
+// niri supplies the real backdrop blur; opacity lets it show through.
 window-rule {
-    match is-focused=false
+    exclude app-id="^liquid-glass-test$"
+    opacity 0.94
+    geometry-corner-radius 14
+    clip-to-geometry true
 
-    opacity 0.95
-}
-
-
-window-rule {
-        geometry-corner-radius 8 // Set every window radius to 8
-        clip-to-geometry true
+    background-effect {
+        blur true
+        xray false
+        noise 0.018
+        saturation 1.12
     }
 
-    window-rule {
+    popups {
+        opacity 0.97
+        geometry-corner-radius 12
         background-effect {
-          blur false
-          xray false
+            blur true
+            xray false
+            noise 0.018
+            saturation 1.12
         }
     }
+}
+
+// Let inactive windows recede slightly while keeping focused content clear.
+window-rule {
+    match is-focused=false
+    opacity 0.90
+}
 
     // Floating Noctalia settings window.
     window-rule {
@@ -63,6 +76,26 @@ window-rule {
           xray false
           // blur false
         }
+    }
+
+    // Liquid glass shader test window (LiquidIslandQS port, GLFW harness).
+    window-rule {
+        match app-id="^liquid-glass-test$"
+        open-floating true
+        default-floating-position x=0 y=0
+        default-column-width { fixed 460; }
+        default-window-height { fixed 320; }
+        opacity 1.0
+        geometry-corner-radius 0
+        // The client supplies the exact silhouette through ext-background-effect.
+        // Keep only xray=false here so niri never falls back to full-window blur
+        // while the first region or a monitor move is being committed.
+        background-effect {
+            xray false
+        }
+        focus-ring { off; }
+        border { off; }
+        shadow { off; }
     }
 
     workspace "privacy"

@@ -2,7 +2,7 @@
     screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
 
     environment {
-        PATH "@HOME@/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/var/lib/flatpak/exports/bin:/usr/bin/site_perl:/usr/bin/vendor_perl:/usr/bin/core_perl"
+        PATH "@HOME@/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/var/lib/flatpak/exports/bin"
         ELECTRON_OZONE_PLATFORM_HINT "auto"
         QT_QPA_PLATFORM "wayland"
         QT_QPA_PLATFORMTHEME "gtk3"
@@ -13,11 +13,16 @@
         GSK_RENDERER "ngl"
     }
 
+    cursor {
+        xcursor-theme "capitaine-cursors"
+        xcursor-size 24
+    }
+
     blur {
-        passes 2        // more passes = stronger blur (default: 3)
-        offset 3.0      // sample distance per pass (default: 3.0)
-        noise 0.03      // grain overlay (default: 0.02)
-        saturation 1.0  // color saturation boost (default: 1.5)
+        passes 3        // smooth frosted backdrop without over-softening text
+        offset 3.0      // sample distance per pass
+        noise 0.018     // subtle grain to hide blur banding
+        saturation 1.12  // restrained Liquid Glass color lift
     }
 
     debug {

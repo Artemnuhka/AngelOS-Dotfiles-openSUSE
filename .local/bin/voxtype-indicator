@@ -312,7 +312,7 @@ class App:
         self.agent_sticky = False
         display = Gdk.Display.get_default()
         n = display.get_n_monitors()
-        # Use the primary monitor to avoid duplicating the indicator across outputs
+        # Only ONE monitor — prefer the primary landscape output, avoid duplicate UI
         pick = display.get_primary_monitor()
         best_score = -1
         best = pick

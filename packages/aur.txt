@@ -1,5 +1,2 @@
-lrc_tty
-millennium
-nexusmods-app-bin
-openai-codex-bin
-throne-bin
+# No AUR packages are required by the rice.
+# Voxtype is downloaded from its official release and verified by SHA256.

@@ -4,13 +4,12 @@ binds {
     // https://github.com/YaLTeR/niri/wiki/Configuration:-Key-Bindings
 
     // ─── without noctalia-shell ───
-    // https://docs.noctalia.dev/getting-started/keybinds/
 
     Mod+Shift+ESCAPE                     { show-hotkey-overlay; }
 
     // ─── Applications ───
-    Mod+T                          hotkey-overlay-title="Open Terminal: kitty" { spawn "@HOME@/.local/bin/kitty"; }
-    Mod+B                               hotkey-overlay-title="Open Browser: Helium" { spawn "helium-browser"; }
+    Mod+T                          hotkey-overlay-title="Open Terminal: kitty" { spawn "kitty"; }
+    Mod+B                               hotkey-overlay-title="Open Browser: default" { spawn-sh "xdg-open about:blank"; }
 
     // --- Launcher / media / brightness (без Noctalia) ---
     Mod+Space                    hotkey-overlay-title="Open App Launcher: fuzzel" { spawn "fuzzel"; }
@@ -30,7 +29,6 @@ binds {
     XF86MonBrightnessDown               allow-when-locked=true { spawn-sh "brightnessctl set 5%-"; }
 
 
-    // --- Launcher / session (без Noctalia) ---
 
     // Please set the text editor of your choice.
     // Mod+Shift+E                               hotkey-overlay-title="Open Text Editor: Zed" { spawn "zed"; }

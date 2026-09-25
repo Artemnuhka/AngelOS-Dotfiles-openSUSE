@@ -24,17 +24,21 @@ These are repository preview mockups made from the included visual style and con
 ## Requirements
 
 - Arch Linux or CachyOS
-- Niri
-- Wayland session
-- `git`
+- A Wayland session
+- `sudo` for the optional package step
+- `git` and `curl`
 
-The optional helper scripts may also use:
+`install.sh` installs the rice dependencies from `packages/pacman.txt`. It does not
+install browsers, chat clients, games, development tools, or unrelated personal
+applications. No AUR packages are required.
+
+The optional helper scripts use:
 
 - `grim` and `slurp` for screenshots
 - `wf-recorder` for recording
 - `tesseract` and `wl-clipboard` for OCR
 - Python GTK, Cairo, and GtkLayerShell bindings for the overlay tools
-- A separately installed `voxtype` binary for voice input
+- `voxtype` and the `large-v3-turbo` Whisper model for voice input
 
 ## Installation
 
@@ -43,18 +47,33 @@ Clone the repository and run the installer:
 ```bash
 git clone https://github.com/MixaDoDs/PixelStreetArt_Dotfiles_Niri.git
 cd PixelStreetArt_Dotfiles_Niri
+./.install
+```
+
+`./install.sh` is the same installer; `.install` is the convenient entry point.
+
+The installer supports two profiles:
+
+- `full` — desktop styling, Noctalia integration, and wallpapers.
+- `tech` — a smaller setup without Noctalia-specific configuration or bundled assets.
+
+For a non-interactive installation:
+
+```bash
+DOTFILES_MODE=full \
+NOCTALIA=1 \
+INSTALL_VOXTYPE=1 \
+DOWNLOAD_VOXTYPE_MODEL=1 \
+ENABLE_SERVICES=1 \
 ./install.sh
 ```
 
-The installer asks which profile to use:
-
-- `full` — desktop styling, Noctalia integration, and wallpapers.
-- `tech` — a smaller setup without Noctalia-specific configuration.
-
-To install configuration files without the package step:
+Useful switches:
 
 ```bash
-DOTFILES_MODE=tech SKIP_PACKAGES=1 ./install.sh
+SKIP_PACKAGES=1 ./install.sh
+INSTALL_VOXTYPE=0 DOWNLOAD_VOXTYPE_MODEL=0 ./install.sh
+ENABLE_SERVICES=0 ./install.sh
 ```
 
 Existing files are backed up as:
@@ -73,9 +92,21 @@ Review these files and adjust them for your system:
 ~/.config/niri/cfg/misc.kdl
 ```
 
-The default keybindings expect `kitty`, `helium-browser`, `nautilus`, and several Wayland utilities. Replace those commands if you use different applications.
+The default keybindings expect `kitty`, a browser registered with `xdg-open`,
+`nautilus`, and several Wayland utilities. Replace those commands if you use
+different applications.
 
-Monitor output blocks are deliberately omitted. Configure outputs through your system or add local `output` blocks to your own Niri configuration.
+Monitor output blocks are deliberately omitted. Configure outputs through your system
+or add local `output` blocks to your own Niri configuration.
+
+Voxtype is downloaded from its official GitHub release and verified with a pinned
+SHA256 checksum. Its binary and Whisper model stay outside the repository.
+
+Run the repository bug-check before installing:
+
+```bash
+./scripts/check.sh
+```
 
 ## Helper commands
 
@@ -103,7 +134,7 @@ install.sh        Installer with backups and profiles
 
 ## Notes
 
-- No credentials, browser profiles, history, caches, or local runtime state are included.
+- No credentials, browser profiles, cookies, history, caches, keyrings, or local runtime state are included.
 - Wallpapers are optional and can be removed without affecting the configuration.
 - The included `pixora` icon theme and pixel font are optional visual assets.
 - Niri configuration syntax can change between releases; check the current Niri documentation if a config option is rejected.
