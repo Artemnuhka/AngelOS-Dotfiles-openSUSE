@@ -1,225 +1,468 @@
 #!/usr/bin/env bash
+# Installer for the PixelStreetArt Niri rice (CachyOS / Arch).
+#
+# Run it with no arguments for the interactive setup, or drive it with
+# environment variables (everything has a default, so it also works unattended):
+#
+#   DOTFILES_MODE=full|tech        full = styling + Noctalia + assets, tech = minimal
+#   NOCTALIA=1|0                   install/use Noctalia Shell (default 1)
+#   KB_LAYOUTS=us,ru               keyboard layouts, XKB codes, first one is the default
+#   KB_TOGGLE=alt_shift            layout switch: alt_shift | ctrl_shift | caps | ralt | lalt | none
+#                                  (or a raw XKB option such as grp:shifts_toggle)
+#   KB_VARIANT=,phonetic           optional XKB variants, one per layout, comma separated
+#   VOXTYPE_LANGUAGE=ru            dictation language (default: derived from KB_LAYOUTS)
+#   SKIP_PACKAGES=0|1              skip `pacman -S`
+#   INSTALL_VOXTYPE=0|1            voice input binary (checksum-verified download)
+#   DOWNLOAD_VOXTYPE_MODEL=0|1     Whisper large-v3-turbo model (~1.6 GB)
+#   INSTALL_WALLPAPERS=0|1         copy the wallpaper collection (~880 MB, full mode)
+#   ENABLE_SERVICES=0|1            enable the systemd user services
+#   INSTALL_FLATPAK=0|1            install packages/flatpak-apps.txt
+#
+# Every file that gets replaced is first moved to  name.bak.YYYYMMDD-HHMMSS.
+# Re-running the installer is safe: unchanged files are left alone.
 set -Eeuo pipefail
-
-# Portable installer for the PixelStreetArt Niri rice.
-# Safe defaults:
-#   DOTFILES_MODE=full|tech
-#   NOCTALIA=auto|0|1
-#   SKIP_PACKAGES=0|1
-#   INSTALL_VOXTYPE=0|1
-#   DOWNLOAD_VOXTYPE_MODEL=0|1
-#   ENABLE_SERVICES=0|1
-#   INSTALL_FLATPAK=0|1
 
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 HOME_DIR="${HOME:?HOME is not set}"
 STAMP="$(date +%Y%m%d-%H%M%S)"
-MODE="${DOTFILES_MODE:-}"
+VOXTYPE_VERSION="${VOXTYPE_VERSION:-1.1.0}"
+VOXTYPE_FORCE="${VOXTYPE_FORCE:-0}"
+
+# Remember which options were given explicitly, so the interactive setup only
+# asks about the rest.
+is_set() { [[ -n "${!1+x}" ]]; }
+for v in DOTFILES_MODE NOCTALIA KB_LAYOUTS KB_TOGGLE INSTALL_VOXTYPE DOWNLOAD_VOXTYPE_MODEL \
+         INSTALL_WALLPAPERS; do
+  is_set "$v" && declare -r "GIVEN_$v=1"
+done
+given() { local n="GIVEN_$1"; [[ -n "${!n:-}" ]]; }
+
+MODE="${DOTFILES_MODE:-full}"
 NOCTALIA="${NOCTALIA:-1}"
 SKIP_PACKAGES="${SKIP_PACKAGES:-0}"
 INSTALL_VOXTYPE="${INSTALL_VOXTYPE:-1}"
 DOWNLOAD_VOXTYPE_MODEL="${DOWNLOAD_VOXTYPE_MODEL:-1}"
+INSTALL_WALLPAPERS="${INSTALL_WALLPAPERS:-1}"
 ENABLE_SERVICES="${ENABLE_SERVICES:-1}"
 INSTALL_FLATPAK="${INSTALL_FLATPAK:-0}"
-VOXTYPE_VERSION="${VOXTYPE_VERSION:-1.1.0}"
-VOXTYPE_FORCE="${VOXTYPE_FORCE:-0}"
+KB_LAYOUTS="${KB_LAYOUTS:-us,ru}"
+KB_TOGGLE="${KB_TOGGLE:-alt_shift}"
+KB_VARIANT="${KB_VARIANT:-}"
+VOXTYPE_LANGUAGE="${VOXTYPE_LANGUAGE:-}"
 
-say() { printf '[dotfiles] %s\n' "$*"; }
-warn() { printf '[dotfiles] WARNING: %s\n' "$*" >&2; }
-die() { printf '[dotfiles] ERROR: %s\n' "$*" >&2; exit 1; }
+INTERACTIVE=0
+[[ -t 0 && -t 1 ]] && INTERACTIVE=1
 
-if [[ -z "$MODE" && -t 0 ]]; then
-  read -r -p 'Режим (1 полный стиль / 2 минимальный tech) [1]: ' answer || true
-  case "${answer:-1}" in
+# ── Output helpers (English, or Russian when the locale is ru_*) ─────────────
+
+case "${LC_ALL:-${LC_MESSAGES:-${LANG:-}}}" in ru*) UI=ru ;; *) UI=en ;; esac
+_() { if [[ "$UI" == ru ]]; then printf '%s' "$2"; else printf '%s' "$1"; fi; }
+
+say()  { printf '\033[1;36m[dotfiles]\033[0m %s\n' "$*"; }
+warn() { printf '\033[1;33m[dotfiles] WARNING:\033[0m %s\n' "$*" >&2; }
+die()  { printf '\033[1;31m[dotfiles] ERROR:\033[0m %s\n' "$*" >&2; exit 1; }
+hr()   { printf '\033[2m%s\033[0m\n' '──────────────────────────────────────────────────────────'; }
+
+TMP_FILES=()
+cleanup() { ((${#TMP_FILES[@]})) && rm -f -- "${TMP_FILES[@]}"; return 0; }
+trap cleanup EXIT
+
+usage() { sed -n '2,/^set -E/p' "${BASH_SOURCE[0]}" | sed -e '$d' -e 's/^# \{0,1\}//'; }
+
+for arg in "$@"; do
+  case "$arg" in
+    -h|--help) usage; exit 0 ;;
+    *) die "$(_ "Unknown argument: $arg (try --help)" "Неизвестный аргумент: $arg (см. --help)")" ;;
+  esac
+done
+
+# confirm "question" y|n   → returns 0 for yes. Without a terminal the default wins.
+confirm() {
+  local question="$1" default="${2:-n}" hint answer
+  [[ "$default" == y ]] && hint='[Y/n]' || hint='[y/N]'
+  ((INTERACTIVE)) || { [[ "$default" == y ]]; return; }
+  read -r -p "$question $hint " answer || true
+  answer="${answer:-$default}"
+  [[ "$answer" =~ ^([yYдД]|yes|да|Да)$ ]]
+}
+
+# ── Keyboard layouts ─────────────────────────────────────────────────────────
+
+KB_MENU=(us ru ua by kz de fr es pl cz it pt tr gb)
+declare -A KB_NAME=(
+  [us]="English (US)"      [ru]="Русский / Russian" [ua]="Українська / Ukrainian"
+  [by]="Беларуская / Belarusian" [kz]="Қазақша / Kazakh" [de]="Deutsch / German"
+  [fr]="Français / French" [es]="Español / Spanish" [pl]="Polski / Polish"
+  [cz]="Čeština / Czech"   [it]="Italiano / Italian" [pt]="Português / Portuguese"
+  [tr]="Türkçe / Turkish"  [gb]="English (UK)"
+)
+# XKB layout code → Whisper language / Tesseract language pack.
+declare -A KB_WHISPER=(
+  [us]=en [gb]=en [ru]=ru [ua]=uk [by]=be [kz]=kk [de]=de [fr]=fr
+  [es]=es [pl]=pl [cz]=cs [it]=it [pt]=pt [tr]=tr
+)
+declare -A KB_TESS=(
+  [ru]=rus [ua]=ukr [by]=bel [kz]=kaz [de]=deu [fr]=fra
+  [es]=spa [pl]=pol [cz]=ces [it]=ita [pt]=por [tr]=tur
+)
+
+# id|label|XKB option. Win+Space is not offered: Mod+Space opens the launcher.
+KB_TOGGLES=(
+  "alt_shift|Alt + Shift|grp:alt_shift_toggle"
+  "ctrl_shift|Ctrl + Shift|grp:ctrl_shift_toggle"
+  "caps|Caps Lock (Caps Lock itself stops working)|grp:caps_toggle"
+  "ralt|Right Alt|grp:ralt_toggle"
+  "lalt|Left Alt|grp:lalt_toggle"
+)
+
+kb_valid_code() {
+  local code="$1" lst=/usr/share/X11/xkb/rules/evdev.lst
+  [[ "$code" =~ ^[a-z][a-z0-9_]{1,15}$ ]] || return 1
+  [[ -r "$lst" ]] || return 0   # cannot verify against the XKB database
+  awk '/^! layout/{f=1;next} /^!/{f=0} f{print $1}' "$lst" | grep -qx -- "$code"
+}
+
+# Turn "1 2 de" / "us,ru" into a clean comma list. Prints it, returns 1 on error.
+kb_parse_layouts() {
+  local input="${1//,/ }" tok code out=() seen=" "
+  for tok in $input; do
+    if [[ "$tok" =~ ^[0-9]+$ ]] && ((tok >= 1 && tok <= ${#KB_MENU[@]})); then
+      code="${KB_MENU[tok-1]}"
+    else
+      code="${tok,,}"
+    fi
+    kb_valid_code "$code" || { printf '%s' "$tok"; return 1; }
+    [[ "$seen" == *" $code "* ]] && continue
+    seen+="$code "
+    out+=("$code")
+  done
+  ((${#out[@]})) || { printf '%s' "$1"; return 1; }
+  local IFS=,
+  printf '%s' "${out[*]}"
+}
+
+# Resolve KB_TOGGLE (id or raw grp:… option) to an XKB option string.
+kb_toggle_option() {
+  local entry id label opt
+  case "$1" in
+    none|"") return 0 ;;
+    grp:*)   printf '%s' "$1"; return 0 ;;
+  esac
+  for entry in "${KB_TOGGLES[@]}"; do
+    IFS='|' read -r id label opt <<<"$entry"
+    [[ "$id" == "$1" ]] && { printf '%s' "$opt"; return 0; }
+  done
+  return 1
+}
+
+choose_keyboard() {
+  local reply bad n code i entry id label opt
+
+  if ((INTERACTIVE)) && ! given KB_LAYOUTS; then
+    hr
+    _ "Keyboard layouts" "Раскладки клавиатуры"; echo
+    _ "Pick the layouts you type in, in order. The first one is active after login." \
+      "Выберите раскладки, на которых печатаете. Первая будет активна после входа."; echo
+    for i in "${!KB_MENU[@]}"; do
+      code="${KB_MENU[i]}"
+      printf '  %2d) %-3s %s\n' $((i + 1)) "$code" "${KB_NAME[$code]}"
+    done
+    _ "  Or type any XKB code yourself (e.g. \"se\", \"jp\"). Examples: \"1 2\"  \"us de\"  \"1,3\"" \
+      "  Или введите любой XKB-код (например \"se\", \"jp\"). Примеры: \"1 2\"  \"us de\"  \"1,3\""; echo
+    while :; do
+      read -r -p "$(_ 'Layouts' 'Раскладки') [1 2 = us,ru]: " reply || true
+      reply="${reply:-1 2}"
+      if KB_LAYOUTS="$(kb_parse_layouts "$reply")"; then break; fi
+      bad="$KB_LAYOUTS"
+      warn "$(_ "Unknown layout: $bad" "Неизвестная раскладка: $bad")"
+      KB_LAYOUTS=us,ru
+    done
+  else
+    KB_LAYOUTS="$(kb_parse_layouts "$KB_LAYOUTS")" ||
+      die "$(_ "Unknown keyboard layout in KB_LAYOUTS: $KB_LAYOUTS" "Неизвестная раскладка в KB_LAYOUTS: $KB_LAYOUTS")"
+  fi
+
+  IFS=, read -r -a KB_LIST <<<"$KB_LAYOUTS"
+
+  if ((${#KB_LIST[@]} > 1)); then
+    if ((INTERACTIVE)) && ! given KB_TOGGLE; then
+      hr
+      _ "Shortcut to switch between layouts" "Сочетание для переключения раскладки"; echo
+      for i in "${!KB_TOGGLES[@]}"; do
+        IFS='|' read -r id label opt <<<"${KB_TOGGLES[i]}"
+        printf '  %d) %s\n' $((i + 1)) "$label"
+      done
+      _ "  (Win+Space is skipped on purpose: it opens the launcher.)" \
+        "  (Win+Space намеренно не предлагается: это запуск лаунчера.)"; echo
+      while :; do
+        read -r -p "$(_ 'Shortcut' 'Сочетание') [1]: " reply || true
+        reply="${reply:-1}"
+        if [[ "$reply" =~ ^[0-9]+$ ]] && ((reply >= 1 && reply <= ${#KB_TOGGLES[@]})); then
+          IFS='|' read -r KB_TOGGLE label opt <<<"${KB_TOGGLES[reply-1]}"
+          break
+        fi
+        warn "$(_ "Enter a number from the list" "Введите номер из списка")"
+      done
+    fi
+    KB_OPTIONS="$(kb_toggle_option "$KB_TOGGLE")" ||
+      die "$(_ "Unknown KB_TOGGLE: $KB_TOGGLE (use alt_shift, ctrl_shift, caps, ralt, lalt, none or grp:…)" \
+               "Неизвестный KB_TOGGLE: $KB_TOGGLE (alt_shift, ctrl_shift, caps, ralt, lalt, none или grp:…)")"
+  else
+    KB_OPTIONS=""
+  fi
+
+  # Dictation language: first non-English layout, otherwise English.
+  if [[ -z "$VOXTYPE_LANGUAGE" ]]; then
+    VOXTYPE_LANGUAGE=en
+    for code in "${KB_LIST[@]}"; do
+      n="${KB_WHISPER[$code]:-en}"
+      if [[ "$n" != en ]]; then
+        VOXTYPE_LANGUAGE="$n"
+        break
+      fi
+    done
+  fi
+}
+
+# ── Interactive questions ────────────────────────────────────────────────────
+
+ask_profile() {
+  local answer
+  ((INTERACTIVE)) || return 0
+  if ! given DOTFILES_MODE; then
+    hr
+    _ "Profile" "Профиль"; echo
+    _ "  1) full  – desktop styling, Noctalia shell, pixel fonts and icons, wallpapers" \
+      "  1) full  – оформление, Noctalia, пиксельные шрифты и иконки, обои"; echo
+    _ "  2) tech  – minimal: Niri config and helper tools only" \
+      "  2) tech  – минимум: конфиг Niri и утилиты"; echo
+    read -r -p "$(_ 'Profile' 'Профиль') [1]: " answer || true
+    MODE="${answer:-1}"
+  fi
+  if [[ "$MODE" == 1 || "$MODE" == full ]] && ! given INSTALL_WALLPAPERS; then
+    confirm "$(_ 'Copy the wallpaper collection to ~/Pictures (~880 MB)?' \
+                 'Скопировать коллекцию обоев в ~/Pictures (~880 МБ)?')" y \
+      && INSTALL_WALLPAPERS=1 || INSTALL_WALLPAPERS=0
+  fi
+  if ! given INSTALL_VOXTYPE; then
+    confirm "$(_ 'Install offline voice input (Voxtype + ~1.6 GB Whisper model)?' \
+                 'Поставить голосовой ввод (Voxtype + модель Whisper ~1.6 ГБ)?')" y \
+      && { INSTALL_VOXTYPE=1; DOWNLOAD_VOXTYPE_MODEL=1; } || { INSTALL_VOXTYPE=0; DOWNLOAD_VOXTYPE_MODEL=0; }
+  fi
+}
+
+normalize_mode() {
+  case "$MODE" in
     1|full) MODE=full ;;
     2|tech) MODE=tech ;;
-    *) die "Неизвестный режим: $answer" ;;
-  esac
-fi
-MODE="${MODE:-full}"
-case "$MODE" in
-  1|full) MODE=full ;;
-  2|tech) MODE=tech ;;
-  *) die "DOTFILES_MODE должен быть full или tech" ;;
-esac
-
-ask_yes() {
-  local answer
-  [[ -t 0 ]] || return 1
-  read -r -p "$1 [д/Н] " answer || true
-  [[ "$answer" =~ ^([дДyY]|да|Да|yes|YES)$ ]]
-}
-
-backup() {
-  local target="$1"
-  if [[ -e "$target" || -L "$target" ]]; then
-    mv -- "$target" "$target.bak.$STAMP"
-    say "backup: ${target}.bak.${STAMP}"
-  fi
-}
-
-copy_file() {
-  local src rel dst content
-  src="$1"
-  rel="$2"
-  dst="$HOME_DIR/$rel"
-  mkdir -p -- "$(dirname -- "$dst")"
-  backup "$dst"
-
-  if [[ "$src" == *.kdl || "$src" == *.toml || "$src" == *.ini || "$src" == *.conf ||
-        "$src" == *.list || "$src" == *.dirs || "$src" == *.locale || "$src" == *.service ||
-        "$src" == *.jsonc || "$src" == *scripts-accels ]]; then
-    content="$(<"$src")"
-    content="${content//@HOME@/$HOME_DIR}"
-    printf '%s\n' "$content" > "$dst"
-  else
-    cp -a -- "$src" "$dst"
-  fi
-  case "$rel" in
-    .local/bin/*) chmod +x "$dst" 2>/dev/null || true ;;
+    *) die "$(_ "DOTFILES_MODE must be full or tech (got: $MODE)" "DOTFILES_MODE должен быть full или tech (получено: $MODE)")" ;;
   esac
 }
+
+# ── Packages ─────────────────────────────────────────────────────────────────
 
 pacman_install() {
-  local list="$ROOT/packages/pacman.txt"
-  command -v pacman >/dev/null 2>&1 || { warn "pacman не найден; пропускаю системные пакеты"; return 0; }
-  [[ "$SKIP_PACKAGES" == 1 ]] && { say "SKIP_PACKAGES=1: пакеты пропущены"; return 0; }
-  command -v sudo >/dev/null 2>&1 || die "Для установки pacman-пакетов нужен sudo"
+  local list="$ROOT/packages/pacman.txt" pkg code
+  command -v pacman >/dev/null 2>&1 || { warn "$(_ 'pacman not found; skipping system packages' 'pacman не найден; системные пакеты пропущены')"; return 0; }
+  [[ "$SKIP_PACKAGES" == 1 ]] && { say "$(_ 'SKIP_PACKAGES=1: packages skipped' 'SKIP_PACKAGES=1: пакеты пропущены')"; return 0; }
+  command -v sudo >/dev/null 2>&1 || die "$(_ 'sudo is required to install packages' 'Для установки пакетов нужен sudo')"
+
   mapfile -t packages < <(grep -Ev '^[[:space:]]*(#|$)' "$list")
-  if [[ "$NOCTALIA" == 0 ]]; then
-    mapfile -t packages < <(printf '%s\n' "${packages[@]}" | grep -Ev '^noctalia$')
-  fi
-  ((${#packages[@]})) && sudo pacman -S --needed "${packages[@]}"
+  [[ "$NOCTALIA" == 0 ]] && mapfile -t packages < <(printf '%s\n' "${packages[@]}" | grep -Ev '^noctalia$')
+
+  # OCR language packs follow the chosen keyboard layouts.
+  for code in "${KB_LIST[@]}"; do
+    pkg="${KB_TESS[$code]:-}"
+    [[ -n "$pkg" ]] || continue
+    if pacman -Si "tesseract-data-$pkg" >/dev/null 2>&1; then
+      packages+=("tesseract-data-$pkg")
+    else
+      warn "$(_ "No OCR language pack for '$code' (tesseract-data-$pkg)" "Нет языкового пакета OCR для '$code' (tesseract-data-$pkg)")"
+    fi
+  done
+
+  say "$(_ 'Installing packages (pacman)…' 'Установка пакетов (pacman)…')"
+  sudo pacman -S --needed "${packages[@]}"
 }
 
 install_noctalia() {
   [[ "$NOCTALIA" == 0 ]] && return 0
   if command -v noctalia >/dev/null 2>&1 || command -v noctalia-shell >/dev/null 2>&1 ||
      (command -v pacman >/dev/null 2>&1 && pacman -Q cachyos-niri-noctalia >/dev/null 2>&1); then
-    NOCTALIA=1
     return 0
   fi
-  local install_requested=0
-  if [[ "$NOCTALIA" == 1 ]]; then
-    install_requested=1
-  elif [[ "$NOCTALIA" == auto ]] && ask_yes 'Noctalia Shell отсутствует. Установить её?'; then
-    install_requested=1
-  fi
-  if ((install_requested)); then
-    command -v pacman >/dev/null 2>&1 || die "Noctalia требует pacman"
-    command -v sudo >/dev/null 2>&1 || die "Для установки Noctalia нужен sudo"
-    if ! sudo pacman -S --needed noctalia; then
-      sudo pacman -S --needed cachyos-niri-noctalia
-    fi
-    NOCTALIA=1
-  else
-    NOCTALIA=0
-    warn "Noctalia не установлена; будет использован tech-конфиг"
-  fi
+  [[ "$SKIP_PACKAGES" == 1 ]] && { warn "$(_ 'Noctalia is not installed (SKIP_PACKAGES=1)' 'Noctalia не установлена (SKIP_PACKAGES=1)')"; return 0; }
+  command -v pacman >/dev/null 2>&1 || die "$(_ 'Noctalia needs pacman' 'Для Noctalia нужен pacman')"
+  sudo pacman -S --needed noctalia || sudo pacman -S --needed cachyos-niri-noctalia
 }
 
+# ── Voxtype ──────────────────────────────────────────────────────────────────
+
 install_voxtype() {
-  [[ "$INSTALL_VOXTYPE" == 1 ]] || { say "Voxtype binary пропущен"; return 0; }
+  [[ "$INSTALL_VOXTYPE" == 1 ]] || { say "$(_ 'Voxtype skipped' 'Voxtype пропущен')"; return 0; }
+  local bin="$HOME_DIR/.local/bin/voxtype" arch variant url sha actual tmp
   mkdir -p -- "$HOME_DIR/.local/bin"
 
-  local arch variant url sha actual tmp
   arch="$(uname -m)"
-  [[ "$arch" == x86_64 ]] || { warn "Автозагрузка Voxtype поддерживает только x86_64"; return 0; }
-  variant=baseline
-  if grep -qE '(^|[[:space:]])avx512f([[:space:]]|$)' /proc/cpuinfo 2>/dev/null; then
-    variant=avx512
-  elif grep -qE '(^|[[:space:]])avx2([[:space:]]|$)' /proc/cpuinfo 2>/dev/null; then
-    variant=avx2
+  [[ "$arch" == x86_64 ]] || { warn "$(_ 'Voxtype auto-download supports x86_64 only' 'Автозагрузка Voxtype поддерживает только x86_64')"; return 0; }
+
+  if [[ -x "$bin" && "$VOXTYPE_FORCE" != 1 && "$("$bin" --version 2>/dev/null || true)" == *"voxtype ${VOXTYPE_VERSION}"* ]]; then
+    say "$(_ 'Voxtype already installed:' 'Voxtype уже установлен:') $("$bin" --version 2>/dev/null)"
+    return 0
   fi
+
+  variant=baseline
+  if grep -qE '(^|[[:space:]])avx512f([[:space:]]|$)' /proc/cpuinfo 2>/dev/null; then variant=avx512
+  elif grep -qE '(^|[[:space:]])avx2([[:space:]]|$)' /proc/cpuinfo 2>/dev/null; then variant=avx2; fi
 
   case "$variant" in
     baseline) sha=1c9d78b4f6805e4f12ba3670949d3c22788269bdbc54215afffa42cafd0b4a7a ;;
-    avx2) sha=e7d5de68cc8fc610c3c961c47f879451db9bee4a2df152e9a66f1078072e7f28 ;;
-    avx512) sha=bb2da45c7676bc128da998da928cb239ab6eef9fe53c31c9b4a77e819e521715 ;;
+    avx2)     sha=e7d5de68cc8fc610c3c961c47f879451db9bee4a2df152e9a66f1078072e7f28 ;;
+    avx512)   sha=bb2da45c7676bc128da998da928cb239ab6eef9fe53c31c9b4a77e819e521715 ;;
   esac
   url="https://github.com/peteonrails/voxtype/releases/download/v${VOXTYPE_VERSION}/voxtype-${VOXTYPE_VERSION}-linux-x86_64-${variant}"
-  tmp="$(mktemp)"
 
-  if [[ -x "$HOME_DIR/.local/bin/voxtype" && "$VOXTYPE_FORCE" != 1 &&
-        "$("$HOME_DIR/.local/bin/voxtype" --version 2>/dev/null || true)" == *"voxtype ${VOXTYPE_VERSION}"* ]]; then
-    say "Voxtype уже установлен: $("$HOME_DIR/.local/bin/voxtype" --version 2>/dev/null || true)"
-  else
-    command -v curl >/dev/null 2>&1 || die "Для установки Voxtype нужен curl"
-    say "Загрузка Voxtype ${VOXTYPE_VERSION} (${variant})"
-    curl --fail --location --retry 3 --output "$tmp" "$url"
-    actual="$(sha256sum "$tmp" | awk '{print $1}')"
-    [[ "$actual" == "$sha" ]] || die "SHA256 Voxtype не совпал: ожидался $sha, получен $actual"
-    install -m 0755 "$tmp" "$HOME_DIR/.local/bin/voxtype"
-  fi
-  rm -f -- "$tmp"
+  command -v curl >/dev/null 2>&1 || die "$(_ 'curl is required to download Voxtype' 'Для загрузки Voxtype нужен curl')"
+  tmp="$(mktemp)"; TMP_FILES+=("$tmp")
+  say "$(_ "Downloading Voxtype ${VOXTYPE_VERSION} (${variant})" "Загрузка Voxtype ${VOXTYPE_VERSION} (${variant})")"
+  curl --fail --location --retry 3 --output "$tmp" "$url"
+  actual="$(sha256sum "$tmp" | awk '{print $1}')"
+  [[ "$actual" == "$sha" ]] || die "$(_ "Voxtype SHA256 mismatch: expected $sha, got $actual" "SHA256 Voxtype не совпал: ожидался $sha, получен $actual")"
+  install -m 0755 "$tmp" "$bin"
 }
 
 install_voxtype_model() {
-  [[ "$DOWNLOAD_VOXTYPE_MODEL" == 1 ]] || { say "Модель Voxtype пропущена"; return 0; }
-  [[ -x "$HOME_DIR/.local/bin/voxtype" ]] || { warn "Модель пропущена: Voxtype binary не установлен"; return 0; }
+  [[ "$DOWNLOAD_VOXTYPE_MODEL" == 1 ]] || { say "$(_ 'Voxtype model skipped' 'Модель Voxtype пропущена')"; return 0; }
+  [[ -x "$HOME_DIR/.local/bin/voxtype" ]] || { warn "$(_ 'Model skipped: Voxtype is not installed' 'Модель пропущена: Voxtype не установлен')"; return 0; }
   if "$HOME_DIR/.local/bin/voxtype" setup --download --model large-v3-turbo --activate --no-post-install; then
-    say "Модель Voxtype large-v3-turbo готова"
+    say "$(_ 'Voxtype model large-v3-turbo is ready' 'Модель Voxtype large-v3-turbo готова')"
   else
-    warn "Не удалось скачать модель Voxtype; повторите позже командой:"
+    warn "$(_ 'Model download failed; retry later with:' 'Не удалось скачать модель; повторите позже командой:')"
     warn "voxtype setup --download --model large-v3-turbo --activate --no-post-install"
   fi
 }
 
+# ── Config files ─────────────────────────────────────────────────────────────
+
+N_INSTALLED=0 N_UNCHANGED=0 N_KEPT=0
+
+sed_escape() { printf '%s' "$1" | sed -e 's/[\/&|\\]/\\&/g'; }
+
+# Files that hold @PLACEHOLDERS@ are rendered; everything else is copied as is.
+PLACEHOLDERS='@(HOME|KB_LAYOUT|KB_OPTIONS|KB_VARIANT|VOXTYPE_LANG)@'
+
+render() {
+  local src="$1" dst="$2"
+  if grep -IqE "$PLACEHOLDERS" "$src"; then
+    sed -e "s|@HOME@|$(sed_escape "$HOME_DIR")|g" \
+        -e "s|@KB_LAYOUT@|$(sed_escape "$KB_LAYOUTS")|g" \
+        -e "s|@KB_OPTIONS@|$(sed_escape "$KB_OPTIONS")|g" \
+        -e "s|@KB_VARIANT@|$(sed_escape "$KB_VARIANT")|g" \
+        -e "s|@VOXTYPE_LANG@|$(sed_escape "$VOXTYPE_LANGUAGE")|g" \
+        "$src" >"$dst"
+  else
+    cp -- "$src" "$dst"
+  fi
+  chmod --reference="$src" "$dst"
+}
+
+backup() {
+  local target="$1"
+  if [[ -e "$target" || -L "$target" ]]; then
+    mv -- "$target" "$target.bak.$STAMP"
+    say "backup: ${target/#$HOME_DIR/\~}.bak.$STAMP"
+  fi
+}
+
+# Files that belong to the user (or are rewritten by the system itself): seeded
+# on the first install, never overwritten afterwards.
+keep_existing() {
+  case "$1" in
+    .config/niri/monitor.kdl|.config/user-dirs.dirs|.config/user-dirs.locale) return 0 ;;
+  esac
+  return 1
+}
+
+install_file() {
+  local src="$1" rel="$2" dst="$HOME_DIR/$2" tmp
+  if keep_existing "$rel" && [[ -e "$dst" ]]; then
+    N_KEPT=$((N_KEPT + 1)); return 0
+  fi
+  tmp="$(mktemp)"; TMP_FILES+=("$tmp")
+  render "$src" "$tmp"
+  if [[ -e "$dst" ]] && cmp -s -- "$tmp" "$dst"; then
+    N_UNCHANGED=$((N_UNCHANGED + 1)); return 0
+  fi
+  mkdir -p -- "$(dirname -- "$dst")"
+  backup "$dst"
+  cp -p -- "$tmp" "$dst"
+  chmod --reference="$src" "$dst"
+  N_INSTALLED=$((N_INSTALLED + 1))
+}
+
+# Where does repo file $1 go for the chosen options? Prints nothing to skip it.
+destination() {
+  local rel="$1"
+  case "$rel" in
+    # Niri: the Noctalia and the plain variants share one destination.
+    .config/niri/config.kdl|.config/niri/cfg/autostart.kdl|.config/niri/cfg/keybinds.kdl)
+      [[ "$NOCTALIA" == 1 ]] || return 0 ;;
+    *-no-noctalia.kdl)
+      [[ "$NOCTALIA" == 0 ]] || return 0
+      rel="${rel/-no-noctalia/}" ;;
+    .config/niri/noctalia.kdl|.config/noctalia/*)
+      [[ "$NOCTALIA" == 1 ]] || return 0 ;;
+    .config/systemd/user/*)
+      [[ "$ENABLE_SERVICES" == 1 ]] || return 0 ;;
+    .config/voxtype/*)
+      [[ "$INSTALL_VOXTYPE" == 1 || -x "$HOME_DIR/.local/bin/voxtype" ]] || return 0 ;;
+    # Helper scripts: tech uses the light GTK variants, full the overlay ones.
+    .local/bin/*-simple)
+      [[ "$MODE" == tech ]] || return 0 ;;
+    .local/bin/niri-record-region|.local/bin/niri-screenshot-region|.local/bin/niri-record-overlay)
+      [[ "$MODE" == full ]] || return 0 ;;
+  esac
+  printf '%s' "$rel"
+}
+
 install_configs() {
-  local src rel
+  local src rel dest
   mkdir -p -- "$HOME_DIR/.config" "$HOME_DIR/.local/bin"
+  say "$(_ 'Installing configuration…' 'Установка конфигурации…')"
 
   while IFS= read -r -d '' src; do
     rel="${src#"$ROOT/"}"
-    case "$rel" in
-      .config/niri/config-no-noctalia.kdl|.config/niri/cfg/autostart-no-noctalia.kdl|.config/niri/cfg/keybinds-no-noctalia.kdl)
-        continue ;;
-      .config/niri/config.kdl|.config/niri/cfg/autostart.kdl|.config/niri/cfg/keybinds.kdl)
-        [[ "$NOCTALIA" == 1 ]] || continue ;;
-      .config/noctalia/*)
-        [[ "$NOCTALIA" == 1 ]] || continue ;;
-      .config/systemd/user/*)
-        [[ "$ENABLE_SERVICES" == 1 ]] || continue ;;
-      .local/share/*|Pictures/*)
-        [[ "$MODE" == full ]] || continue ;;
-    esac
-    copy_file "$src" "$rel"
+    dest="$(destination "$rel")"
+    [[ -n "$dest" ]] && install_file "$src" "$dest"
   done < <(find "$ROOT/.config" "$ROOT/.local/bin" -type f -print0 | sort -z)
 
-  if [[ "$NOCTALIA" == 0 ]]; then
-    copy_file "$ROOT/.config/niri/config-no-noctalia.kdl" ".config/niri/config.kdl"
-    copy_file "$ROOT/.config/niri/cfg/autostart-no-noctalia.kdl" ".config/niri/cfg/autostart.kdl"
-    copy_file "$ROOT/.config/niri/cfg/keybinds-no-noctalia.kdl" ".config/niri/cfg/keybinds.kdl"
-    backup "$HOME_DIR/.config/niri/noctalia.kdl"
-    rm -f -- "$HOME_DIR/.config/niri/noctalia.kdl"
-  fi
-
+  # The light variants also answer to the regular command names.
   if [[ "$MODE" == tech ]]; then
-    copy_file "$ROOT/.local/bin/niri-screenshot-region-simple" ".local/bin/niri-screenshot-region"
-    copy_file "$ROOT/.local/bin/niri-record-region-simple" ".local/bin/niri-record-region"
+    install_file "$ROOT/.local/bin/niri-screenshot-region-simple" ".local/bin/niri-screenshot-region"
+    install_file "$ROOT/.local/bin/niri-record-region-simple" ".local/bin/niri-record-region"
   fi
 }
 
 install_assets() {
   [[ "$MODE" == full ]] || return 0
+  say "$(_ 'Installing fonts and icons…' 'Установка шрифтов и иконок…')"
   if [[ -d "$ROOT/.local/share" ]]; then
     mkdir -p -- "$HOME_DIR/.local/share"
-    rsync -a \
-      --exclude 'voxtype/models' \
-      --exclude 'nautilus/tags' \
-      "$ROOT/.local/share/" "$HOME_DIR/.local/share/"
+    cp -au -- "$ROOT/.local/share/." "$HOME_DIR/.local/share/"
   fi
-  mkdir -p -- "$HOME_DIR/Pictures"
-  if [[ -d "$ROOT/Pictures" ]]; then
-    rsync -a --exclude 'Screenshots' "$ROOT/Pictures/" "$HOME_DIR/Pictures/"
+  if [[ "$INSTALL_WALLPAPERS" == 1 && -d "$ROOT/Pictures" ]]; then
+    say "$(_ 'Copying wallpapers…' 'Копирование обоев…')"
+    mkdir -p -- "$HOME_DIR/Pictures"
+    cp -au -- "$ROOT/Pictures/." "$HOME_DIR/Pictures/"
   fi
-  if command -v fc-cache >/dev/null 2>&1; then fc-cache -f "$HOME_DIR/.local/share/fonts" >/dev/null 2>&1 || true; fi
-  command -v xdg-user-dirs-update >/dev/null 2>&1 && xdg-user-dirs-update || true
+  command -v fc-cache >/dev/null 2>&1 && { fc-cache -f "$HOME_DIR/.local/share/fonts" >/dev/null 2>&1 || true; }
+  command -v xdg-user-dirs-update >/dev/null 2>&1 && { xdg-user-dirs-update || true; }
+  return 0
 }
 
 enable_services() {
   [[ "$ENABLE_SERVICES" == 1 ]] || return 0
-  command -v systemctl >/dev/null 2>&1 || { warn "systemctl не найден; user services не включены"; return 0; }
+  command -v systemctl >/dev/null 2>&1 || { warn "$(_ 'systemctl not found; user services not enabled' 'systemctl не найден; user-сервисы не включены')"; return 0; }
   systemctl --user daemon-reload || true
   systemctl --user enable niri-game-mode.service || true
   if [[ -x "$HOME_DIR/.local/bin/voxtype" ]]; then
@@ -229,27 +472,51 @@ enable_services() {
 
 install_flatpak() {
   [[ "$INSTALL_FLATPAK" == 1 ]] || return 0
-  command -v flatpak >/dev/null 2>&1 || { warn "flatpak не найден"; return 0; }
+  command -v flatpak >/dev/null 2>&1 || { warn "$(_ 'flatpak not found' 'flatpak не найден')"; return 0; }
   [[ -f "$ROOT/packages/flatpak-apps.txt" ]] || return 0
   mapfile -t apps < <(grep -Ev '^[[:space:]]*(#|$)' "$ROOT/packages/flatpak-apps.txt")
   ((${#apps[@]})) && flatpak install -y flathub "${apps[@]}"
+  return 0
 }
+
+validate() {
+  command -v niri >/dev/null 2>&1 || return 0
+  if niri validate -c "$HOME_DIR/.config/niri/config.kdl" >/dev/null 2>&1; then
+    say "$(_ 'Niri config is valid' 'Конфиг Niri валиден')"
+  else
+    warn "$(_ 'Niri config failed validation; see: niri validate -c ~/.config/niri/config.kdl' \
+               'Конфиг Niri не прошёл проверку; смотрите: niri validate -c ~/.config/niri/config.kdl')"
+  fi
+}
+
+summary() {
+  hr
+  say "$(_ 'Done.' 'Готово.')  profile=${MODE}  noctalia=${NOCTALIA}  home=${HOME_DIR}"
+  say "$(_ "Files: $N_INSTALLED installed, $N_UNCHANGED unchanged, $N_KEPT kept" \
+           "Файлы: $N_INSTALLED установлено, $N_UNCHANGED без изменений, $N_KEPT сохранено")"
+  say "$(_ 'Keyboard' 'Клавиатура'): ${KB_LAYOUTS}${KB_OPTIONS:+  ($KB_OPTIONS)}"
+  say "$(_ '  change later in' '  изменить позже в') ~/.config/niri/cfg/input.kdl"
+  say "$(_ 'Monitors: run nwg-displays, or edit ~/.config/niri/monitor.kdl' \
+           'Мониторы: запустите nwg-displays или правьте ~/.config/niri/monitor.kdl')"
+  say "$(_ 'Cheat sheet: Mod+Shift+Esc  (Mod = Super/Windows key)' \
+           'Шпаргалка по клавишам: Mod+Shift+Esc  (Mod = клавиша Super/Windows)')"
+}
+
+# ── Main ─────────────────────────────────────────────────────────────────────
+
+ask_profile
+normalize_mode
+[[ "$MODE" == tech && ! -v GIVEN_NOCTALIA ]] && NOCTALIA=0
+[[ "$NOCTALIA" =~ ^[01]$ ]] || die "NOCTALIA must be 0 or 1"
+choose_keyboard
 
 pacman_install
 install_noctalia
-install_voxtype
-install_voxtype_model
 install_configs
 install_assets
+install_voxtype
+install_voxtype_model
 install_flatpak
 enable_services
-
-if command -v niri >/dev/null 2>&1; then
-  if niri validate -c "$HOME_DIR/.config/niri/config.kdl" >/dev/null 2>&1; then
-    say "Niri config valid"
-  else
-    warn "Niri config не прошёл validate; проверьте вывод: niri validate -c ~/.config/niri/config.kdl"
-  fi
-fi
-
-say "Готово: mode=${MODE}, noctalia=${NOCTALIA}, home=${HOME_DIR}"
+validate
+summary

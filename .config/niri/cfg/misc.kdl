@@ -22,7 +22,7 @@
         passes 3        // smooth frosted backdrop without over-softening text
         offset 3.0      // sample distance per pass
         noise 0.018     // subtle grain to hide blur banding
-        saturation 1.12  // restrained Liquid Glass color lift
+        saturation 1.0   // neutral; raise for a stronger color lift
     }
 
     debug {

@@ -1,4 +1,55 @@
+// ────────────── Window and layer rules ──────────────
+// https://github.com/YaLTeR/niri/wiki/Configuration:-Window-Rules
 
+// Base look for every window: rounded, fully opaque.
+// Blur and inactive dimming are deliberately off. With focus-follows-mouse they
+// made windows "glow" whenever the pointer crossed them.
+window-rule {
+    opacity 1.0
+    geometry-corner-radius 14
+    clip-to-geometry true
+
+    background-effect {
+        blur false
+        xray false
+    }
+
+    popups {
+        opacity 1.0
+        geometry-corner-radius 12
+        background-effect {
+            blur false
+            xray false
+        }
+    }
+}
+
+// ─── Noctalia ───
+
+// Settings open as a large floating window.
+window-rule {
+    match app-id="dev.noctalia.Noctalia"
+    open-floating true
+    default-column-width { fixed 1080; }
+    default-window-height { fixed 920; }
+}
+
+// Wallpaper lives in the backdrop so it also shows behind the overview.
+layer-rule {
+    match namespace="^noctalia-wallpaper"
+    place-within-backdrop true
+}
+
+layer-rule {
+    match namespace="^noctalia-(bar-[^\"]+|notification|dock|panel|attached-panel|osd)$"
+    background-effect {
+        xray false
+    }
+}
+
+// ─── Steam ───
+
+// Invisible helper windows and popups should not steal a tile.
 window-rule {
     match app-id="steam" title="^$"
     open-floating true
@@ -6,104 +57,28 @@ window-rule {
     min-height 1
 }
 
+// Only the main library window is tiled; everything else floats.
+window-rule {
+    match app-id="steam"
+    exclude title=r#"^[Ss]team$"#
+    open-floating true
+}
+
 window-rule {
     match app-id="steam" title=r#"^notificationtoasts_\d+_desktop$"#
     default-floating-position x=10 y=10 relative-to="bottom-right"
+    open-focused false
 }
 
-// Liquid Glass base style for normal windows.
-// niri supplies the real backdrop blur; opacity lets it show through.
+// ─── Screencast privacy (Mod+Shift+X) ───
+
+// The hidden workspace that niri-cast-privacy parks blocked windows on.
+workspace "privacy"
+
 window-rule {
-    exclude app-id="^liquid-glass-test$"
-    opacity 0.94
-    geometry-corner-radius 14
-    clip-to-geometry true
-
-    background-effect {
-        blur true
-        xray false
-        noise 0.018
-        saturation 1.12
-    }
-
-    popups {
-        opacity 0.97
-        geometry-corner-radius 12
-        background-effect {
-            blur true
-            xray false
-            noise 0.018
-            saturation 1.12
-        }
-    }
+    match title="niri-cast-privacy"
+    match app-id="dev.niri.cast-privacy"
+    open-on-workspace "privacy"
+    open-focused false
+    open-floating true
 }
-
-// Let inactive windows recede slightly while keeping focused content clear.
-window-rule {
-    match is-focused=false
-    opacity 0.90
-}
-
-    // Floating Noctalia settings window.
-    window-rule {
-        match app-id="dev.noctalia.Noctalia"
-        open-floating true
-        default-column-width { fixed 1080; }
-        default-window-height { fixed 920; }
-    }
-
-    // if you use steam you will probably like these
-    window-rule {
-        match app-id="steam"
-        exclude title=r#"^[Ss]team$"#
-        open-floating true
-    }
-
-    window-rule {
-       match app-id="steam" title=r#"^notificationtoasts_\d+_desktop$"#
-       default-floating-position x=10 y=10 relative-to="bottom-right"
-       open-focused false
-    }
-
-    layer-rule {
-        match namespace="^noctalia-wallpaper"
-        place-within-backdrop true
-    }
-
-    layer-rule {
-        match namespace="^noctalia-(bar-[^\"]+|notification|dock|panel|attached-panel|osd)$"
-        background-effect {
-          xray false
-          // blur false
-        }
-    }
-
-    // Liquid glass shader test window (LiquidIslandQS port, GLFW harness).
-    window-rule {
-        match app-id="^liquid-glass-test$"
-        open-floating true
-        default-floating-position x=0 y=0
-        default-column-width { fixed 460; }
-        default-window-height { fixed 320; }
-        opacity 1.0
-        geometry-corner-radius 0
-        // The client supplies the exact silhouette through ext-background-effect.
-        // Keep only xray=false here so niri never falls back to full-window blur
-        // while the first region or a monitor move is being committed.
-        background-effect {
-            xray false
-        }
-        focus-ring { off; }
-        border { off; }
-        shadow { off; }
-    }
-
-    workspace "privacy"
-
-    window-rule {
-        match title="niri-cast-privacy"
-        match app-id="dev.niri.cast-privacy"
-        open-on-workspace "privacy"
-        open-focused false
-        open-floating true
-    }

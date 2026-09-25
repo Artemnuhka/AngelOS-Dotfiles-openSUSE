@@ -29,11 +29,9 @@ home/
 .local/share/fonts/SF-Pro/
 .local/share/fonts/SF-Pro/**
 
-# Voxtype binaries
-voxtype
-voxtype.real
-**/voxtype
-**/voxtype.real
+# Voxtype binaries (the .config/voxtype/ settings are tracked)
+/.local/bin/voxtype
+/.local/bin/voxtype.real
 
 # Media not part of rice
 Videos/

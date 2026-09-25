@@ -6,7 +6,7 @@ A dark, pixel-flavoured **CachyOS + [Niri](https://github.com/YaLTeR/niri) + [No
 
 > The screenshot is from the working session. It was reviewed before publishing and contains no browser profiles, chats, credentials, or personal files.
 
-**Jump to:** [In action](#in-action) · [Keybindings](#keybindings) · [Helper tools](#helper-tools) · [Install](#installation) · [Layout](#repository-layout)
+**Jump to:** [In action](#in-action) · [Keybindings](#keybindings) · [Helper tools](#helper-tools) · [Install](#installation) · [Keyboard layouts](#keyboard-layouts) · [Mouse and monitors](#mouse-and-monitors) · [Layout](#repository-layout)
 
 ---
 
@@ -118,7 +118,7 @@ Installed to `~/.local/bin`. They are plain Bash/Python scripts built on `grim`,
 | --- | --- |
 | `niri-screenshot-region` | Region screenshot with a pixel "gravity ropes" selection overlay; always saves to `~/Pictures/Screenshots` |
 | `niri-record-region` | Toggle a region recording to `~/Videos` with an on-screen overlay. Tune it with `NIRI_RECORD_FPS`, `NIRI_RECORD_CODEC`, `NIRI_RECORD_CRF` |
-| `niri-ocr` | Select a region and copy the recognised text (Russian + English) to the clipboard |
+| `niri-ocr` | Select a region and copy the recognised text to the clipboard. Uses every installed Tesseract language pack; the installer adds packs for your keyboard layouts |
 | `niri-cast-privacy` | Toggle Niri `block-out-from "screencast"` rules for Telegram, Bitwarden, Helium and Discord. Your screen stays live, the stream sees black |
 | `niri-game-mode` | User service that switches off animations, blur and transparency while a window covers an output, then restores them |
 | `voxtype-indicator` | Bottom-dock overlay that shows the state of [Voxtype](https://github.com/peteonrails/voxtype) voice dictation |
@@ -134,9 +134,9 @@ The `tech` install profile installs the lighter `niri-screenshot-region-simple` 
 - Kitty, Alacritty, Foot, GTK, Fastfetch and fontconfig setups, themed to match.
 - The `pixora` pixel icon theme, Cozette / Pixeloid pixel fonts and a set of wallpapers.
 - Package lists for Arch-based systems.
-- An installer with two profiles and automatic backups of anything it replaces.
+- An installer that asks which keyboard layouts you want, backs up anything it replaces, and is safe to re-run.
 
-The configuration is intentionally portable. It does not include monitor names, resolutions, refresh rates, positions, mouse sensitivity, cursor preferences, GPU driver variables, or desktop runtime state.
+The configuration is intentionally portable. It does not include monitor names, resolutions, refresh rates or positions, mouse sensitivity, cursor preferences, GPU driver variables, or desktop runtime state.
 
 ## Requirements
 
@@ -163,39 +163,69 @@ cd PixelStreetArt_Dotfiles_Niri
 ./.install
 ```
 
-`./install.sh` is the same installer; `.install` is the convenient entry point.
+`./install.sh` is the same installer; `.install` is just a convenient entry point. Run without arguments it walks you through a short setup (English, or Russian when your locale is `ru_*`):
 
-Two profiles are available:
+1. **Profile**: `full` (styling, Noctalia shell, pixel fonts and icons, wallpapers) or `tech` (Niri config and helper tools only, no Noctalia).
+2. **Wallpapers**: whether to copy the ~880 MB collection.
+3. **Voice input**: whether to install Voxtype and its ~1.6 GB Whisper model.
+4. **Keyboard layouts**: pick from a list or type any XKB code.
+5. **Layout switch shortcut**: Alt+Shift, Ctrl+Shift, Caps Lock, Right Alt or Left Alt.
 
-- `full`: desktop styling, Noctalia integration and wallpapers.
-- `tech`: a smaller setup without Noctalia-specific configuration or bundled assets.
-
-Non-interactive install:
+Everything can also be given up front, which makes the installer fully unattended:
 
 ```bash
 DOTFILES_MODE=full \
-NOCTALIA=1 \
-INSTALL_VOXTYPE=1 \
-DOWNLOAD_VOXTYPE_MODEL=1 \
-ENABLE_SERVICES=1 \
+KB_LAYOUTS="us ru" KB_TOGGLE=alt_shift \
+INSTALL_WALLPAPERS=1 INSTALL_VOXTYPE=1 DOWNLOAD_VOXTYPE_MODEL=1 \
 ./install.sh
 ```
 
-Useful switches:
+Other switches (run `./install.sh --help` for the full list):
 
 ```bash
 SKIP_PACKAGES=1 ./install.sh                                  # config only, no pacman
 INSTALL_VOXTYPE=0 DOWNLOAD_VOXTYPE_MODEL=0 ./install.sh       # no voice input
 ENABLE_SERVICES=0 ./install.sh                                # do not enable user services
+NOCTALIA=0 ./install.sh                                       # plain Niri + fuzzel, no Noctalia
 ```
 
-Existing files are never overwritten silently; they are backed up as `filename.bak.YYYYMMDD-HHMMSS`.
+Existing files are never overwritten silently: they are moved to `filename.bak.YYYYMMDD-HHMMSS`. Re-running the installer leaves unchanged files alone, and files that belong to you (`monitor.kdl`, the XDG user-dirs files) are only created if missing.
 
-Run the repository bug-check before installing:
+Run the repository check before installing. Besides syntax and hygiene checks it runs the installer against throw-away home directories (both profiles, custom layouts, bad input, re-runs), so it never touches your real configuration:
 
 ```bash
 ./scripts/check.sh
 ```
+
+## Keyboard layouts
+
+The installer writes your choice into [`~/.config/niri/cfg/input.kdl`](.config/niri/cfg/input.kdl), so nobody has to hunt for it:
+
+```kdl
+xkb {
+    layout "us,ru"
+    options "grp:alt_shift_toggle"
+}
+```
+
+| Choice | Shortcut | XKB option |
+| --- | --- | --- |
+| Alt + Shift | `KB_TOGGLE=alt_shift` (default) | `grp:alt_shift_toggle` |
+| Ctrl + Shift | `KB_TOGGLE=ctrl_shift` | `grp:ctrl_shift_toggle` |
+| Caps Lock | `KB_TOGGLE=caps` | `grp:caps_toggle` (Caps Lock itself stops working) |
+| Right Alt | `KB_TOGGLE=ralt` | `grp:ralt_toggle` |
+| Left Alt | `KB_TOGGLE=lalt` | `grp:lalt_toggle` |
+
+Win+Space is deliberately not offered because `Mod`+`Space` opens the launcher. Any other XKB option can be passed as `KB_TOGGLE=grp:shifts_toggle`.
+
+Your layouts also drive two other things: the **dictation language** of Voxtype (the first non-English layout, e.g. `ru` → Russian) and the **OCR language packs** that get installed.
+
+To change layouts later, edit `input.kdl`; Niri reloads it instantly. `niri msg keyboard-layouts` shows what is active, and `niri msg action switch-layout next` switches from a script.
+
+## Mouse and monitors
+
+- **Mouse**: pointer speed and acceleration are intentionally left at libinput defaults, because every mouse is different (a forced flat, zero-speed profile made the cursor feel slow for some people). To tune it, add a `mouse { accel-profile "adaptive"; accel-speed 0.4 }` block; the example is commented in `input.kdl`.
+- **Monitors**: `~/.config/niri/monitor.kdl` is created empty, so Niri auto-detects your outputs. Run `nwg-displays` to set resolution, refresh rate, scale, rotation and position graphically; it rewrites that file, and the installer never overwrites it.
 
 ### After installation
 
@@ -208,18 +238,17 @@ Review and adjust for your system:
 ```
 
 - The default binds expect `kitty`, a browser registered with `xdg-open`, `nautilus` and several Wayland utilities. Replace those commands if you use other applications.
-- Monitor `output` blocks are deliberately omitted. Configure outputs through your system, or add local `output` blocks to your own Niri config.
 - Voxtype is downloaded from its official GitHub release and verified with a pinned SHA256 checksum. Its binary and Whisper model stay outside the repository.
 
 ## Repository layout
 
 ```text
-.config/           Niri, Noctalia, terminal, GTK and fastfetch configuration
+.config/           Niri, Noctalia, Voxtype, terminal, GTK and fastfetch configuration
 .local/bin/        Wayland helper scripts
 .local/share/      Optional icon theme and pixel fonts
 Pictures/          Optional wallpapers
 packages/          Arch, AUR and Flatpak package lists
-scripts/check.sh   Repository bug-check
+scripts/check.sh   Repository check, including end-to-end installer tests
 docs/screenshots/  Static preview images
 docs/demo/         GIFs used in this README
 install.sh         Installer with backups and profiles

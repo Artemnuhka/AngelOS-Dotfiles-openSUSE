@@ -11,6 +11,7 @@ alacritty
 foot
 fastfetch
 fuzzel
+nwg-displays
 
 # Wayland helpers
 grim
@@ -26,8 +27,8 @@ cliphist
 
 # OCR and overlay dependencies
 tesseract
+# More OCR languages are added by install.sh from your keyboard layouts.
 tesseract-data-eng
-tesseract-data-rus
 python
 python-cairo
 python-gobject
@@ -42,6 +43,5 @@ fontconfig
 capitaine-cursors
 xdg-user-dirs
 xdg-utils
-rsync
 curl
 git
