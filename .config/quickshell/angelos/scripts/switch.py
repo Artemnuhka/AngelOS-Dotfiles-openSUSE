@@ -1,0 +1,203 @@
+#!/usr/bin/env python3
+"""Switch the desktop shell between Noctalia and angelOS.
+
+  switch.py angelos [--no-restart]   patch niri + app themes for angelOS, start it
+  switch.py noctalia                 restore files from the last switch backup, start Noctalia
+  switch.py status
+
+Every run that touches files first copies them into a *new* folder
+~/.local/state/angelos/backups/<stamp>-switch/ (never overwrites old backups).
+Patching is idempotent, so it can be re-run after a dotfiles install.
+"""
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+HOME = Path.home()
+SHELL = Path(__file__).resolve().parent.parent
+STATE = HOME / ".local/state/angelos"
+MARK = HOME / ".config/angelos/active"
+NIRI = HOME / ".config/niri"
+FILES = [
+    NIRI / "config.kdl", NIRI / "cfg/autostart.kdl", NIRI / "cfg/keybinds.kdl", NIRI / "cfg/rules.kdl",
+    HOME / ".config/kitty/kitty.conf", HOME / ".config/foot/foot.ini",
+    HOME / ".config/alacritty/alacritty.toml",
+    HOME / ".config/gtk-3.0/gtk.css", HOME / ".config/gtk-4.0/gtk.css",
+]
+
+CLI = "qs -c angelos ipc call angelos"
+KEYS = [  # noctalia msg ... -> angelos function
+    (r"panel-toggle wallpaper", "settings wallpaper", "angelOS: обои"),
+    (r"panel-toggle control-center", "settings appearance", "angelOS: настройки"),
+    (r"settings-toggle", "settings appearance", "angelOS: настройки"),
+    (r"panel-toggle launcher", "launcher", "angelOS: программы"),
+    (r"session lock", "lock", "angelOS: блокировка"),
+    (r"panel-toggle session", "session", "angelOS: выключение"),
+    (r"panel-toggle clipboard", "clipboard", "angelOS: буфер обмена"),
+    (r"volume-up", "volumeUp", None),
+    (r"volume-down", "volumeDown", None),
+    (r"volume-mute", "mute", None),
+    (r"mic-mute", "micMute", None),
+    (r"media next", "media next", None),
+    (r"media previous", "media previous", None),
+    (r"media toggle", "media toggle", None),
+    (r"media pause", "media pause", None),
+]
+
+RULES = '''
+    // ─── angelOS (managed by angelos switch.py) ───
+    layer-rule {
+        match namespace="^angelos-wallpaper$"
+        place-within-backdrop true
+    }
+    layer-rule {
+        match namespace="^angelos-"
+        background-effect {
+            xray false
+        }
+    }
+    window-rule {
+        match app-id="^org.quickshell$" title="^angelOS"
+        open-floating true
+        geometry-corner-radius 0
+        clip-to-geometry false
+        border { off; }
+        focus-ring { off; }
+        shadow { off; }
+        default-column-width { fixed 1040; }
+        default-window-height { fixed 740; }
+    }
+    // ─── /angelOS ───
+'''
+
+EXTRA_BINDS = '''
+    // ─── angelOS extras ───
+    Mod+Alt+Y                           hotkey-overlay-title="angelOS: лирика вкл/выкл" { spawn-sh "qs -c angelos ipc call angelos lyrics"; }
+    Mod+Alt+T                           hotkey-overlay-title="angelOS: светлая/тёмная" { spawn-sh "qs -c angelos ipc call angelos theme toggle"; }
+'''
+
+
+def log(*a):
+    print("»", *a, flush=True)
+
+
+def backup(tag):
+    base = STATE / "backups" / (time.strftime("%Y%m%d-%H%M%S") + "-" + tag)
+    dst, n = base, 1
+    while dst.exists():  # always a fresh folder
+        n += 1
+        dst = base.with_name(base.name + f"-{n}")
+    dst.mkdir(parents=True)
+    for f in FILES + [NIRI / "noctalia.kdl", NIRI / "angelos.kdl"]:
+        if f.exists():
+            rel = f.relative_to(HOME)
+            (dst / rel).parent.mkdir(parents=True, exist_ok=True)
+            if not (dst / rel).exists():  # cp -n semantics
+                shutil.copy2(f, dst / rel)
+    (dst / "files.json").write_text(json.dumps([str(f.relative_to(HOME)) for f in FILES if f.exists()]))
+    log("бэкап:", dst)
+    return dst
+
+
+def edit(path, fn):
+    if not path.exists():
+        return False
+    old = path.read_text()
+    new = fn(old)
+    if new != old:
+        path.write_text(new)
+        log("изменён", path.relative_to(HOME))
+        return True
+    return False
+
+
+def patch_keys(t):
+    for pat, fn, title in KEYS:
+        rx = re.compile(r'(hotkey-overlay-title="[^"]*"\s*)?\{\s*spawn-sh\s+"noctalia msg ' + pat + r'";\s*\}')
+        repl = (f'hotkey-overlay-title="{title}" ' if title else "") + '{ spawn-sh "' + CLI + " " + fn + '"; }'
+        t = rx.sub(lambda m: repl, t)
+    # brightness keys have no target on desktop monitors: comment them out
+    t = re.sub(r'^(\s*)(XF86MonBrightness\w+[^\n]*noctalia msg[^\n]*)$', r'\1// \2', t, flags=re.M)
+    t = t.replace("// ─── noctalia-shell keybinds ───", "// ─── angelOS keybinds (were noctalia) ───")
+    if "angelOS extras" not in t:
+        t = t.rstrip()
+        assert t.endswith("}")
+        t = t[:-1].rstrip() + "\n" + EXTRA_BINDS + "}\n"
+    return t
+
+
+def patch_rules(t):
+    if 'exclude app-id="^org.quickshell$" title="^angelOS"' not in t:
+        t = t.replace('exclude app-id="^liquid-glass-test$"', 'exclude app-id="^liquid-glass-test$"\n    exclude app-id="^org.quickshell$" title="^angelOS"')
+    t = t.replace('match title="^angelOS · "', 'match app-id="^org.quickshell$" title="^angelOS"')
+    if "managed by angelos switch.py" in t:
+        return t
+    return t.rstrip() + "\n" + RULES
+
+
+def to_angelos(restart=True):
+    backup("switch")
+    # theme files first: niri must never include a missing file
+    subprocess.run([sys.executable, str(SHELL / "scripts/render-templates.py"), str(SHELL / "templates/palette-default.json")], check=False)
+    if not (NIRI / "angelos.kdl").exists():
+        sys.exit("angelos.kdl не создан — отмена")
+    edit(NIRI / "cfg/autostart.kdl", lambda t: re.sub(r'spawn-at-startup\s+"noctalia"', 'spawn-at-startup "qs" "-c" "angelos" "-n"', t))
+    edit(NIRI / "config.kdl", lambda t: t.replace('include "noctalia.kdl"', 'include "angelos.kdl"'))
+    edit(NIRI / "cfg/keybinds.kdl", patch_keys)
+    edit(NIRI / "cfg/rules.kdl", patch_rules)
+    edit(HOME / ".config/kitty/kitty.conf", lambda t: t.replace("include themes/noctalia.conf", "include themes/angelos.conf"))
+    edit(HOME / ".config/foot/foot.ini", lambda t: t.replace("include=~/.config/foot/themes/noctalia", "include=~/.config/foot/themes/angelos"))
+    edit(HOME / ".config/alacritty/alacritty.toml", lambda t: t.replace("themes/noctalia.toml", "themes/angelos.toml"))
+    for g in ("gtk-3.0", "gtk-4.0"):
+        edit(HOME / f".config/{g}/gtk.css", lambda t: t.replace('@import url("noctalia.css");', '@import url("angelos.css");'))
+    r = subprocess.run(["niri", "validate"], capture_output=True, text=True)
+    if r.returncode != 0:
+        log("niri validate НЕ прошёл — откатываю")
+        print(r.stderr)
+        to_noctalia(restart=False)
+        sys.exit(1)
+    log("niri: конфиг валиден")
+    MARK.parent.mkdir(parents=True, exist_ok=True)
+    MARK.write_text("angelos\n")
+    if restart:
+        subprocess.run(["pkill", "-x", "noctalia"])
+        time.sleep(0.8)
+        subprocess.Popen(["setsid", "-f", "qs", "-c", "angelos", "-n"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        log("angelOS запущен ♡")
+
+
+def to_noctalia(restart=True):
+    backups = sorted((STATE / "backups").glob("*-switch*"))
+    src = None
+    for b in reversed(backups):
+        cfg = b / ".config/niri/config.kdl"
+        if cfg.exists() and 'include "noctalia.kdl"' in cfg.read_text():
+            src = b
+            break
+    if not src:
+        sys.exit("не нашёл бэкап с конфигом Noctalia")
+    backup("switch-back")
+    for rel in json.loads((src / "files.json").read_text()):
+        shutil.copy2(src / rel, HOME / rel)
+        log("восстановлен", rel)
+    MARK.unlink(missing_ok=True)
+    if restart:
+        subprocess.run(["qs", "-c", "angelos", "kill"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        time.sleep(0.5)
+        subprocess.Popen(["setsid", "-f", "noctalia"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        log("Noctalia запущена")
+
+
+if __name__ == "__main__":
+    cmd = sys.argv[1] if len(sys.argv) > 1 else "status"
+    if cmd == "angelos":
+        to_angelos(restart="--no-restart" not in sys.argv)
+    elif cmd == "noctalia":
+        to_noctalia(restart="--no-restart" not in sys.argv)
+    else:
+        print("active:", "angelos" if MARK.exists() else "noctalia/other")

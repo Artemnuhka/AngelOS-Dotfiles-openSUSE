@@ -1,0 +1,2 @@
+# angelOS lock screen: plain password check, no session/account stacks
+auth required pam_unix.so

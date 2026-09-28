@@ -1,0 +1,14 @@
+{
+  "id": "nightlight",
+  "name": "Ночной свет",
+  "version": "1.0.0",
+  "author": "angelOS",
+  "description": "Тёплый экран вечером через wlsunset (6600K днём → 3900K ночью, как было в Noctalia).",
+  "icon": "moon",
+  "enabledByDefault": true,
+  "main": "Main.qml",
+  "settings": "Settings.qml",
+  "menu": [
+    { "label": "Ночной свет: настройки", "icon": "moon", "settings": "plugin:nightlight" }
+  ]
+}

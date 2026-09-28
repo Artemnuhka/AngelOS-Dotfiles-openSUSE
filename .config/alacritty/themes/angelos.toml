@@ -1,0 +1,44 @@
+# angelOS overdose / dark
+[colors.primary]
+background = '#1a0f24'
+foreground = '#ffe1f1'
+
+[colors.cursor]
+text = '#1a0f24'
+cursor = '#ff2e7e'
+
+[colors.vi_mode_cursor]
+text = '#1a0f24'
+cursor = '#b36bff'
+
+[colors.selection]
+text = '#1a0d24'
+background = '#ff2e7e'
+
+[colors.search.matches]
+foreground = '#1a0f24'
+background = '#b36bff'
+
+[colors.search.focused_match]
+foreground = '#1a0f24'
+background = '#ff2e7e'
+
+[colors.normal]
+black   = '#2a1838'
+red     = '#ff4f6d'
+green   = '#57e3a2'
+yellow  = '#ffe066'
+blue    = '#7b8cff'
+magenta = '#ff5cad'
+cyan    = '#4fe3ff'
+white   = '#e8cfe0'
+
+[colors.bright]
+black   = '#6b4f7d'
+red     = '#ff7a93'
+green   = '#8af0c0'
+yellow  = '#fff0a0'
+blue    = '#a3b0ff'
+magenta = '#ff9fd0'
+cyan    = '#9ff0ff'
+white   = '#ffffff'

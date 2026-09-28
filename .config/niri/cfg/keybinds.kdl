@@ -3,22 +3,22 @@ binds {
     // ────────────── Keybindings ──────────────
     // https://github.com/YaLTeR/niri/wiki/Configuration:-Key-Bindings
 
-    // ─── noctalia-shell keybinds ───
+    // ─── angelOS keybinds (were noctalia) ───
     // https://docs.noctalia.dev/getting-started/keybinds/
 
     Mod+Shift+ESCAPE                     { show-hotkey-overlay; }
 
     // ─── Applications ───
-    Mod+T                          hotkey-overlay-title="Open Terminal: kitty" { spawn "kitty"; }
-    Mod+B                               hotkey-overlay-title="Open Browser: default" { spawn-sh "xdg-open about:blank"; }
+    Mod+T                          hotkey-overlay-title="Open Terminal: kitty" { spawn "@HOME@/.local/bin/kitty"; }
+    Mod+B                               hotkey-overlay-title="Open Browser: Helium" { spawn "helium-browser"; }
 
     // --- Noctalia ---
-    Mod+Shift+Return                    hotkey-overlay-title="Open Wallpaper Selector: noctalia wallpaper toggle" { spawn-sh "noctalia msg panel-toggle wallpaper"; }
-    Mod+S                               hotkey-overlay-title="Open Control Center: noctalia controlCenter" { spawn-sh "noctalia msg panel-toggle control-center"; }
-    Mod+Alt+S                           hotkey-overlay-title="Open Settings: noctalia settings" { spawn-sh "noctalia msg settings-toggle"; }
-    Mod+Space                    hotkey-overlay-title="Open App Launcher: noctalia launcher" { spawn-sh "noctalia msg panel-toggle launcher"; }
-    Mod+ALT+L                           hotkey-overlay-title="Lock Screen: noctalia lock" { spawn-sh "noctalia msg session lock"; }
-    Mod+Shift+Q                         hotkey-overlay-title="Session Menu: noctalia sessionMenu" { spawn-sh "noctalia msg panel-toggle session"; }
+    Mod+Shift+Return                    hotkey-overlay-title="angelOS: обои" { spawn-sh "qs -c angelos ipc call angelos settings wallpaper"; }
+    Mod+S                               hotkey-overlay-title="angelOS: настройки" { spawn-sh "qs -c angelos ipc call angelos settings appearance"; }
+    Mod+Alt+S                           hotkey-overlay-title="angelOS: настройки" { spawn-sh "qs -c angelos ipc call angelos settings appearance"; }
+    Mod+Space                    hotkey-overlay-title="angelOS: программы" { spawn-sh "qs -c angelos ipc call angelos launcher"; }
+    Mod+ALT+L                           hotkey-overlay-title="angelOS: блокировка" { spawn-sh "qs -c angelos ipc call angelos lock"; }
+    Mod+Shift+Q                         hotkey-overlay-title="angelOS: выключение" { spawn-sh "qs -c angelos ipc call angelos session"; }
 
     // Please set the text editor of your choice.
     // Mod+Shift+E                               hotkey-overlay-title="Open Text Editor: Zed" { spawn "zed"; }
@@ -26,20 +26,21 @@ binds {
     // Please choose your own file manager.
     Mod+E                               hotkey-overlay-title="File Manager: Nautilus" { spawn "nautilus"; }
 
+
     // ─── Media Controls ───
-    XF86AudioRaiseVolume                allow-when-locked=true { spawn-sh "noctalia msg volume-up"; }
-    XF86AudioLowerVolume                allow-when-locked=true { spawn-sh "noctalia msg volume-down"; }
-    XF86AudioMute                       allow-when-locked=true { spawn-sh "noctalia msg volume-mute"; }
-    XF86AudioMicMute                    allow-when-locked=true { spawn-sh "noctalia msg mic-mute"; }
-    XF86AudioNext                       allow-when-locked=true { spawn-sh "noctalia msg media next"; }
-    XF86AudioPrev                       allow-when-locked=true { spawn-sh "noctalia msg media previous"; }
-    XF86AudioPlay                       allow-when-locked=true { spawn-sh "noctalia msg media toggle"; }
-    XF86AudioPause                      allow-when-locked=true { spawn-sh "noctalia msg media pause"; }
-    XF86AudioStop                       allow-when-locked=true { spawn-sh "noctalia msg media pause"; }
+    XF86AudioRaiseVolume                allow-when-locked=true { spawn-sh "qs -c angelos ipc call angelos volumeUp"; }
+    XF86AudioLowerVolume                allow-when-locked=true { spawn-sh "qs -c angelos ipc call angelos volumeDown"; }
+    XF86AudioMute                       allow-when-locked=true { spawn-sh "qs -c angelos ipc call angelos mute"; }
+    XF86AudioMicMute                    allow-when-locked=true { spawn-sh "qs -c angelos ipc call angelos micMute"; }
+    XF86AudioNext                       allow-when-locked=true { spawn-sh "qs -c angelos ipc call angelos media next"; }
+    XF86AudioPrev                       allow-when-locked=true { spawn-sh "qs -c angelos ipc call angelos media previous"; }
+    XF86AudioPlay                       allow-when-locked=true { spawn-sh "qs -c angelos ipc call angelos media toggle"; }
+    XF86AudioPause                      allow-when-locked=true { spawn-sh "qs -c angelos ipc call angelos media pause"; }
+    XF86AudioStop                       allow-when-locked=true { spawn-sh "qs -c angelos ipc call angelos media pause"; }
 
     // ─── Brightness Controls ───
-    XF86MonBrightnessUp                 allow-when-locked=true { spawn-sh "noctalia msg brightness-up"; }
-    XF86MonBrightnessDown               allow-when-locked=true { spawn-sh "noctalia msg brightness-down"; }
+    // XF86MonBrightnessUp                 allow-when-locked=true { spawn-sh "noctalia msg brightness-up"; }
+    // XF86MonBrightnessDown               allow-when-locked=true { spawn-sh "noctalia msg brightness-down"; }
 
     // ─── Window Movement and Focus ───
     Mod+Q                               { close-window; }
@@ -141,7 +142,7 @@ binds {
 
 
     // ─── Modes ───
-    Mod+V                               hotkey-overlay-title="Clipboard: noctalia" { spawn-sh "noctalia msg panel-toggle clipboard"; }
+    Mod+V                               hotkey-overlay-title="angelOS: буфер обмена" { spawn-sh "qs -c angelos ipc call angelos clipboard"; }
     Mod+Shift+Space                     hotkey-overlay-title="Toggle floating" { toggle-window-floating; }
     Mod+F                               { fullscreen-window; }
     Mod+Shift+F                         { maximize-column; }
@@ -150,7 +151,7 @@ binds {
 
     // ─── Screenshots (Win+Shift+S style) ───
     Mod+Shift+S                         hotkey-overlay-title="Screenshot: region → Screenshots (ropes)" { spawn "@HOME@/.local/bin/niri-screenshot-region"; }
-    Mod+Shift+T                         hotkey-overlay-title="OCR: region to clipboard" { spawn "@HOME@/.local/bin/niri-ocr"; }
+    Mod+Shift+T                         hotkey-overlay-title="OCR: region to clipboard (stone)" { spawn "@HOME@/.local/bin/niri-ocr-region"; }
     Mod+Shift+V                         repeat=false hotkey-overlay-title="Voice: toggle dictation" { spawn "@HOME@/.local/bin/voxtype" "record" "toggle"; }
     CTRL+Shift+2                        { screenshot-screen; }
     CTRL+Shift+3                        { screenshot-window; }
@@ -165,4 +166,8 @@ binds {
     Mod+Shift+P                         { power-off-monitors; } // Turn off screens (useful for OLED or privacy)
     Mod+Shift+X                         repeat=false allow-inhibiting=false hotkey-overlay-title="Privacy: block Telegram Bitwarden Helium Discord" { spawn "@HOME@/.local/bin/niri-cast-privacy"; }
     Mod+O                               hotkey-overlay-title="Previous workspace" { focus-workspace-previous; }
+
+    // ─── angelOS extras ───
+    Mod+Alt+Y                           hotkey-overlay-title="angelOS: лирика вкл/выкл" { spawn-sh "qs -c angelos ipc call angelos lyrics"; }
+    Mod+Alt+T                           hotkey-overlay-title="angelOS: светлая/тёмная" { spawn-sh "qs -c angelos ipc call angelos theme toggle"; }
 }

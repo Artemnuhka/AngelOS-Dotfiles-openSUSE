@@ -1,0 +1,14 @@
+{
+  "mode": "dark", "flavor": "bubblegum",
+  "desk": "#1a0f24", "face": "#241432", "faceAlt": "#2f1a42", "sunken": "#150b1e",
+  "text": "#ffe1f1", "textDim": "#a987b8", "titleText": "#ffffff",
+  "hi": "#4a2c63", "lo": "#0e0716", "edge": "#07030b",
+  "accent": "#ff5cad", "accent2": "#4fe3ff", "accent3": "#ffe066", "accent4": "#a57cff",
+  "title1": "#ff4fa3", "title2": "#7b4dff", "danger": "#ff4f6d", "ok": "#57e3a2",
+  "select": "#ff5cad", "selectText": "#1a0d24", "shadow": "#000000",
+  "color0": "#2a1838", "color1": "#ff4f6d", "color2": "#57e3a2", "color3": "#ffe066",
+  "color4": "#7b8cff", "color5": "#ff5cad", "color6": "#4fe3ff", "color7": "#e8cfe0",
+  "color8": "#6b4f7d", "color9": "#ff7a93", "color10": "#8af0c0", "color11": "#fff0a0",
+  "color12": "#a3b0ff", "color13": "#ff9fd0", "color14": "#9ff0ff", "color15": "#ffffff",
+  "bg": "#1a0f24", "fg": "#ffe1f1", "bgAlt": "#241432"
+}

@@ -18,6 +18,12 @@
       "key": "OS"
     },
     {
+      "type": "disk",
+      "key": "OS Age",
+      "folders": "/",
+      "format": "{days} days"
+    },
+    {
       "type": "host",
       "key": "Host"
     },

@@ -1,0 +1,24 @@
+# angelOS overdose / dark
+[colors-dark]
+foreground=ffe1f1
+background=1a0f24
+regular0=2a1838
+regular1=ff4f6d
+regular2=57e3a2
+regular3=ffe066
+regular4=7b8cff
+regular5=ff5cad
+regular6=4fe3ff
+regular7=e8cfe0
+bright0=6b4f7d
+bright1=ff7a93
+bright2=8af0c0
+bright3=fff0a0
+bright4=a3b0ff
+bright5=ff9fd0
+bright6=9ff0ff
+bright7=ffffff
+selection-foreground=1a0d24
+selection-background=ff2e7e
+cursor=1a0f24 ff2e7e
+urls=b36bff

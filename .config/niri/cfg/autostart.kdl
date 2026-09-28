@@ -1,4 +1,6 @@
 // ────────────── Startup Applications ──────────────
 // https://github.com/YaLTeR/niri/wiki/Configuration:-Miscellaneous#spawn-sh-at-startup
 
-    spawn-at-startup "noctalia"
+    spawn-at-startup "qs" "-c" "angelos" "-n"
+    spawn-at-startup "@HOME@/.local/bin/voxtype" "daemon"
+    spawn-sh-at-startup "systemctl --user start voxtype-indicator.service"

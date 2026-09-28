@@ -8,8 +8,6 @@ OUTDIR="${HOME}/Videos"
 OVERLAY_BIN="${HOME}/.local/bin/niri-record-overlay"
 SELECTOR="${HOME}/.local/bin/niri-screenshot-region"
 FPS="${NIRI_RECORD_FPS:-60}"
-CODEC="${NIRI_RECORD_CODEC:-libx264}"
-CRF="${NIRI_RECORD_CRF:-23}"
 mkdir -p "$OUTDIR"
 
 notify() {
@@ -40,7 +38,7 @@ if [[ -f "$PIDFILE" ]]; then
     rm -f "$PIDFILE"
     stop_overlay
     if [[ -n "$outfile" && -f "$outfile" ]]; then
-      notify "Сохранено (${FPS} fps · ${CODEC})" "$outfile"
+      notify "Сохранено (${FPS} fps · HEVC NVENC)" "$outfile"
     else
       notify "Запись остановлена" "смотри /tmp/niri-record-region.log"
     fi
@@ -72,9 +70,9 @@ if [[ -x "$OVERLAY_BIN" ]]; then
 fi
 
 wf-recorder -g "$geom" -f "$outfile" -r "$FPS" -D \
-  -c "$CODEC" -p crf="$CRF" -b 0 \
+  -c hevc_nvenc -p cq=26 -p preset=p4 -p tune=ll -b 0 \
   >/tmp/niri-record-region.log 2>&1 &
 echo $! >"$PIDFILE"
 disown || true
 
-notify "Запись ${FPS} fps · ${CODEC}" "Meta+Shift+R — стоп · ${outfile##*/}"
+notify "Запись ${FPS} fps · HEVC NVENC" "Meta+Shift+R — стоп · ${outfile##*/}"

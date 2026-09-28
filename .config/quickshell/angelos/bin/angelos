@@ -1,0 +1,16 @@
+#!/bin/sh
+# angelOS control. `angelos help` lists IPC functions.
+#   angelos launcher | settings [page] | lock | session | clipboard | lyrics
+#   angelos theme light|dark|auto|toggle | wallpaper <path|random> | bar taskbar|top|island
+#   angelos start | restart | stop | log | switch angelos|noctalia | status
+SHELL_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/angelos"
+case "$1" in
+  ""|help|-h|--help) sed -n '2,6p' "$0"; exec qs -c angelos ipc show ;;
+  start)   exec setsid -f qs -c angelos -n ;;
+  stop)    exec qs -c angelos kill ;;
+  restart) qs -c angelos kill >/dev/null 2>&1; sleep 0.5; exec setsid -f qs -c angelos -n ;;
+  log)     exec qs -c angelos log -f ;;
+  switch)  shift; exec python3 "$SHELL_DIR/scripts/switch.py" "$@" ;;
+  settings) exec qs -c angelos ipc call angelos settings "${2:-}" ;;
+  *)       exec qs -c angelos ipc call angelos "$@" ;;
+esac

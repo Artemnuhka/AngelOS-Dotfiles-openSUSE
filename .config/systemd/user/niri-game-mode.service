@@ -1,12 +1,12 @@
 [Unit]
-Description=Niri game mode: disable effects while a window covers an output
 ConditionEnvironment=XDG_CURRENT_DESKTOP=niri
+Description=niri game mode: drop animations and effects on fullscreen
 PartOf=graphical-session.target
 After=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart=%h/.local/bin/niri-game-mode --watch
+ExecStart=@HOME@/.local/bin/niri-game-mode --watch
 Restart=always
 RestartSec=2
 Environment=XDG_RUNTIME_DIR=%t

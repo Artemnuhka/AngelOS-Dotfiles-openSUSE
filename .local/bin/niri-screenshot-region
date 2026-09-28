@@ -30,10 +30,7 @@ SLACK_BORDER = 1.0  # rigid length; tiny motion from residual gravity
 GRAVITY_SIDE = 8.0   # left/right perimeter — almost cable-taut
 SLACK_SIDE = 1.0
 SLACK_TETHER = 1.06  # tighter corner tethers
-ROPE_WIDTH = 2.4
-ROPE_COLOR = (0.82, 0.68, 0.42, 1.0)
-ROPE_DARK = (0.45, 0.32, 0.18, 0.9)
-TETHER_COLOR = (0.78, 0.62, 0.36, 0.95)
+PHYSICS_SUBSTEPS = 2  # integrate in smaller steps so fast drags don't overshoot/jitter
 MIN_SIZE = 4
 GEOMETRY_ONLY = "--geometry" in sys.argv
 
@@ -89,7 +86,10 @@ def step_rope(rope: Rope, dt: float):
         p.px, p.py = p.x, p.y
         p.x += vx
         p.y += vy + g
-    iters = (10 if rope.gravity <= 10 else 6) if rope.kind == "border" else 4
+    if rope.kind == "border":
+        iters = 10 if rope.gravity <= 10 else 6
+    else:
+        iters = 8  # more segments than before need more passes to hold rest length
     for _ in range(iters):
         for i in range(len(rope.pts) - 1):
             a = rope.pts[i]
@@ -223,7 +223,8 @@ class ScreenOverlay(Gtk.Window):
             for rope in self.app.ropes:
                 self._draw_rope(cr, rope)
 
-            # corner pins
+            # corner pins (reset antialiasing: ropes leave it disabled for the pixel look)
+            cr.set_antialias(cairo.ANTIALIAS_DEFAULT)
             cr.set_source_rgba(0.95, 0.85, 0.55, 1.0)
             for cx, cy in ((x, y), (x + w, y), (x + w, y + h), (x, y + h)):
                 cr.arc(cx - self.geo.x, cy - self.geo.y, 3.2, 0, 2 * math.pi)
@@ -244,31 +245,32 @@ class ScreenOverlay(Gtk.Window):
         cell = 3
         thick = 7 if rope.kind == "border" else 6
 
-        def path():
-            cr.move_to(rope.pts[0].x - ox, rope.pts[0].y - oy)
-            for p in rope.pts[1:]:
-                cr.line_to(p.x - ox, p.y - oy)
-
         cr.set_line_cap(cairo.LINE_CAP_ROUND)
         cr.set_line_join(cairo.LINE_JOIN_ROUND)
-        # outline
-        cr.set_line_width(thick + 2 * cell)
+        # build the line path once, reuse it for all three stroke widths instead of
+        # rebuilding it 3x (stroke_preserve keeps the path around for the next stroke)
+        cr.move_to(rope.pts[0].x - ox, rope.pts[0].y - oy)
+        for p in rope.pts[1:]:
+            cr.line_to(p.x - ox, p.y - oy)
+        cr.set_line_width(thick + 2 * cell)  # outline
         cr.set_source_rgba(*C_OUT)
-        path()
-        cr.stroke()
-        # dark core
-        cr.set_line_width(thick)
+        cr.stroke_preserve()
+        cr.set_line_width(thick)  # dark core
         cr.set_source_rgba(*C_DARK)
-        path()
-        cr.stroke()
-        # mid body
-        cr.set_line_width(thick - 2)
+        cr.stroke_preserve()
+        cr.set_line_width(thick - 2)  # mid body
         cr.set_source_rgba(*C_MID)
-        path()
         cr.stroke()
-        # light braid ticks along length (sparse = fast)
-        dist_acc = 0.0
+
+        # braid ticks + end knots: batch every pixel by color so each color is a
+        # single fill() call per rope instead of one fill() per pixel
+        batches: dict = {}
+
+        def add(px, py, col):
+            batches.setdefault(col, []).append((round(px / cell) * cell, round(py / cell) * cell))
+
         step = cell * 2
+        dist_acc = 0.0
         for i in range(len(rope.pts) - 1):
             a, b = rope.pts[i], rope.pts[i + 1]
             dx, dy = b.x - a.x, b.y - a.y
@@ -277,25 +279,14 @@ class ScreenOverlay(Gtk.Window):
             nx, ny = -uy, ux
             t = 0.0
             while t < seg:
-                if int((dist_acc + t) / step) != int((dist_acc + t - 0.01) / step) or t == 0:
-                    phase = int((dist_acc + t) / step)
-                    twist = 1 if (phase % 2) == 0 else -1
-                    px = a.x + ux * t - ox + nx * twist * 1.5
-                    py = a.y + uy * t - oy + ny * twist * 1.5
-                    col = C_LIT if (phase % 3) == 0 else C_MID
-                    cr.set_source_rgba(*col)
-                    cr.rectangle(round(px / cell) * cell, round(py / cell) * cell, cell, cell)
-                    cr.fill()
-                    # opposite dark fiber
-                    px2 = a.x + ux * t - ox - nx * twist * 1.5
-                    py2 = a.y + uy * t - oy - ny * twist * 1.5
-                    cr.set_source_rgba(*C_DARK)
-                    cr.rectangle(round(px2 / cell) * cell, round(py2 / cell) * cell, cell, cell)
-                    cr.fill()
+                phase = int((dist_acc + t) / step)
+                twist = 1 if (phase % 2) == 0 else -1
+                col = C_LIT if (phase % 3) == 0 else C_MID
+                add(a.x + ux * t - ox + nx * twist * 1.5, a.y + uy * t - oy + ny * twist * 1.5, col)
+                add(a.x + ux * t - ox - nx * twist * 1.5, a.y + uy * t - oy - ny * twist * 1.5, C_DARK)
                 t += step
             dist_acc += seg
 
-        # end knots
         for p in (rope.pts[0], rope.pts[-1]):
             kx, ky = p.x - ox, p.y - oy
             for dx, dy, col in (
@@ -305,9 +296,13 @@ class ScreenOverlay(Gtk.Window):
                 (0, -cell, C_DARK),
                 (0, cell, C_LIT),
             ):
-                cr.set_source_rgba(*col)
-                cr.rectangle(round((kx + dx) / cell) * cell, round((ky + dy) / cell) * cell, cell, cell)
-                cr.fill()
+                add(kx + dx, ky + dy, col)
+
+        for col, pts in batches.items():
+            cr.set_source_rgba(*col)
+            for px, py in pts:
+                cr.rectangle(px, py, cell, cell)
+            cr.fill()
 
 
 class ScreenshotApp:
@@ -334,7 +329,14 @@ class ScreenshotApp:
             )
             self.windows[0].grab_focus()
 
-        GLib.timeout_add(5, self._tick)  # ~200Hz physics + draw
+        # draw at the real monitor refresh rate instead of a fixed 200fps —
+        # avoids wasted cairo/compositor work on 60/120/144Hz screens
+        rates = [w.monitor.get_refresh_rate() for w in self.windows]
+        rates = [r for r in rates if r and r > 0]
+        hz = max(rates) / 1000.0 if rates else 165.0
+        self._redraw_interval = 1.0 / min(max(hz, 30.0), 240.0)
+
+        GLib.timeout_add(5, self._tick)  # ~200Hz physics tick; drawing is throttled separately
 
     def selection_global(self):
         if not self.dragging and abs(self.x1 - self.x0) < 1 and abs(self.y1 - self.y0) < 1:
@@ -442,6 +444,13 @@ class ScreenshotApp:
         geom = f"{x},{y} {w}x{h}"
         try:
             subprocess.run(["grim", "-g", geom, path], check=True)
+            pling = os.path.expanduser("~/.local/share/sounds/screenshot-pling.ogg")
+            if os.path.isfile(pling):
+                subprocess.Popen(
+                    ["pw-play", "--volume", "0.75", pling],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
             with open(path, "rb") as f:
                 subprocess.run(
                     ["wl-copy", "--type", "image/png"],
@@ -487,12 +496,15 @@ class ScreenshotApp:
         dt = min(now - self._last, 0.01)
         self._last = now
         if self.ropes:
-            for rope in self.ropes:
-                step_rope(rope, dt)
-            # target ~200fps redraw on active monitor
+            # smaller substeps keep the constraint solver stable when the
+            # selection anchor jumps a lot between ticks (fast mouse drags)
+            sub_dt = dt / PHYSICS_SUBSTEPS
+            for _ in range(PHYSICS_SUBSTEPS):
+                for rope in self.ropes:
+                    step_rope(rope, sub_dt)
             if not hasattr(self, "_last_draw"):
                 self._last_draw = 0.0
-            if now - self._last_draw >= (1 / 200):
+            if now - self._last_draw >= self._redraw_interval:
                 self._last_draw = now
                 self.redraw()
         return True
