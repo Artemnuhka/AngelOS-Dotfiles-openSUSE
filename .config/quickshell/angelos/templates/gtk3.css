@@ -25,3 +25,21 @@
 @define-color theme_selected_fg_color @accent_fg_color;
 @define-color theme_unfocused_selected_bg_color @accent_bg_color;
 @define-color theme_unfocused_selected_fg_color @accent_fg_color;
+
+/* Square desktop decorations, matching angelOS windows and menus. */
+window,
+window.csd,
+window.solid-csd,
+decoration,
+.window-frame,
+headerbar,
+.titlebar,
+.titlebar .titlebutton,
+menu,
+.menu,
+popover,
+popover.background,
+tooltip,
+tooltip.background {
+    border-radius: 0;
+}

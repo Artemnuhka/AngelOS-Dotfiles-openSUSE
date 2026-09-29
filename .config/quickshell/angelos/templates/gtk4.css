@@ -54,4 +54,27 @@
     --sidebar-fg-color: {{fg}};
     --success-color: {{ok}};
     --warning-color: {{accent3}};
+    --window-radius: 0px;
+}
+
+/* Keep floating windows square too; libadwaita inherits this into content. */
+window {
+    --window-radius: 0px;
+}
+
+/* Square desktop decorations, including libadwaita in-window dialogs. */
+window,
+window.csd,
+window.solid-csd,
+headerbar,
+.titlebar,
+windowcontrols button,
+popover,
+popover > contents,
+tooltip,
+tooltip.background,
+floating-sheet > sheet,
+dialog sheet,
+dialog sheet > outline {
+    border-radius: 0;
 }

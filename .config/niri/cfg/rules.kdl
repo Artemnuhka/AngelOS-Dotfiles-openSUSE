@@ -11,13 +11,12 @@ window-rule {
     default-floating-position x=10 y=10 relative-to="bottom-right"
 }
 
-// Liquid Glass base style for normal windows.
-// niri supplies the real backdrop blur; opacity lets it show through.
+// Square window and popup geometry matches angelOS pixel decorations.
 window-rule {
     exclude app-id="^liquid-glass-test$"
     exclude app-id="^org.quickshell$" title="^angelOS"
     opacity 1.0
-    geometry-corner-radius 14
+    geometry-corner-radius 0
     clip-to-geometry true
 
     // blur/saturation off — with focus-follows-mouse the glass effect
@@ -29,7 +28,7 @@ window-rule {
 
     popups {
         opacity 1.0
-        geometry-corner-radius 12
+        geometry-corner-radius 0
         background-effect {
             blur false
             xray false
@@ -38,7 +37,7 @@ window-rule {
 }
 
 // Inactive opacity dimming removed — with focus-follows-mouse it made
-// windows "shine" on hover (0.90 → 0.94). Keep uniform Liquid Glass opacity.
+// windows "shine" on hover (0.90 → 0.94). Keep uniform opacity.
 
     // Floating Noctalia settings window.
     window-rule {
