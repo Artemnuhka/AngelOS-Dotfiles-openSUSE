@@ -31,11 +31,12 @@ PanelWindow {
     // target rect in screen coordinates
     readonly property rect hole: {
         Tour.revision;
-        if (!step || step.key === "end")
+        if (!Tour.running || !step || step.key === "end")
             return Qt.rect(width / 2, height / 2, 0, 0);
         if (step.key === "desktop")
             return Qt.rect(width / 2 - Theme.u * 60, height / 2 - Theme.u * 60, Theme.u * 120, Theme.u * 120);
-        if (!tgt || !tgt.item || !tgt.window)
+        // registered items can already be gone (a reload tears the bars down first)
+        if (!tgt || !tgt.item || !tgt.window || typeof tgt.item.mapToItem !== "function" || !tgt.window.contentItem)
             return Qt.rect(width / 2, height / 2, 0, 0);
         const w = tgt.window, it = tgt.item;
         const p = it.mapToItem(w.contentItem, 0, 0);

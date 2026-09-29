@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import qs.config
 import qs.services
 import qs.widgets
@@ -119,6 +120,32 @@ PxPage {
                 placeholder: "#c77dff"
                 onEdited: if (/^#[0-9a-f]{6}$/i.test(text))
                     Config.appearance.customAccent = text
+            }
+        }
+        SettingRow {
+            visible: Config.appearance.flavor === "wallpaper"
+            label: I18n.t("Следовать за обоями", "Follow the wallpaper")
+            hint: I18n.t("новые обои — новые цвета, автоматически", "New wallpaper, new colours — automatically")
+            PxToggle {
+                checked: Config.appearance.autoWallpaperColors
+                onToggled: c => Config.appearance.autoWallpaperColors = c
+            }
+        }
+        SettingRow {
+            visible: Config.appearance.flavor === "wallpaper" && Config.appearance.autoWallpaperColors && Quickshell.screens.length > 1
+            label: I18n.t("Экран с обоями", "Wallpaper screen")
+            hint: I18n.t("чьи обои задают цвета", "Whose wallpaper sets the colours")
+            PxCombo {
+                width: Theme.u * 100
+                model: [{
+                        "label": I18n.t("Основной", "Primary"),
+                        "value": ""
+                    }].concat(Quickshell.screens.map(s => ({
+                            "label": s.name,
+                            "value": s.name
+                        })))
+                currentValue: Config.appearance.paletteScreen
+                onActivated: v => Config.appearance.paletteScreen = v
             }
         }
         PxText {

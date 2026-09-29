@@ -31,6 +31,9 @@ Singleton {
     property alias voxtype: adapter.voxtype
     property alias desktop: adapter.desktop
     property alias lock: adapter.lock
+    property alias idle: adapter.idle
+    property alias sidebar: adapter.sidebar
+    property alias capture: adapter.capture
     property alias plugins: adapter.plugins
     property alias dotfiles: adapter.dotfiles
     property alias system: adapter.system
@@ -61,7 +64,7 @@ Singleton {
     Process {
         id: mkdirs
         running: true
-        command: ["mkdir", "-p", root.dir, root.pluginsDir, root.templatesDir, root.stateDir, root.cacheDir + "/lyrics"]
+        command: ["sh", "-c", 'mkdir -p "$@" && chmod 700 "$4"', "sh", root.dir, root.pluginsDir, root.templatesDir, root.stateDir, root.cacheDir + "/lyrics"]
     }
 
     FileView {
@@ -94,6 +97,11 @@ Singleton {
                 property bool shadows: true         // hard pixel drop shadows
                 property bool themeApps: true       // render templates for kitty/foot/gtk/niri
                 property var disabledTemplates: []
+                property string fontTitle: ""       // "" = Pixeloid Sans
+                property string fontBody: ""        // "" = CozetteVector
+                property string fontMono: ""        // "" = Pixeloid Mono
+                property bool autoWallpaperColors: true // flavor "wallpaper": follow wallpaper changes
+                property string paletteScreen: ""  // screen whose wallpaper feeds the palette; "" = first
             }
 
             property JsonObject bar: JsonObject {
@@ -111,6 +119,9 @@ Singleton {
                 property bool showSeconds: false
                 property string startLabel: "angelOS"
                 property string logoStyle: "classic" // classic | angel
+                property bool metaTap: true         // a short Meta tap opens Start (Windows-like)
+                property int metaTapMs: 400         // longer presses are holds, not taps
+                property bool metaTapFullscreen: false // also over fullscreen windows / games
                 property var layout: ({})           // {left:[], center:[], right:[]}; empty = defaults
                 property var hidden: []             // widget ids removed from the bar
                 property string trayTint: "accent"  // off | mono | accent — recolor tray icons to the theme
@@ -133,6 +144,7 @@ Singleton {
                 property bool indicator: false      // heart strip on the right edge
                 property int popupMs: 650
                 property bool phrases: true
+                property string switchFx: "soft"    // soft | slide | bounce | teleport | pixel | heart | glitch | instant
                 property var names: ({})            // "DP-1:1" -> "работа"
             }
 
@@ -143,6 +155,7 @@ Singleton {
                 property string artwork: "note"          // note | cover
                 property bool typewriter: true
                 property string preferPlayer: "spotify"
+                property var sources: ["lrclib", "netease", "ovh"] // tried in this order
             }
 
             property JsonObject setup: JsonObject {
@@ -183,6 +196,33 @@ Singleton {
             property JsonObject lock: JsonObject {
                 property int idleMinutes: 0         // 0 = never lock automatically
                 property bool pixelate: true
+                property bool hearts: true          // floating pixel hearts
+                property bool reactions: true       // hearts on typing, a broken heart on a mistake, a burst on unlock
+                property bool indicators: true      // Caps Lock, layout, battery, time locked, missed notifications
+                property bool stream: false         // NGO stream overlay: LIVE badge, viewers, cute chat
+                property string streamTitle: ""      // "" = "angel is on a break" 
+            }
+
+            property JsonObject idle: JsonObject {
+                property int minutes: 0             // start the idle screen after N idle minutes; 0 = by hand only
+                property string text: ""            // "" = angelOS ASCII art
+                property string effect: "random"    // random | decrypt | rain | beams | wave | typewriter | hearts | glitch
+                property string colors: "accent"    // accent | mono | rainbow
+                property bool clock: true
+                property bool allScreens: true
+            }
+
+            property JsonObject sidebar: JsonObject {
+                property bool enabled: false        // experimental
+                property string screen: ""          // "" = first screen
+                property string edge: "right"       // left | right | top | bottom — where the tab sits
+                property real offset: 0.5           // tab position along that edge, 0..1
+                property var sections: ["toggles", "media", "sound", "system", "ai"]
+            }
+
+            property JsonObject capture: JsonObject {
+                property string skin: "ropes"       // ropes | window | stream — region selector and recording overlay
+                property bool themeColors: false    // NGO skins in the angelOS theme instead of the NGO palette
             }
 
             property JsonObject plugins: JsonObject {
@@ -203,13 +243,16 @@ Singleton {
                 property string monitor: "auto"
                 property string monitorProgram: ""
                 property bool monitorInTerminal: false
+                property bool nautilusDefaults: false // angelOS Nautilus extensions + prefs applied once
             }
 
             property JsonObject developer: JsonObject {
                 property bool enabled: false
-                property string provider: "openai"
+                property string provider: "claude-cli" // claude-cli | codex-cli (browser login) | openai | anthropic (API key)
                 property string openaiModel: "gpt-5.4"
                 property string anthropicModel: "claude-sonnet-4-6"
+                property string claudeCliModel: ""  // "" = the CLI default; aliases like sonnet / opus work
+                property string codexCliModel: ""
                 property int maxOutputTokens: 16000
             }
         }

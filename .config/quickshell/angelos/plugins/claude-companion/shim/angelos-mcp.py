@@ -361,11 +361,11 @@ def _set_wallpaper(a):
     """Set a wallpaper by path, or switch to a random one if no path given."""
     path = str(a.get("path") or "").strip()
     conn = str(a.get("connector") or "").strip()
-    if path:
-        argv = ["qs", "-c", "angelos", "ipc", "call", "angelos", "wallpaper", path]
-    else:
-        argv = ["qs", "-c", "angelos", "ipc", "call", "angelos", "wallpaper", "random"]
-    return sh(argv)
+    if conn and not re.fullmatch(r"[A-Za-z0-9._-]{1,32}", conn):
+        return "error: invalid connector name"
+    if conn:
+        return sh(["qs", "-c", "angelos", "ipc", "call", "angelos", "wallpaperOn", conn, path or "random"])
+    return sh(["qs", "-c", "angelos", "ipc", "call", "angelos", "wallpaper", path or "random"])
 
 
 # ── presence (the agent's own voice) ──────────────────────────────────────────
@@ -529,8 +529,10 @@ TOOLS = {
     "set_color_scheme": (
         "Set the angelOS palette flavor.",
         {
-            "name": {"type": "string", "enum": ["bubblegum", "overdose", "cyberangel"],
-                     "description": "Palette flavor"},
+            "name": {"type": "string",
+                     "enum": ["overdose", "bubblegum", "cyberangel", "wallpaper", "gruvbox", "rosepine",
+                              "catppuccin", "nord", "dracula", "tokyonight", "solarized", "everforest"],
+                     "description": "Palette flavor ('wallpaper' derives it from the wallpaper)"},
         },
         lambda a: sh(["qs", "-c", "angelos", "ipc", "call", "angelos", "flavor", a.get("name", "bubblegum")]),
     ),

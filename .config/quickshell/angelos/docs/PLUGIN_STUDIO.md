@@ -4,10 +4,20 @@
 
 1. **Настройки → System → Разработка → Режим разработчика.**
    В настройках и меню «Пуск» появится **Мастер плагинов**.
-2. Выбери **OpenAI** или **Claude / Anthropic**, вставь API-ключ и нажми
-   **Сохранить ключ**. При необходимости укажи другой API ID модели.
-   Нужна модель с поддержкой structured outputs. Запросы оплачиваются через
-   API; подписка ChatGPT/Codex или Claude не заменяет ключ с доступом к API.
+2. Выбери, как подключаться:
+   - **Claude · вход через браузер** или **Codex · вход через ChatGPT** — без
+     API-ключа. Мастер использует установленные `claude` (Claude Code) или
+     `codex` и твою подписку. Кнопка **Войти через браузер** открывает терминал с
+     `claude auth login` / `codex login`, они сами открывают браузер; затем
+     **Проверить вход**. angelOS не видит токены входа.
+     Claude запускается без инструментов, MCP и пользовательских настроек/хуков
+     (`--tools "" --strict-mcp-config --setting-sources ""`), API-ключ из окружения
+     убирается, чтобы шла именно подписка. Codex — без shell, веб-поиска, MCP,
+     computer use и приложений, песочница только на чтение, в пустой временной папке.
+     Запросы расходуют лимиты подписки. Модель можно оставить пустой.
+   - **OpenAI API** или **Anthropic API** — вставь API-ключ и нажми
+     **Сохранить ключ**; запросы оплачиваются отдельно через API. Нужна модель с
+     поддержкой structured outputs.
 3. Опиши идею. Мастер объяснит, что будет делать плагин, предложит размеры,
    настройки, источники данных и зависимости. Если нужны уточнения, ответь
    в поле запроса; кнопки вариантов ответа добавляют текст в это поле.
@@ -75,9 +85,16 @@ Python, JSON и shell. Проверка синтаксиса не гаранти
 ## English
 
 Enable **Settings → System → Development → Developer mode**. Open
-**Plugin Studio** in Settings or Start, choose OpenAI or Anthropic, and save
-an API key. The model ID and output token limit are editable. The model must
-support structured outputs; API billing is separate from subscription access.
+**Plugin Studio** in Settings or Start and pick a connection:
+
+- **Claude · browser sign-in** / **Codex · ChatGPT sign-in** use the local
+  `claude` or `codex` CLI and your subscription — no API key. **Sign in via
+  browser** opens a terminal with `claude auth login` / `codex login`; then
+  **Check sign-in**. angelOS never sees the tokens. Claude runs with no tools,
+  MCP or user settings/hooks; Codex without shell, web search, MCP or computer
+  use, read-only, in an empty temporary folder.
+- **OpenAI API** / **Anthropic API** need an API key (separate API billing).
+  The model must support structured outputs.
 
 Describe the plugin, answer any questions, review its proposed behavior,
 size, data sources and settings, then approve generation. Review the files

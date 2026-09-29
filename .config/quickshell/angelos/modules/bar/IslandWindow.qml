@@ -18,6 +18,7 @@ PanelWindow {
     implicitWidth: Math.min(modelData.width - Theme.u * 8, row.implicitWidth + Theme.u * 12)
     implicitHeight: Theme.u * 20
     exclusiveZone: implicitHeight + Theme.u * 2
+    exclusionMode: Shell.dev ? ExclusionMode.Ignore : ExclusionMode.Normal
     color: "transparent"
     WlrLayershell.namespace: "angelos-bar"
     WlrLayershell.layer: WlrLayer.Top

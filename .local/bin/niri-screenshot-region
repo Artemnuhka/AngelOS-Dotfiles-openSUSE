@@ -35,6 +35,21 @@ MIN_SIZE = 4
 GEOMETRY_ONLY = "--geometry" in sys.argv
 
 
+def load_skin():
+    """angelOS skin (Settings → Screenshots): None keeps the ropes."""
+    try:
+        base = os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
+        sys.path.insert(0, os.path.join(base, "quickshell/angelos/scripts"))
+        import capture_skins
+        name = next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--skin=")), None)
+        return capture_skins.load(name)
+    except Exception:
+        return None
+
+
+SKIN = load_skin()
+
+
 @dataclass
 class Particle:
     x: float
@@ -201,6 +216,14 @@ class ScreenOverlay(Gtk.Window):
         cr.set_operator(cairo.OPERATOR_SOURCE)
         cr.set_source_rgba(0, 0, 0, 0)
         cr.paint()
+
+        if SKIN is not None:
+            cr.set_operator(cairo.OPERATOR_OVER)
+            cr.set_antialias(cairo.ANTIALIAS_NONE)
+            sel = self.app.selection_global()
+            local = None if sel is None else (sel[0] - self.geo.x, sel[1] - self.geo.y, sel[2], sel[3])
+            SKIN.draw_select(cr, self.win_w, self.win_h, local)
+            return False
 
         cr.set_operator(cairo.OPERATOR_OVER)
         # dim whole output
@@ -493,6 +516,12 @@ class ScreenshotApp:
         if self._done:
             return False
         now = time.monotonic()
+        if SKIN is not None:
+            # skins animate on their own clock; no rope physics
+            if now - getattr(self, "_last_draw", 0.0) >= 1.0 / SKIN.fps:
+                self._last_draw = now
+                self.redraw(all_monitors=True)
+            return True
         dt = min(now - self._last, 0.01)
         self._last = now
         if self.ropes:

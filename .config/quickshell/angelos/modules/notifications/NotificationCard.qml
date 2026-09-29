@@ -102,13 +102,13 @@ PxWindow {
                 PxText {
                     width: parent.width
                     visible: text !== ""
-                    text: root.notification ? root.notification.body : ""
+                    text: root.notification ? Notifs.safeMarkup(root.notification.body) : ""
                     textFormat: Text.StyledText
                     wrapMode: Text.Wrap
                     maximumLineCount: 5
                     elide: Text.ElideRight
                     linkColor: Theme.accent2
-                    onLinkActivated: l => Qt.openUrlExternally(l)
+                    onLinkActivated: l => Notifs.openLink(l)
                 }
             }
         }

@@ -90,7 +90,8 @@ PxPage {
             width: parent.width
             spacing: Theme.u * 4
             PxText {
-                text: (Config.developer.provider === "anthropic" ? "Claude" : "OpenAI") + " · " + PluginStudio.model + " · " + (PluginStudio.hasKey ? I18n.t("ключ сохранён", "key saved") : I18n.t("нужен API-ключ", "API key needed"))
+                readonly property var p: PluginStudio.providers.find(x => x.value === Config.developer.provider)
+                text: (p ? p.label : Config.developer.provider) + " · " + (PluginStudio.model || I18n.t("модель по умолчанию", "default model")) + " · " + (PluginStudio.isCli ? (!PluginStudio.cliState.installed ? I18n.t("CLI не установлен", "CLI not installed") : PluginStudio.cliState.loggedIn ? I18n.t("вход выполнен ♡", "signed in ♡") : I18n.t("нужно войти", "sign-in needed")) : (PluginStudio.hasKey ? I18n.t("ключ сохранён", "key saved") : I18n.t("нужен API-ключ", "API key needed")))
                 wrapMode: Text.Wrap
                 width: Math.min(implicitWidth, parent.width)
             }
@@ -109,71 +110,111 @@ PxPage {
                 label: I18n.t("Провайдер", "Provider")
                 PxCombo {
                     width: parent.width
-                    model: [{label: "OpenAI", value: "openai"}, {label: "Claude · Anthropic", value: "anthropic"}]
+                    model: PluginStudio.providers
                     currentValue: Config.developer.provider
                     onActivated: value => {
                         apiKey.text = "";
                         Config.developer.provider = value;
+                        PluginStudio.refresh();
                     }
                 }
             }
             SettingRow {
-                label: I18n.t("Модель · API ID", "Model · API ID")
+                label: PluginStudio.isCli ? I18n.t("Модель", "Model") : I18n.t("Модель · API ID", "Model · API ID")
+                hint: PluginStudio.isCli ? I18n.t("пусто — модель по умолчанию в CLI", "Empty uses the CLI default") : ""
                 PxField {
                     width: parent.width
                     text: PluginStudio.model
-                    onEdited: {
-                        if (Config.developer.provider === "anthropic")
-                            Config.developer.anthropicModel = text.trim();
-                        else
-                            Config.developer.openaiModel = text.trim();
-                    }
+                    placeholder: Config.developer.provider === "claude-cli" ? "sonnet / opus" : Config.developer.provider === "codex-cli" ? I18n.t("как в ~/.codex/config.toml", "as in ~/.codex/config.toml") : ""
+                    onEdited: PluginStudio.setModel(text.trim())
                 }
             }
-            SettingRow {
-                label: "API key"
-                hint: PluginStudio.hasKey ? I18n.t("Сохранён. Вставь новый, чтобы заменить.", "Saved. Paste a new key to replace it.") : ""
-                PxField {
-                    id: apiKey
-                    width: parent.width
-                    password: true
-                    placeholder: Config.developer.provider === "anthropic" ? "Anthropic API key" : "OpenAI API key"
-                }
-            }
-            Flow {
+
+            // ---- browser sign-in through the official CLI ----
+            Column {
+                visible: PluginStudio.isCli
                 width: parent.width
                 spacing: Theme.u * 3
-                PxButton {
-                    text: I18n.t("Сохранить ключ", "Save key")
-                    icon: "lock"
-                    enabled: apiKey.text.trim().length > 0
-                    onClicked: {
-                        if (PluginStudio.send("save_key", {key: apiKey.text.trim()}))
-                            apiKey.text = "";
+                PxText {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: PluginStudio.hasKey ? Theme.ok : Theme.textDim
+                    text: !PluginStudio.cliState.installed ? (Config.developer.provider === "codex-cli" ? I18n.t("Codex CLI не найден. Установи: sudo pacman -S openai-codex (или npm i -g @openai/codex).", "Codex CLI not found. Install it: sudo pacman -S openai-codex (or npm i -g @openai/codex).") : I18n.t("Claude Code не найден. Установи его: https://claude.com/claude-code", "Claude Code not found. Install it from https://claude.com/claude-code")) : PluginStudio.cliState.loggedIn ? I18n.t("Вход выполнен", "Signed in") + (PluginStudio.cliState.method ? " (" + PluginStudio.cliState.method + ")" : "") + " ♡" : I18n.t("Не выполнен вход.", "Not signed in.")
+                }
+                Flow {
+                    width: parent.width
+                    spacing: Theme.u * 3
+                    PxButton {
+                        visible: !!PluginStudio.cliState.installed
+                        text: PluginStudio.cliState.loggedIn ? I18n.t("Войти заново", "Sign in again") : I18n.t("Войти через браузер", "Sign in via browser")
+                        icon: "lock"
+                        accent: !PluginStudio.cliState.loggedIn
+                        onClicked: PluginStudio.login()
+                    }
+                    PxButton {
+                        text: I18n.t("Проверить вход", "Check sign-in")
+                        icon: "refresh"
+                        onClicked: PluginStudio.refresh()
                     }
                 }
-                PxButton {
-                    text: I18n.t("Удалить ключ", "Delete key")
-                    enabled: PluginStudio.hasKey
-                    onClicked: PluginStudio.send("delete_key")
+                PxText {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    dim: true
+                    text: Config.developer.provider === "codex-cli" ? I18n.t("Запросы идут через твой Codex CLI и расходуют лимиты ChatGPT-подписки (или провайдера из ~/.codex/config.toml). Codex запускается без shell, веб-поиска, MCP и computer use, в пустой папке и только на чтение.", "Requests go through your Codex CLI and use your ChatGPT plan limits (or the provider in ~/.codex/config.toml). Codex runs without shell, web search, MCP or computer use, in an empty read-only folder.") : I18n.t("Запросы идут через Claude Code и расходуют лимиты подписки Claude. Claude запускается без инструментов, MCP и твоих настроек/хуков, в пустой папке. API-ключ из окружения не используется.", "Requests go through Claude Code and use your Claude plan limits. Claude runs without tools, MCP or your settings/hooks, in an empty folder. An API key in the environment is ignored.")
                 }
             }
-            SettingRow {
-                label: I18n.t("Лимит ответа", "Output limit")
-                hint: I18n.t("Токенов на генерацию", "Tokens per generation")
-                PxSpin {
-                    from: 2048
-                    to: 32000
-                    stepSize: 1000
-                    value: Config.developer.maxOutputTokens
-                    onMoved: value => Config.developer.maxOutputTokens = value
-                }
-            }
-            PxText {
+
+            // ---- API key (paid API access) ----
+            Column {
+                visible: !PluginStudio.isCli
                 width: parent.width
-                wrapMode: Text.Wrap
-                text: I18n.t("Нужен ключ API с отдельным балансом; подписка ChatGPT/Codex или Claude его не заменяет. Запросы платные. Ключ хранится локально в закрытом файле, отдельно от плагинов. Провайдер получает диалог и документацию angelOS.", "Use an API key with API billing; a ChatGPT/Codex or Claude subscription does not replace it. API requests are paid. The key stays in a private local file, separate from plugins. The provider receives the conversation and angelOS documentation.")
-                dim: true
+                spacing: Theme.u * 5
+                SettingRow {
+                    label: "API key"
+                    hint: PluginStudio.hasKey ? I18n.t("Сохранён. Вставь новый, чтобы заменить.", "Saved. Paste a new key to replace it.") : ""
+                    PxField {
+                        id: apiKey
+                        width: parent.width
+                        password: true
+                        placeholder: Config.developer.provider === "anthropic" ? "Anthropic API key" : "OpenAI API key"
+                    }
+                }
+                Flow {
+                    width: parent.width
+                    spacing: Theme.u * 3
+                    PxButton {
+                        text: I18n.t("Сохранить ключ", "Save key")
+                        icon: "lock"
+                        enabled: apiKey.text.trim().length > 0
+                        onClicked: {
+                            if (PluginStudio.send("save_key", {key: apiKey.text.trim()}))
+                                apiKey.text = "";
+                        }
+                    }
+                    PxButton {
+                        text: I18n.t("Удалить ключ", "Delete key")
+                        enabled: PluginStudio.hasKey
+                        onClicked: PluginStudio.send("delete_key")
+                    }
+                }
+                SettingRow {
+                    label: I18n.t("Лимит ответа", "Output limit")
+                    hint: I18n.t("Токенов на генерацию", "Tokens per generation")
+                    PxSpin {
+                        from: 2048
+                        to: 32000
+                        stepSize: 1000
+                        value: Config.developer.maxOutputTokens
+                        onMoved: value => Config.developer.maxOutputTokens = value
+                    }
+                }
+                PxText {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    text: I18n.t("Нужен ключ API с отдельным балансом; запросы платные. Без ключа выбери «вход через браузер» — тогда хватит подписки Claude или ChatGPT. Ключ хранится локально в закрытом файле, отдельно от плагинов. Провайдер получает диалог и документацию angelOS.", "An API key uses separate, paid API billing. Without one, pick a browser sign-in provider — a Claude or ChatGPT subscription is enough. The key stays in a private local file, separate from plugins. The provider receives the conversation and angelOS documentation.")
+                    dim: true
+                }
             }
         }
     }

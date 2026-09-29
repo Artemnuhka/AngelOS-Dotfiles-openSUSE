@@ -33,8 +33,18 @@ Item {
                     "icon": "palette"
                 },
                 {
+                    "id": "fonts",
+                    "label": I18n.t("Шрифты", "Fonts"),
+                    "icon": "document"
+                },
+                {
                     "id": "wallpaper",
                     "label": I18n.t("Обои", "Wallpaper"),
+                    "icon": "image"
+                },
+                {
+                    "id": "capture",
+                    "label": I18n.t("Скриншоты", "Screenshots"),
                     "icon": "image"
                 },
                 {
@@ -113,6 +123,11 @@ Item {
                     "label": "Dotfiles",
                     "icon": "package",
                     "owner": true
+                },
+                {
+                    "id": "lock",
+                    "label": I18n.t("Блокировка и заставка", "Lock and idle"),
+                    "icon": "lock"
                 },
                 {
                     "id": "system",
@@ -207,6 +222,8 @@ Item {
                                             ink: entry.sel ? Theme.selectText : (Theme.dark ? Theme.text : Theme.edge)
                                         }
                                         PxText {
+                                            width: entry.width - Theme.u * 24
+                                            elide: Text.ElideRight
                                             text: entry.modelData.label
                                             anchors.verticalCenter: parent.verticalCenter
                                             color: entry.sel ? Theme.selectText : Theme.text

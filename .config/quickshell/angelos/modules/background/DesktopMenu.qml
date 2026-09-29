@@ -73,13 +73,18 @@ PopupWindow {
         {
             "label": I18n.t("Скриншот области", "Region screenshot"),
             "icon": "image",
-            "run": () => Shell.sh("command -v niri-screenshot-region >/dev/null && niri-screenshot-region || niri msg action screenshot")
+            "run": () => Capture.screenshot()
         },
         {
             "label": I18n.t("Запись области экрана", "Region recording"),
             "icon": "play",
             "enabled": true,
-            "run": () => Shell.sh("command -v niri-record-region >/dev/null && niri-record-region")
+            "run": () => Capture.record()
+        },
+        {
+            "label": I18n.t("Видео для DaVinci (mediafix)…", "Video for DaVinci (mediafix)…"),
+            "icon": "music",
+            "run": () => NautilusSetup.mediafix([])
         }
     ]
     readonly property var openItems: [

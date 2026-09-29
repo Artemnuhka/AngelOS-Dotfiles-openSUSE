@@ -35,6 +35,7 @@ Singleton {
     readonly property var desktopWidgets: enabledPlugins.filter(p => !!p.desktopWidget)
     readonly property var services: enabledPlugins.filter(p => !!p.main)
     readonly property var settingsPages: enabledPlugins.filter(p => !!p.settings)
+    readonly property var sidebarWidgets: enabledPlugins.filter(p => !!p.sidebarWidget)
     readonly property var launcherProviders: enabledPlugins.filter(p => !!p.launcher)
 
     function isEnabled(p) {
@@ -101,7 +102,7 @@ Singleton {
         id = id.replace(/[^a-z0-9_-]/gi, "-").toLowerCase();
         if (!id)
             return;
-        creator.command = ["sh", "-c", 'set -e; d="$2/$3"; [ -e "$d" ] && exit 3; mkdir -p "$2"; cp -r "$1/_template" "$d"; sed -i "s/__ID__/$3/g; s/__NAME__/$4/g" "$d"/manifest.json "$d"/*.qml', "sh", bundledDir, userDir, id, name || id];
+        creator.command = ["python3", Quickshell.shellDir + "/scripts/plugin-create.py", bundledDir, userDir, id, name || id];
         creator.running = true;
     }
     signal created(string id, bool ok)
@@ -109,7 +110,7 @@ Singleton {
     Process {
         id: creator
         onExited: code => {
-            root.created(creator.command[6], code === 0);
+            root.created(creator.command[4], code === 0);
             root.reload();
         }
     }

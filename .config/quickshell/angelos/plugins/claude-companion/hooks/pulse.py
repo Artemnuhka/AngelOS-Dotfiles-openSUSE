@@ -43,7 +43,9 @@ import sys
 
 
 def _cache_path(session):
-    base = os.environ.get("XDG_RUNTIME_DIR") or "/tmp"
+    # a shared /tmp would let other users plant symlinks; fall back to the private cache
+    base = os.environ.get("XDG_RUNTIME_DIR") or os.path.join(os.path.expanduser("~"), ".cache", "angelos")
+    os.makedirs(base, mode=0o700, exist_ok=True)
     safe = "".join(c for c in session if c.isalnum() or c in "-_") or "nosession"
     return os.path.join(base, f"angelos-pulse-{safe}.json")
 

@@ -140,4 +140,11 @@ window-rule {
         default-column-width { fixed 1040; }
         default-window-height { fixed 740; }
     }
+    // angelOS dev instances (ANGELOS_DEV=1): keep test windows off the stream monitor
+    window-rule {
+        match app-id="^org.quickshell$" title=r#"^angelOS \[dev\]"#
+        open-on-output "HDMI-A-1"
+        open-focused false
+        block-out-from "screencast"
+    }
     // ─── /angelOS ───

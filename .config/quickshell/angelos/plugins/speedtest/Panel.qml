@@ -104,7 +104,7 @@ Column {
                 dim: true
             }
             PxText {
-                text: modelData.down.toFixed(1) + " ↓   " + modelData.up.toFixed(1) + " ↑   " + modelData.ping.toFixed(0) + I18n.t(" мс", " ms")
+                text: modelData.down.toFixed(1) + " ↓   " + modelData.up.toFixed(1) + " ↑   " + (modelData.ping > 0 && modelData.ping < 60000 ? modelData.ping.toFixed(0) + I18n.t(" мс", " ms") : "— " + I18n.t("мс", "ms"))
             }
         }
     }

@@ -45,6 +45,27 @@ Singleton {
         saveTimer.restart();
     }
 
+    // Notification bodies may carry markup. Keep a small whitelist: no images or
+    // other remote fetches, links only to http(s)/mailto.
+    function safeMarkup(text) {
+        return String(text || "").replace(/<\s*(script|style|iframe|object)\b[\s\S]*?<\/\s*\1\s*>/gi, "").replace(/<(\/?)([a-z][a-z0-9]*)(\s[^>]*|\/)?>/gi, (m, close, name, attrs) => {
+            name = name.toLowerCase();
+            if (["b", "i", "u", "br", "em", "strong", "p"].includes(name))
+                return "<" + close + name + ">";
+            if (name === "a") {
+                if (close)
+                    return "</a>";
+                const href = ((attrs || "").match(/href\s*=\s*["']([^"']*)["']/i) || [])[1] || "";
+                return /^(https?:|mailto:)/i.test(href) ? "<a href=\"" + href.replace(/"/g, "&quot;") + "\">" : "<a>";
+            }
+            return "";
+        });
+    }
+    function openLink(url) {
+        if (/^(https?:|mailto:)/i.test(url))
+            Qt.openUrlExternally(url);
+    }
+
     function iconFor(n) {
         if (n.image)
             return n.image;

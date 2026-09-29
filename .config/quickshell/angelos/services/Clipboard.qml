@@ -59,8 +59,11 @@ Singleton {
         history = [text].concat(history.filter(h => h !== text)).slice(0, limit);
         saveTimer.restart();
     }
+    // via stdin: argv is readable by every process (/proc/*/cmdline)
     function copy(text) {
-        copier.command = ["sh", "-c", 'printf "%s" "$1" | wl-copy', "sh", text];
+        if (copier.running)
+            copier.running = false;
+        copier.pending = text;
         copier.running = true;
     }
     function remove(text) {
@@ -75,7 +78,8 @@ Singleton {
     Process {
         id: watcher
         running: !Shell.dev
-        command: ["wl-paste", "--type", "text", "--watch", "sh", "-c", "base64 -w0; echo"]
+        // password managers mark secrets with x-kde-passwordManagerHint: never keep those
+        command: ["wl-paste", "--type", "text", "--watch", "sh", "-c", "if wl-paste --list-types 2>/dev/null | grep -qx 'x-kde-passwordManagerHint'; then cat >/dev/null; echo; else base64 -w0; echo; fi"]
         stdout: SplitParser {
             onRead: line => root.push(root.decode(line))
         }
@@ -88,6 +92,15 @@ Singleton {
     }
     Process {
         id: copier
+        property string pending: ""
+        command: ["wl-copy"]
+        stdinEnabled: true
+        onStarted: {
+            write(pending);
+            pending = "";
+            stdinEnabled = false;
+        }
+        onExited: stdinEnabled = true
     }
 
     Timer {

@@ -125,7 +125,7 @@ PanelWindow {
         usage[app.id] = (usage[app.id] || 0) + 1;
         Config.launcher.usage = usage;
         if (app.runInTerminal)
-            Shell.terminal(app.command.join(" "));
+            Shell.exec(Shell.terminalArgv(app.command));
         else
             app.execute();
         Shell.launcherOpen = false;

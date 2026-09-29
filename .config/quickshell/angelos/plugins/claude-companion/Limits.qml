@@ -91,7 +91,7 @@ Column {
             }
             PxText {
                 visible: !root.compact && !!r.modelData.w.resetsAt
-                text: r.modelData.w.resetsAt ? I18n.t("сброс через ", "Resets in ") + Usage.untilText(r.modelData.w.resetsAt) + "  (" + Qt.locale("ru_RU").toString(r.modelData.w.resetsAt, "ddd HH:mm") + ")" : ""
+                text: r.modelData.w.resetsAt ? I18n.t("сброс через ", "Resets in ") + Usage.untilText(r.modelData.w.resetsAt) + "  (" + Qt.locale(Config.appearance.language === "en" ? "en_US" : "ru_RU").toString(r.modelData.w.resetsAt, "ddd HH:mm") + ")" : ""
                 kind: "tiny"
                 dim: true
             }
@@ -99,7 +99,7 @@ Column {
     }
     PxText {
         visible: Usage.ok && !root.compact
-        text: I18n.t("план: ", "Plan: ") + (Usage.plan || "?") + " · обновлено " + Qt.formatTime(Usage.updated, "HH:mm")
+        text: I18n.t("план: ", "Plan: ") + (Usage.plan || "?") + I18n.t(" · обновлено ", " · updated ") + Qt.formatTime(Usage.updated, "HH:mm")
         kind: "tiny"
         dim: true
     }

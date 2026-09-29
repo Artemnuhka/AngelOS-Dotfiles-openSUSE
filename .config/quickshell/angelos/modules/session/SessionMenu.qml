@@ -34,6 +34,12 @@ PanelWindow {
             "key": "L"
         },
         {
+            "id": "idle",
+            "label": I18n.t("Заставка", "Idle"),
+            "icon": "sparkle",
+            "key": "I"
+        },
+        {
             "id": "suspend",
             "label": I18n.t("Сон", "Sleep"),
             "icon": "moon",
@@ -64,6 +70,9 @@ PanelWindow {
         switch (id) {
         case "lock":
             Shell.lock();
+            break;
+        case "idle":
+            Idle.start();
             break;
         case "suspend":
             Shell.exec(["systemctl", "suspend"]);

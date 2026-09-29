@@ -19,6 +19,8 @@ import qs.modules.settings
 import qs.modules.workspace
 import qs.modules.tour
 import qs.modules.voxtype
+import qs.modules.idle
+import qs.modules.sidebar
 import qs.widgets
 
 // angelOS — pixel pink shell for niri.
@@ -28,6 +30,8 @@ ShellRoot {
 
     Background {}
     Bar {}
+    StartOverlay {}
+    SidebarHost {}
     WorkspaceFx {}
     NotificationPopups {}
     Osd {}
@@ -35,6 +39,7 @@ ShellRoot {
     Launcher {}
     ClipboardPanel {}
     SessionMenu {}
+    IdleScreen {}
     Lock {}
     PolkitDialog {}
     SettingsWindow {}
@@ -61,6 +66,11 @@ ShellRoot {
 
     Component.onCompleted: {
         ThemeExport.signature; // wake the template exporter
+        PaletteGenerator.auto; // follow wallpaper colours from startup
+        Fonts.files; // register fonts installed into ~/.local/share/fonts/angelos
+        MetaTap.status; // Meta tap → Start menu
+        Idle.active; // idle-minutes watcher
+        NautilusSetup.status; // first run: Nautilus defaults + mediafix
         PluginStudio.loaded; // make the worker available to dynamically loaded pages
     }
 }

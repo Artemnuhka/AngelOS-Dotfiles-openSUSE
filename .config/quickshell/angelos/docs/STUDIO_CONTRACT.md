@@ -40,7 +40,8 @@ does not run any script. Scripts must be invoked explicitly via argv.
 
 Manifest: id/name/version/description/icon, enabledByDefault=false, settings,
 and the entry point for the selected kind (desktopWidget/barWidget/main/menu/
-launcher). Settings.qml is mandatory, even for a small plugin: explain the data
+launcher). A plugin may also add sidebarWidget (a compact Column that receives
+plugin and width) for the experimental sidebar. Settings.qml is mandatory, even for a small plugin: explain the data
 source and allow useful preferences. Do not override any installed/bundled id.
 Give desktop widgets a desktopTitle such as "my-widget.exe".
 

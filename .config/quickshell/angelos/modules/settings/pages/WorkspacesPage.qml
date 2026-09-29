@@ -11,6 +11,80 @@ PxPage {
     subtitle: I18n.t("Анимации при переключении: пиксельный переход обоев, NGO-попап и полоска сердечек.", "Workspace animations: pixel wallpaper transition, popup, and heart strip.")
 
     PxGroup {
+        title: I18n.t("Анимация переключения", "Switch animation")
+        icon: "layers"
+        width: parent.width
+        Component.onCompleted: WorkspaceAnim.refresh()
+        Grid {
+            width: parent.width
+            columns: Math.max(1, Math.floor(width / (Theme.u * 120)))
+            spacing: Theme.u * 3
+            Repeater {
+                model: WorkspaceAnim.styles
+                PxBox {
+                    id: styleCard
+                    required property var modelData
+                    readonly property bool current: WorkspaceAnim.current.id === modelData.id
+                    width: (parent.width - (parent.columns - 1) * parent.spacing) / parent.columns
+                    height: styleCol.implicitHeight + Theme.u * 8
+                    sunken: current
+                    color: current ? Theme.mix(Theme.face, Theme.accent, 0.3) : styleMouse.containsMouse ? Theme.mix(Theme.face, Theme.accent, 0.1) : Theme.face
+                    Column {
+                        id: styleCol
+                        x: Theme.u * 4
+                        y: Theme.u * 4
+                        width: parent.width - Theme.u * 8
+                        spacing: Theme.u
+                        PxText {
+                            text: (styleCard.current ? "♡ " : "") + styleCard.modelData.label
+                            font.bold: true
+                        }
+                        PxText {
+                            width: parent.width
+                            text: styleCard.modelData.hint
+                            kind: "tiny"
+                            dim: true
+                            wrapMode: Text.Wrap
+                        }
+                    }
+                    MouseArea {
+                        id: styleMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        enabled: !WorkspaceAnim.busy
+                        onClicked: WorkspaceAnim.pick(styleCard.modelData.id)
+                    }
+                }
+            }
+        }
+        Row {
+            spacing: Theme.u * 4
+            PxButton {
+                text: I18n.t("Показать", "Try it")
+                icon: "sparkle"
+                onClicked: {
+                    const ws = Niri.activeWorkspace(Niri.focusedOutput);
+                    if (ws)
+                        Niri.workspaceActivated(ws, false);
+                }
+            }
+            PxText {
+                anchors.verticalCenter: parent.verticalCenter
+                text: WorkspaceAnim.log
+                visible: text !== ""
+                color: Theme.danger
+            }
+        }
+        PxText {
+            width: parent.width
+            wrapMode: Text.Wrap
+            dim: true
+            text: I18n.t("Мягкий, слайд и подпрыг — пружина niri (cfg/animation.kdl, с бэкапом и проверкой). Остальные переключают мгновенно и прячут склейку под эффектом angelOS. В полноэкранных играх game-mode всё равно выключает анимации.", "Soft, slide and bounce are niri springs (cfg/animation.kdl, backed up and validated). The others switch instantly and hide the cut under an angelOS effect. Game mode still turns animations off for fullscreen games.")
+        }
+    }
+
+    PxGroup {
         title: I18n.t("Смена воркспейса", "Workspace switching")
         icon: "sparkle"
         width: parent.width

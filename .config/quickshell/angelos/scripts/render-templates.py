@@ -11,6 +11,7 @@ Placeholders: {{key}} -> "#rrggbb", {{key.strip}} -> "rrggbb", plus
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -36,11 +37,13 @@ def load_entries():
     return list(entries.values())
 
 
-def render(text, pal):
+def render(text, pal, quote=None):
     def sub(m):
         key, _, mod = m.group(1).partition(".")
         val = str(pal.get(key, m.group(0)))
-        return val.lstrip("#") if mod == "strip" else val
+        val = val.lstrip("#") if mod == "strip" else val
+        # values that reach `sh -c` must stay single words (the flavor comes from settings.json)
+        return quote(val) if quote and not re.fullmatch(r"[\w#.-]*", val) else val
     return re.sub(r"\{\{\s*([\w.]+)\s*\}\}", sub, text)
 
 
@@ -64,7 +67,7 @@ def main():
                     print(f"wrote {dst}")
             for key in ("command", "reload"):
                 if e.get(key):
-                    subprocess.run(["sh", "-c", render(e[key], pal)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10)
+                    subprocess.run(["sh", "-c", render(e[key], pal, shlex.quote)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10)
         except Exception as ex:  # keep going with the other templates
             print(f"{e['id']}: {ex}", file=sys.stderr)
 

@@ -6,7 +6,8 @@ import qs.widgets
 
 PxPage {
     heading: I18n.t("Лирика", "Lyrics")
-    subtitle: I18n.t("Текущая строка песни посередине панели. Источник — lrclib.net, трек берётся из MPRIS. Клик по строке открывает эту страницу.", "The current lyric line appears in the bar. Lyrics come from lrclib.net; track metadata comes from MPRIS. Click the line to open this page.")
+    subtitle: I18n.t("Текущая строка песни посередине панели. Трек берётся из любого MPRIS-плеера (Spotify, браузер с YouTube, mpv…), текст ищется по названию песни в нескольких источниках. Клик по строке открывает эту страницу.", "The current lyric line appears in the bar. Any MPRIS player works (Spotify, a browser with YouTube, mpv…); lyrics are searched by the song title in several sources. Click the line to open this page.")
+    id: page
 
     PxGroup {
         title: I18n.t("Показ", "Display")
@@ -91,6 +92,36 @@ PxPage {
     }
 
     PxGroup {
+        title: I18n.t("Источники", "Sources")
+        icon: "search"
+        width: parent.width
+        PxText {
+            width: parent.width
+            wrapMode: Text.Wrap
+            dim: true
+            text: I18n.t("Проверяются по порядку, пока не найдётся текст с таймкодами. Название чистится от «(Official Video)», «[MV]», feat. и «- Topic»; «Артист - Песня» из браузера разбирается на части.", "Tried in order until synced lyrics turn up. Titles lose “(Official Video)”, “[MV]”, feat. and “- Topic”; “Artist - Song” from a browser is split.")
+        }
+        Repeater {
+            model: [["lrclib", "lrclib.net", I18n.t("синхронный текст, открытая база", "synced lyrics, open database")], ["netease", "NetEase Cloud Music", I18n.t("синхронный текст, много азиатской и мировой музыки", "synced lyrics, large Asian and worldwide catalogue")], ["ovh", "lyrics.ovh", I18n.t("только текст без таймкодов, запасной вариант", "plain text only, last resort")]]
+            SettingRow {
+                required property var modelData
+                label: modelData[1]
+                hint: modelData[2]
+                PxToggle {
+                    checked: (Config.lyrics.sources || []).includes(modelData[0])
+                    onToggled: c => {
+                        const order = ["lrclib", "netease", "ovh"];
+                        const on = (Config.lyrics.sources || []).filter(s => s !== modelData[0]);
+                        if (c)
+                            on.push(modelData[0]);
+                        Config.lyrics.sources = order.filter(s => on.includes(s));
+                    }
+                }
+            }
+        }
+    }
+
+    PxGroup {
         title: I18n.t("Сейчас", "Current")
         icon: "music"
         width: parent.width
@@ -107,9 +138,17 @@ PxPage {
                     "plain": I18n.t("есть только текст без таймкодов", "Only unsynchronized lyrics are available"),
                     "instrumental": I18n.t("инструментал ♪", "Instrumental ♪"),
                     "notfound": I18n.t("текст не найден", "Lyrics not found"),
-                    "error": I18n.t("нет сети / lrclib недоступен", "Offline / lrclib unavailable")
+                    "error": I18n.t("нет сети / источники недоступны", "Offline / sources unavailable")
                 })[Lyrics.status] || Lyrics.status
             dim: true
+        }
+        PxText {
+            visible: !!Lyrics.player
+            width: parent.width
+            wrapMode: Text.Wrap
+            kind: "tiny"
+            dim: true
+            text: I18n.t("ищу как: ", "searching as: ") + Lyrics.cleaned.artist + " — " + Lyrics.cleaned.title + (Lyrics.source ? I18n.t(" · источник: ", " · source: ") + Lyrics.source : "")
         }
         Row {
             spacing: Theme.u * 4
@@ -125,6 +164,70 @@ PxPage {
             }
         }
     }
+    PxGroup {
+        title: I18n.t("Найти по названию", "Search by title")
+        icon: "search"
+        width: parent.width
+        visible: !!Lyrics.player && Lyrics.title !== ""
+        PxText {
+            width: parent.width
+            wrapMode: Text.Wrap
+            dim: true
+            text: I18n.t("Если нашлось не то или ничего: введи название (и артиста), выбери результат — он запомнится для этого трека.", "Wrong or no lyrics? Type the title (and artist) and pick a result — it is remembered for this track.")
+        }
+        Row {
+            width: parent.width
+            spacing: Theme.u * 3
+            PxField {
+                id: q
+                width: parent.width - searchButton.width - Theme.u * 3
+                placeholder: Lyrics.cleaned.artist + " " + Lyrics.cleaned.title
+                onAccepted: Lyrics.search(text || placeholder)
+            }
+            PxButton {
+                id: searchButton
+                text: Lyrics.searching ? "…" : I18n.t("Искать", "Search")
+                icon: "search"
+                enabled: !Lyrics.searching
+                onClicked: Lyrics.search(q.text || q.placeholder)
+            }
+        }
+        Repeater {
+            model: Lyrics.results
+            PxBox {
+                id: res
+                required property var modelData
+                width: parent.width
+                height: resCol.implicitHeight + Theme.u * 6
+                color: resMouse.containsMouse ? Theme.mix(Theme.face, Theme.accent, 0.15) : Theme.face
+                Column {
+                    id: resCol
+                    x: Theme.u * 4
+                    y: Theme.u * 3
+                    width: parent.width - Theme.u * 8
+                    PxText {
+                        width: parent.width
+                        elide: Text.ElideRight
+                        text: res.modelData.title + " — " + res.modelData.artist
+                        font.bold: true
+                    }
+                    PxText {
+                        kind: "tiny"
+                        dim: true
+                        text: res.modelData.source + " · " + (res.modelData.synced ? I18n.t("с таймкодами", "synced") : I18n.t("без таймкодов", "plain")) + (res.modelData.duration ? " · " + Math.floor(res.modelData.duration / 60) + ":" + String(Math.round(res.modelData.duration % 60)).padStart(2, "0") : "")
+                    }
+                }
+                MouseArea {
+                    id: resMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: Lyrics.pick(res.modelData)
+                }
+            }
+        }
+    }
+
     PxGroup {
         width: parent.width
         title: I18n.t("Текст песни", "Song lyrics")

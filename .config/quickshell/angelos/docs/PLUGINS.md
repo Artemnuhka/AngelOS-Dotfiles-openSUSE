@@ -54,6 +54,10 @@ OpenAI и Claude, русский и английский интерфейс. [Р
 | `settings` | страница в Настройки → Плагины → имя | `plugin` |
 | `main` | фоновый сервис, живёт пока плагин включён (можно держать тут `IpcHandler`) | `plugin` |
 | `launcher` | провайдер результатов лаунчера (Mod+Space) | `plugin`, `pluginId` |
+| `sidebarWidget` | блок в экспериментальном сайдбаре (раздел «AI-лимиты»), ширина задаётся сайдбаром | `plugin`, `width` |
+
+`name` и `description` могут быть строкой или объектом `{"ru": "…", "en": "…"}` —
+тогда показывается вариант на языке интерфейса.
 
 ## Провайдер лаунчера
 
@@ -76,8 +80,12 @@ QtObject {
 }
 ```
 
-Готовые примеры: `plugins/web-search` (префикс `web`, фавиконки, MRU) и
-`plugins/claude-companion` (префикс `claude`).
+Готовые примеры: `plugins/web-search` (префикс `web`, фавиконки, MRU),
+`plugins/claude-companion` (префикс `claude`), `plugins/codex-companion`
+(префикс `codex`) и `plugins/osu-mini` (`osu`).
+
+Имена файлов плагина не должны совпадать с синглтонами `qs.services`
+(`Sidebar`, `Idle`, `Fonts`, `Capture`, `MetaTap`, …): QML путает типы.
 
 Объяви в корне компонента те свойства, которые используешь, например
 `property var plugin` и `property string screenName`.

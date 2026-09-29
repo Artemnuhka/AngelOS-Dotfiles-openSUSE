@@ -18,19 +18,25 @@ Item {
     implicitWidth: face.width
     implicitHeight: face.height
 
-    SequentialAnimation on glow {
-        loops: Animation.Infinite
+    // Pixel-stepped breathing: ~10 frames a second, and only distinct values
+    // reach the scene graph. A 60 fps NumberAnimation here kept every bar and
+    // the full-screen desktop layer repainting and cost several % CPU idle.
+    property real _phase: 0
+    Timer {
+        interval: 100
+        repeat: true
         running: root.visible && root.state !== "none" && root.state !== "idle" && root.speed > 0
-        // one full breath ≈ 4 s (≈ 2 s when it waits for you); depth stays gentle
-        NumberAnimation {
-            to: root.urgent ? 0.45 : root.busy ? 0.7 : 0.82
-            duration: (root.urgent ? 1000 : 2000) / Math.max(0.1, root.speed)
-            easing.type: Easing.InOutSine
-        }
-        NumberAnimation {
-            to: 1
-            duration: (root.urgent ? 1000 : 2000) / Math.max(0.1, root.speed)
-            easing.type: Easing.InOutSine
+        onRunningChanged: if (!running)
+            root.glow = 1
+        onTriggered: {
+            // one full breath ≈ 4 s (≈ 2 s when it waits for you); depth stays gentle
+            const period = (root.urgent ? 2000 : 4000) / Math.max(0.1, root.speed);
+            root._phase = (root._phase + interval / period) % 1;
+            const depth = root.urgent ? 0.55 : root.busy ? 0.3 : 0.18;
+            const v = 1 - depth * (0.5 - 0.5 * Math.cos(root._phase * 2 * Math.PI));
+            const stepped = Math.round(v * 16) / 16;
+            if (stepped !== root.glow)
+                root.glow = stepped;
         }
     }
 

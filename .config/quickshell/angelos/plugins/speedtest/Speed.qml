@@ -58,7 +58,8 @@ Singleton {
                     root.phase = "ping";
                 else if ((m = line.match(/^Hosted by (.*?)(?: \[[^\]]*\])?: ([\d.]+) ms/))) {
                     root.server = m[1];
-                    root.ping = parseFloat(m[2]);
+                    const ms = parseFloat(m[2]);
+                    root.ping = ms > 60000 ? 0 : ms;   // speedtest-cli reports 1800000 when it could not measure
                 } else if (/Testing download speed/.test(line))
                     root.phase = "download";
                 else if ((m = line.match(/^Download: ([\d.]+) Mbit/))) {

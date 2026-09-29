@@ -8,13 +8,19 @@ import qs.widgets
 
 FloatingWindow {
     id: root
-    title: "angelOS · " + I18n.t("Добро пожаловать", "Welcome")
+    title: Shell.appTitle + " · " + I18n.t("Добро пожаловать", "Welcome")
     visible: Shell.setupOpen
     color: "transparent"
     implicitWidth: 920
     implicitHeight: 720
     minimumSize: Qt.size(720, 500)
     property int step: 0
+    Connections {
+        target: Shell
+        function onSetupStepRequested(step) {
+            root.step = Math.max(0, Math.min(root.last, step));
+        }
+    }
     property bool offered: false
     // only what is really needed on day one; everything else lives in Settings
     readonly property var stepList: [
@@ -40,6 +46,10 @@ FloatingWindow {
             "label": I18n.t("Тема", "Theme"),
             "kind": "page",
             "page": "pages/AppearancePage.qml"
+        },
+        {
+            "label": I18n.t("Шрифты", "Fonts"),
+            "kind": "fonts"
         },
         {
             "label": I18n.t("Панель", "Bar"),
@@ -140,6 +150,7 @@ FloatingWindow {
                     "shortcuts": shortcuts,
                     "finish": finish,
                     "bar": barStep,
+                    "fonts": fontsStep,
                     "desktop": desktopStep
                 })[root.cur.kind] || settingsStep
         }
@@ -247,6 +258,77 @@ FloatingWindow {
         }
     }
 
+    Component {
+        id: fontsStep
+        PxPage {
+            heading: I18n.t("Пиксельные шрифты", "Pixel fonts")
+            subtitle: I18n.t("Выбери набор шрифтов. Недостающие скачаются с GitHub / Google Fonts (с проверкой SHA-256). Потом можно поменять в Настройки → Шрифты.", "Pick a font set. Missing fonts are downloaded from GitHub / Google Fonts and verified by SHA-256. Change it later in Settings → Fonts.")
+            Component.onCompleted: Fonts.refresh()
+            Repeater {
+                model: Fonts.presets
+                PxBox {
+                    id: preset
+                    required property var modelData
+                    readonly property bool ready: modelData.needs.every(id => Fonts.installed(id))
+                    readonly property bool current: Config.appearance.fontTitle === modelData.fonts[0] && Config.appearance.fontBody === modelData.fonts[1] && Config.appearance.fontMono === modelData.fonts[2]
+                    width: parent.width
+                    height: presetCol.implicitHeight + Theme.u * 10
+                    color: current ? Theme.mix(Theme.face, Theme.accent, 0.18) : presetMouse.containsMouse ? Theme.mix(Theme.face, Theme.accent, 0.08) : Theme.face
+                    Column {
+                        id: presetCol
+                        x: Theme.u * 5
+                        y: Theme.u * 5
+                        width: parent.width - Theme.u * 10
+                        spacing: Theme.u * 2
+                        Row {
+                            spacing: Theme.u * 4
+                            PxIcon {
+                                name: preset.current ? "check" : "heart"
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            PxText {
+                                text: preset.modelData.label + (preset.ready ? "" : I18n.t("  · скачается при выборе", "  · downloads when picked"))
+                                font.bold: true
+                            }
+                        }
+                        Repeater {
+                            model: [[0, 18, I18n.t("Заголовок ♡ angelOS", "Title ♡ angelOS")], [1, 13, I18n.t("Обычный текст: привет, мир!", "Body text: hello, world!")], [2, 13, "mono: 0123 ~/.config"]]
+                            Text {
+                                required property var modelData
+                                readonly property string family: preset.modelData.fonts[modelData[0]] || [Theme.defaultTitleFont, Theme.defaultBodyFont, Theme.defaultMonoFont][modelData[0]]
+                                visible: preset.ready
+                                text: modelData[2]
+                                color: Theme.text
+                                font.family: family
+                                font.pixelSize: Theme.crisp(modelData[1], family) * Theme.fs
+                                renderType: Text.NativeRendering
+                            }
+                        }
+                        PxText {
+                            visible: !preset.ready
+                            text: preset.modelData.fonts.filter((f, i, a) => f && a.indexOf(f) === i).join(" · ")
+                            dim: true
+                        }
+                    }
+                    MouseArea {
+                        id: presetMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        enabled: !Fonts.busy
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: Fonts.applyPreset(preset.modelData)
+                    }
+                }
+            }
+            PxText {
+                visible: Fonts.busy || Fonts.error !== ""
+                width: parent.width
+                wrapMode: Text.Wrap
+                color: Fonts.error ? Theme.danger : Theme.accent
+                text: Fonts.error || I18n.t("Скачиваю шрифт…", "Downloading font…")
+            }
+        }
+    }
     Component {
         id: barStep
         PxPage {

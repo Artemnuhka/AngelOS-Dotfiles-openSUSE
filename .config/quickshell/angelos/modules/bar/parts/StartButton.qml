@@ -1,14 +1,16 @@
 import QtQuick
+import Quickshell
 import qs.config
 import qs.services
 import qs.widgets
-import qs.modules.bar
 
 PxButton {
     id: root
 
     property bool above: true
     property bool small: false
+    property string screenName: ""
+    property var barWindow: null
 
     text: ""
     icon: ""
@@ -22,13 +24,12 @@ PxButton {
         emblemOnly: root.small
     }
     kind: small ? "body" : "title"
-    checked: menu.visible
+    checked: Shell.startScreen !== "" && Shell.startScreen === screenName
     compact: small
-    onClicked: menu.toggle()
+    onClicked: Shell.toggleStart(screenName)
 
-    StartMenu {
-        id: menu
-        anchorItem: root
-        above: root.above
-    }
+    // the Start overlay opens right above/below this button
+    Component.onCompleted: if (screenName && barWindow)
+        Shell.registerStartButton(screenName, root, barWindow)
+    Component.onDestruction: Shell.unregisterStartButton(screenName, root)
 }

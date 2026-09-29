@@ -468,7 +468,10 @@ Singleton {
         "Замер скорости интернета со спидометром и историей. Кнопка на панели, работает через speedtest-cli.": "Measure download, upload and latency, with recent results.",
         "Спутник Claude Code: «пульс» состояния сессий на панели, дышащая сфера на столе, «claude …» в лаунчере (запуск в терминале, «? вопрос» — быстрый ответ), MCP-мост к рабочему столу.": "Claude Code sessions, usage limits, quick questions and a desktop companion."
     }
+    // plugin manifests may give {"ru": …, "en": …} instead of a plain string
     function label(value) {
+        if (value && typeof value === "object")
+            return String(english ? (value.en || value.ru || "") : (value.ru || value.en || ""));
         return english ? (labels[value] || value) : value;
     }
     function t(ru, en) {

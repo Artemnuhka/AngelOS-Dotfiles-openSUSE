@@ -11,7 +11,7 @@ import qs.widgets
 FloatingWindow {
     id: win
 
-    title: I18n.t("angelOS · Настройки", "angelOS · Settings")
+    title: Shell.appTitle + " · " + I18n.t("Настройки", "Settings")
     visible: Shell.settingsOpen
     color: "transparent"
     implicitWidth: 1040

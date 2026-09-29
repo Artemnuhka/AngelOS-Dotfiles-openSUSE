@@ -19,6 +19,7 @@ PanelWindow {
         right: true
     }
     implicitHeight: Theme.u * 16
+    exclusionMode: Shell.dev ? ExclusionMode.Ignore : ExclusionMode.Auto
     color: "transparent"
     WlrLayershell.namespace: "angelos-bar"
     WlrLayershell.layer: WlrLayer.Top

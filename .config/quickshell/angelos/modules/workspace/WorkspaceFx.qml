@@ -39,5 +39,9 @@ Variants {
             screenName: scope.screenName
             serial: scope.serial
         }
+        SwitchFx {
+            screen: scope.modelData
+            serial: scope.serial
+        }
     }
 }

@@ -19,6 +19,15 @@ IpcHandler {
     function setup(): void {
         Shell.setupOpen = true;
     }
+    // open the wizard on a given step (0 = welcome)
+    function setupStep(step: int): void {
+        Shell.setupOpen = true;
+        Shell.setupStepRequested(step);
+    }
+    // Start menu on a screen (default: focused); what a Meta tap does
+    function startMenu(screen: string): void {
+        Shell.toggleStart(screen);
+    }
     function launcher(): void {
         Shell.launcherOpen = !Shell.launcherOpen;
     }
@@ -77,6 +86,26 @@ IpcHandler {
     function lock(): void {
         Shell.lock();
     }
+    // show the lock screen without locking (Esc or any password closes it)
+    function lockPreview(): void {
+        Shell.lockPreview = !Shell.lockPreview;
+    }
+    // preview only: "" shows the wrong-password reaction, any text the unlock
+    function lockPreviewTry(text: string): void {
+        if (Shell.lockPreviewTry)
+            Shell.lockPreviewTry(text);
+    }
+    // experimental sidebar (Settings → Bar → Sidebar)
+    function sidebar(): string {
+        if (!Sidebar.enabled)
+            return "sidebar is off (Settings → Bar → Sidebar)";
+        Sidebar.toggle();
+        return Sidebar.open ? "open" : "closed";
+    }
+    // screensaver: animated ASCII art until any input
+    function idle(): void {
+        Idle.toggle();
+    }
     function lyrics(): void {
         Config.lyrics.enabled = !Config.lyrics.enabled;
     }
@@ -91,6 +120,16 @@ IpcHandler {
             Wallpapers.random("");
         else
             Wallpapers.setEverywhere(path);
+    }
+    // wallpaper for one monitor: angelos wallpaperOn DP-1 <path|random>
+    function wallpaperOn(screen: string, path: string): string {
+        if (!Shell.screenByName(screen))
+            return "no screen " + screen;
+        if (path === "random")
+            Wallpapers.random(screen);
+        else
+            Wallpapers.setForOutput(screen, path);
+        return "ok";
     }
     function bar(style: string): void {
         Config.bar.style = style;
@@ -198,6 +237,14 @@ IpcHandler {
     function lyricArtwork(mode: string): void {
         if (["note", "cover"].includes(mode))
             Config.lyrics.artwork = mode;
+    }
+    // font presets: angelos | arcade | soft | block (missing fonts are downloaded)
+    function fontPreset(id: string): string {
+        const p = Fonts.presets.find(x => x.id === id);
+        if (!p)
+            return "presets: " + Fonts.presets.map(x => x.id).join(", ");
+        Fonts.applyPreset(p);
+        return "ok";
     }
     function blur(enabled: bool): void {
         Config.appearance.blur = enabled;

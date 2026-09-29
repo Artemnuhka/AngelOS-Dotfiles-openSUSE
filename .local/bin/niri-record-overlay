@@ -44,6 +44,19 @@ C_MID = (0.70, 0.50, 0.28, 1.0)
 C_LIT = (0.90, 0.74, 0.48, 1.0)
 
 
+def load_skin():
+    """angelOS skin (Settings → Screenshots): None keeps the ropes → dirt morph."""
+    try:
+        import os
+        base = os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
+        sys.path.insert(0, os.path.join(base, "quickshell/angelos/scripts"))
+        import capture_skins
+        return capture_skins.load()
+    except Exception:
+        log(traceback.format_exc())
+        return None
+
+
 def log(msg: str) -> None:
     try:
         with open(LOG, "a", encoding="utf-8") as f:
@@ -388,6 +401,11 @@ def main() -> int:
         x, y, w, h = parse_geom(sys.argv[1])
         signal.signal(signal.SIGTERM, lambda *_: Gtk.main_quit())
         signal.signal(signal.SIGINT, lambda *_: Gtk.main_quit())
+        skin = load_skin()
+        if skin is not None:
+            import capture_skins
+            capture_skins.run_record_overlay(skin, x, y, w, h)
+            return 0
         Overlay(x, y, w, h)
         Gtk.main()
         return 0

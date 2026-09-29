@@ -384,14 +384,37 @@ Singleton {
     readonly property int pad: u * 5
 
     // ---- fonts (sizes are native multiples so glyphs stay crisp) ----
-    readonly property string fontTitle: "Pixeloid Sans"
-    readonly property string fontBody: "CozetteVector"
-    readonly property string fontMono: "Pixeloid Mono"
-    readonly property int sizeTiny: 9 * fs
-    readonly property int sizeBody: 13 * fs
-    readonly property int sizeTitle: 18 * fs
-    readonly property int sizeBig: 27 * fs
-    readonly property int sizeHuge: 36 * fs
+    readonly property string defaultTitleFont: "Pixeloid Sans"
+    readonly property string defaultBodyFont: "CozetteVector"
+    readonly property string defaultMonoFont: "Pixeloid Mono"
+    readonly property string fontTitle: Config.appearance.fontTitle || defaultTitleFont
+    readonly property string fontBody: Config.appearance.fontBody || defaultBodyFont
+    readonly property string fontMono: Config.appearance.fontMono || defaultMonoFont
+    // glyph cell of known pixel fonts (scripts/fonts.py keeps the same numbers)
+    readonly property var fontNative: ({
+            "Pixeloid Sans": 9,
+            "Pixeloid Mono": 9,
+            "CozetteVector": 13,
+            "CozetteVectorBold": 13,
+            "Cozette": 13,
+            "Pixelify Sans": 11,
+            "Tiny5": 8,
+            "Press Start 2P": 8,
+            "Monocraft": 9,
+            "Departure Mono": 11,
+            "Silkscreen": 8
+        })
+    function crisp(base, family) {
+        const n = fontNative[family] || 0;
+        return n > 0 ? Math.max(n, Math.round(base / n) * n) : base;
+    }
+    readonly property int sizeTiny: crisp(9, fontTitle) * fs
+    readonly property int sizeBody: crisp(13, fontBody) * fs
+    readonly property int sizeTitle: crisp(18, fontTitle) * fs
+    readonly property int sizeBig: crisp(27, fontTitle) * fs
+    readonly property int sizeHuge: crisp(36, fontTitle) * fs
+    readonly property int sizeMono: crisp(18, fontMono) * fs
+    readonly property int sizeMonoSmall: crisp(13, fontMono) * fs
 
     // ---- motion: stepped easing feels "pixel" ----
     readonly property int fast: 140

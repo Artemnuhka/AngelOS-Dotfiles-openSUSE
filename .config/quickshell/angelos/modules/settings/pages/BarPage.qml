@@ -10,6 +10,130 @@ PxPage {
     subtitle: I18n.t("Три вида: таскбар как в Win98, тонкая полоса сверху или плавающий остров.", "Choose a taskbar, a top strip, or a floating island.")
 
     PxGroup {
+        title: I18n.t("Кнопка «Пуск»", "Start button")
+        icon: "pill"
+        width: parent.width
+        SettingRow {
+            label: I18n.t("Открывать по нажатию Meta", "Open with a Meta tap")
+            hint: I18n.t("короткое нажатие Super — меню «Пуск», как в Windows. Зажатая клавиша и сочетания (Mod+…) меню не открывают.", "A short Super tap opens Start, like on Windows. Holding it or shortcuts (Mod+…) never do.")
+            PxToggle {
+                checked: Config.bar.metaTap
+                onToggled: c => Config.bar.metaTap = c
+            }
+        }
+        SettingRow {
+            visible: Config.bar.metaTap
+            label: I18n.t("Самое долгое нажатие", "Longest tap")
+            hint: I18n.t("дольше — это уже удержание", "Anything longer counts as a hold")
+            PxSlider {
+                width: parent.width
+                from: 150
+                to: 1000
+                stepSize: 50
+                value: Config.bar.metaTapMs
+                suffix: I18n.t(" мс", " ms")
+                onReleased: v => Config.bar.metaTapMs = v
+            }
+        }
+        SettingRow {
+            visible: Config.bar.metaTap
+            label: I18n.t("Поверх полноэкранных окон", "Over fullscreen windows")
+            hint: I18n.t("выключено — игры и видео на весь экран не прерываются", "Off: fullscreen games and video are never interrupted")
+            PxToggle {
+                checked: Config.bar.metaTapFullscreen
+                onToggled: c => Config.bar.metaTapFullscreen = c
+            }
+        }
+        PxText {
+            visible: Config.bar.metaTap && MetaTap.status !== "ready"
+            width: parent.width
+            wrapMode: Text.Wrap
+            color: MetaTap.status === "noperm" || MetaTap.status === "noevdev" || MetaTap.status === "error" ? Theme.danger : Theme.textDim
+            text: ({
+                    "noperm": I18n.t("Нет доступа к клавиатурам. Добавь себя в группу input: sudo usermod -aG input $USER и перезайди.", "No access to keyboards. Join the input group: sudo usermod -aG input $USER, then log in again."),
+                    "noevdev": I18n.t("Нужен python-evdev: sudo pacman -S python-evdev", "python-evdev is required: sudo pacman -S python-evdev"),
+                    "error": I18n.t("Слушатель клавиши остановился, перезапускаю…", "The key listener stopped; restarting…"),
+                    "off": Shell.dev ? I18n.t("В dev-режиме выключено (ANGELOS_DEV_TAP=1 включит)", "Off in dev mode (set ANGELOS_DEV_TAP=1)") : "",
+                    "starting": "…"
+                })[MetaTap.status] || ""
+        }
+        PxText {
+            visible: Config.bar.metaTap
+            width: parent.width
+            wrapMode: Text.Wrap
+            dim: true
+            text: I18n.t("niri не умеет назначать действие на одиночный модификатор, поэтому angelOS слушает клавиатуры сам (только чтение). Запоминается лишь «Meta нажата» и «было что-то ещё» — какие клавиши нажимались, никуда не пишется.", "niri cannot bind a bare modifier, so angelOS reads keyboards itself (read-only). It only tracks “Meta is down” and “something else happened”; which keys you press is never stored.")
+        }
+    }
+
+    PxGroup {
+        title: I18n.t("Сайдбар (эксперимент)", "Sidebar (experimental)")
+        icon: "layers"
+        width: parent.width
+        SettingRow {
+            label: I18n.t("Включить сайдбар", "Enable the sidebar")
+            hint: I18n.t("закладка на краю экрана: клик — открыть, перетащи — переставить (прилипает к ближайшему краю)", "A tab on the screen edge: click to open, drag to move — it snaps to the nearest edge")
+            PxToggle {
+                checked: Config.sidebar.enabled
+                onToggled: c => Config.sidebar.enabled = c
+            }
+        }
+        SettingRow {
+            visible: Config.sidebar.enabled
+            label: I18n.t("Экран", "Screen")
+            PxCombo {
+                width: Theme.u * 100
+                model: [{
+                        "label": I18n.t("Основной", "Primary"),
+                        "value": ""
+                    }].concat(Quickshell.screens.map(s => ({
+                            "label": s.name,
+                            "value": s.name
+                        })))
+                currentValue: Config.sidebar.screen
+                onActivated: v => Config.sidebar.screen = v
+            }
+        }
+        SettingRow {
+            visible: Config.sidebar.enabled
+            label: I18n.t("Разделы", "Sections")
+            Flow {
+                width: parent.width
+                spacing: Theme.u * 5
+                Repeater {
+                    model: [["toggles", I18n.t("Переключатели", "Toggles")], ["media", I18n.t("Музыка", "Media")], ["sound", I18n.t("Звук", "Sound")], ["system", I18n.t("Система", "System")], ["ai", I18n.t("AI-лимиты", "AI limits")]]
+                    PxCheck {
+                        required property var modelData
+                        text: modelData[1]
+                        checked: Sidebar.has(modelData[0])
+                        onToggled: c => Sidebar.setSection(modelData[0], c)
+                    }
+                }
+            }
+        }
+        Row {
+            visible: Config.sidebar.enabled
+            spacing: Theme.u * 4
+            PxButton {
+                text: I18n.t("Открыть", "Open")
+                icon: "layers"
+                onClicked: {
+                    Shell.settingsOpen = false;
+                    Sidebar.open = true;
+                }
+            }
+            PxButton {
+                text: I18n.t("Закладку — на место", "Reset tab position")
+                icon: "refresh"
+                onClicked: {
+                    Config.sidebar.edge = "right";
+                    Config.sidebar.offset = 0.5;
+                }
+            }
+        }
+    }
+
+    PxGroup {
         title: I18n.t("Стиль", "Style")
         icon: "window"
         width: parent.width

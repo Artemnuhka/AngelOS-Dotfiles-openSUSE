@@ -12,7 +12,9 @@ Item {
     property bool submenu: false
     property bool checked: false
     property bool checkable: false
+    property bool highlighted: false        // keyboard selection
     readonly property bool hovered: mouse.containsMouse
+    readonly property bool lit: (mouse.containsMouse || highlighted) && enabled
     signal triggered
 
     width: parent ? parent.width : implicitWidth
@@ -38,7 +40,7 @@ Item {
     Rectangle {
         visible: !root.separator
         anchors.fill: parent
-        color: mouse.containsMouse && root.enabled ? Theme.select : "transparent"
+        color: root.lit ? Theme.select : "transparent"
     }
 
     Row {
@@ -56,12 +58,12 @@ Item {
                 anchors.centerIn: parent
                 visible: root.icon !== "" || (root.checkable && root.checked)
                 name: root.checkable ? (root.checked ? "check" : "heart") : (root.icon || "heart")
-                ink: mouse.containsMouse ? Theme.selectText : (Theme.dark ? Theme.text : Theme.edge)
+                ink: root.lit ? Theme.selectText : (Theme.dark ? Theme.text : Theme.edge)
             }
         }
         PxText {
             text: root.text
-            color: mouse.containsMouse && root.enabled ? Theme.selectText : Theme.text
+            color: root.lit ? Theme.selectText : Theme.text
             anchors.verticalCenter: parent.verticalCenter
         }
     }
@@ -69,8 +71,8 @@ Item {
         id: hintText
         visible: !root.separator && (root.hint !== "" || root.submenu)
         text: root.submenu ? "▸" : root.hint
-        dim: !mouse.containsMouse
-        color: mouse.containsMouse ? Theme.selectText : Theme.textDim
+        dim: !root.lit
+        color: root.lit ? Theme.selectText : Theme.textDim
         anchors.right: parent.right
         anchors.rightMargin: Theme.u * 5
         anchors.verticalCenter: parent.verticalCenter

@@ -7,7 +7,7 @@
   "icon": "heart",
   "enabledByDefault": true,
   "menu": [
-    { "label": "__NAME__: привет", "icon": "heart", "exec": "notify-send '__NAME__' 'привет из плагина ♡'" }
+    { "label": "__NAME__: привет", "icon": "heart", "exec": "notify-send angelOS 'привет из плагина ♡'" }
   ],
   "barWidget": "BarWidget.qml",
   "desktopTitle": "__ID__.exe",

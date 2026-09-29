@@ -26,6 +26,16 @@ const icons = {
         "...#o#...",
         "....#...."
     ],
+    heartBroken: [
+        ".##...##.",
+        "#wo#.#oo#",
+        "#oo#.#oo#",
+        "#ooo#.oo#",
+        ".#oo#oo#.",
+        "..#o#o#..",
+        "...#.#...",
+        "....#...."
+    ],
     heartSmall: [
         ".#.#.",
         "#o#o#",
@@ -602,7 +612,24 @@ function names() {
 
 // Builds a crisp SVG data URI; runs of equal cells are merged into one rect.
 // `name` may also be an array of rows (custom bitmap, e.g. from a plugin)
+// Every PxIcon asks for its SVG again whenever a theme colour changes, and most
+// icons share a handful of palettes, so the encoded documents are memoized.
+const _cache = new Map();
+const CACHE_LIMIT = 4000;
+
 function svg(name, colors, hollow) {
+    const key = (Array.isArray(name) ? name.join("/") : name) + "|" + (hollow ? 1 : 0) + "|" + colors["#"] + colors.o + colors.x + colors.y + colors.w + colors.f + colors.r;
+    const hit = _cache.get(key);
+    if (hit)
+        return hit;
+    const result = build(name, colors, hollow);
+    if (_cache.size >= CACHE_LIMIT)
+        _cache.clear();
+    _cache.set(key, result);
+    return result;
+}
+
+function build(name, colors, hollow) {
     const rows = Array.isArray(name) ? name : get(name);
     const h = rows.length;
     let w = 0;

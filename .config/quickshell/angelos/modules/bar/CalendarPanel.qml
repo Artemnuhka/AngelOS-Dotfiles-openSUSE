@@ -172,7 +172,7 @@ BarPopup {
                                 }
                                 PxText {
                                     width: parent.width
-                                    text: h.modelData.body
+                                    text: Notifs.safeMarkup(h.modelData.body)
                                     textFormat: Text.StyledText
                                     wrapMode: Text.Wrap
                                     maximumLineCount: 3

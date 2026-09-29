@@ -38,7 +38,7 @@ Item {
             selectionColor: Theme.select
             selectedTextColor: Theme.selectText
             font.family: root.monospace ? Theme.fontMono : Theme.fontBody
-            font.pixelSize: Theme.sizeBody
+            font.pixelSize: root.monospace ? Theme.sizeMonoSmall : Theme.sizeBody
             renderType: Text.NativeRendering
             onTextChanged: root.edited()
             onCursorRectangleChanged: {

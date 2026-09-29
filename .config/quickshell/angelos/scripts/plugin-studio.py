@@ -25,7 +25,13 @@ MAX_BYTES = 512 * 1024
 MAX_FILES = 24
 ID_RE = re.compile(r"[a-z][a-z0-9-]{1,47}\Z")
 EXTENSIONS = {".qml", ".js", ".json", ".py", ".sh", ".md", ".txt", ".svg"}
-ENTRYPOINTS = ("main", "settings", "desktopWidget", "barWidget", "menuComponent", "launcher")
+ENTRYPOINTS = ("main", "settings", "desktopWidget", "barWidget", "menuComponent", "launcher", "sidebarWidget")
+API_PROVIDERS = ("openai", "anthropic")
+# "Sign in with the browser": the local Claude Code / Codex CLIs, logged in with a
+# Claude or ChatGPT account. angelOS never sees their credentials.
+CLI_PROVIDERS = ("claude-cli", "codex-cli")
+CLI_TIMEOUT = 600
+CODEX_DISABLE = ("shell_tool", "computer_use", "browser_use", "browser_use_external", "apps")
 
 
 class StudioError(Exception):
@@ -177,6 +183,134 @@ def call_provider(request, provider):
         raise StudioError("Invalid provider response.", "Некорректный ответ провайдера.")
 
 
+def cli_path(name):
+    """The CLI from PATH or ~/.local/bin (Quickshell may start with a short PATH)."""
+    found = shutil.which(name)
+    if found:
+        return found
+    local = Path.home() / ".local/bin" / name
+    return str(local) if os.access(local, os.X_OK) else None
+
+
+def cli_status():
+    """Installed + logged-in state of both CLIs. Only the login *method* is kept."""
+    status = {}
+    claude = cli_path("claude")
+    entry = {"installed": bool(claude), "loggedIn": False, "method": ""}
+    if claude:
+        try:
+            out = subprocess.run([claude, "auth", "status"], capture_output=True, text=True, timeout=20)
+            data = json.loads(out.stdout or "{}")
+            entry["loggedIn"] = bool(data.get("loggedIn"))
+            entry["method"] = str(data.get("authMethod") or "")
+        except (OSError, ValueError, subprocess.TimeoutExpired):
+            pass
+    status["claude-cli"] = entry
+    codex = cli_path("codex")
+    entry = {"installed": bool(codex), "loggedIn": False, "method": ""}
+    if codex:
+        try:
+            out = subprocess.run([codex, "login", "status"], capture_output=True, text=True, timeout=20)
+            text = (out.stdout + out.stderr).lower()
+            entry["loggedIn"] = out.returncode == 0 and "not logged in" not in text
+            entry["method"] = "chatgpt" if "chatgpt" in text else "apikey" if "api key" in text else ""
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+    status["codex-cli"] = entry
+    return status
+
+
+def transcript(messages):
+    parts = []
+    for message in messages:
+        role = "USER" if message.get("role") == "user" else "ASSISTANT"
+        parts.append(role + ":\n" + str(message.get("content", "")))
+    return "\n\n".join(parts) + "\n\nReply to the last USER message with JSON matching the schema."
+
+
+def run_cli(provider, model, system, messages, schema, workdir):
+    """One structured request through a logged-in CLI; returns (value, usage)."""
+    env = dict(os.environ)
+    if provider == "claude-cli":
+        binary = cli_path("claude")
+        if not binary:
+            raise StudioError("Claude Code (claude) is not installed.", "Claude Code (claude) не установлен.")
+        # the subscription login, not an API key that may sit in the environment
+        for name in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"):
+            env.pop(name, None)
+        system_file = workdir / "system.md"
+        system_file.write_text(system)
+        argv = [binary, "-p", "--output-format", "json", "--json-schema", json.dumps(schema),
+                "--tools", "", "--strict-mcp-config", "--setting-sources", "",
+                "--no-session-persistence", "--system-prompt-file", str(system_file)]
+        if model:
+            argv += ["--model", model]
+        prompt = transcript(messages)
+    else:
+        binary = cli_path("codex")
+        if not binary:
+            raise StudioError("Codex CLI (codex) is not installed.", "Codex CLI (codex) не установлен.")
+        schema_file, out_file = workdir / "schema.json", workdir / "answer.json"
+        schema_file.write_text(json.dumps(schema))
+        try:
+            listed = subprocess.run([binary, "features", "list"], capture_output=True, text=True, timeout=20).stdout
+            known = {line.split()[0] for line in listed.splitlines() if line.strip()}
+        except (OSError, subprocess.TimeoutExpired, IndexError):
+            known = set()
+        argv = [binary, "exec", "--ephemeral", "--skip-git-repo-check", "--sandbox", "read-only",
+                "-c", "web_search=disabled", "-c", "mcp_servers={}", "--color", "never",
+                "-C", str(workdir), "--output-schema", str(schema_file), "-o", str(out_file)]
+        for feature in CODEX_DISABLE:
+            if not known or feature in known:
+                argv += ["--disable", feature]
+        if model:
+            argv += ["-m", model]
+        argv.append("-")
+        prompt = "SYSTEM INSTRUCTIONS:\n" + system + "\n\nCONVERSATION:\n" + transcript(messages)
+    try:
+        done = subprocess.run(argv, input=prompt, capture_output=True, text=True,
+                              timeout=CLI_TIMEOUT, cwd=workdir, env=env)
+    except subprocess.TimeoutExpired:
+        raise StudioError("The CLI did not answer in 10 minutes.", "CLI не ответил за 10 минут.")
+    except OSError:
+        raise StudioError("Could not start the CLI.", "Не удалось запустить CLI.")
+    tail = (done.stderr or done.stdout or "").strip().splitlines()[-1:] or [""]
+
+    def login_hint(text):
+        # only inspected on failure: a generated plugin may well mention "login"
+        text = text.lower()
+        if "not logged in" in text or "please run /login" in text or "codex login" in text or "invalid api key" in text:
+            raise StudioError("Sign in first: Plugin Studio → Sign in via browser.",
+                              "Сначала войди: Мастер плагинов → «Войти через браузер».")
+    if provider == "claude-cli":
+        try:
+            data = json.loads(done.stdout)
+        except ValueError:
+            login_hint(done.stdout + done.stderr)
+            raise StudioError("Claude Code failed: " + tail[0][:300], "Claude Code: ошибка: " + tail[0][:300])
+        if data.get("is_error") or data.get("subtype") != "success":
+            login_hint(str(data.get("result") or "") + done.stderr)
+            message = str(data.get("result") or data.get("subtype") or "error")[:300]
+            raise StudioError("Claude Code: " + message, "Claude Code: " + message)
+        value = data.get("structured_output")
+        if value is None:
+            try:
+                value = json.loads(data.get("result") or "")
+            except ValueError:
+                raise StudioError("Claude Code returned no JSON. Try again.", "Claude Code не вернул JSON. Повторите.")
+        usage = data.get("usage") or {}
+        return value, {"input_tokens": int(usage.get("input_tokens") or 0) + int(usage.get("cache_read_input_tokens") or 0)
+                       + int(usage.get("cache_creation_input_tokens") or 0),
+                       "output_tokens": int(usage.get("output_tokens") or 0)}
+    if done.returncode:
+        login_hint(done.stderr)
+        raise StudioError("Codex failed: " + tail[0][:300], "Codex: ошибка: " + tail[0][:300])
+    try:
+        return json.loads((workdir / "answer.json").read_text()), {}
+    except (OSError, ValueError):
+        raise StudioError("Codex returned no JSON. Try again.", "Codex не вернул JSON. Повторите.")
+
+
 def valid_path(name):
     if not isinstance(name, str) or len(name) > 150 or "\\" in name:
         return False
@@ -294,7 +428,7 @@ def validate_files(files, directory, spec, taken):
 
 
 class Studio:
-    def __init__(self, home=None, emit=None, api=None):
+    def __init__(self, home=None, emit=None, api=None, cli=None):
         self.home = Path(home) if home else Path.home()
         self.config = self.home / ".config/angelos"
         self.state = self.home / ".local/state/angelos/studio"
@@ -303,6 +437,7 @@ class Studio:
         self.plugins = self.config / "plugins"
         self.emit = emit or (lambda event: None)
         self.api = api or call_provider
+        self.cli = cli or run_cli
 
     def session(self):
         return read_json(self.session_file, {"messages": [], "plan": None, "draft": None, "installed": ""})
@@ -333,7 +468,21 @@ class Studio:
 
     def ask(self, request, messages, schema, generate=False):
         provider = request.get("provider")
-        if provider not in ("openai", "anthropic"):
+        if provider in CLI_PROVIDERS:
+            model = request.get("model", "")
+            if not isinstance(model, str) or not re.fullmatch(r"[A-Za-z0-9_.:\[\]-]{0,100}", model):
+                raise StudioError("Enter a valid model name or leave it empty.", "Введите корректное имя модели или оставьте пустым.")
+            system = self.context(request.get("language"), generate)
+            self.emit({"event": "progress", "stage": "request"})
+            private_dir(self.state)
+            workdir = Path(tempfile.mkdtemp(prefix="cli-", dir=self.state))
+            try:
+                value, usage = self.cli(provider, model, system, messages, schema, workdir)
+            finally:
+                shutil.rmtree(workdir, ignore_errors=True)
+            check_schema(value, schema)
+            return value, usage
+        if provider not in API_PROVIDERS:
             raise StudioError("Choose an API provider.", "Выберите провайдера API.")
         key = self.credentials().get(provider, "")
         if not key:
@@ -443,11 +592,11 @@ class Studio:
                                   "Включите режим разработчика в Настройки → System.")
         if action == "status":
             keys = self.credentials()
-            return {"keys": {p: bool(keys.get(p)) for p in ("openai", "anthropic")},
-                    "session": self.session()}
+            return {"keys": {p: bool(keys.get(p)) for p in API_PROVIDERS},
+                    "cli": cli_status(), "session": self.session()}
         if action in ("save_key", "delete_key"):
             provider = request.get("provider")
-            if provider not in ("openai", "anthropic"):
+            if provider not in API_PROVIDERS:
                 raise StudioError("Unknown provider.")
             keys = self.credentials()
             if action == "delete_key":

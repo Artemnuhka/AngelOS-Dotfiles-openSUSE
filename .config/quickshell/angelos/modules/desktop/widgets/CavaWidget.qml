@@ -29,11 +29,17 @@ Item {
         atomicWrites: true
         onSaved: proc.running = true
     }
+    property bool ready: false
     function writeConf() {
+        if (!ready)
+            return;
         proc.running = false;
         confFile.setText(["[general]", "bars = " + bars, "framerate = 30", "sensitivity = 70", "autosens = 1", "[input]", "method = pipewire", "source = " + (root.source || "auto"), "[output]", "method = raw", "raw_target = /dev/stdout", "data_format = ascii", "ascii_max_range = 100", "bar_delimiter = 59", "frame_delimiter = 10", "channels = mono", "[smoothing]", "noise_reduction = 60", ""].join("\n"));
     }
-    Component.onCompleted: writeConf()
+    Component.onCompleted: {
+        ready = true;
+        writeConf();
+    }
     onBarsChanged: writeConf()
     onSourceChanged: writeConf()
 

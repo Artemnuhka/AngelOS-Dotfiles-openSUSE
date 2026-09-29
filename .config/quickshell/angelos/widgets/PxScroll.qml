@@ -11,6 +11,27 @@ Item {
     property bool barVisible: flick.contentHeight > flick.height + 1
     default property alias content: flick.flickableData
 
+    // Mouse wheel: fixed steps with a short glide. Flickable's own wheel
+    // handling is velocity based and crawls on long settings pages.
+    function scrollBy(dy) {
+        const max = Math.max(0, flick.contentHeight - flick.height);
+        const from = glide.running ? glide.to : flick.contentY;
+        const to = Math.max(0, Math.min(max, from + dy));
+        glide.stop();
+        if (to === flick.contentY)
+            return;
+        glide.from = flick.contentY;
+        glide.to = to;
+        glide.start();
+    }
+    NumberAnimation {
+        id: glide
+        target: flick
+        property: "contentY"
+        duration: 110
+        easing.type: Easing.OutCubic
+    }
+
     Flickable {
         id: flick
         anchors.fill: parent
@@ -20,6 +41,18 @@ Item {
         boundsBehavior: Flickable.StopAtBounds
         flickDeceleration: 4000
         maximumFlickVelocity: 3000
+        pixelAligned: true
+
+        WheelHandler {
+            target: null
+            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+            onWheel: e => {
+                if (flick.contentHeight <= flick.height)
+                    return;
+                const dy = e.pixelDelta.y !== 0 ? -e.pixelDelta.y : -e.angleDelta.y / 120 * Theme.u * 40;
+                root.scrollBy(dy);
+            }
+        }
     }
 
     PxBox {

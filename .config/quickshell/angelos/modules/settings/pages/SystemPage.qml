@@ -140,27 +140,13 @@ PxPage {
     }
 
     PxGroup {
-        title: I18n.t("Блокировка", "Lock screen")
-        icon: "lock"
+        title: I18n.t("Программы", "Programs")
+        icon: "terminal"
         width: parent.width
-        SettingRow {
-            label: I18n.t("Блокировать после простоя", "Lock when idle")
-            hint: I18n.t("0 = никогда", "0 = never")
-            PxSpin {
-                from: 0
-                to: 120
-                stepSize: 5
-                value: Config.lock.idleMinutes
-                suffix: I18n.t(" мин", " min")
-                onMoved: v => Config.lock.idleMinutes = v
-            }
-        }
-        SettingRow {
-            label: I18n.t("Пикселизовать обои на локе", "Pixelate lock screen wallpaper")
-            PxToggle {
-                checked: Config.lock.pixelate
-                onToggled: c => Config.lock.pixelate = c
-            }
+        PxButton {
+            text: I18n.t("Блокировка и заставка →", "Lock and idle screen →")
+            icon: "lock"
+            onClicked: Shell.openSettings("lock")
         }
         SettingRow {
             label: I18n.t("Терминал", "Terminal")

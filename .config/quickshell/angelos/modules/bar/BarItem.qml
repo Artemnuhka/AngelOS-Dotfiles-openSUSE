@@ -70,6 +70,8 @@ Loader {
         StartButton {
             small: root.bar.compact || root.bar.style !== "taskbar"
             above: root.bar.above
+            screenName: root.bar.screenName
+            barWindow: root.bar.barWindow
         }
     }
     Component {

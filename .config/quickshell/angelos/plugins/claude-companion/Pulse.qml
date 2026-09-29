@@ -83,7 +83,7 @@ Singleton {
     property var presence: null     // {message, state, at} written by the MCP shim
     property var answer: null       // {q, text, at, error}
     property bool asking: false
-    readonly property string runtimeDir: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/claude-companion"
+    readonly property string runtimeDir: (Quickshell.env("XDG_RUNTIME_DIR") || Quickshell.env("HOME") + "/.cache/angelos") + "/claude-companion"
 
     function colorFor(s, theme) {
         return s === "needs_attention" || s === "error" ? theme.danger : s === "tool_start" ? theme.accent3 : s === "turn_start" || s === "text" ? theme.accent : s === "turn_end" ? theme.ok : s === "idle" ? theme.accent4 : theme.textDim;
@@ -152,7 +152,9 @@ Singleton {
             "error": false
         };
         event("turn_start", "?,0,0,0,0,ask");
-        asker.command = ["sh", "-c", 'PATH="$HOME/.local/bin:$PATH"; exec claude --tools "" --strict-mcp-config --setting-sources "" --output-format stream-json --verbose --append-system-prompt "$1" -p -- "$2"', "sh", askNote, q];
+        // the question goes on stdin: argv is visible to every process
+        asker.question = q;
+        asker.command = ["sh", "-c", 'PATH="$HOME/.local/bin:$PATH"; exec claude --tools "" --strict-mcp-config --setting-sources "" --output-format stream-json --verbose --append-system-prompt "$1" -p', "sh", askNote];
         asker.running = true;
     }
     function finishAsk(text, error) {
@@ -174,6 +176,12 @@ Singleton {
     }
     Process {
         id: asker
+        property string question: ""
+        stdinEnabled: true
+        onStarted: {
+            write(question);
+            stdinEnabled = false;
+        }
         stdout: SplitParser {
             onRead: line => {
                 let ev;
@@ -201,6 +209,7 @@ Singleton {
             id: askErr
         }
         onExited: code => {
+            stdinEnabled = true;
             if (root.asking)
                 root.finishAsk(code === 127 ? I18n.t("claude не найден в PATH", "Claude was not found in PATH") : (askErr.text.trim() || root._acc || I18n.t("claude завершился с кодом ", "Claude exited with code ") + code), true);
         }
@@ -208,7 +217,7 @@ Singleton {
 
     // ---- terminal launches ----
     readonly property string shim: Quickshell.shellDir + "/plugins/claude-companion/shim/angelos-mcp.py"
-    readonly property string systemNote: "You are running inside the angelOS desktop shell (Quickshell on niri), launched from its Claude Companion plugin. An MCP server named 'angelos' gives you live desktop senses and hands: PERCEIVE — get_window, get_workspace, get_media, get_shell_state, get_power, get_network, get_processes. ACT — notify, set_theme_mode (dark/light/auto), set_color_scheme (bubblegum/overdose/cyberangel), focus_window, switch_workspace, move_to_workspace, set_wallpaper, set_presence/clear_presence. MEMORY — remember. Call the perceive tools when current desktop context matters instead of assuming it."
+    readonly property string systemNote: "You are running inside the angelOS desktop shell (Quickshell on niri), launched from its Claude Companion plugin. An MCP server named 'angelos' gives you live desktop senses and hands: PERCEIVE — get_window, get_workspace, get_media, get_shell_state, get_power, get_network, get_processes. ACT — notify, set_theme_mode (dark/light/auto), set_color_scheme (overdose/bubblegum/cyberangel/wallpaper/gruvbox/rosepine/catppuccin/nord/dracula/tokyonight/solarized/everforest), focus_window, switch_workspace, move_to_workspace, set_wallpaper, set_presence/clear_presence. MEMORY — remember. Call the perceive tools when current desktop context matters instead of assuming it."
     function launch(args, mcp) {
         const mcpJson = JSON.stringify({
             "mcpServers": {
