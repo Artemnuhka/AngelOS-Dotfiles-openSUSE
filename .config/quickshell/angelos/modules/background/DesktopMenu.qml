@@ -130,7 +130,7 @@ PopupWindow {
     anchor.edges: Edges.Top | Edges.Left
     anchor.gravity: Edges.Bottom | Edges.Right
     anchor.adjustment: PopupAdjustment.Flip | PopupAdjustment.Slide
-    grabFocus: true
+    grabFocus: !Shell.demo
     color: "transparent"
     implicitWidth: frame.width + Theme.u * 3
     implicitHeight: frame.height + Theme.u * 3
@@ -164,6 +164,17 @@ PopupWindow {
         interval: 160
         onTriggered: if (item && item.hovered)
             sub.openFor(item, list)
+    }
+    // scripting: open a flyout by name ("view" | "new" | "open" | "more")
+    function openSub(name) {
+        const m = {
+            "view": [viewItem, viewItems],
+            "new": [newItem, newItems],
+            "open": [openItem, openItems],
+            "more": [moreItem, moreItems]
+        }[name];
+        if (m)
+            sub.openFor(m[0], m[1]);
     }
     function hoverSub(item, list) {
         if (sub.visible && sub.anchorItem === item)

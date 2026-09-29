@@ -4,7 +4,7 @@ mode = "toggle"
 
 [whisper]
 model = "large-v3-turbo"
-language = "ru"
+language = "@VOXTYPE_LANG@"
 translate = false
 on_demand_loading = true
 

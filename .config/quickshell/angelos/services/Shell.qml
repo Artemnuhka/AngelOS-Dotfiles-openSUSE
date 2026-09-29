@@ -21,6 +21,10 @@ Singleton {
     property var polkitReregister: null
     property bool polkitRegistered: false
     readonly property bool dev: Quickshell.env("ANGELOS_DEV") === "1"
+    // demo/recording mode: popups open from IPC without an input grab
+    readonly property bool demo: Quickshell.env("ANGELOS_DEMO") === "1"
+    property var desktopMenus: ({})   // screen name -> DesktopMenu
+    property string launcherText: ""
 
     function lock() {
         locked = true;

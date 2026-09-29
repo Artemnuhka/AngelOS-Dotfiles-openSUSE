@@ -142,6 +142,18 @@ PanelWindow {
             activate(results[Math.min(current, results.length - 1)]);
     }
 
+    // scripting: `angelos launcherText <text>` types into the open launcher
+    Connections {
+        target: Shell
+        function onLauncherTextChanged() {
+            if (!win.visible)
+                return;
+            field.text = Shell.launcherText;
+            win.query = Shell.launcherText;
+            win.current = 0;
+        }
+    }
+
     onVisibleChanged: if (visible) {
         query = Shell.launcherPrefill;
         field.text = Shell.launcherPrefill;

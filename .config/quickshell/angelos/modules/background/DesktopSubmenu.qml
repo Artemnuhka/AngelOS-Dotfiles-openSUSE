@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Wayland
 import qs.config
+import qs.services
 import qs.widgets
 
 // Flyout for the desktop menu. items: [{label, icon, hint, separator, checkable, checked, run}]
@@ -31,7 +32,7 @@ PopupWindow {
     anchor.edges: Edges.Top | Edges.Left
     anchor.gravity: Edges.Bottom | Edges.Right
     anchor.adjustment: PopupAdjustment.FlipX | PopupAdjustment.SlideY
-    grabFocus: true
+    grabFocus: !Shell.demo
     color: "transparent"
     implicitWidth: frame.width + Theme.u * 3
     implicitHeight: frame.height + Theme.u * 3

@@ -84,6 +84,11 @@ Variants {
             DesktopMenu {
                 id: menu
                 parentWindow: win
+                Component.onCompleted: {
+                    const m = Shell.desktopMenus;
+                    m[win.modelData.name] = menu;
+                    Shell.desktopMenus = m;
+                }
             }
         }
     }

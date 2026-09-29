@@ -42,6 +42,35 @@ IpcHandler {
     function widgetEdit(): void {
         DesktopWidgets.editMode = !DesktopWidgets.editMode;
     }
+    function settingsPage(page: string): void {
+        Shell.openSettings(page);
+    }
+    function launcherText(text: string): void {
+        if (!Shell.launcherOpen)
+            Shell.launcherOpen = true;
+        Shell.launcherText = text;
+    }
+    // open the right-click desktop menu (x, y in screen pixels); sub: "" | view | new | open | more
+    function desktopMenu(screen: string, x: int, y: int, sub: string): string {
+        const m = Shell.desktopMenus[screen || (Shell.focusedScreen ? Shell.focusedScreen.name : "")];
+        if (!m)
+            return "no desktop on " + screen;
+        if (x < 0) {
+            m.close();
+            return "closed";
+        }
+        if (!m.visible)
+            m.openAt(x, y);
+        if (sub)
+            m.openSub(sub);
+        return "ok";
+    }
+    function tourNext(): void {
+        Tour.next();
+    }
+    function tourStop(): void {
+        Tour.stop();
+    }
     function tour(): void {
         Tour.start();
     }

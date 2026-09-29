@@ -194,9 +194,18 @@ else
 
   if install_case default; then
     pass "installer: default run"
+    if [[ -L "$WORK/default/.local/bin/angelos" &&
+          -f "$WORK/default/.config/quickshell/angelos/shell.qml" &&
+          ! -e "$WORK/default/.config/angelos/owner" ]] &&
+       grep -qx angelos "$WORK/default/.config/angelos/active"; then
+      pass "installer: angelOS is the default, fresh installs have no owner marker"
+    else
+      fail "installer: angelOS default/owner marker"
+    fi
     expect_line default "$input" '^[[:space:]]*layout "us,ru"$'                  "installer: default layouts us,ru"
     expect_line default "$input" '^[[:space:]]*options "grp:alt_shift_toggle"$'  "installer: default switch Alt+Shift"
-    if grep -rq '@[A-Z_]*@' "$WORK/default/.config" "$WORK/default/.local/bin" 2>/dev/null; then
+    if grep -rEq '@(HOME|KB_LAYOUT|KB_OPTIONS|KB_VARIANT|VOXTYPE_LANG)@' \
+         "$WORK/default/.config" "$WORK/default/.local/bin" 2>/dev/null; then
       fail "installer: unresolved @PLACEHOLDER@ left in installed files"
     else
       pass "installer: every placeholder resolved"
@@ -205,26 +214,20 @@ else
       niri validate -c "$WORK/default/.config/niri/config.kdl" >/dev/null 2>&1 &&
         pass "installer: installed config validates" || fail "installer: installed config validates"
     fi
-    if command -v noctalia >/dev/null 2>&1; then
-      if noctalia config validate "$WORK/default/.config/noctalia/config.toml" >"$WORK/noctalia-validate" 2>&1 &&
-         ! grep -Eq '^(WARN|ERROR)' "$WORK/noctalia-validate"; then
-        pass "installer: installed Noctalia config validates without warnings"
-      else
-        fail "installer: installed Noctalia config validates without warnings"; sed 's/^/    /' "$WORK/noctalia-validate" >&2
-      fi
-    else
-      skip "Noctalia config validation (noctalia is not installed)"
-    fi
-    if [[ -f "$WORK/default/$wallpaper" ]]; then
-      pass "installer: default wallpaper installed even without the collection"
-    else
-      fail "installer: default wallpaper installed even without the collection"
-    fi
+    # Updating the owner's installation must not disable publishing.
+    printf 'remote=fixture\n' > "$WORK/default/.config/angelos/owner"
+    printf '{"setup":{"complete":true}}\n' > "$WORK/default/.config/angelos/settings.json"
     # Second run must change nothing except what the user owns.
     if install_case default && grep -q 'Files: 0 installed' "$WORK/default.log"; then
       pass "installer: re-run is idempotent"
     else
       fail "installer: re-run is idempotent"
+    fi
+    if grep -qx 'remote=fixture' "$WORK/default/.config/angelos/owner" &&
+       grep -qx '{"setup":{"complete":true}}' "$WORK/default/.config/angelos/settings.json"; then
+      pass "installer: existing angelOS settings and owner marker survive an update"
+    else
+      fail "installer: existing angelOS settings and owner marker survive an update"
     fi
     echo 'output "X" { scale 2 }' >"$WORK/default/.config/niri/monitor.kdl"
     install_case default
@@ -235,6 +238,28 @@ else
     fi
   else
     fail "installer: default run"; sed 's/^/    /' "$WORK/default.log" >&2
+  fi
+
+  if install_case noctalia DESKTOP_SHELL=noctalia; then
+    expect_line noctalia .config/noctalia/config.toml '^setup_wizard_enabled = false$' \
+      "installer: Noctalia config is preseeded"
+    if command -v noctalia >/dev/null 2>&1; then
+      if noctalia config validate "$WORK/noctalia/.config/noctalia/config.toml" >"$WORK/noctalia-validate" 2>&1 &&
+         ! grep -Eq '^(WARN|ERROR)' "$WORK/noctalia-validate"; then
+        pass "installer: installed Noctalia config validates without warnings"
+      else
+        fail "installer: installed Noctalia config validates without warnings"; sed 's/^/    /' "$WORK/noctalia-validate" >&2
+      fi
+    else
+      skip "Noctalia config validation (noctalia is not installed)"
+    fi
+    if [[ -f "$WORK/noctalia/$wallpaper" ]]; then
+      pass "installer: default wallpaper installed for Noctalia"
+    else
+      fail "installer: default wallpaper installed for Noctalia"
+    fi
+  else
+    fail "installer: Noctalia run"; sed 's/^/    /' "$WORK/noctalia.log" >&2
   fi
 
   if install_case layouts KB_LAYOUTS="us de ua" KB_TOGGLE=ctrl_shift; then
@@ -282,7 +307,7 @@ else
     state="$WORK/reset$reset/.local/state/noctalia"
     mkdir -p "$state"
     echo '[bar.default]' >"$state/settings.toml"
-    if install_case "reset$reset" NOCTALIA_RESET_SETTINGS=$reset; then
+    if install_case "reset$reset" DESKTOP_SHELL=noctalia NOCTALIA_RESET_SETTINGS=$reset; then
       if [[ "$reset" == 1 ]]; then
         [[ ! -e "$state/settings.toml" ]] && compgen -G "$state/settings.toml.bak.*" >/dev/null &&
           pass "installer: NOCTALIA_RESET_SETTINGS=1 moves old Noctalia settings aside" ||
@@ -341,8 +366,15 @@ else
   pass "no personal paths or secret-like data"
 fi
 
-if search 'DP-1|HDMI-A-1|eDP-[0-9]|WAYLAND_DISPLAY=wayland-[0-9]+|avatar_path' \
-     -g '!scripts/check.sh' -g '!README.md' -g '!.gitignore' -g '!install.sh' >"$WORK/machine" 2>/dev/null; then
+{
+  grep -nE '^[[:space:]]*output "[^"]+"' \
+    "$ROOT/.config/niri/monitor.kdl" "$ROOT/.config/niri/cfg/display.kdl" 2>/dev/null || true
+  grep -RInE '^[[:space:]]*Environment=WAYLAND_DISPLAY=wayland-[0-9]+' \
+    "$ROOT/.config/systemd" 2>/dev/null || true
+  grep -RInE '"(screen|connectorName)"[[:space:]]*:' \
+    "$ROOT/.config/angelos" "$ROOT/.config/kwinoutputconfig.json" 2>/dev/null || true
+} >"$WORK/machine"
+if [[ -s "$WORK/machine" ]]; then
   cat "$WORK/machine" >&2
   fail "machine-specific monitor/runtime state detected"
 else

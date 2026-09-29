@@ -46,6 +46,10 @@ given() { local n="GIVEN_$1"; [[ -n "${!n:-}" ]]; }
 
 MODE="${DOTFILES_MODE:-full}"
 # NOCTALIA=1/0 given explicitly keeps working as before
+if is_set NOCTALIA && [[ "${NOCTALIA}" != 0 && "${NOCTALIA}" != 1 ]]; then
+  printf 'NOCTALIA must be 0 or 1\n' >&2
+  exit 1
+fi
 if ! is_set DESKTOP_SHELL && is_set NOCTALIA; then
   [[ "$NOCTALIA" == 1 ]] && DESKTOP_SHELL=noctalia || DESKTOP_SHELL=none
 fi
@@ -449,6 +453,7 @@ install_file() {
 destination() {
   local rel="$1"
   case "$rel" in
+    */__pycache__/*|*.pyc|*.bak.*|.config/quickshell/angelos/owner/*) return 0 ;;
     # Niri: the Noctalia and the plain variants share one destination.
     # Niri: the shell-wired files (angelOS in the repo; rewired for Noctalia after install)
     # and the plain variants share one destination.
@@ -685,9 +690,11 @@ install_shell() {
     ln -sfn "$shell_dir/bin/angelos" "$HOME_DIR/.local/bin/angelos"
     mkdir -p -- "$HOME_DIR/.config/angelos"
     printf 'angelos\n' > "$HOME_DIR/.config/angelos/active"
-    rm -f -- "$HOME_DIR/.config/angelos/owner"   # owner-only features never apply to fresh installs
-    python3 "$shell_dir/scripts/render-templates.py" "$shell_dir/templates/palette-default.json" >/dev/null 2>&1 \
-      || warn "$(_ 'angelOS theme templates were not rendered' 'Шаблоны тем angelOS не отрисовались')"
+    # Fresh installs have no owner marker. Preserve an existing owner's marker
+    # so updating the dotfiles does not disable their publishing controls.
+    # The generated theme files are shipped with the repository and are
+    # installed by install_configs. Do not regenerate them here: doing so
+    # would overwrite the shipped palette and make a second install dirty.
   else
     # Noctalia: the repo ships angelOS wiring; rewrite it for Noctalia in place
     python3 "$shell_dir/scripts/switch.py" noctalia-forward >/dev/null 2>&1 \

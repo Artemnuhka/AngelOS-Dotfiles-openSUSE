@@ -1,4 +1,9 @@
 # Secrets / junk
+/.config/quickshell/angelos/owner/
+/.config/angelos/
+*.qslog
+.qmlls.ini
+*.bak.*
 *.env
 *.key
 *.pem
