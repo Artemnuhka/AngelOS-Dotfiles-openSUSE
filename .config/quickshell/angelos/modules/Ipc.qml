@@ -32,6 +32,19 @@ IpcHandler {
     function clipboard(): void {
         Shell.clipboardOpen = !Shell.clipboardOpen;
     }
+    // toggle a desktop widget: angelos widget clock DP-1 (types: clock sysmon cava nowplaying plugin:<id>)
+    function widget(type: string, screen: string): string {
+        if (!DesktopWidgets.typeInfo(type))
+            return "unknown widget: " + type + " (" + DesktopWidgets.types.map(t => t.type).join(", ") + ")";
+        DesktopWidgets.toggle(type, screen || (Shell.focusedScreen ? Shell.focusedScreen.name : ""));
+        return "ok";
+    }
+    function widgetEdit(): void {
+        DesktopWidgets.editMode = !DesktopWidgets.editMode;
+    }
+    function tour(): void {
+        Tour.start();
+    }
     function lock(): void {
         Shell.lock();
     }

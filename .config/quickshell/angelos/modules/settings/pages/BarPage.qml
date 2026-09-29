@@ -43,6 +43,77 @@ PxPage {
             }
         }
         SettingRow {
+            visible: Config.bar.taskLabels
+            label: I18n.t("Ширина кнопок окон", "Window button width")
+            hint: I18n.t("мин и макс: кнопки сужаются, когда окон много", "min and max: buttons shrink when many windows are open")
+            Column {
+                width: parent.width
+                spacing: Theme.u * 2
+                PxSlider {
+                    width: parent.width
+                    from: 16
+                    to: 120
+                    stepSize: 2
+                    value: Config.bar.taskMinWidth
+                    valueScale: Theme.u
+                    suffix: " px ↓"
+                    onMoved: v => {
+                        Config.bar.taskMinWidth = v;
+                        if (Config.bar.taskMaxWidth < v)
+                            Config.bar.taskMaxWidth = v;
+                    }
+                }
+                PxSlider {
+                    width: parent.width
+                    from: 30
+                    to: 200
+                    stepSize: 2
+                    value: Config.bar.taskMaxWidth
+                    valueScale: Theme.u
+                    suffix: " px ↑"
+                    onMoved: v => {
+                        Config.bar.taskMaxWidth = v;
+                        if (Config.bar.taskMinWidth > v)
+                            Config.bar.taskMinWidth = v;
+                    }
+                }
+            }
+        }
+        SettingRow {
+            label: I18n.t("Воркспейсы на панели", "Workspaces on the bar")
+            hint: I18n.t("сердечки, иконки открытых приложений или всё вместе", "hearts, icons of open apps, or both")
+            PxSegmented {
+                model: [
+                    {
+                        "label": I18n.t("Сердечки", "Hearts"),
+                        "value": "hearts",
+                        "icon": "heart"
+                    },
+                    {
+                        "label": I18n.t("Иконки", "Icons"),
+                        "value": "icons",
+                        "icon": "window"
+                    },
+                    {
+                        "label": I18n.t("Оба", "Both"),
+                        "value": "both"
+                    }
+                ]
+                currentValue: Config.bar.workspaceStyle
+                onActivated: v => Config.bar.workspaceStyle = v
+            }
+        }
+        SettingRow {
+            visible: Config.bar.workspaceStyle !== "hearts"
+            label: I18n.t("Иконок на воркспейс", "Icons per workspace")
+            PxSpin {
+                from: 1
+                to: 6
+                value: Config.bar.workspaceIcons
+                onMoved: v => Config.bar.workspaceIcons = v
+            }
+        }
+        SettingRow {
             label: I18n.t("Мониторы", "Monitors")
             hint: I18n.t("ничего не выбрано = на всех", "No selection = all displays")
             Flow {

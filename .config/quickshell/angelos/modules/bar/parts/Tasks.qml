@@ -13,7 +13,9 @@ Item {
     property bool iconsOnly: false
     readonly property var ws: Niri.activeWorkspace(screenName)
     readonly property var list: Niri.sortedWindows(Config.bar.allWindows ? Niri.windows : Niri.windows.filter(w => ws && w.workspace_id === ws.id))
-    readonly property int buttonWidth: iconsOnly ? root.height : Math.max(Theme.u * 40, Math.min(Theme.u * 90, (width - (list.length - 1) * row.spacing) / Math.max(1, list.length)))
+    readonly property int minW: Theme.u * Math.max(16, Config.bar.taskMinWidth)
+    readonly property int maxW: Theme.u * Math.max(Config.bar.taskMinWidth, Config.bar.taskMaxWidth)
+    readonly property int buttonWidth: iconsOnly ? root.height : Math.max(minW, Math.min(maxW, (width - (list.length - 1) * row.spacing) / Math.max(1, list.length)))
 
     clip: true
 

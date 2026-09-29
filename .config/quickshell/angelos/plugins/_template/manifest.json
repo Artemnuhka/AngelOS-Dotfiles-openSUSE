@@ -10,6 +10,7 @@
     { "label": "__NAME__: привет", "icon": "heart", "exec": "notify-send '__NAME__' 'привет из плагина ♡'" }
   ],
   "barWidget": "BarWidget.qml",
+  "desktopTitle": "__ID__.exe",
   "desktopWidget": "DesktopWidget.qml",
   "settings": "Settings.qml",
   "main": "Main.qml"

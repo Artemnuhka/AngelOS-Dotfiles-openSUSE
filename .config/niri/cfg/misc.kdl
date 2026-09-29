@@ -23,7 +23,7 @@
 
     blur {
         passes 2        // smooth frosted backdrop without over-softening text
-        offset 9.5      // sample distance per pass
+        offset 10.0      // sample distance per pass
         noise 0.1     // subtle grain to hide blur banding
         saturation 1.0  // restrained Liquid Glass color lift
     }

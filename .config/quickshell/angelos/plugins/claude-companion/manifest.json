@@ -8,6 +8,7 @@
   "enabledByDefault": true,
   "main": "Main.qml",
   "barWidget": "BarWidget.qml",
+  "desktopTitle": "claude.exe",
   "desktopWidget": "Orb.qml",
   "launcher": "Launcher.qml",
   "settings": "Settings.qml",

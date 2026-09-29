@@ -12,9 +12,10 @@ Item {
     required property string screenName
     readonly property var list: Niri.workspacesOn(screenName).filter(w => w.name !== "privacy")
 
-    // Keep a stable slot for the badge, including custom workspace names.
-    readonly property real badgeWidth: Math.min(Theme.u * 64, Math.max(Theme.u * 26, ...list.map(w => badgeMetrics.advanceWidth("✧ " + ((Config.workspaces.names || {})[w.output + ":" + w.idx] || w.name || String(w.idx))) + Theme.u * 10)))
-    implicitWidth: row.implicitWidth + (Config.workspaces.popupMode === "bar" ? Theme.u * 6 + badgeWidth : 0)
+    // the badge only takes room while it is shown: the slot opens, then closes again
+    readonly property real badgeWidth: Math.min(Theme.u * 64, badgeMetrics.advanceWidth("✧ " + flashText) + Theme.u * 10)
+    property real slot: 0
+    implicitWidth: row.implicitWidth + slot
     implicitHeight: row.implicitHeight
     property int bounceToken: 0
     property int bounceWorkspace: -1
@@ -33,13 +34,55 @@ Item {
                 id: cell
                 required property var modelData
                 readonly property bool active: modelData.is_active
-                readonly property bool occupied: Niri.windowsOn(modelData.id).length > 0
-                width: heart.width + Theme.u * 4
-                height: heart.height + Theme.u * 4
+                readonly property var wins: Niri.sortedWindows(Niri.windowsOn(modelData.id))
+                readonly property bool occupied: wins.length > 0
+                readonly property string style: Config.bar.workspaceStyle
+                readonly property bool showIcons: style !== "hearts" && occupied
+                readonly property bool showHeart: style !== "icons" || !occupied
+                readonly property var icons: wins.slice(0, Math.max(1, Config.bar.workspaceIcons))
+                width: (showHeart ? heart.width : 0) + (showIcons ? iconRow.width + (showHeart ? Theme.u * 2 : 0) : 0) + Theme.u * 4
+                height: Math.max(heart.height, Theme.u * 9) + Theme.u * 4
+
+                // active workspace gets a soft plate when icons are shown
+                Rectangle {
+                    visible: cell.showIcons
+                    anchors.fill: parent
+                    anchors.topMargin: Theme.u
+                    anchors.bottomMargin: Theme.u
+                    color: cell.active ? Qt.alpha(Theme.accent, 0.28) : mouse.containsMouse ? Qt.alpha(Theme.accent, 0.12) : "transparent"
+                    border.width: cell.active ? Math.max(1, Theme.u / 2) : 0
+                    border.color: Theme.accent
+                }
+                Row {
+                    id: iconRow
+                    visible: cell.showIcons
+                    anchors.verticalCenter: parent.verticalCenter
+                    x: (cell.showHeart ? heart.x + heart.width + Theme.u * 2 : Theme.u * 2)
+                    spacing: Theme.u
+                    Repeater {
+                        model: cell.showIcons ? cell.icons : []
+                        AppIcon {
+                            required property var modelData
+                            appId: modelData.app_id || ""
+                            size: Theme.u * 8
+                            opacity: cell.active ? 1 : 0.7
+                            tint: Config.bar.tintTasks && !cell.active ? Config.bar.trayTint : "off"
+                        }
+                    }
+                    PxText {
+                        visible: cell.wins.length > cell.icons.length
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "+" + (cell.wins.length - cell.icons.length)
+                        kind: "tiny"
+                        dim: true
+                    }
+                }
 
                 PxIcon {
                     id: heart
-                    anchors.centerIn: parent
+                    visible: cell.showHeart
+                    x: Theme.u * 2
+                    anchors.verticalCenter: parent.verticalCenter
                     name: "heart"
                     pixel: Theme.u
                     hollow: !cell.active && !cell.occupied
@@ -174,21 +217,39 @@ Item {
     }
     SequentialAnimation {
         id: flash
-        NumberAnimation {
-            target: badge
-            property: "opacity"
-            from: 0
-            to: 1
-            duration: 90
+        ParallelAnimation {
+            NumberAnimation {
+                target: root
+                property: "slot"
+                to: root.badgeWidth + Theme.u * 6
+                duration: 120
+                easing.type: Easing.OutCubic
+            }
+            NumberAnimation {
+                target: badge
+                property: "opacity"
+                from: 0
+                to: 1
+                duration: 120
+            }
         }
         PauseAnimation {
             duration: Math.max(250, Config.workspaces.popupMs)
         }
-        NumberAnimation {
-            target: badge
-            property: "opacity"
-            to: 0
-            duration: 160
+        ParallelAnimation {
+            NumberAnimation {
+                target: badge
+                property: "opacity"
+                to: 0
+                duration: 140
+            }
+            NumberAnimation {
+                target: root
+                property: "slot"
+                to: 0
+                duration: 180
+                easing.type: Easing.InCubic
+            }
         }
     }
 

@@ -159,4 +159,40 @@ PxPage {
             }
         }
     }
+
+    PxGroup {
+        title: I18n.t("Голосовой ввод (VoxType)", "Voice typing (VoxType)")
+        icon: "mic"
+        width: parent.width
+        SettingRow {
+            label: I18n.t("Индикатор", "Indicator")
+            hint: I18n.t("«angelOS» — окошко voice.exe в стиле райса, «старый» — прежний кружок", "“angelOS” — a voice.exe window in the rice style, “classic” — the old circle")
+            PxSegmented {
+                model: [
+                    {
+                        "label": "angelOS",
+                        "value": "angelos"
+                    },
+                    {
+                        "label": I18n.t("Старый", "Classic"),
+                        "value": "classic"
+                    },
+                    {
+                        "label": I18n.t("Нет", "Off"),
+                        "value": "off"
+                    }
+                ]
+                currentValue: Config.voxtype.indicator
+                onActivated: v => Config.voxtype.indicator = v
+            }
+        }
+        SettingRow {
+            visible: Config.voxtype.indicator === "angelos"
+            label: I18n.t("Где показывать", "Position")
+            PxPositionPicker {
+                value: Config.voxtype.position
+                onPicked: v => Config.voxtype.position = v
+            }
+        }
+    }
 }

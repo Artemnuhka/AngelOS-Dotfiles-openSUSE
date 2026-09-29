@@ -5,59 +5,86 @@ import Quickshell
 import Quickshell.Wayland
 import qs.config
 import qs.services
+import qs.modules.desktop
 
-// Desktop layer per screen: wallpaper, desktop widgets, RMB menu.
+// Two background-layer surfaces per screen:
+//   angelos-wallpaper — the picture; niri puts it into the overview backdrop, where
+//                       surfaces get NO input at all (layer-rule place-within-backdrop)
+//   angelos-desktop   — transparent, on top: right-click menu and desktop widgets
 Variants {
     model: Shell.screens
 
-    PanelWindow {
-        id: win
-
+    Scope {
+        id: scope
         required property var modelData
-        screen: modelData
-        color: Theme.desk
-        anchors {
-            top: true
-            bottom: true
-            left: true
-            right: true
-        }
-        exclusionMode: ExclusionMode.Ignore
-        WlrLayershell.layer: WlrLayer.Background
-        WlrLayershell.namespace: "angelos-wallpaper"
 
-        WallpaperView {
-            anchors.fill: parent
-            screenName: win.modelData.name
-        }
+        PanelWindow {
+            screen: scope.modelData
+            color: Theme.desk
+            anchors {
+                top: true
+                bottom: true
+                left: true
+                right: true
+            }
+            exclusionMode: ExclusionMode.Ignore
+            WlrLayershell.layer: WlrLayer.Background
+            WlrLayershell.namespace: "angelos-wallpaper"
 
-        // plugin desktop widgets
-        Repeater {
-            model: Plugins.desktopWidgets
-            Loader {
-                required property var modelData
+            WallpaperView {
                 anchors.fill: parent
-                Component.onCompleted: setSource(Plugins.url(modelData, modelData.desktopWidget), {
-                    "plugin": Plugins.context(modelData),
-                    "screenName": win.modelData.name
-                })
+                screenName: scope.modelData.name
             }
         }
 
-        MouseArea {
-            anchors.fill: parent
-            acceptedButtons: Qt.RightButton | Qt.LeftButton
-            onClicked: m => {
-                if (m.button === Qt.RightButton)
-                    menu.openAt(m.x, m.y);
-                else
-                    menu.close();
-            }
-        }
+        PanelWindow {
+            id: win
 
-        DesktopMenu {
-            id: menu
-            parentWindow: win
+            readonly property var modelData: scope.modelData
+            screen: scope.modelData
+            color: "transparent"
+            anchors {
+                top: true
+                bottom: true
+                left: true
+                right: true
+            }
+            exclusionMode: ExclusionMode.Ignore
+            WlrLayershell.layer: WlrLayer.Background
+            WlrLayershell.namespace: "angelos-desktop"
+
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.RightButton | Qt.LeftButton
+                onClicked: m => {
+                    if (m.button === Qt.RightButton)
+                        menu.openAt(m.x, m.y);
+                    else {
+                        menu.close();
+                        DesktopWidgets.editMode = false;
+                    }
+                }
+            }
+
+            // desktop widgets (built-in + plugins), above the click catcher so they get their own input
+            Item {
+                id: deskArea
+                anchors.fill: parent
+                Repeater {
+                    model: DesktopWidgets.uidsFor(win.modelData.name)
+                    DesktopWidgetHost {
+                        required property string modelData
+                        uid: modelData
+                        screenName: win.modelData.name
+                        area: deskArea
+                    }
+                }
+            }
+
+            DesktopMenu {
+                id: menu
+                parentWindow: win
+            }
         }
     }
 }

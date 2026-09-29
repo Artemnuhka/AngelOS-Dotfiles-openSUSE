@@ -12,6 +12,7 @@ Item {
     property bool submenu: false
     property bool checked: false
     property bool checkable: false
+    readonly property bool hovered: mouse.containsMouse
     signal triggered
 
     width: parent ? parent.width : implicitWidth

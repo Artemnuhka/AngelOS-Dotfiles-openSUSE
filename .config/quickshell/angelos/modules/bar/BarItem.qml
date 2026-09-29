@@ -33,6 +33,11 @@ Loader {
         return true;
     }
 
+    // guided tips find bar elements by "bar:<id>"
+    Component.onCompleted: if (bar && bar.barWindow)
+        Tour.register("bar:" + wid, root, bar.barWindow)
+    Component.onDestruction: Tour.unregister("bar:" + wid, root)
+
     sourceComponent: {
         switch (wid) {
         case "start":

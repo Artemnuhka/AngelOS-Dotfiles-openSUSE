@@ -16,7 +16,12 @@ Item {
         triggeredOnStart: true
         onTriggered: Pulse.scan()
     }
-    Component.onCompleted: Usage.refresh()
+    // give the disk cache a moment, so a shell reload doesn't hit the API
+    Timer {
+        running: true
+        interval: 4000
+        onTriggered: Usage.refresh(false)
+    }
 
     IpcHandler {
         target: "claude"
@@ -50,7 +55,7 @@ Item {
             });
         }
         function refreshLimits(): void {
-            Usage.refresh();
+            Usage.refresh(true);
         }
     }
 }

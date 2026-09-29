@@ -66,7 +66,7 @@ Column {
         compact: true
         text: I18n.t("Обновить", "Refresh")
         icon: "refresh"
-        onClicked: Usage.refresh()
+        onClicked: Usage.refresh(true)
     }
 
     // answer

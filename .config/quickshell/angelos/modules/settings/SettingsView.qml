@@ -38,6 +38,11 @@ Item {
                     "icon": "image"
                 },
                 {
+                    "id": "widgets",
+                    "label": I18n.t("Виджеты", "Widgets"),
+                    "icon": "layers"
+                },
+                {
                     "id": "bar",
                     "label": I18n.t("Панель", "Bar"),
                     "icon": "window"
@@ -82,6 +87,11 @@ Item {
         {
             "title": "System",
             "pages": [
+                {
+                    "id": "defaults",
+                    "label": I18n.t("По умолчанию", "Default apps"),
+                    "icon": "star"
+                },
                 {
                     "id": "notifications",
                     "label": I18n.t("Уведомления", "Notifications"),

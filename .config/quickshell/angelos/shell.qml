@@ -6,6 +6,7 @@ import Quickshell
 import qs.services
 import qs.modules
 import qs.modules.background
+import qs.modules.desktop
 import qs.modules.clipboard
 import qs.modules.bar
 import qs.modules.launcher
@@ -16,6 +17,8 @@ import qs.modules.polkit
 import qs.modules.session
 import qs.modules.settings
 import qs.modules.workspace
+import qs.modules.tour
+import qs.modules.voxtype
 import qs.widgets
 
 // angelOS — pixel pink shell for niri.
@@ -28,6 +31,7 @@ ShellRoot {
     WorkspaceFx {}
     NotificationPopups {}
     Osd {}
+    VoxIndicator {}
     Launcher {}
     ClipboardPanel {}
     SessionMenu {}
@@ -35,6 +39,7 @@ ShellRoot {
     PolkitDialog {}
     SettingsWindow {}
     SetupWizard {}
+    TourOverlay {}
     PluginHost {}
     Ipc {}
 

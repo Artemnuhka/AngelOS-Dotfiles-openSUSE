@@ -171,6 +171,35 @@ def to_angelos(restart=True):
         log("angelOS запущен ♡")
 
 
+def unpatch_keys(t):
+    """angelOS keybinds back to `noctalia msg …` (inverse of patch_keys)."""
+    for pat, fn, _title in KEYS:
+        noct = pat.replace("\\", "")
+        t = t.replace('spawn-sh "' + CLI + " " + fn + '"', 'spawn-sh "noctalia msg ' + noct + '"')
+    t = re.sub(r'^(\s*)// (XF86MonBrightness\w+[^\n]*noctalia msg[^\n]*)$', r'\1\2', t, flags=re.M)
+    t = re.sub(r"\n\s*// ─── angelOS extras ───\n(?:[^\n]*angelos[^\n]*\n)*", "\n", t)
+    return t.replace("// ─── angelOS keybinds (were noctalia) ───", "// ─── noctalia-shell keybinds ───")
+
+
+def unpatch_rules(t):
+    return re.sub(r"\n?\s*// ─── angelOS \(managed by angelos switch.py\) ───.*?// ─── /angelOS ───\n?", "\n", t, flags=re.S)
+
+
+def to_noctalia_forward():
+    """No switch backup (e.g. a fresh install from the repo): rewrite the wiring in place."""
+    backup("switch-back")
+    edit(NIRI / "cfg/autostart.kdl", lambda t: re.sub(r'spawn-at-startup\s+"qs"\s+"-c"\s+"angelos"', 'spawn-at-startup "noctalia"', t))
+    edit(NIRI / "config.kdl", lambda t: t.replace('include "angelos.kdl"', 'include "noctalia.kdl"'))
+    edit(NIRI / "cfg/keybinds.kdl", unpatch_keys)
+    edit(NIRI / "cfg/rules.kdl", unpatch_rules)
+    edit(HOME / ".config/kitty/kitty.conf", lambda t: t.replace("include themes/angelos.conf", "include themes/noctalia.conf"))
+    edit(HOME / ".config/foot/foot.ini", lambda t: t.replace("include=~/.config/foot/themes/angelos", "include=~/.config/foot/themes/noctalia"))
+    edit(HOME / ".config/alacritty/alacritty.toml", lambda t: t.replace("themes/angelos.toml", "themes/noctalia.toml"))
+    for g in ("gtk-3.0", "gtk-4.0"):
+        edit(HOME / f".config/{g}/gtk.css", lambda t: t.replace('@import url("angelos.css");', '@import url("noctalia.css");'))
+    MARK.unlink(missing_ok=True)
+
+
 def to_noctalia(restart=True):
     backups = sorted((STATE / "backups").glob("*-switch*"))
     src = None
@@ -180,7 +209,12 @@ def to_noctalia(restart=True):
             src = b
             break
     if not src:
-        sys.exit("не нашёл бэкап с конфигом Noctalia")
+        log("бэкапа с Noctalia нет — переписываю обвязку на месте")
+        to_noctalia_forward()
+        if restart:
+            subprocess.run(["qs", "-c", "angelos", "kill"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.Popen(["setsid", "-f", "noctalia"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return
     backup("switch-back")
     for rel in json.loads((src / "files.json").read_text()):
         shutil.copy2(src / rel, HOME / rel)
@@ -197,6 +231,8 @@ if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else "status"
     if cmd == "angelos":
         to_angelos(restart="--no-restart" not in sys.argv)
+    elif cmd == "noctalia-forward":
+        to_noctalia_forward()
     elif cmd == "noctalia":
         to_noctalia(restart="--no-restart" not in sys.argv)
     else:

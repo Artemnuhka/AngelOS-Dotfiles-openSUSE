@@ -16,7 +16,69 @@ FloatingWindow {
     minimumSize: Qt.size(720, 500)
     property int step: 0
     property bool offered: false
-    readonly property var steps: [I18n.t("Привет", "Welcome"), I18n.t("Хоткеи", "Shortcuts"), I18n.t("Мониторы", "Monitors"), I18n.t("Ввод", "Input"), I18n.t("Окна", "Windows"), I18n.t("Тема", "Theme"), I18n.t("Готово", "Finish")]
+    // only what is really needed on day one; everything else lives in Settings
+    readonly property var stepList: [
+        {
+            "label": I18n.t("Привет", "Welcome"),
+            "kind": "welcome"
+        },
+        {
+            "label": I18n.t("Хоткеи", "Shortcuts"),
+            "kind": "shortcuts"
+        },
+        {
+            "label": I18n.t("Мониторы", "Monitors"),
+            "kind": "page",
+            "page": "pages/MonitorPage.qml"
+        },
+        {
+            "label": I18n.t("Ввод", "Input"),
+            "kind": "page",
+            "page": "pages/KeyboardPage.qml"
+        },
+        {
+            "label": I18n.t("Тема", "Theme"),
+            "kind": "page",
+            "page": "pages/AppearancePage.qml"
+        },
+        {
+            "label": I18n.t("Панель", "Bar"),
+            "kind": "bar"
+        },
+        {
+            "label": I18n.t("Окна", "Windows"),
+            "kind": "page",
+            "page": "pages/WindowsPage.qml"
+        },
+        {
+            "label": I18n.t("Рабочий стол", "Desktop"),
+            "kind": "desktop"
+        },
+        {
+            "label": I18n.t("Приложения", "Apps"),
+            "kind": "page",
+            "page": "pages/DefaultsPage.qml"
+        },
+        {
+            "label": I18n.t("Готово", "Finish"),
+            "kind": "finish"
+        }
+    ]
+    readonly property var steps: stepList.map(s => s.label)
+    readonly property var cur: stepList[step] || stepList[0]
+    readonly property int last: stepList.length - 1
+    property bool tipsAfter: true
+    function finishSetup() {
+        Config.setup.complete = true;
+        Shell.setupOpen = false;
+        if (tipsAfter)
+            tipsTimer.start();
+    }
+    Timer {
+        id: tipsTimer
+        interval: 700
+        onTriggered: Tour.start()
+    }
     onClosed: Shell.setupOpen = false
     onVisibleChanged: if (!visible)
         Shell.setupOpen = false
@@ -73,7 +135,13 @@ FloatingWindow {
             anchors.bottomMargin: Theme.u * 5
             anchors.left: parent.left
             anchors.right: parent.right
-            sourceComponent: root.step === 0 ? welcome : root.step === 1 ? shortcuts : root.step === 6 ? finish : settingsStep
+            sourceComponent: ({
+                    "welcome": welcome,
+                    "shortcuts": shortcuts,
+                    "finish": finish,
+                    "bar": barStep,
+                    "desktop": desktopStep
+                })[root.cur.kind] || settingsStep
         }
         Row {
             id: footer
@@ -85,15 +153,13 @@ FloatingWindow {
                 onClicked: root.step--
             }
             PxButton {
-                text: root.step === 6 ? I18n.t("Начать работу", "Start using angelOS") : I18n.t("Далее", "Next")
+                text: root.step === root.last ? I18n.t("Начать работу", "Start using angelOS") : I18n.t("Далее", "Next")
                 accent: true
                 onClicked: {
-                    if (root.step < 6)
+                    if (root.step < root.last)
                         root.step++;
-                    else {
-                        Config.setup.complete = true;
-                        Shell.setupOpen = false;
-                    }
+                    else
+                        root.finishSetup();
                 }
             }
             PxButton {
@@ -108,7 +174,7 @@ FloatingWindow {
     Component {
         id: settingsStep
         Loader {
-            source: root.step === 2 ? "pages/MonitorPage.qml" : root.step === 3 ? "pages/KeyboardPage.qml" : root.step === 4 ? "pages/WindowsPage.qml" : "pages/AppearancePage.qml"
+            source: root.cur.page || "pages/AppearancePage.qml"
         }
     }
     Component {
@@ -161,6 +227,11 @@ FloatingWindow {
         id: finish
         PxPage {
             heading: I18n.t("Всё готово ♡", "You're ready ♡")
+            PxCheck {
+                text: I18n.t("Показать подсказки по интерфейсу после мастера", "Show interface tips after the wizard")
+                checked: root.tipsAfter
+                onToggled: c => root.tipsAfter = c
+            }
             subtitle: I18n.t("Изменения уже сохранены. Настройки всегда доступны из меню angelOS или по Mod+S.", "Your changes are saved. Open Settings from the angelOS menu or press Mod+S at any time.")
             PxText {
                 text: I18n.t("Тема: ", "Theme: ") + Theme.flavors[Config.appearance.flavor].name
@@ -172,6 +243,168 @@ FloatingWindow {
                 width: parent.width
                 wrapMode: Text.Wrap
                 text: I18n.t("Для геометрии мониторов нажми «Сохранить в конфиг» на шаге «Мониторы», если менял её.", "If you changed monitor geometry, use Save to config on the Monitors step to keep it after login.")
+            }
+        }
+    }
+
+    Component {
+        id: barStep
+        PxPage {
+            heading: I18n.t("Панель", "The bar")
+            subtitle: I18n.t("Как выглядит панель. Раскладку элементов потом можно перетаскивать в Настройки → Панель.", "How the bar looks. Rearrange its items later in Settings → Bar.")
+            PxGroup {
+                title: I18n.t("Вид", "Look")
+                icon: "window"
+                width: parent.width
+                SettingRow {
+                    label: I18n.t("Стиль", "Style")
+                    PxSegmented {
+                        model: [
+                            {
+                                "label": I18n.t("Таскбар", "Taskbar"),
+                                "value": "taskbar"
+                            },
+                            {
+                                "label": I18n.t("Полоса", "Strip"),
+                                "value": "top"
+                            },
+                            {
+                                "label": I18n.t("Остров", "Island"),
+                                "value": "island"
+                            }
+                        ]
+                        currentValue: Config.bar.style
+                        onActivated: v => Config.bar.style = v
+                    }
+                }
+                SettingRow {
+                    label: I18n.t("Воркспейсы", "Workspaces")
+                    PxSegmented {
+                        model: [
+                            {
+                                "label": I18n.t("Сердечки", "Hearts"),
+                                "value": "hearts",
+                                "icon": "heart"
+                            },
+                            {
+                                "label": I18n.t("Иконки", "Icons"),
+                                "value": "icons",
+                                "icon": "window"
+                            },
+                            {
+                                "label": I18n.t("Оба", "Both"),
+                                "value": "both"
+                            }
+                        ]
+                        currentValue: Config.bar.workspaceStyle
+                        onActivated: v => Config.bar.workspaceStyle = v
+                    }
+                }
+                SettingRow {
+                    label: I18n.t("Подписи окон", "Window titles")
+                    PxToggle {
+                        checked: Config.bar.taskLabels
+                        onToggled: c => Config.bar.taskLabels = c
+                    }
+                }
+                SettingRow {
+                    label: I18n.t("Иконки трея под тему", "Tray icons in theme colors")
+                    PxSegmented {
+                        model: [
+                            {
+                                "label": I18n.t("Как есть", "As is"),
+                                "value": "off"
+                            },
+                            {
+                                "label": I18n.t("Моно", "Mono"),
+                                "value": "mono"
+                            },
+                            {
+                                "label": I18n.t("Акцент", "Accent"),
+                                "value": "accent"
+                            }
+                        ]
+                        currentValue: Config.bar.trayTint
+                        onActivated: v => Config.bar.trayTint = v
+                    }
+                }
+                SettingRow {
+                    label: I18n.t("Лирика в центре панели", "Lyrics in the middle of the bar")
+                    PxToggle {
+                        checked: Config.lyrics.enabled
+                        onToggled: c => Config.lyrics.enabled = c
+                    }
+                }
+            }
+            PxGroup {
+                title: I18n.t("Логотип", "Logo")
+                icon: "heart"
+                width: parent.width
+                Row {
+                    spacing: Theme.u * 6
+                    Repeater {
+                        model: ["classic", "angel"]
+                        PxButton {
+                            required property string modelData
+                            width: logoPreview.implicitWidth + Theme.u * 12
+                            height: Theme.u * 23
+                            checked: (Config.bar.logoStyle === "angel" ? "angel" : "classic") === modelData
+                            onClicked: Config.bar.logoStyle = modelData
+                            AngelLogo {
+                                id: logoPreview
+                                anchors.centerIn: parent
+                                variant: parent.modelData
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Component {
+        id: desktopStep
+        PxPage {
+            heading: I18n.t("Рабочий стол", "Desktop")
+            subtitle: I18n.t("Виджеты на обоях — таскаются за заголовок, добавляются и убираются через ПКМ → Вид.", "Widgets on the wallpaper — drag them by the title, add or remove via right-click → View.")
+            PxGroup {
+                title: I18n.t("Виджеты на ", "Widgets on ") + (Shell.focusedScreen ? Shell.focusedScreen.name : "")
+                icon: "layers"
+                width: parent.width
+                Repeater {
+                    model: DesktopWidgets.types
+                    PxCheck {
+                        required property var modelData
+                        text: modelData.label
+                        checked: DesktopWidgets.has(modelData.type, Shell.focusedScreen ? Shell.focusedScreen.name : "")
+                        onToggled: DesktopWidgets.toggle(modelData.type, Shell.focusedScreen ? Shell.focusedScreen.name : "")
+                    }
+                }
+            }
+            PxGroup {
+                title: I18n.t("Голосовой ввод", "Voice typing")
+                icon: "mic"
+                width: parent.width
+                SettingRow {
+                    label: I18n.t("Индикатор VoxType", "VoxType indicator")
+                    PxSegmented {
+                        model: [
+                            {
+                                "label": "angelOS",
+                                "value": "angelos"
+                            },
+                            {
+                                "label": I18n.t("Старый", "Classic"),
+                                "value": "classic"
+                            },
+                            {
+                                "label": I18n.t("Нет", "Off"),
+                                "value": "off"
+                            }
+                        ]
+                        currentValue: Config.voxtype.indicator
+                        onActivated: v => Config.voxtype.indicator = v
+                    }
+                }
             }
         }
     }

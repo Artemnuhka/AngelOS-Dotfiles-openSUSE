@@ -28,6 +28,8 @@ Singleton {
     property alias notifications: adapter.notifications
     property alias osd: adapter.osd
     property alias launcher: adapter.launcher
+    property alias voxtype: adapter.voxtype
+    property alias desktop: adapter.desktop
     property alias lock: adapter.lock
     property alias plugins: adapter.plugins
     property alias dotfiles: adapter.dotfiles
@@ -99,6 +101,10 @@ Singleton {
                 property bool compactOnVertical: true
                 property bool showWindows: true
                 property bool taskLabels: false
+                property int taskMinWidth: 40       // task buttons with titles, in art pixels
+                property int taskMaxWidth: 90
+                property string workspaceStyle: "hearts" // hearts | icons | both
+                property int workspaceIcons: 3      // max app icons per workspace
                 property bool allWindows: false     // taskbar: every window, not only current workspace
                 property bool showMedia: true
                 property bool showSeconds: false
@@ -155,6 +161,17 @@ Singleton {
                 property bool layout: true          // show keyboard layout switches
                 property string position: "bottom-center"
                 property int ms: 900
+            }
+
+            property JsonObject desktop: JsonObject {
+                property var widgets: []            // [{uid, type, screen, x, y, settings}]; x/y < 0 = from the right/bottom
+                property bool initialized: false
+                property bool snap: true
+            }
+
+            property JsonObject voxtype: JsonObject {
+                property string indicator: "angelos" // angelos | classic (old GTK circle) | off
+                property string position: "bottom-center"
             }
 
             property JsonObject launcher: JsonObject {

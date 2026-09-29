@@ -16,11 +16,14 @@ Singleton {
     property var weekOpus: null
     property var weekSonnet: null
     property var extra: null       // extra usage (pay-as-you-go), if enabled
-    property string status: "idle" // idle | loading | ok | expired | auth | offline | nologin
+    property string status: "idle" // idle | loading | ok | limited | expired | auth | offline | nologin
     property string plan: ""
     property date updated
-    property int intervalSec: 90
-    readonly property bool ok: status === "ok" && !!five
+    property int intervalSec: 300
+    property real notBefore: 0      // backoff after 429 (ms since epoch)
+    // stale data stays visible while Anthropic rate-limits us
+    readonly property bool ok: (status === "ok" || status === "limited" || status === "loading" || status === "offline") && !!five
+    readonly property string cacheFile: Quickshell.env("HOME") + "/.cache/angelos/claude-usage.json"
     readonly property real fiveLeft: five ? five.left : -1
     readonly property real weekLeft: week ? week.left : -1
 
@@ -52,7 +55,23 @@ Singleton {
         return left < 0 ? theme.textDim : left <= 15 ? theme.danger : left <= 40 ? theme.accent3 : theme.ok;
     }
 
-    function refresh() {
+    function apply(d, when) {
+        five = window(d.five_hour);
+        week = window(d.seven_day);
+        weekOpus = window(d.seven_day_opus);
+        weekSonnet = window(d.seven_day_sonnet);
+        extra = d.extra_usage && d.extra_usage.is_enabled ? d.extra_usage : null;
+        updated = when || new Date();
+    }
+    // force: user asked (button / popup) — still honours the 429 backoff and a 60 s floor
+    function refresh(force) {
+        if (Quickshell.env("ANGELOS_DEV") === "1" && five)
+            return;   // dev instances share the account's rate limit; don't burn it
+        const now = Date.now();
+        if (now < notBefore)
+            return;
+        if (five && updated && now - updated.getTime() < (force ? 60000 : (intervalSec - 10) * 1000))
+            return;
         if (!_token) {
             status = "nologin";
             return;
@@ -70,16 +89,19 @@ Singleton {
             if (xhr.status === 200) {
                 try {
                     const d = JSON.parse(xhr.responseText);
-                    root.five = root.window(d.five_hour);
-                    root.week = root.window(d.seven_day);
-                    root.weekOpus = root.window(d.seven_day_opus);
-                    root.weekSonnet = root.window(d.seven_day_sonnet);
-                    root.extra = d.extra_usage && d.extra_usage.is_enabled ? d.extra_usage : null;
-                    root.updated = new Date();
+                    root.apply(d, new Date());
                     root.status = "ok";
+                    cache.setText(JSON.stringify({
+                        "at": Date.now(),
+                        "data": d
+                    }));
                 } catch (e) {
                     root.status = "offline";
                 }
+            } else if (xhr.status === 429) {
+                const ra = parseInt(xhr.getResponseHeader("retry-after") || "0");
+                root.notBefore = Date.now() + Math.max(600, ra || 0) * 1000;
+                root.status = "limited";
             } else {
                 root.status = xhr.status === 401 || xhr.status === 403 ? "auth" : "offline";
             }
@@ -95,7 +117,23 @@ Singleton {
         interval: root.intervalSec * 1000
         running: true
         repeat: true
-        onTriggered: root.refresh()
+        onTriggered: root.refresh(false)
+    }
+    // last good answer survives restarts, so a reload doesn't hit the API again
+    FileView {
+        id: cache
+        path: root.cacheFile
+        printErrors: false
+        atomicWrites: true
+        onLoaded: {
+            try {
+                const c = JSON.parse(text());
+                if (c && c.data && !root.five) {
+                    root.apply(c.data, new Date(c.at));
+                    root.status = "ok";
+                }
+            } catch (e) {}
+        }
     }
 
     FileView {
@@ -112,7 +150,7 @@ Singleton {
                 root._expires = o.expiresAt || 0;
                 root.plan = o.subscriptionType || "";
                 if (changed)
-                    root.refresh();
+                    Qt.callLater(() => root.refresh(false));
             } catch (e) {
                 root._token = "";
                 root.status = "nologin";

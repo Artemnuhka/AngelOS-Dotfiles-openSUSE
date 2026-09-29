@@ -399,6 +399,9 @@ Singleton {
     readonly property int slow: 380
 
     function mix(a, b, t) {
+        // accepts colors or "#rrggbb" strings
+        a = typeof a === "string" ? Qt.color(a) : a;
+        b = typeof b === "string" ? Qt.color(b) : b;
         return Qt.rgba(a.r + (b.r - a.r) * t, a.g + (b.g - a.g) * t, a.b + (b.b - a.b) * t, a.a + (b.a - a.a) * t);
     }
 

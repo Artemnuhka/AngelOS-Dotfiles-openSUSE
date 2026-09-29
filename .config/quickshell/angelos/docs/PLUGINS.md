@@ -45,7 +45,7 @@
 | `menu` | ПКМ-меню рабочего стола (декларативно). `exec` — команда sh, `settings` — открыть страницу настроек, `url` — xdg-open | — |
 | `menuComponent` | QML-элементы в ПКМ-меню (обычно `PxMenuItem`) | `plugin`, `menu` (вызови `menu.close()`) |
 | `barWidget` | панель, рядом с треем (все три стиля) | `plugin`, `screenName`, `barWindow` |
-| `desktopWidget` | слой обоев на каждом мониторе, растянут на экран | `plugin`, `screenName` |
+| `desktopWidget` | виджет на рабочем столе: angelOS сам рисует рамку с заголовком `desktopTitle`, перетаскивание и удаление; добавляется через ПКМ → Вид | `plugin`, `screenName`, `widget` (`{uid, x, y, settings}`) |
 | `settings` | страница в Настройки → Плагины → имя | `plugin` |
 | `main` | фоновый сервис, живёт пока плагин включён (можно держать тут `IpcHandler`) | `plugin` |
 | `launcher` | провайдер результатов лаунчера (Mod+Space) | `plugin`, `pluginId` |
@@ -76,6 +76,11 @@ QtObject {
 
 Объяви в корне компонента те свойства, которые используешь, например
 `property var plugin` и `property string screenName`.
+
+Виджет рабочего стола — это только содержимое: размер берётся из `implicitWidth` /
+`implicitHeight`, рамку «*.exe» рисует angelOS. Необязательное
+`property bool wantVisible` прячет рамку, когда показывать нечего (в режиме правки
+виджет всё равно виден полупрозрачным, чтобы его можно было подвинуть).
 
 ## Объект `plugin`
 

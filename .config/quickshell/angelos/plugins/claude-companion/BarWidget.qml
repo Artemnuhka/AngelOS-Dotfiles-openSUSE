@@ -49,7 +49,7 @@ Item {
         onClicked: m => {
             panel.tab = m.button === Qt.RightButton ? "sessions" : m.button === Qt.MiddleButton ? "ask" : "limits";
             if (!popup.visible)
-                Usage.refresh();
+                Usage.refresh(true);
             popup.toggle();
         }
     }

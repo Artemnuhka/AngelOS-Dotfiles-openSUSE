@@ -25,11 +25,22 @@ PxPage {
             onActivated: v => Config.appearance.language = v
         }
     }
-    PxButton {
+    Row {
         visible: !Shell.setupOpen
-        text: I18n.t("Мастер настройки", "Setup wizard")
-        icon: "sparkle"
-        onClicked: Shell.setupOpen = true
+        spacing: Theme.u * 4
+        PxButton {
+            text: I18n.t("Мастер настройки", "Setup wizard")
+            icon: "sparkle"
+            onClicked: Shell.setupOpen = true
+        }
+        PxButton {
+            text: I18n.t("Подсказки по интерфейсу", "Interface tips")
+            icon: "info"
+            onClicked: {
+                Shell.settingsOpen = false;
+                Tour.start();
+            }
+        }
     }
     PxGroup {
         title: I18n.t("Тема", "Theme")

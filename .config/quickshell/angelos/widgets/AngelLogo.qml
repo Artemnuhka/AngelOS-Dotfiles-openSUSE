@@ -1,93 +1,108 @@
 import QtQuick
 import qs.config
 
-// Font-based wordmarks sharing the little heart-window emblem.
+// angelOS logo: a pixel angel-heart (halo + wings) and a wordmark.
+//   classic — "angel" + a Win98 "OS" plate
+//   angel   — pink "angel" + cyan "OS" with sparkles
 Item {
     id: root
+
     property bool emblemOnly: false
     property int pixel: Theme.u
-    property string variant: Config.bar.logoStyle
+    property string variant: Config.bar.logoStyle === "angel" ? "angel" : "classic"
+    property int fontSize: Theme.sizeTitle
     readonly property bool angel: variant === "angel"
-    implicitWidth: emblemOnly ? emblem.width : emblem.width + pixel * 4 + wordmark.implicitWidth
-    implicitHeight: pixel * 12
 
-    Item {
-        id: emblem
-        width: root.pixel * 13
-        height: root.pixel * 12
-        Rectangle {
-            x: root.pixel * 4
-            width: root.pixel * 5
-            height: root.pixel * 2
-            radius: root.pixel
-            color: "transparent"
-            border.width: root.pixel / 2
-            border.color: Theme.accent2
+    // 19×12 art pixels: '#' outline, 'o' heart, 'w' wings/shine, 'y' halo
+    readonly property var emblemRows: [
+        "......yyyyyyy......",
+        ".....y.......y.....",
+        "......yyyyyyy......",
+        "...................",
+        "#.....##...##.....#",
+        "#w#..#wo#.#oo#..#w#",
+        "#ww###ooo#ooo###ww#",
+        ".#www#ooooooo#www#.",
+        "..#w#.#ooooo#.#w#..",
+        "...##..#ooo#..##...",
+        "........#o#........",
+        ".........#........."
+    ]
+
+    implicitWidth: emblemOnly ? emblem.width : row.implicitWidth
+    implicitHeight: Math.max(emblem.height, wordmark.implicitHeight)
+
+    Row {
+        id: row
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: root.pixel * 4
+
+        PxIcon {
+            id: emblem
+            anchors.verticalCenter: parent.verticalCenter
+            bitmap: root.emblemRows
+            pixel: root.pixel
+            ink: Theme.dark ? Theme.mix(Theme.accent, Theme.edge, 0.55) : Theme.edge
+            fill: Theme.accent
+            light: "#ffffff"
+            fill3: Theme.mix(Theme.accent3, Qt.color("#ffd84a"), 0.6)
         }
-        Rectangle {
-            x: root.pixel
-            y: root.pixel * 3
-            width: root.pixel * 11
-            height: root.pixel * 9
-            color: Theme.face
-            border.width: root.pixel / 2
-            border.color: Theme.text
-            Rectangle {
-                x: root.pixel
-                y: root.pixel
-                width: parent.width - root.pixel * 2
-                height: root.pixel * 2
+
+        Row {
+            id: wordmark
+            visible: !root.emblemOnly
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: root.angel ? 0 : root.pixel * 2
+
+            PxText {
+                anchors.verticalCenter: parent.verticalCenter
+                text: "angel"
+                font.family: Theme.fontTitle
+                font.pixelSize: root.fontSize
+                color: root.angel ? Theme.accent : Theme.text
+                style: root.angel ? Text.Outline : Text.Normal
+                styleColor: Qt.alpha(Theme.edge, 0.8)
+            }
+
+            // classic: "OS" on a bevelled plate
+            PxBox {
+                visible: !root.angel
+                anchors.verticalCenter: parent.verticalCenter
+                width: os.implicitWidth + root.pixel * 6
+                height: root.fontSize + root.pixel * 2
                 color: Theme.accent
-                Rectangle {
-                    anchors.right: parent.right
-                    anchors.rightMargin: root.pixel / 2
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: root.pixel
-                    height: root.pixel
+                hiColor: Theme.mix(Theme.accent, "#ffffff", 0.45)
+                loColor: Theme.mix(Theme.accent, Theme.edge, 0.5)
+                PxText {
+                    id: os
+                    anchors.centerIn: parent
+                    text: "OS"
+                    font.family: Theme.fontTitle
+                    font.pixelSize: root.fontSize
+                    font.bold: true
                     color: Theme.selectText
                 }
             }
-            PxIcon {
-                name: "heart"
-                pixel: Math.max(1, root.pixel / 2)
-                fill: Theme.accent
-                anchors.horizontalCenter: parent.horizontalCenter
-                y: root.pixel * 3.5
+
+            // angel: cyan "OS" and a sparkle
+            PxText {
+                visible: root.angel
+                anchors.verticalCenter: parent.verticalCenter
+                text: "OS"
+                font.family: Theme.fontTitle
+                font.pixelSize: root.fontSize
+                font.bold: true
+                color: Theme.accent2
+                style: Text.Outline
+                styleColor: Qt.alpha(Theme.edge, 0.8)
             }
-        }
-    }
-    Row {
-        id: wordmark
-        visible: !root.emblemOnly
-        x: emblem.width + root.pixel * 4
-        anchors.verticalCenter: parent.verticalCenter
-        spacing: root.angel ? root.pixel : 0
-        Text {
-            text: "angel"
-            color: Theme.text
-            font.family: root.angel ? "Pixeloid Sans" : "Liberation Sans"
-            font.pixelSize: root.pixel * (root.angel ? 9 : 10)
-            font.bold: !root.angel
-            font.hintingPreference: Font.PreferFullHinting
-            renderType: Text.NativeRendering
-        }
-        Text {
-            text: "OS"
-            color: root.angel ? Theme.accent2 : Theme.text
-            font.family: root.angel ? "Pixeloid Sans" : "Liberation Sans"
-            font.pixelSize: root.pixel * (root.angel ? 9 : 10)
-            font.bold: root.angel
-            font.hintingPreference: Font.PreferFullHinting
-            renderType: Text.NativeRendering
-        }
-        Text {
-            visible: root.angel
-            text: "+"
-            color: Theme.accent
-            font.family: "Pixeloid Sans"
-            font.pixelSize: root.pixel * 6
-            anchors.verticalCenter: parent.verticalCenter
-            renderType: Text.NativeRendering
+            PxIcon {
+                visible: root.angel
+                anchors.top: parent.top
+                name: "sparkle"
+                pixel: Math.max(1, root.pixel - 1)
+                fill: Theme.accent3
+            }
         }
     }
 }

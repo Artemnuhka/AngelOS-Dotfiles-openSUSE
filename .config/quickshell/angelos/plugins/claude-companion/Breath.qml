@@ -3,7 +3,7 @@ import qs.config
 import qs.widgets
 import "."
 
-// The mascot: face tinted by state, breathing (blinking when it needs you).
+// The mascot: face tinted by state, breathing slowly and softly (a bit quicker when it needs you).
 Item {
     id: root
 
@@ -20,16 +20,17 @@ Item {
 
     SequentialAnimation on glow {
         loops: Animation.Infinite
-        running: root.visible && root.state !== "none"
+        running: root.visible && root.state !== "none" && root.state !== "idle" && root.speed > 0
+        // one full breath ≈ 4 s (≈ 2 s when it waits for you); depth stays gentle
         NumberAnimation {
-            to: root.urgent ? 0.25 : 0.45
-            duration: (root.urgent ? 260 : root.busy ? 700 : 1600) / Math.max(0.1, root.speed)
-            easing.type: root.urgent ? Easing.Linear : Easing.InOutSine
+            to: root.urgent ? 0.45 : root.busy ? 0.7 : 0.82
+            duration: (root.urgent ? 1000 : 2000) / Math.max(0.1, root.speed)
+            easing.type: Easing.InOutSine
         }
         NumberAnimation {
             to: 1
-            duration: (root.urgent ? 260 : root.busy ? 700 : 1600) / Math.max(0.1, root.speed)
-            easing.type: root.urgent ? Easing.Linear : Easing.InOutSine
+            duration: (root.urgent ? 1000 : 2000) / Math.max(0.1, root.speed)
+            easing.type: Easing.InOutSine
         }
     }
 
