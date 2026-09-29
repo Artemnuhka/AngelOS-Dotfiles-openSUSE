@@ -51,6 +51,12 @@ for path in root.glob(".local/bin/*"):
 PY
 then pass "Python syntax"; else fail "Python syntax"; fi
 
+if python3 "$ROOT/scripts/test-plugin-studio.py"; then
+  pass "Plugin Studio: offline integration tests"
+else
+  fail "Plugin Studio: offline integration tests"
+fi
+
 if command -v shellcheck >/dev/null 2>&1; then
   if shellcheck -S warning "$ROOT/install.sh" "$ROOT/scripts/check.sh"; then
     pass "shellcheck"

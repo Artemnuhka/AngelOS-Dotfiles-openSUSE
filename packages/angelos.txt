@@ -1,5 +1,6 @@
 # angelOS desktop shell (installed with DESKTOP_SHELL=angelos)
 quickshell
+qt6-declarative
 qt6-5compat
 qt6-imageformats
 python

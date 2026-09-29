@@ -13,6 +13,13 @@ PxPage {
     subtitle: I18n.t("Папка ~/.config/angelos/plugins/<id>/ с manifest.json. Плагин может добавить пункты в ПКМ-меню, виджет на панель или рабочий стол, фоновый сервис и страницу настроек. Документация: docs/PLUGINS.md", "Plugins live in ~/.config/angelos/plugins/<id>/ with manifest.json. They can add menus, bar or desktop widgets, services, and settings pages. See docs/PLUGINS.md.")
 
     property string createLog: ""
+    PxButton {
+        visible: Config.developer.enabled
+        text: I18n.t("Создать плагин с ИИ", "Create a plugin with AI")
+        icon: "sparkle"
+        accent: true
+        onClicked: Shell.openSettings("studio")
+    }
     Connections {
         target: Plugins
         function onCreated(id, ok) {

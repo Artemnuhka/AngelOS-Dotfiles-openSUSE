@@ -103,6 +103,12 @@ Item {
                     "icon": "plug"
                 },
                 {
+                    "id": "studio",
+                    "label": I18n.t("Мастер плагинов", "Plugin Studio"),
+                    "icon": "sparkle",
+                    "developer": true
+                },
+                {
                     "id": "dotfiles",
                     "label": "Dotfiles",
                     "icon": "package",
@@ -127,7 +133,7 @@ Item {
     // owner-only pages vanish in the public version
     readonly property var visibleGroups: groups.map(g => ({
                 "title": g.title,
-                "pages": g.pages.filter(p => !p.owner || Owner.enabled)
+                "pages": g.pages.filter(p => (!p.owner || Owner.enabled) && (!p.developer || Config.developer.enabled))
             })).filter(g => g.pages.length > 0)
     readonly property var allPages: visibleGroups.reduce((a, g) => a.concat(g.pages), [])
     readonly property var currentPage: allPages.find(p => p.id === Shell.settingsPage) || allPages[0]

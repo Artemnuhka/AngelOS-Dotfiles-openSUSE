@@ -9,6 +9,26 @@ import qs.widgets
 PxPage {
     heading: "System"
 
+    PxGroup {
+        title: I18n.t("Разработка", "Development")
+        icon: "sparkle"
+        width: parent.width
+        SettingRow {
+            label: I18n.t("Режим разработчика", "Developer mode")
+            hint: I18n.t("Добавляет мастер плагинов в настройки и меню «Пуск». Установленные плагины работают и без этого режима.", "Adds Plugin Studio to Settings and Start. Installed plugins keep working when this mode is off.")
+            PxToggle {
+                checked: Config.developer.enabled
+                onToggled: c => Config.developer.enabled = c
+            }
+        }
+        PxButton {
+            visible: Config.developer.enabled
+            text: I18n.t("Открыть мастер плагинов", "Open Plugin Studio")
+            icon: "sparkle"
+            onClicked: Shell.openSettings("studio")
+        }
+    }
+
     Component.onCompleted: {
         SystemInfo.refresh();
         DesktopActions.refresh();

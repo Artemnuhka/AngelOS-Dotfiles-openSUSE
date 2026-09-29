@@ -109,6 +109,14 @@ angelos switch noctalia            # go back to Noctalia (and `switch angelos` t
 
 A plugin is a folder with a `manifest.json`; it can add right-click menu items, bar widgets, desktop widgets, launcher providers, a settings page and a background service. **Settings → Plugins → New plugin** scaffolds one; the guide is [`docs/PLUGINS.md`](.config/quickshell/angelos/docs/PLUGINS.md).
 
+**Build a plugin with AI:** enable **Settings → System → Developer mode**, then open
+**Plugin Studio** from Settings or Start. Add an OpenAI or Anthropic API key,
+describe your idea, answer any questions and approve the proposed behavior and
+size. Studio generates themed QML, shows the files and checks their syntax before
+you click **Install**. Installed plugins appear in the normal plugin settings;
+desktop widgets can be added to the current screen immediately. The UI supports
+Russian and English. [Plugin Studio guide](.config/quickshell/angelos/docs/PLUGIN_STUDIO.md).
+
 | Plugin | What it does |
 | --- | --- |
 | `cat` | A pixel cat on the bar: asleep, walking or running with the CPU load |

@@ -122,6 +122,13 @@ PopupWindow {
                 onTriggered: root.run(() => Shell.openSettings("plugins"))
             }
             PxMenuItem {
+                visible: Config.developer.enabled
+                height: visible ? implicitHeight : 0
+                text: I18n.t("Мастер плагинов…", "Plugin Studio…")
+                icon: "sparkle"
+                onTriggered: root.run(() => Shell.openSettings("studio"))
+            }
+            PxMenuItem {
                 visible: Owner.enabled
                 height: visible ? implicitHeight : 0
                 text: "Dotfiles"

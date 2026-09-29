@@ -34,6 +34,7 @@ Singleton {
     property alias plugins: adapter.plugins
     property alias dotfiles: adapter.dotfiles
     property alias system: adapter.system
+    property alias developer: adapter.developer
 
     function expand(path) {
         if (!path)
@@ -202,6 +203,14 @@ Singleton {
                 property string monitor: "auto"
                 property string monitorProgram: ""
                 property bool monitorInTerminal: false
+            }
+
+            property JsonObject developer: JsonObject {
+                property bool enabled: false
+                property string provider: "openai"
+                property string openaiModel: "gpt-5.4"
+                property string anthropicModel: "claude-sonnet-4-6"
+                property int maxOutputTokens: 16000
             }
         }
     }

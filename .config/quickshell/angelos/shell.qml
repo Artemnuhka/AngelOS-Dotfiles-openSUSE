@@ -54,6 +54,13 @@ ShellRoot {
         id: barLayoutEditorTypeAnchor
         BarLayoutEditor {}
     }
+    Component {
+        id: textAreaTypeAnchor
+        PxTextArea {}
+    }
 
-    Component.onCompleted: ThemeExport.signature // wake the template exporter
+    Component.onCompleted: {
+        ThemeExport.signature; // wake the template exporter
+        PluginStudio.loaded; // make the worker available to dynamically loaded pages
+    }
 }
