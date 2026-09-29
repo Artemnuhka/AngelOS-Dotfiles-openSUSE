@@ -4,8 +4,11 @@
 # Run it with no arguments for the interactive setup, or drive it with
 # environment variables (everything has a default, so it also works unattended):
 #
-#   DOTFILES_MODE=full|tech        full = styling + Noctalia + assets, tech = minimal
-#   NOCTALIA=1|0                   install/use Noctalia Shell (default 1)
+#   DOTFILES_MODE=full|tech        full = styling + desktop shell + assets, tech = minimal
+#   DESKTOP_SHELL=angelos|noctalia|none
+#                                  desktop shell (default angelos; tech defaults to none).
+#                                  angelOS = the pixel Quickshell shell shipped in .config/quickshell/angelos
+#   NOCTALIA=1|0                   legacy switch: NOCTALIA=1 means DESKTOP_SHELL=noctalia
 #   NOCTALIA_RESET_SETTINGS=0|1    move aside Noctalia GUI settings saved by an earlier
 #                                  run, so the preconfigured shell setup applies (default 0)
 #   KB_LAYOUTS=us,ru               keyboard layouts, XKB codes, first one is the default
@@ -35,14 +38,19 @@ VOXTYPE_FORCE="${VOXTYPE_FORCE:-0}"
 # Remember which options were given explicitly, so the interactive setup only
 # asks about the rest.
 is_set() { [[ -n "${!1+x}" ]]; }
-for v in DOTFILES_MODE NOCTALIA KB_LAYOUTS KB_TOGGLE INSTALL_VOXTYPE DOWNLOAD_VOXTYPE_MODEL \
+for v in DOTFILES_MODE DESKTOP_SHELL NOCTALIA KB_LAYOUTS KB_TOGGLE INSTALL_VOXTYPE DOWNLOAD_VOXTYPE_MODEL \
          INSTALL_WALLPAPERS INSTALL_SDDM NOCTALIA_RESET_SETTINGS; do
   is_set "$v" && declare -r "GIVEN_$v=1"
 done
 given() { local n="GIVEN_$1"; [[ -n "${!n:-}" ]]; }
 
 MODE="${DOTFILES_MODE:-full}"
-NOCTALIA="${NOCTALIA:-1}"
+# NOCTALIA=1/0 given explicitly keeps working as before
+if ! is_set DESKTOP_SHELL && is_set NOCTALIA; then
+  [[ "$NOCTALIA" == 1 ]] && DESKTOP_SHELL=noctalia || DESKTOP_SHELL=none
+fi
+DESKTOP_SHELL="${DESKTOP_SHELL:-angelos}"
+NOCTALIA=0
 NOCTALIA_RESET_SETTINGS="${NOCTALIA_RESET_SETTINGS:-0}"
 SKIP_PACKAGES="${SKIP_PACKAGES:-0}"
 INSTALL_VOXTYPE="${INSTALL_VOXTYPE:-1}"
@@ -240,12 +248,27 @@ ask_profile() {
   if ! given DOTFILES_MODE; then
     hr
     _ "Profile" "Профиль"; echo
-    _ "  1) full  – desktop styling, Noctalia shell, pixel fonts and icons, wallpapers" \
-      "  1) full  – оформление, Noctalia, пиксельные шрифты и иконки, обои"; echo
+    _ "  1) full  – desktop styling, angelOS shell, pixel fonts and icons, wallpapers" \
+      "  1) full  – оформление, оболочка angelOS, пиксельные шрифты и иконки, обои"; echo
     _ "  2) tech  – minimal: Niri config and helper tools only" \
       "  2) tech  – минимум: конфиг Niri и утилиты"; echo
     read -r -p "$(_ 'Profile' 'Профиль') [1]: " answer || true
     MODE="${answer:-1}"
+  fi
+  if [[ "$MODE" == 1 || "$MODE" == full ]] && ! given DESKTOP_SHELL && ! given NOCTALIA; then
+    _ "Desktop shell" "Оболочка рабочего стола"; echo
+    _ "  1) angelOS  – pixel pink Quickshell shell: bar, lyrics, widgets, settings (recommended)" \
+      "  1) angelOS  – пиксельная розовая оболочка на Quickshell: панель, лирика, виджеты, настройки (рекомендуется)"; echo
+    _ "  2) Noctalia – the previous shell" \
+      "  2) Noctalia – прежняя оболочка"; echo
+    _ "  3) none     – plain niri" \
+      "  3) нет      – голый niri"; echo
+    read -r -p "$(_ 'Shell' 'Оболочка') [1]: " answer || true
+    case "${answer:-1}" in
+      2|noctalia) DESKTOP_SHELL=noctalia ;;
+      3|none) DESKTOP_SHELL=none ;;
+      *) DESKTOP_SHELL=angelos ;;
+    esac
   fi
   if [[ "$MODE" == 1 || "$MODE" == full ]] && ! given INSTALL_WALLPAPERS; then
     confirm "$(_ 'Copy the wallpaper collection to ~/Pictures (~880 MB)?' \
@@ -282,6 +305,9 @@ pacman_install() {
 
   mapfile -t packages < <(grep -Ev '^[[:space:]]*(#|$)' "$list")
   [[ "$NOCTALIA" == 0 ]] && mapfile -t packages < <(printf '%s\n' "${packages[@]}" | grep -Ev '^noctalia$')
+  if [[ "$DESKTOP_SHELL" == angelos && -f "$ROOT/packages/angelos.txt" ]]; then
+    mapfile -t -O "${#packages[@]}" packages < <(grep -Ev '^[[:space:]]*(#|$)' "$ROOT/packages/angelos.txt")
+  fi
   if [[ "$INSTALL_SDDM" == 1 ]]; then
     mapfile -t -O "${#packages[@]}" packages < <(grep -Ev '^[[:space:]]*(#|$)' "$ROOT/packages/sddm.txt")
   fi
@@ -424,13 +450,17 @@ destination() {
   local rel="$1"
   case "$rel" in
     # Niri: the Noctalia and the plain variants share one destination.
+    # Niri: the shell-wired files (angelOS in the repo; rewired for Noctalia after install)
+    # and the plain variants share one destination.
     .config/niri/config.kdl|.config/niri/cfg/autostart.kdl|.config/niri/cfg/keybinds.kdl)
-      [[ "$NOCTALIA" == 1 ]] || return 0 ;;
+      [[ "$DESKTOP_SHELL" != none ]] || return 0 ;;
     *-no-noctalia.kdl)
-      [[ "$NOCTALIA" == 0 ]] || return 0
+      [[ "$DESKTOP_SHELL" == none ]] || return 0
       rel="${rel/-no-noctalia/}" ;;
     .config/niri/noctalia.kdl|.config/noctalia/*)
       [[ "$NOCTALIA" == 1 ]] || return 0 ;;
+    .config/quickshell/angelos/*)
+      [[ "$DESKTOP_SHELL" != none ]] || return 0 ;;
     .config/systemd/user/*)
       [[ "$ENABLE_SERVICES" == 1 ]] || return 0 ;;
     .config/voxtype/*)
@@ -645,6 +675,26 @@ install_flatpak() {
   return 0
 }
 
+# angelOS: CLI on PATH, theme files for kitty/foot/gtk/niri, shell wiring.
+# On the first login angelOS opens its setup wizard and then the interface tips.
+install_shell() {
+  local shell_dir="$HOME_DIR/.config/quickshell/angelos"
+  [[ "$DESKTOP_SHELL" != none && -d "$shell_dir" ]] || return 0
+  if [[ "$DESKTOP_SHELL" == angelos ]]; then
+    say "$(_ 'Setting up angelOS…' 'Настройка angelOS…')"
+    ln -sfn "$shell_dir/bin/angelos" "$HOME_DIR/.local/bin/angelos"
+    mkdir -p -- "$HOME_DIR/.config/angelos"
+    printf 'angelos\n' > "$HOME_DIR/.config/angelos/active"
+    rm -f -- "$HOME_DIR/.config/angelos/owner"   # owner-only features never apply to fresh installs
+    python3 "$shell_dir/scripts/render-templates.py" "$shell_dir/templates/palette-default.json" >/dev/null 2>&1 \
+      || warn "$(_ 'angelOS theme templates were not rendered' 'Шаблоны тем angelOS не отрисовались')"
+  else
+    # Noctalia: the repo ships angelOS wiring; rewrite it for Noctalia in place
+    python3 "$shell_dir/scripts/switch.py" noctalia-forward >/dev/null 2>&1 \
+      || warn "$(_ 'Could not wire niri for Noctalia' 'Не удалось переключить niri на Noctalia')"
+  fi
+}
+
 validate() {
   command -v niri >/dev/null 2>&1 || return 0
   if niri validate -c "$HOME_DIR/.config/niri/config.kdl" >/dev/null 2>&1; then
@@ -657,7 +707,12 @@ validate() {
 
 summary() {
   hr
-  say "$(_ 'Done.' 'Готово.')  profile=${MODE}  noctalia=${NOCTALIA}  home=${HOME_DIR}"
+  say "$(_ 'Done.' 'Готово.')  profile=${MODE}  shell=${DESKTOP_SHELL}  home=${HOME_DIR}"
+  if [[ "$DESKTOP_SHELL" == angelos ]]; then
+    say "$(_ 'angelOS: on the first login a setup wizard and interface tips open by themselves;' \
+             'angelOS: при первом входе сами откроются мастер настройки и подсказки по интерфейсу;')"
+    say "$(_ '  later: Mod+S — settings, `angelos help` — CLI' '  потом: Mod+S — настройки, `angelos help` — CLI')"
+  fi
   say "$(_ "Files: $N_INSTALLED installed, $N_UNCHANGED unchanged, $N_KEPT kept" \
            "Файлы: $N_INSTALLED установлено, $N_UNCHANGED без изменений, $N_KEPT сохранено")"
   say "$(_ 'Keyboard' 'Клавиатура'): ${KB_LAYOUTS}${KB_OPTIONS:+  ($KB_OPTIONS)}"
@@ -677,13 +732,15 @@ summary() {
 
 ask_profile
 normalize_mode
-[[ "$MODE" == tech && ! -v GIVEN_NOCTALIA ]] && NOCTALIA=0
-[[ "$NOCTALIA" =~ ^[01]$ ]] || die "NOCTALIA must be 0 or 1"
+[[ "$MODE" == tech ]] && ! given DESKTOP_SHELL && ! given NOCTALIA && DESKTOP_SHELL=none
+[[ "$DESKTOP_SHELL" =~ ^(angelos|noctalia|none)$ ]] || die "DESKTOP_SHELL must be angelos, noctalia or none"
+[[ "$DESKTOP_SHELL" == noctalia ]] && NOCTALIA=1 || NOCTALIA=0
 choose_keyboard
 
 pacman_install
 install_noctalia
 install_configs
+install_shell
 install_assets
 install_noctalia_defaults
 install_voxtype

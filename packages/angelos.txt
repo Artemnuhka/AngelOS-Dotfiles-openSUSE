@@ -1,0 +1,12 @@
+# angelOS desktop shell (installed with DESKTOP_SHELL=angelos)
+quickshell
+qt6-5compat
+qt6-imageformats
+python
+jq
+wl-clipboard
+playerctl
+# desktop widgets and plugins
+cava
+wlsunset
+speedtest-cli
