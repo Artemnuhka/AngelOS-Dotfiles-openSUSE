@@ -82,6 +82,7 @@ class StudioTest(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.home = Path(self.tmp.name)
         self.calls = []
+        self.timeouts = []
         self.reply = PLAN
         self.worker = studio.Studio(self.home, api=self.fake_api)
         self.worker.config.mkdir(parents=True)
@@ -89,8 +90,9 @@ class StudioTest(unittest.TestCase):
         self.settings.write_text('{"developer":{"enabled":true}}')
         self.request("save_key", key="test-only-placeholder-credential")
 
-    def fake_api(self, wire, provider):
+    def fake_api(self, wire, provider, timeout):
         self.calls.append((wire, provider))
+        self.timeouts.append(timeout)
         return copy.deepcopy(self.reply), {"input_tokens": 100, "output_tokens": 200}
 
     def request(self, action, **extra):
@@ -106,6 +108,8 @@ class StudioTest(unittest.TestCase):
 
     def test_complete_flow_and_no_execution_before_install(self):
         draft = self.generate()
+        self.assertTrue(self.timeouts)
+        self.assertTrue(all(timeout > 0 for timeout in self.timeouts))
         self.assertEqual(draft["errors"], [])
         self.assertFalse((self.worker.plugins / PLAN["spec"]["id"]).exists())
         result = self.request("install", digest=draft["digest"])
@@ -240,6 +244,21 @@ class StudioTest(unittest.TestCase):
         self.assertEqual(result.stderr, "")
         self.assertEqual(json.loads(result.stdout)["event"], "result")
         self.assertNotIn("test-only-placeholder-credential", result.stdout)
+
+    def test_runtime_sandbox_setup_failure_is_not_plugin_failure(self):
+        directory = self.worker.state / "runtime-fixture"
+        directory.mkdir(parents=True)
+        (directory / "DesktopWidget.qml").write_text("import QtQuick\nItem {}\n")
+        failed = subprocess.CompletedProcess(
+            args=["bwrap"], returncode=1, stdout="",
+            stderr="bwrap: loopback: Failed to create NETLINK_ROUTE socket",
+        )
+        with patch.object(studio, "quickshell_binary", return_value=("/bin/true", {}, [])), \
+             patch.object(studio.subprocess, "run", return_value=failed):
+            errors, note = self.worker.runtime_check(
+                directory, {"id": "runtime-test", "desktopWidget": "DesktopWidget.qml"})
+        self.assertEqual(errors, [])
+        self.assertIn("skipped", note)
 
 
 class ProviderTest(unittest.TestCase):

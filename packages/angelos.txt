@@ -3,10 +3,24 @@ quickshell
 qt6-declarative
 qt6-5compat
 qt6-imageformats
+# optional NVIDIA/Qt EGL threaded-render-loop build
+cmake
+gcc
+pkgconf
+patch
 python
 jq
 wl-clipboard
 playerctl
+# networking, Bluetooth and input-device settings
+networkmanager
+bluez
+bluez-utils
+python-evdev
+# workspace IPC, cursor theme generation and plugin runtime checks
+socat
+bubblewrap
+python-pillow
 # desktop widgets and plugins
 cava
 wlsunset

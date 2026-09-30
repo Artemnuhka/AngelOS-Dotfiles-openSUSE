@@ -690,6 +690,9 @@ install_shell() {
     ln -sfn "$shell_dir/bin/angelos" "$HOME_DIR/.local/bin/angelos"
     mkdir -p -- "$HOME_DIR/.config/angelos"
     printf 'angelos\n' > "$HOME_DIR/.config/angelos/active"
+    # where Settings → Updates pulls from
+    printf 'repo=%s\nremote=%s\n' "$ROOT" "$(git -C "$ROOT" remote get-url origin 2>/dev/null || true)" \
+      > "$HOME_DIR/.config/angelos/dotfiles-source"
     # Fresh installs have no owner marker. Preserve an existing owner's marker
     # so updating the dotfiles does not disable their publishing controls.
     # The generated theme files are shipped with the repository and are
