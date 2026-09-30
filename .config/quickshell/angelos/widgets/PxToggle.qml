@@ -58,8 +58,11 @@ Item {
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
         onClicked: {
-            root.checked = !root.checked;
-            root.toggled(root.checked);
+            // the owner's binding updates `checked` (see PxSegmented): assign only if it did not
+            const next = !root.checked;
+            root.toggled(next);
+            if (root.checked !== next)
+                root.checked = next;
             Sounds.play("toggle");
         }
     }

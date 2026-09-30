@@ -332,6 +332,27 @@ Singleton {
         say(tr(Lines.demon.leave), null, 2600);
         leave.restart();
     }
+    // Settings → Y2K → "Call the angel" (and `angelos helper summon`): she comes
+    // now — switched on and not hidden; if the demon rules, she leaves (a line,
+    // then the same swap as the pleas). Returns what happened.
+    function summon() {
+        if (transition)
+            return "busy";
+        if (!Config.y2k.helper)
+            Config.y2k.helper = true;
+        hiddenUntil = 0;
+        now = Date.now();
+        if (!screen)
+            return "hidden";               // stream mode keeps her off every screen
+        if (demon) {
+            say(tr(Lines.demon.summoned), null, 2600);
+            leave.restart();
+            return "ascend";
+        }
+        lastReaction = Date.now();
+        say(tr(pick(Lines.angel.summoned, "summoned")));
+        return "ok";
+    }
     // the owner debugging: no begging, she goes right away
     function ownerAngel() {
         if (!Owner.enabled || !demon || transition)

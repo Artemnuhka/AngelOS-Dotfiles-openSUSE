@@ -38,8 +38,10 @@ Item {
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
         onClicked: {
-            root.checked = !root.checked;
-            root.toggled(root.checked);
+            const next = !root.checked;
+            root.toggled(next);
+            if (root.checked !== next)
+                root.checked = next;
         }
     }
 }

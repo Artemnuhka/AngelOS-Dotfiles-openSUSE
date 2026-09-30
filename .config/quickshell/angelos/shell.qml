@@ -22,6 +22,7 @@ import qs.modules.voxtype
 import qs.modules.idle
 import qs.modules.sidebar
 import qs.modules.y2k
+import qs.modules.alttab
 import qs.widgets
 
 // angelOS — pixel pink shell for niri.
@@ -52,6 +53,7 @@ ShellRoot {
     ScreenCracks {}
     ScreenQuake {}
     BootScreen {}
+    AltTabHost {}
     Ipc {}
 
     // Keep dynamically loaded settings pages visible to Quickshell's static
@@ -92,5 +94,7 @@ ShellRoot {
         Sounds.ready; // Y2K sound pack (generated on first use)
         StreamMode.active; // OBS watcher: stream mode while live
         Angel.demon; // the corner helper's schedule (tips, the demon's pranks)
+        AltTab.ours; // Alt+Tab: windows in MRU order, niri's binds follow the chosen style
+        InputConfig.numlock; // NumLock on login: checked once per login (scripts/numlock.py)
     }
 }

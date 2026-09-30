@@ -28,6 +28,8 @@ Item {
     readonly property int buttonWidth: labels ? Math.min(maxW, Math.floor(share)) : iconWidth
     readonly property real rowWidth: count * buttonWidth + Math.max(0, count - 1) * spacing
     readonly property bool overflow: rowWidth > width + 0.5
+    // as wide as the buttons want to be (Settings → Bar → "Windows" width: compact)
+    readonly property real naturalWidth: count * (iconsOnly ? iconWidth : maxW) + Math.max(0, count - 1) * spacing
 
     clip: true
 

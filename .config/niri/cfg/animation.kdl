@@ -3,10 +3,11 @@
         slowdown 1.2
 
         workspace-switch {
-            duration-ms 380
+            duration-ms 224
             curve "cubic-bezier" 0.22 1 0.36 1
         }
         window-open {
+            // angelOS open: default
             duration-ms 280
             curve "ease-out-cubic"
         }

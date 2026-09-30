@@ -67,6 +67,8 @@ IpcHandler {
         const debug = Shell.dev || Owner.enabled;
         if (cmd === "angel")
             return Angel.ownerAngel() ? "ok" : !Owner.enabled ? "owner only" : Angel.demon ? "not now" : "she is an angel already";
+        if (cmd === "summon")
+            return Angel.summon();
         if (cmd === "tip")
             Angel.tip();
         else if (cmd === "joke")
@@ -98,7 +100,7 @@ IpcHandler {
         else if (debug && cmd === "hellwall")
             return Angel.newHell() ? "ok" : "not now (angel, off, or your own picture)";
         else if (cmd !== "status")
-            return "tip | joke | hint | ask <text> | plea | menu [main|ask] | status" + (Owner.enabled ? " | angel" : "");
+            return "summon | tip | joke | hint | ask <text> | plea | menu [main|ask] | status" + (Owner.enabled ? " | angel" : "");
         return JSON.stringify({
             "character": Config.y2k.character,
             "shown": Angel.shown,

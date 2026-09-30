@@ -179,6 +179,7 @@ PxBox {
 
         PxField {
             id: field
+            keepFocus: true
             width: parent.width
             icon: "search"
             placeholder: I18n.t("Поиск приложений…", "Search apps…")

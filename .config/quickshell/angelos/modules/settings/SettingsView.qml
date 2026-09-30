@@ -426,6 +426,7 @@ Item {
 
             PxField {
                 id: search
+                keepFocus: true
                 x: win.expert ? Theme.u * 2 : homeBtn.x + (homeBtn.visible ? homeBtn.width + Theme.u * 3 : 0)
                 y: Theme.u * 2
                 width: win.expert ? parent.width - Theme.u * 4 : (undoBtn.visible ? undoBtn.x : expertBtn.x) - x - Theme.u * 3

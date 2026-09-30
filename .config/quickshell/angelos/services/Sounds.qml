@@ -23,6 +23,14 @@ Singleton {
     readonly property var extra: ["voiceAngel", "voiceDemon"]
     readonly property var cute: ["open", "toggle", "screenshot", "volume", "windowClose"]
     readonly property var effects: ["crack", "choir", "rocks", "shatter", "voice"]
+    // the helper's own sounds follow "Her voice" (Config.y2k.helperVolume) on top of the volume
+    readonly property var helperSounds: ["angel", "demon", "crack", "choir", "rocks", "shatter", "voice", "voiceAngel", "voiceDemon"]
+    function volumeOf(name) {
+        const v = Math.max(0, Math.min(1, Config.y2k.soundVolume));
+        return helperSounds.includes(name) ? v * Math.max(0, Math.min(1, Config.y2k.helperVolume)) : v;
+    }
+    // scripts/y2k-sounds.py PACK_VERSION: an older pack is synthesised again
+    readonly property string packVersion: "2"
     readonly property string base: Config.home + "/.local/share/angelos/sounds"
     readonly property string dir: base + "/y2k"
     readonly property string pack: Config.y2k.soundPack === "overdose" ? "overdose" : "y2k"
@@ -51,7 +59,7 @@ Singleton {
             return;
         // a burst of the same event (volume wheel, many toggles) plays once
         const now = Date.now();
-        if (!force && now - (lastAt[name] || 0) < (name === "volume" ? 140 : 90))
+        if (!force && now - (lastAt[name] || 0) < (name === "volume" ? 140 : name === "click" ? 45 : 90))
             return;
         lastAt[name] = now;
         if (!ready) {
@@ -65,13 +73,40 @@ Singleton {
             return;
         }
         const first = overdose ? base + "/overdose" : dir;
-        Quickshell.execDetached(["sh", "-c", 'f="$1/$3.ogg"; [ -f "$f" ] || f="$2/$3.ogg"; [ -f "$f" ] || f="$2/$3.wav"; exec pw-play --volume "$4" "$f"', "sh", first, dir, name, String(Math.max(0, Math.min(1, Config.y2k.soundVolume)))]);
+        Quickshell.execDetached(["sh", "-c", 'f="$1/$3.ogg"; [ -f "$f" ] || f="$2/$3.ogg"; [ -f "$f" ] || f="$2/$3.wav"; exec pw-play --volume "$4" "$f"', "sh", first, dir, name, String(volumeOf(name))]);
     }
 
     // the pack must be there before something plays it without _play() (the pips)
     function ensure() {
         if (!ready && !make.running)
             make.running = true;
+    }
+
+    // ---- "Click": every left / right click on the desktop (issue #10). The shell
+    // only sees clicks on its own windows, so scripts/click-watch.py reports
+    // them from the mice; it runs only while the sound is on.
+    readonly property bool clicksWanted: Config.ready && enabled("click") && !Shell.dev
+    property string clickStatus: ""          // "" | noperm
+    Process {
+        id: clicks
+        running: root.clicksWanted
+        command: ["python3", "-u", Quickshell.shellDir + "/scripts/click-watch.py"]
+        stdout: SplitParser {
+            onRead: line => {
+                if (line === "click")
+                    root.play("click");
+                else if (line === "noperm")
+                    root.clickStatus = "noperm";
+            }
+        }
+        onExited: if (root.clicksWanted)
+            clickRestart.start()
+    }
+    Timer {
+        id: clickRestart
+        interval: 5000
+        onTriggered: if (root.clicksWanted)
+            clicks.running = true
     }
 
     // ---- the shell's own moments ----
@@ -122,10 +157,12 @@ Singleton {
     Process {
         id: check
         running: true
-        command: ["sh", "-c", 'd="$1"; shift; for n in "$@"; do [ -f "$d/$n.ogg" ] || [ -f "$d/$n.wav" ] || exit 1; done', "sh", root.dir].concat(root.events).concat(root.extra)
+        command: ["sh", "-c", 'd="$1"; [ "$(cat "$d/.version" 2>/dev/null)" = "$2" ] || exit 1; shift 2; for n in "$@"; do [ -f "$d/$n.ogg" ] || [ -f "$d/$n.wav" ] || exit 1; done', "sh", root.dir, root.packVersion].concat(root.events).concat(root.extra)
         onExited: code => {
             if (code === 0)
                 root.ready = true;
+            else if (Config.y2k.sounds && !make.running)
+                make.running = true;        // missing or older (louder) pack: made again right away
         }
     }
     Process {

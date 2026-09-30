@@ -8,6 +8,8 @@ import qs.config
 import qs.services
 import qs.modules.settings
 import qs.modules.y2k
+import qs.modules.alttab
+import qs.modules.bar.parts
 import qs.widgets
 
 // angelOS UI self-test, started by scripts/test-ui.sh (ANGELOS_TEST=1, Qt's
@@ -18,6 +20,8 @@ import qs.widgets
 //   search    settings search: 40 typical queries, average and worst time
 //   rig       the helper's pictures (SpriteRig): both figures read, sized as
 //             their rig.json says, swapped and played through without errors
+//   alttab    the three Alt+Tab switcher styles load and follow the pick
+//   bar       bar widgets (Wi-Fi, Bluetooth, wired, tray, desk sprites) load, their panels open
 //   rmb       a right click into the window's corner pixel does not crash Qt
 // Prints "TEST <name> PASS|FAIL [detail]" and "TEST-PAGE <id>" markers (the
 // script ties log errors to the page that caused them), "TEST DONE <n>" last.
@@ -54,6 +58,67 @@ Scope {
         SpriteRig {
             id: rig
         }
+        // the Alt+Tab switcher's looks, with a stand-in for its window
+        Loader {
+            id: altTabStage
+            property string style: ""
+            active: style !== ""
+            sourceComponent: style === "ngo" ? atNgo : style === "y2k" ? atY2k : atAngel
+        }
+        Component {
+            id: atAngel
+            AltTabAngel {
+                host: altTabHost
+            }
+        }
+        Component {
+            id: atNgo
+            AltTabNgo {
+                host: altTabHost
+            }
+        }
+        Component {
+            id: atY2k
+            AltTabY2k {
+                host: altTabHost
+            }
+        }
+        // bar widgets outside a real bar (the layer-shell bar needs a compositor)
+        Loader {
+            id: barStage
+            active: false
+            sourceComponent: Row {
+                property alias wifi: wifiW
+                property alias bt: btW
+                property alias wired: wiredW
+                property alias tray: trayW
+                WifiButton {
+                    id: wifiW
+                }
+                BluetoothButton {
+                    id: btW
+                }
+                WiredButton {
+                    id: wiredW
+                }
+                Tray {
+                    id: trayW
+                }
+                Workspaces {
+                    screenName: "TEST-1"
+                }
+            }
+        }
+        QtObject {
+            id: altTabHost
+            property var screen: null
+            function appName(w) {
+                return w ? w.app_id : "";
+            }
+            function place(w) {
+                return w ? "desk " + w.workspace_id : "";
+            }
+        }
         RightClickGuard {}
     }
     // a window that never takes focus, like the shell's layer-shell panels: Qt
@@ -82,6 +147,8 @@ Scope {
             "StartMenu": ["classic", "win11", "fullscreen"],
             "BarStyle": ["taskbar", "top", "island"],
             "DeskSwitch": WorkspaceAnim.styles.map(s => s.id),
+            "OpenFx": WindowAnim.openStyles.map(s => s.id),
+            "CloseFx": WindowAnim.closeStyles.map(s => s.id),
             "LockScreen": ["pixelate", "hearts", "reactions", "indicators", "stream"],
             "CaptureSkin": ["ropes", "window", "stream"]
         })
@@ -92,6 +159,10 @@ Scope {
     property double started: 0
     property bool expertPass: false
     property bool undoFrom: false
+    property var altTabStyles: []
+    property var altTabSeen: []
+    property string altTabShot: ""
+    readonly property string shots: Quickshell.env("ANGELOS_TEST_SHOTS") || ""
     property bool undoDone: false
     property int undoSteps: 0
 
@@ -283,6 +354,76 @@ Scope {
                 rig.flutter = !rig.flutter;
             }
             report("sprite-rig", seen.every(s => s.indexOf("FAIL") < 0), seen.join(", "));
+            console.log("TEST-PAGE alttab");
+            AltTab.items = [1, 2, 3, 4, 5].map(i => ({
+                        "id": 9000 + i,
+                        "app_id": ["kitty", "helium", "discord", "org.gnome.Nautilus", "unknown.app"][i - 1],
+                        "title": "window " + i,
+                        "workspace_id": i
+                    }));
+            AltTab.index = 1;
+            altTabStyles = ["angelos", "ngo", "y2k"];
+            altTabSeen = [];
+            phase = "alttab";
+            started = Date.now();
+            return;
+        }
+        if (phase === "alttab") {
+            if (!altTabStage.style) {
+                altTabStage.style = altTabStyles[altTabSeen.length];
+                started = Date.now();
+                return;
+            }
+            if (altTabStage.status === Loader.Loading && Date.now() - started < 4000)
+                return;
+            const it = altTabStage.item;
+            const ok = altTabStage.status === Loader.Ready && it && it.implicitWidth > 0 && it.implicitHeight > 0;
+            // ANGELOS_TEST_SHOTS=<dir>: a picture of each style to look at
+            if (ok && shots && !altTabShot) {
+                altTabShot = "wait";
+                it.width = it.implicitWidth;
+                it.height = it.implicitHeight;
+                const name = shots + "/alttab-" + altTabStage.style + ".png";
+                it.grabToImage(r => {
+                    r.saveToFile(name);
+                    root.altTabShot = "done";
+                });
+                return;
+            }
+            if (altTabShot === "wait" && Date.now() - started < 3000)
+                return;
+            altTabShot = "";
+            for (let i = 0; i < 6; i++)
+                AltTab.index = (AltTab.index + 1) % AltTab.items.length;
+            altTabSeen.push(altTabStage.style + (ok ? " " + Math.round(it.implicitWidth) + "×" + Math.round(it.implicitHeight) : " FAIL"));
+            altTabStage.style = "";
+            if (altTabSeen.length < altTabStyles.length)
+                return;
+            AltTab.items = [];
+            report("alttab-styles", altTabSeen.every(x => x.indexOf("FAIL") < 0), altTabSeen.join(", "));
+            // its layer-shell window cannot open here, but it must compile
+            const host = Qt.createComponent(Quickshell.shellDir + "/modules/alttab/AltTabHost.qml");
+            const hostErr = host.status === Component.Ready ? "" : host.errorString();
+            // offscreen has no layer shell: that one error is expected, anything else is not
+            report("alttab-host", !hostErr || /No PanelWindow backend/.test(hostErr) && hostErr.trim().split("\n").length === 1, hostErr ? hostErr.trim().split("\n")[0].replace(/^.*AltTabHost\.qml:/, "") : "compiles");
+            console.log("TEST-PAGE bar-widgets");
+            barStage.active = true;
+            phase = "bar";
+            started = Date.now();
+            return;
+        }
+        if (phase === "bar") {
+            if (barStage.status === Loader.Loading && Date.now() - started < 4000)
+                return;
+            const b = barStage.item;
+            const ok = barStage.status === Loader.Ready && !!b && b.wifi.width > 0 && b.bt.width > 0 && b.wired.width > 0;
+            // every tray density lays out; the sprites switch
+            for (const d of ["compact", "airy", "spacious", "normal"])
+                Config.bar.trayDensity = d;
+            for (const sp of ["star", "cd", "heart"])
+                Config.workspaces.sprite = sp;
+            report("bar-widgets", ok, ok ? "wifi, bluetooth, wired, tray, workspaces" : "status " + barStage.status);
+            barStage.active = false;
             phase = "rmb";
             return;
         }

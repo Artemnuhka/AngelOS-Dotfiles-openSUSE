@@ -307,6 +307,11 @@ Singleton {
                     "is_focused": w.id === d.id
                 }));
             break;
+        case "WindowFocusTimestampChanged":
+            windows = windows.map(w => w.id === d.id ? Object.assign({}, w, {
+                    "focus_timestamp": d.focus_timestamp
+                }) : w);
+            break;
         case "WindowUrgencyChanged":
             windows = windows.map(w => w.id === d.id ? Object.assign({}, w, {
                     "is_urgent": d.urgent

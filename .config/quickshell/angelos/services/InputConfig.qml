@@ -132,6 +132,8 @@ Singleton {
             t = /^\s*repeat-delay\s+\d+/m.test(t) ? t.replace(/^(\s*)repeat-delay\s+\d+/m, (m, i) => i + "repeat-delay " + Math.round(ch.repeatDelay)) : t;
         if (ch.repeatRate !== undefined)
             t = /^\s*repeat-rate\s+\d+/m.test(t) ? t.replace(/^(\s*)repeat-rate\s+\d+/m, (m, i) => i + "repeat-rate " + Math.round(ch.repeatRate)) : t;
+        if (ch.numlock)
+            numlockKick.restart();          // turn it on now too, not only at the next login
         if (ch.numlock !== undefined) {
             const kr = blockRange("keyboard", t);
             const has = kr ? /^\s*numlock\b/m.test(t.slice(kr[0], kr[1])) : false;
@@ -170,6 +172,37 @@ Singleton {
                 root.log = text.trim()
         }
         onExited: view.reload()
+    }
+
+    // NumLock on login, for real: niri's `numlock` only acts when niri starts and
+    // is not honoured everywhere (issue #12), so once per login (and right after
+    // switching it on) scripts/numlock.py taps NumLock if its LED is off
+    property string numlockState: ""
+    Timer {
+        id: numlockKick
+        interval: 1200
+        onTriggered: if (!Shell.dev)
+            numlocker.running = true
+    }
+    Timer {
+        running: root.loaded && root.numlock && !Shell.dev
+        interval: 3000
+        onTriggered: numlockOnce.running = true
+    }
+    Process {
+        id: numlockOnce
+        command: ["sh", "-c", 'm="${XDG_RUNTIME_DIR:-/tmp}/angelos-numlock"; [ -e "$m" ] && exit 1; : > "$m"']
+        onExited: code => {
+            if (code === 0)
+                numlocker.running = true;
+        }
+    }
+    Process {
+        id: numlocker
+        command: ["python3", Quickshell.shellDir + "/scripts/numlock.py", "ensure"]
+        stdout: StdioCollector {
+            onStreamFinished: root.numlockState = text.trim()
+        }
     }
 
     FileView {

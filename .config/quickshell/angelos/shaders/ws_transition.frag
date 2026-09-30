@@ -1,7 +1,8 @@
 #version 440
 // Workspace transitions: the frozen frame of the old workspace (`source`) is
 // taken away over the live new one. Transparent where the new workspace shows.
-// mode: 0 pixel dissolve, 1 heart iris, 2 ender teleport.
+// mode: 0 pixel dissolve, 1 shape iris, 2 ender teleport.
+// shape (mode 1, the desk sprite): 0 heart, 1 sparkle star ✦, 2 CD.
 layout(location = 0) in vec2 qt_TexCoord0;
 layout(location = 0) out vec4 fragColor;
 
@@ -15,6 +16,7 @@ layout(std140, binding = 0) uniform buf {
     vec2 resolution;
     vec4 accent;
     vec4 purple;
+    float shape;
 };
 layout(binding = 1) uniform sampler2D source;
 
@@ -35,6 +37,15 @@ float heart(vec2 p) {
     p.y = -p.y + 0.25;
     float a = p.x * p.x + p.y * p.y - 1.0;
     return a * a * a - p.x * p.x * p.y * p.y * p.y;
+}
+
+// a four-point sparkle star ✦ (concave sides); < 0 inside
+float star(vec2 p) {
+    p = abs(p);
+    return sqrt(p.x) + sqrt(p.y) - 1.0;
+}
+vec3 rainbow(float h) {
+    return clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
 }
 
 void main() {
@@ -62,17 +73,38 @@ void main() {
             outc = vec4(c.rgb, 1.0);
         }
     } else if (mode < 1.5) {
-        // heart iris: a heart-shaped hole grows from the centre, the old frame dims
+        // shape iris: a heart / star / CD-shaped hole grows from the centre, the old frame dims
         float e = p < 0.5 ? 4.0 * p * p * p : 1.0 - pow(-2.0 * p + 2.0, 3.0) / 2.0;
         vec2 cellPx = floor(px / (cell * 0.5)) * cell * 0.5 + cell * 0.25;
         vec2 c = (cellPx - resolution * 0.5) / (min(resolution.x, resolution.y) * 0.5);
-        float radius = 0.001 + e * 3.4;
-        float inside = step(heart(c / radius), 0.0);
-        float rim = step(heart(c / (radius * 1.08 + 0.02)), 0.0) - inside;
         vec4 old = texture(source, uv);
         old.rgb *= 1.0 - 0.35 * e;
+        vec3 rimColor = accent.rgb;
+        float inside, rim;
+        if (shape < 0.5) {
+            float radius = 0.001 + e * 3.4;
+            inside = step(heart(c / radius), 0.0);
+            rim = step(heart(c / (radius * 1.08 + 0.02)), 0.0) - inside;
+        } else if (shape < 1.5) {
+            // the star's points reach the corners late: it grows further
+            float radius = 0.001 + e * 6.4;
+            inside = step(star(c / radius), 0.0);
+            rim = step(star(c / (radius * 1.12 + 0.03)), 0.0) - inside;
+            // a white glint runs along the rim
+            rimColor = mix(accent.rgb, vec3(1.0), step(0.8, fract(atan(c.y, c.x) * 0.955 + p * 3.0)));
+        } else {
+            // a CD: a disc with a rainbow sheen that spins, and a hole in the middle
+            float radius = 0.001 + e * 2.25;
+            float d = length(c);
+            float hole = radius * 0.2 * (1.0 - smoothstep(0.55, 0.95, p));
+            inside = step(d, radius) * step(hole, d);
+            float band = radius * 0.06 + 0.02;
+            rim = step(d, radius + band) * (1.0 - step(d, radius)) + step(d, hole) * step(hole - band * 0.6, d);
+            float a = atan(c.y, c.x) / 6.2832 + p * 1.5;
+            rimColor = mix(rainbow(fract(a * 2.0)), accent.rgb, 0.35);
+        }
         outc = vec4(old.rgb, 1.0) * (1.0 - inside);
-        outc = mix(outc, vec4(accent.rgb, 1.0), rim);
+        outc = mix(outc, vec4(rimColor, 1.0), clamp(rim, 0.0, 1.0));
     } else {
         // ender teleport: the old screen breaks into squares that shrink, turn
         // purple and float up; purple bits twinkle where they were

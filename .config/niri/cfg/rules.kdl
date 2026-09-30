@@ -94,12 +94,12 @@ window-rule {
         shadow { off; }
     }
 
-    workspace "privacy"
-
+    // (a named "privacy" workspace used to be declared here: niri keeps named
+    // workspaces forever at the top of a monitor, the panel hid it and the
+    // desk numbers slipped — angelOS issue #17)
     window-rule {
         match title="niri-cast-privacy"
         match app-id="dev.niri.cast-privacy"
-        open-on-workspace "privacy"
         open-focused false
         open-floating true
     }

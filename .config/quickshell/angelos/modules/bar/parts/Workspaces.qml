@@ -6,12 +6,13 @@ import qs.services
 import qs.widgets
 import qs.modules.workspace
 
-// Hearts: filled = active, lavender = has windows, hollow = empty.
+// Hearts (or the Y2K star / CD, Config.workspaces.sprite): filled = active,
+// lavender = has windows, hollow = empty.
 Item {
     id: root
 
     required property string screenName
-    readonly property var list: Niri.workspacesOn(screenName).filter(w => w.name !== "privacy")
+    readonly property var list: Niri.workspacesOn(screenName)
 
     // the badge only takes room while it is shown: the slot opens, then closes again
     readonly property real badgeWidth: Math.min(Theme.u * 64, badgeMetrics.advanceWidth("✧ " + flashText) + Theme.u * 10)
@@ -95,14 +96,15 @@ Item {
                     }
                 }
 
-                PxIcon {
+                WsSprite {
                     id: heart
                     visible: cell.showHeart
                     x: Theme.u * 2
                     anchors.verticalCenter: parent.verticalCenter
-                    name: "heart"
                     pixel: Theme.u
+                    lit: cell.lit
                     hollow: !cell.lit && !cell.occupied
+                    tone: cell.modelData.is_urgent ? Theme.danger : Theme.accent4
                     fill: cell.modelData.is_urgent ? Theme.danger : cell.lit ? Theme.accent : Theme.accent4
                     opacity: cell.lit || mouse.containsMouse ? 1 : 0.75
                     scale: cell.lit ? 1.0 : 0.8
@@ -163,6 +165,7 @@ Item {
         height: row.height
         z: 5
         style: Config.workspaces.heartAnim
+        sprite: Config.workspaces.sprite
         heart: Config.bar.workspaceStyle !== "icons"
         plate: Config.bar.workspaceStyle !== "hearts"
         cellRect: i => {
@@ -182,7 +185,7 @@ Item {
     Connections {
         target: Niri
         function onWorkspaceActivated(ws, focused) {
-            if (ws.output !== root.screenName || ws.name === "privacy")
+            if (ws.output !== root.screenName)
                 return;
             anim.play(root.previousIndex, root.list.findIndex(w => w.id === ws.id));
             if (Config.workspaces.popupMode !== "bar")

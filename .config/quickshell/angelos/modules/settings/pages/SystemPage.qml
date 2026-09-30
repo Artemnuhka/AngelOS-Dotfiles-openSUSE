@@ -276,6 +276,60 @@ PxPage {
         }
     }
 
+    // the expensive toys: shown only when a popular model over $100 is plugged in
+    PxGroup {
+        visible: SystemInfo.gear.length > 0
+        title: I18n.t("Твой сетап ✧", "Your setup ✧")
+        icon: "star"
+        width: parent.width
+        Repeater {
+            model: SystemInfo.gear
+            Row {
+                id: gearRow
+                required property var modelData
+                spacing: Theme.u * 4
+                PxIcon {
+                    anchors.verticalCenter: parent.verticalCenter
+                    name: ({
+                            "keyboard": "keyboard",
+                            "mouse": "mouse",
+                            "mic": "mic"
+                        })[gearRow.modelData.kind] || "star"
+                    pixel: Theme.u * 2
+                }
+                Column {
+                    anchors.verticalCenter: parent.verticalCenter
+                    PxText {
+                        text: gearRow.modelData.name
+                        font.bold: true
+                    }
+                    PxText {
+                        text: ({
+                                "keyboard": I18n.t("Клавиатура", "Keyboard"),
+                                "mouse": I18n.t("Мышь", "Mouse"),
+                                "mic": I18n.t("Микрофон", "Microphone")
+                            })[gearRow.modelData.kind] + " · ~$" + Math.round(gearRow.modelData.usd)
+                        kind: "tiny"
+                        dim: true
+                    }
+                }
+            }
+        }
+        PxText {
+            width: parent.width
+            wrapMode: Text.Wrap
+            kind: "tiny"
+            dim: true
+            text: I18n.t("Популярные клавиатуры, мыши и микрофоны дороже $", "Popular keyboards, mice and microphones over $") + Math.round(SystemInfo.gearThreshold) + I18n.t(" (примерная цена на старте продаж). Их же показывает fastfetch.", " (roughly their launch price). fastfetch shows them too.")
+        }
+        PxButton {
+            compact: true
+            icon: "refresh"
+            text: I18n.t("Проверить снова", "Check again")
+            onClicked: SystemInfo.refresh()
+        }
+    }
+
     PxGroup {
         visible: SystemInfo.powerProfile !== ""
         title: I18n.t("Питание", "Power")

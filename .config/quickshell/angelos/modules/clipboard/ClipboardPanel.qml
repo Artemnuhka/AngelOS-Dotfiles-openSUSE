@@ -7,7 +7,8 @@ import qs.config
 import qs.services
 import qs.widgets
 
-// Clipboard history (Mod+V): type to filter, Enter copies, Delete removes.
+// Clipboard history (Mod+V): type to filter, Enter copies, Delete removes,
+// Ctrl+D or the star keeps an entry in Favourites (never dropped or cleared by "Clear").
 PanelWindow {
     id: win
 
@@ -27,9 +28,9 @@ PanelWindow {
 
     property string query: ""
     property int current: 0
-    property string kind: "all"          // all | text | image
+    property string kind: "all"          // all | text | image | fav
     readonly property var results: Clipboard.history.filter(h => {
-        if (kind !== "all" && (h.kind || "text") !== kind)
+        if (kind === "fav" ? !h.fav : kind !== "all" && (h.kind || "text") !== kind)
             return false;
         if (!query)
             return true;
@@ -86,6 +87,7 @@ PanelWindow {
 
         PxField {
             id: field
+            keepFocus: true
             width: parent.width - clearBtn.width - Theme.u * 3
             icon: "search"
             placeholder: I18n.t("поиск…", "Searching…")
@@ -99,9 +101,12 @@ PanelWindow {
                 if (e.key === Qt.Key_Escape) {
                     Shell.clipboardOpen = false;
                     e.accepted = true;
+                } else if (e.key === Qt.Key_D && (e.modifiers & Qt.ControlModifier) && win.results.length) {
+                    Clipboard.toggleFav(win.results[win.current]);
+                    e.accepted = true;
                 } else if (e.key === Qt.Key_Tab || e.key === Qt.Key_Backtab) {
-                    const order = ["all", "text", "image"];
-                    win.kind = order[(order.indexOf(win.kind) + (e.key === Qt.Key_Tab ? 1 : 2)) % 3];
+                    const order = ["all", "text", "image", "fav"];
+                    win.kind = order[(order.indexOf(win.kind) + (e.key === Qt.Key_Tab ? 1 : 3)) % 4];
                     kinds.currentValue = win.kind;   // PxSegmented keeps its own value after clicks
                     win.current = 0;
                     e.accepted = true;
@@ -119,12 +124,31 @@ PanelWindow {
                 }
             }
         }
+        // "Clear" keeps favourites; on the Favourites tab it clears them, after a second click
         PxButton {
             id: clearBtn
+            property bool armed: false
             anchors.right: parent.right
             height: field.height
             icon: "trash"
-            onClicked: Clipboard.clear()
+            text: armed ? I18n.t("ещё раз", "again") : ""
+            checked: armed
+            onClicked: {
+                if (win.kind !== "fav") {
+                    Clipboard.clear();
+                } else if (armed) {
+                    armed = false;
+                    Clipboard.clearFavorites();
+                } else {
+                    armed = true;
+                    disarm.restart();
+                }
+            }
+            Timer {
+                id: disarm
+                interval: 3000
+                onTriggered: clearBtn.armed = false
+            }
         }
 
         PxSegmented {
@@ -143,6 +167,10 @@ PanelWindow {
                 {
                     "label": I18n.t("Картинки", "Images") + " · " + Clipboard.imageCount,
                     "value": "image"
+                },
+                {
+                    "label": "★ " + I18n.t("Избранное", "Favourites") + " · " + Clipboard.favCount,
+                    "value": "fav"
                 }
             ]
             currentValue: win.kind
@@ -163,7 +191,10 @@ PanelWindow {
             PxText {
                 visible: win.results.length === 0
                 anchors.centerIn: parent
-                text: I18n.t("пусто… скопируй что-нибудь ♡", "Nothing here… copy something ♡")
+                width: parent.width - Theme.u * 20
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.Wrap
+                text: win.kind === "fav" ? I18n.t("здесь живут записи со звёздочкой — нажми ★ у записи или Ctrl+D", "Starred entries live here: press ★ on an entry or Ctrl+D") : I18n.t("пусто… скопируй что-нибудь ♡", "Nothing here… copy something ♡")
                 dim: true
             }
 
@@ -229,7 +260,7 @@ PanelWindow {
                         anchors.left: frame.right
                         anchors.leftMargin: Theme.u * 4
                         anchors.right: parent.right
-                        anchors.rightMargin: Theme.u * 3
+                        anchors.rightMargin: Theme.u * 5 + star.width
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: Theme.u
                         Row {
@@ -265,7 +296,7 @@ PanelWindow {
                         id: txt
                         visible: !item.isImage
                         x: Theme.u * 4
-                        width: parent.width - Theme.u * 8
+                        width: parent.width - Theme.u * 8 - star.width
                         anchors.verticalCenter: parent ? parent.verticalCenter : undefined
                         text: String(item.modelData.text || "").replace(/\s+/g, " ").slice(0, 300)
                         maximumLineCount: 2
@@ -279,6 +310,32 @@ PanelWindow {
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: win.pick(item.modelData)
+                    }
+                    // ★ keeps it: shown on favourites, and on the row under the mouse or the selection
+                    Item {
+                        id: star
+                        anchors.right: parent.right
+                        anchors.rightMargin: Theme.u * 2
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: Theme.u * 12
+                        height: Theme.u * 12
+                        visible: item.modelData.fav || m.containsMouse || starMouse.containsMouse || item.sel
+                        PxIcon {
+                            anchors.centerIn: parent
+                            name: "star"
+                            hollow: !item.modelData.fav
+                            fill3: item.modelData.fav ? Theme.accent3 : Theme.accent4
+                            ink: item.sel ? Theme.selectText : (Theme.dark ? Theme.text : Theme.edge)
+                            scale: starMouse.containsMouse ? 1.2 : 1
+                        }
+                        MouseArea {
+                            id: starMouse
+                            anchors.fill: parent
+                            anchors.margins: -Theme.u * 2
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: Clipboard.toggleFav(item.modelData)
+                        }
                     }
                 }
             }

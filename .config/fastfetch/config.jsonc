@@ -1,11 +1,24 @@
 {
   "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/master/doc/json_schema.json",
 
+  // NEEDY GIRL OVERDOSE: KAngel's winged heart, halo and a pill (truecolor
+  // half-blocks, so the size is given: raw ANSI can't be measured)
   "logo": {
     "type": "file-raw",
     "source": "~/.config/fastfetch/logo.txt",
+    "width": 40,
+    "height": 16,
     "padding": {
-      "right": 2
+      "top": 1,
+      "right": 3
+    }
+  },
+
+  "display": {
+    "separator": " ♡ ",
+    "color": {
+      "keys": "38;2;255;111;176",
+      "title": "38;2;201;182;255"
     }
   },
 
@@ -56,6 +69,26 @@
       "type": "disk",
       "key": "Disk",
       "format": "{size-used} / {size-total}"
+    },
+
+    "break",
+
+    // popular gear that costs more than $100 (angelOS scripts/gear.py);
+    // nothing printed = the line is left out
+    {
+      "type": "command",
+      "key": "Keyboard",
+      "text": "python3 ~/.config/quickshell/angelos/scripts/gear.py --kind keyboard"
+    },
+    {
+      "type": "command",
+      "key": "Mouse",
+      "text": "python3 ~/.config/quickshell/angelos/scripts/gear.py --kind mouse"
+    },
+    {
+      "type": "command",
+      "key": "Mic",
+      "text": "python3 ~/.config/quickshell/angelos/scripts/gear.py --kind mic"
     },
 
     "break",

@@ -13,7 +13,7 @@ PxPage {
 
     PxGroup {
         id: heartsGroup
-        title: I18n.t("Анимация сердечек", "Heart animation")
+        title: I18n.t("Значок и его анимация", "Desk sprite and its animation")
         icon: "heart"
         width: parent.width
         readonly property var heartStyles: [
@@ -79,6 +79,91 @@ PxPage {
             }
         ]
 
+        // the desk sprite: the heart or a Y2K one (bar, strip, popup, the "Heart" transition)
+        SettingRow {
+            label: I18n.t("Значок стола", "Desk sprite")
+            hint: ({
+                    "star": I18n.t("звезда-блёстка ✦: у активного стола мерцает; переход «Сердечко» станет звездой", "A sparkle star ✦: twinkles on the active desk; the Heart transition becomes a star"),
+                    "cd": I18n.t("радужный CD: у активного стола прокручивается; переход «Сердечко» станет диском", "A rainbow CD: spins on the active desk; the Heart transition becomes a disc")
+                })[Config.workspaces.sprite] || I18n.t("пиксельное сердечко, как было", "The pixel heart, as before")
+            Row {
+                spacing: Theme.u * 3
+                Repeater {
+                    model: [
+                        {
+                            "id": "heart",
+                            "label": I18n.t("Сердечко", "Heart")
+                        },
+                        {
+                            "id": "star",
+                            "label": I18n.t("Звезда ✦", "Star ✦")
+                        },
+                        {
+                            "id": "cd",
+                            "label": I18n.t("CD-диск", "CD")
+                        }
+                    ]
+                    PxBox {
+                        id: spriteCard
+                        required property var modelData
+                        readonly property bool current: (Config.workspaces.sprite || "heart") === modelData.id
+                        width: Theme.u * 34
+                        height: Theme.u * 28
+                        sunken: current
+                        color: current ? Theme.mix(Theme.face, Theme.accent, 0.3) : spriteMouse.containsMouse ? Theme.mix(Theme.face, Theme.accent, 0.1) : Theme.face
+                        WsSprite {
+                            id: cardSprite
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            y: Theme.u * 4
+                            sprite: spriteCard.modelData.id
+                            lit: spriteCard.current || spriteMouse.containsMouse
+                            pixel: Theme.u * 1.5
+                        }
+                        PxText {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            anchors.bottom: parent.bottom
+                            anchors.bottomMargin: Theme.u * 3
+                            text: spriteCard.modelData.label
+                            kind: "tiny"
+                            font.bold: spriteCard.current
+                        }
+                        MouseArea {
+                            id: spriteMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                Config.workspaces.sprite = spriteCard.modelData.id;
+                                cardSprite.celebrate();
+                                const from = previewRow.active, to = (from + 1) % 6;
+                                previewRow.active = to;
+                                Qt.callLater(() => previewAnim.play(from, to));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        SettingRow {
+            label: I18n.t("Скорость анимации значка", "Sprite animation speed")
+            hint: I18n.t("×2 — вдвое быстрее, ×0.5 — вдвое медленнее", "×2 is twice as fast, ×0.5 half as fast")
+            PxSlider {
+                width: parent.width
+                from: 25
+                to: 300
+                stepSize: 5
+                valueScale: 0.01
+                decimals: 2
+                suffix: "×"
+                value: Math.round((Config.workspaces.heartSpeed || 1) * 100)
+                onReleased: v => {
+                    Config.workspaces.heartSpeed = v / 100;
+                    const from = previewRow.active, to = (from + 1) % 6;
+                    previewRow.active = to;
+                    Qt.callLater(() => previewAnim.play(from, to));
+                }
+            }
+        }
         // live preview: six hearts on a strip
         PxBox {
             width: parent.width
@@ -99,11 +184,10 @@ PxPage {
                         readonly property bool lit: previewRow.active === index && previewAnim.hiddenIndex !== index
                         width: Theme.u * 13
                         height: Theme.u * 13
-                        PxIcon {
+                        WsSprite {
                             anchors.centerIn: parent
-                            name: "heart"
+                            lit: pc.lit
                             hollow: !pc.lit && pc.index > 3
-                            fill: pc.lit ? Theme.accent : Theme.accent4
                             scale: pc.lit ? 1 : 0.8
                         }
                     }
@@ -125,6 +209,7 @@ PxPage {
                 width: previewRow.width
                 height: previewRow.height
                 style: Config.workspaces.heartAnim
+                sprite: Config.workspaces.sprite
                 cellRect: i => {
                     const c = previewCells.itemAt(i);
                     return c ? c.mapToItem(previewAnim, 0, 0, c.width, c.height) : Qt.rect(0, 0, 0, 0);
@@ -250,6 +335,23 @@ PxPage {
                 }
             }
         }
+        SettingRow {
+            label: I18n.t("Скорость переключения", "Switch speed")
+            hint: WorkspaceAnim.current.id === "instant" ? I18n.t("у «Мгновенно» скорости нет", "Instant has no speed") : WorkspaceAnim.captured ? I18n.t("длина эффекта angelOS: ", "the angelOS effect lasts ") + WorkspaceAnim.fxMs + I18n.t(" мс", " ms") : I18n.t("анимация niri: ", "niri's slide: ") + WorkspaceAnim.slideMs + I18n.t(" мс (× slowdown ", " ms (× slowdown ") + WorkspaceAnim.slowdown + ")"
+            enabled: WorkspaceAnim.current.id !== "instant" && !WorkspaceAnim.busy
+            opacity: enabled ? 1 : 0.5
+            PxSlider {
+                width: parent.width
+                from: 25
+                to: 300
+                stepSize: 5
+                valueScale: 0.01
+                decimals: 2
+                suffix: "×"
+                value: Math.round(WorkspaceAnim.speed * 100)
+                onReleased: v => Config.workspaces.switchSpeed = v / 100
+            }
+        }
         // how the picked style looks, as a looping gif
         PxPreview {
             width: Math.min(parent.width, Theme.u * 200)
@@ -363,7 +465,7 @@ PxPage {
             wrapMode: Text.Wrap
         }
         Repeater {
-            model: Niri.workspaces.filter(w => w.name !== "privacy")
+            model: Niri.workspaces
             SettingRow {
                 id: r
                 required property var modelData

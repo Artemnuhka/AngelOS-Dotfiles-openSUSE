@@ -15,9 +15,10 @@ Row {
     spacing: Theme.u * 2
 
     function set(v) {
-        v = Math.max(from, Math.min(to, Math.round(v / stepSize) * stepSize));
-        value = Number(v.toFixed(Math.max(decimals, 3)));
-        moved(value);
+        v = Number(Math.max(from, Math.min(to, Math.round(v / stepSize) * stepSize)).toFixed(Math.max(decimals, 3)));
+        moved(v);
+        if (value !== v)
+            value = v;
     }
 
     PxButton {

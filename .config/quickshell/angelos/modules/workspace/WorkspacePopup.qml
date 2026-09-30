@@ -103,12 +103,12 @@ PanelWindow {
                 anchors.horizontalCenter: parent.horizontalCenter
                 spacing: Theme.u * 3
                 Repeater {
-                    model: win.ws ? Niri.workspacesOn(win.ws.output).filter(w => w.name !== "privacy") : []
-                    PxIcon {
+                    model: win.ws ? Niri.workspacesOn(win.ws.output) : []
+                    WsSprite {
                         required property var modelData
-                        name: "heart"
+                        lit: modelData.is_active
+                        playful: false
                         hollow: !modelData.is_active && Niri.windowsOn(modelData.id).length === 0
-                        fill: modelData.is_active ? Theme.accent : Theme.accent4
                         pixel: modelData.is_active ? Theme.u + 1 : Theme.u
                         anchors.verticalCenter: parent ? parent.verticalCenter : undefined
                     }

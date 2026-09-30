@@ -115,7 +115,7 @@ PanelWindow {
         onTriggered: {
             WorkspaceAnim.niriAct(win.target);
             win.phase = "play";
-            anim.duration = win.style.ms || 500;
+            anim.duration = WorkspaceAnim.fxMs;
             anim.restart();
         }
     }
@@ -151,6 +151,7 @@ PanelWindow {
         property variant source: frame
         property real progress: win.progress
         property real mode: win.style.fx === undefined ? 0 : win.style.fx
+        property real shape: WorkspaceAnim.shape
         property real cell: Theme.u * 8
         property real seed: 0.37
         property size resolution: Qt.size(width, height)

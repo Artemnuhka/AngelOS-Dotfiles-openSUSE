@@ -10,6 +10,9 @@ Item {
     property bool password: false
     property string icon: ""
     property string kind: "body"
+    // Enter applies and leaves the field, Esc just leaves it (issue #9) — unless
+    // the field is the whole point of its window (launcher, search, passwords)
+    property bool keepFocus: false
     signal accepted
     signal edited
     signal keyPressed(var event)
@@ -54,8 +57,18 @@ Item {
         echoMode: root.password ? TextInput.Password : TextInput.Normal
         passwordCharacter: "♥"
         selectByMouse: true
-        onAccepted: root.accepted()
-        Keys.onPressed: e => root.keyPressed(e)
+        onAccepted: {
+            root.accepted();
+            if (!root.keepFocus)
+                input.focus = false;
+        }
+        Keys.onPressed: e => {
+            root.keyPressed(e);
+            if (!e.accepted && !root.keepFocus && e.key === Qt.Key_Escape) {
+                input.focus = false;
+                e.accepted = true;
+            }
+        }
         onTextEdited: root.edited()
 
         cursorDelegate: Rectangle {

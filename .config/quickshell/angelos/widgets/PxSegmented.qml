@@ -19,8 +19,13 @@ Row {
             icon: modelData.icon || ""
             checked: root.currentValue === modelData.value
             onClicked: {
-                root.currentValue = modelData.value;
-                root.activated(modelData.value);
+                // the owner's binding (currentValue: Config.x, onActivated: Config.x = v)
+                // updates it; assigning here first would break that binding and leave a
+                // stale pick when the value later changes elsewhere (issue #15)
+                const picked = modelData.value;
+                root.activated(picked);
+                if (root.currentValue !== picked)
+                    root.currentValue = picked;
             }
         }
     }

@@ -31,6 +31,7 @@ JsonAdapter {
         property var screens: []            // empty = every screen
         property bool compactOnVertical: true
         property bool showWindows: true
+        property string tasksWidth: "fill"  // the "Windows" element: fill (takes the free room) | compact (as wide as its buttons)
         property bool taskLabels: false
         property int taskMinWidth: 40       // task buttons with titles, in art pixels
         property int taskMaxWidth: 90
@@ -52,6 +53,7 @@ JsonAdapter {
         property var layout: ({})           // {left:[], center:[], right:[]}; empty = defaults
         property var hidden: []             // widget ids removed from the bar
         property string trayTint: "accent"  // off | mono | accent — recolor tray icons to the theme
+        property string trayDensity: "normal" // tray grid: compact | normal | airy | spacious (fewer, bigger cells)
         property bool tintTasks: false      // same for window buttons
         property string taskRightClick: "menu" // menu (window menu with Close) | close (closes at once) | none
         property bool taskMiddleClose: true // middle click on a window button closes the window
@@ -76,7 +78,17 @@ JsonAdapter {
         property bool phrases: true
         property string switchFx: "soft"    // soft | slide | bounce | teleport | pixel | heart | glitch | instant
         property string heartAnim: "smart"  // hearts/icons indicator: smart | collide | ender | hop | worm | pixel | beat | sparkle | drop | glitch | slide | off
+        property string sprite: "heart"     // the desk sprite on the bar/strip/popup and the "Heart" transition's shape: heart | star | cd
+        property real heartSpeed: 1.0       // × speed of the indicator animation (2 = twice as fast)
+        property real switchSpeed: 1.0      // × speed of the switch animation: niri's slide (cfg/animation.kdl) and angelOS's captured ones
         property var names: ({})            // "DP-1:1" -> "работа"
+    }
+
+    property JsonObject alttab: JsonObject {
+        property string style: "angelos"    // angelos | ngo | y2k — angelOS's own switcher; niri = niri's with live previews
+        property string scope: "all"        // all | output (this monitor) | workspace (this desk)
+        property int delayMs: 150           // a quick Alt+Tab tap switches without showing anything
+        property bool titles: true          // window titles under the icons
     }
 
     property JsonObject lyrics: JsonObject {
@@ -201,6 +213,7 @@ JsonAdapter {
     property JsonObject network: JsonObject {
         property bool showWifi: true        // bar/sidebar Wi-Fi indicator when a Wi-Fi adapter exists
         property bool showBluetooth: true
+        property bool showWired: true       // bar: the wired connection's indicator (when there is a wired adapter)
     }
 
     property JsonObject y2k: JsonObject {
@@ -212,6 +225,7 @@ JsonAdapter {
         property var sparkleScreens: []     // empty = every screen
         property bool sounds: true
         property real soundVolume: 0.55
+        property real helperVolume: 0.6     // the angel's / demon's voice, pips and effects, on top of soundVolume
         property var soundOff: ["click"]    // events kept quiet: startup notify error click shutdown angel
         property bool boot: true            // CD-ROM style loading screen once per login
         property var bootScreens: []        // empty = every screen

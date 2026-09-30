@@ -7,7 +7,7 @@
 #   errors or missing images in the log.
 #
 #   scripts/test-ui.sh [angelOS dir]      exit 0 = all good
-#   ANGELOS_TEST_LOG=file keeps the full log
+#   ANGELOS_TEST_LOG=file keeps the full log, ANGELOS_TEST_SHOTS=dir saves pictures (Alt+Tab styles)
 set -uo pipefail
 DIR="$(cd "${1:-"$(dirname "$0")/.."}" && pwd)"
 [[ -f "$DIR/shell.qml" && -f "$DIR/tests/ui/Driver.qml" ]] || { echo "no angelOS in $DIR"; exit 2; }
@@ -64,7 +64,7 @@ env -i PATH="$PATH" LANG=C.UTF-8 HOME="$T/home" USER="${USER:-angel}" \
   XDG_CONFIG_HOME="$T/home/.config" XDG_STATE_HOME="$T/home/.local/state" \
   XDG_CACHE_HOME="$T/home/.cache" XDG_DATA_HOME="$T/home/.local/share" XDG_RUNTIME_DIR="$T/rt" \
   QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME= LD_LIBRARY_PATH="$LIB" QML_IMPORT_PATH="$QML" \
-  ANGELOS_DEV=1 ANGELOS_SCREENS=__none__ ANGELOS_TEST=1 QS_NO_RELOAD_POPUP=1 QS_DISABLE_CRASH_HANDLER=1 \
+  ANGELOS_DEV=1 ANGELOS_SCREENS=__none__ ANGELOS_TEST=1 ANGELOS_TEST_SHOTS="${ANGELOS_TEST_SHOTS:-}" QS_NO_RELOAD_POPUP=1 QS_DISABLE_CRASH_HANDLER=1 \
   "${runner[@]}" timeout 150 "$QS" -p "$T/root" >"$log" 2>&1
 code=$?
 

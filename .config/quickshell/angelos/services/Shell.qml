@@ -51,6 +51,35 @@ Singleton {
         locked = true;
     }
 
+    // A window you type into (the launcher, clipboard history, the session menu)
+    // first closes every menu and panel: a popup's input grab or another
+    // exclusive overlay (Start) would otherwise keep the keyboard (issue #22).
+    signal dismissMenus
+    function closeTransient(keep) {
+        dismissMenus();
+        if (PopupManager.active)
+            PopupManager.close(PopupManager.active);    // tray menus are not registered
+        for (const p of PopupManager.registered)
+            PopupManager.close(p);
+        for (const k in desktopMenus)
+            if (desktopMenus[k] && desktopMenus[k].close)
+                desktopMenus[k].close();
+        if (keep !== "start")
+            closeStart();
+        if (keep !== "launcher")
+            launcherOpen = false;
+        if (keep !== "clipboard")
+            clipboardOpen = false;
+        if (keep !== "session")
+            sessionOpen = false;
+    }
+    onLauncherOpenChanged: if (launcherOpen)
+        closeTransient("launcher")
+    onClipboardOpenChanged: if (clipboardOpen)
+        closeTransient("clipboard")
+    onSessionOpenChanged: if (sessionOpen)
+        closeTransient("session")
+
     // ---- Start menu: a layer-shell overlay per screen (xdg popups opened without
     // a click are dismissed by the compositor, so Meta taps could not use them) ----
     property string startScreen: ""          // screen whose Start menu is open

@@ -258,6 +258,7 @@ Scope {
                         // ---- Ask… ----
                         PxField {
                             id: askField
+                            keepFocus: true
                             visible: Angel.menuOpen && Angel.menuMode === "ask"
                             width: parent.width
                             icon: "chat"
@@ -357,7 +358,8 @@ Scope {
                 Item {
                     id: voice
                     readonly property bool on: Sounds.enabled("voice") && !StreamMode.quiet && Sounds.ready
-                    readonly property url clip: "file://" + Sounds.dir + "/" + (Angel.demon ? "voiceDemon" : "voiceAngel") + ".wav"
+                    // loaded once the pack is ready: an older, louder pack is synthesised again first
+                    readonly property url clip: Sounds.ready ? "file://" + Sounds.dir + "/" + (Angel.demon ? "voiceDemon" : "voiceAngel") + ".wav" : ""
                     property int next: 0
                     function pip() {
                         if (!on)
@@ -369,17 +371,17 @@ Scope {
                     SoundEffect {
                         id: v0
                         source: voice.clip
-                        volume: Config.y2k.soundVolume
+                        volume: Sounds.volumeOf("voiceAngel")
                     }
                     SoundEffect {
                         id: v1
                         source: voice.clip
-                        volume: Config.y2k.soundVolume
+                        volume: Sounds.volumeOf("voiceAngel")
                     }
                     SoundEffect {
                         id: v2
                         source: voice.clip
-                        volume: Config.y2k.soundVolume
+                        volume: Sounds.volumeOf("voiceAngel")
                     }
                 }
 

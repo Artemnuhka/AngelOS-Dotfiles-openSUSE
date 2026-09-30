@@ -1,0 +1,292 @@
+pragma Singleton
+pragma ComponentBehavior: Bound
+
+import QtQuick
+import Quickshell
+import Quickshell.Io
+import qs.config
+
+// angelOS Alt+Tab (Settings → Windows → Alt+Tab): its own switcher in the
+// angelOS, NEEDY GIRL OVERDOSE or Y2K style, or niri's native one with live
+// previews ("niri").
+//
+// niri binds Alt+Tab / Alt+Shift+Tab to `angelos alttab next|prev` (the block
+// in cfg/angelos-windows.kdl, scripts/window-config.py, with `recent-windows
+// { off }`), which reaches the control socket in a few ms. niri keeps those
+// binds while the switcher is up, so every Tab steps here; Alt being let go is
+// read from the keyboards by scripts/alt-watch.py (niri has no release binds),
+// Qt's own key release is the fallback. A quick Alt+Tab tap never shows the
+// switcher: it only appears after `delayMs` while Alt is still held.
+// Windows are in most-recently-used order: niri's focus timestamps, then every
+// focus change moves a window to the front.
+Singleton {
+    id: root
+
+    readonly property var styles: [
+        {
+            "id": "angelos",
+            "label": "angelOS",
+            "hint": I18n.t("пиксельное окошко alt+tab.exe в цветах темы, выбранное — в розовой рамке с сердечком", "a pixel alt+tab.exe window in the theme colours, the pick framed in pink with a heart")
+        },
+        {
+            "id": "ngo",
+            "label": "NEEDY GIRL OVERDOSE",
+            "hint": I18n.t("окно Windose: пастельные полоски, клетчатый фон, скачущее сердце над выбранным и реплики Ame", "a Windose window: pastel stripes, a checkered back, a heart bouncing over the pick and Ame's lines")
+        },
+        {
+            "id": "y2k",
+            "label": "Y2K ✧",
+            "hint": I18n.t("глянцевая хромированная панель-пузырь, радужные карточки и мерцающие звёздочки", "a glossy chrome bubble panel, iridescent cards and twinkling sparkles")
+        },
+        {
+            "id": "niri",
+            "label": I18n.t("Как в niri", "niri's own"),
+            "hint": I18n.t("встроенный переключатель niri с живыми превью окон", "niri's built-in switcher with live window previews")
+        }
+    ]
+    readonly property string style: styles.some(s => s.id === Config.alttab.style) ? Config.alttab.style : "angelos"
+    readonly property bool ours: style !== "niri"
+
+    // ---- most recently used ----
+    property var mru: []                     // window ids, the focused one first
+    function _seed() {
+        const ts = w => w.focus_timestamp ? w.focus_timestamp.secs * 1e3 + w.focus_timestamp.nanos / 1e6 : 0;
+        const sorted = Niri.windows.slice().sort((a, b) => (b.is_focused - a.is_focused) || ts(b) - ts(a) || b.id - a.id);
+        mru = sorted.map(w => w.id);
+    }
+    Connections {
+        target: Niri
+        function onFocusedWindowIdChanged() {
+            // cycling does not focus anything; only the pick does, at the end
+            if (Niri.focusedWindowId >= 0)
+                root.mru = [Niri.focusedWindowId].concat(root.mru.filter(id => id !== Niri.focusedWindowId));
+        }
+        function onWindowsChanged() {
+            const ids = Niri.windows.map(w => w.id);
+            if (!root.mru.length) {
+                root._seed();
+                return;
+            }
+            const known = root.mru.filter(id => ids.includes(id));
+            const fresh = ids.filter(id => !known.includes(id));
+            if (fresh.length || known.length !== root.mru.length)
+                root.mru = known.concat(fresh);
+        }
+    }
+    Component.onCompleted: _seed()
+
+    // the windows to cycle through, in MRU order
+    function candidates() {
+        const byId = {};
+        for (const w of Niri.windows)
+            byId[w.id] = w;
+        let list = mru.map(id => byId[id]).filter(w => !!w);
+        for (const w of Niri.windows)
+            if (!list.includes(w))
+                list.push(w);
+        if (Config.alttab.scope === "workspace") {
+            const ws = Niri.activeWorkspace(Niri.focusedOutput);
+            list = list.filter(w => ws && w.workspace_id === ws.id);
+        } else if (Config.alttab.scope === "output") {
+            list = list.filter(w => {
+                const ws = Niri.workspaceById(w.workspace_id);
+                return ws && ws.output === Niri.focusedOutput;
+            });
+        }
+        return list;
+    }
+
+    // ---- the switcher ----
+    property bool active: false              // cycling (Alt held)
+    property bool shown: false               // the switcher is on screen
+    property bool demo: false                // settings "Try it": plays by itself, focuses nothing
+    property var items: []
+    property int index: 0
+    property string screenName: ""
+    readonly property var current: items[index] || null
+    property int serial: 0                   // bumps per open (the window restarts its intro)
+
+    function step(dir) {
+        if (!ours || Shell.locked)
+            return;
+        if (!active) {
+            const list = candidates();
+            if (list.length === 0)
+                return;
+            items = list;
+            index = list.length === 1 ? 0 : (dir < 0 ? list.length - 1 : 1);
+            screenName = Niri.focusedOutput;
+            demo = false;
+            active = true;
+            serial++;
+            watcher.running = false;
+            watcher.running = true;
+            showTimer.restart();
+            guard.restart();
+            return;
+        }
+        if (items.length)
+            index = (index + (dir < 0 ? -1 : 1) + items.length) % items.length;
+        guard.restart();
+        if (!shown && !demo && watcherSaid === "down")
+            reveal();
+    }
+    function select(i) {
+        if (active && i >= 0 && i < items.length)
+            index = i;
+    }
+    // Alt went up (or Enter, or a click): focus the pick
+    function commit() {
+        if (!active)
+            return;
+        const w = current, wasDemo = demo;
+        close();
+        if (w && !wasDemo && w.id !== Niri.focusedWindowId)
+            Niri.focusWindow(w.id);
+    }
+    function cancel() {
+        close();
+    }
+    function close() {
+        active = false;
+        shown = false;
+        demo = false;
+        showTimer.stop();
+        guard.stop();
+        demoTimer.stop();
+        watcher.running = false;
+        watcherSaid = "";
+    }
+    function reveal() {
+        if (active && !shown)
+            shown = true;
+    }
+    // Settings → "Try it": the switcher cycles by itself for a few seconds
+    function tryIt(styleId) {
+        if (styleId)
+            Config.alttab.style = styleId;
+        if (!ours)
+            return;
+        const list = candidates();
+        items = list.length ? list : [];
+        if (!items.length)
+            return;
+        close();
+        index = items.length > 1 ? 1 : 0;
+        screenName = Niri.focusedOutput;
+        demo = true;
+        active = true;
+        shown = true;
+        serial++;
+        demoTimer.steps = 0;
+        demoTimer.restart();
+    }
+    Timer {
+        id: demoTimer
+        property int steps: 0
+        interval: 520
+        repeat: true
+        onTriggered: {
+            if (++steps > 6) {
+                root.close();
+                return;
+            }
+            root.index = (root.index + 1) % Math.max(1, root.items.length);
+        }
+    }
+    // shows up only while Alt is still held after a moment: a quick tap just switches
+    Timer {
+        id: showTimer
+        interval: Math.max(0, Config.alttab.delayMs)
+        onTriggered: {
+            // without the keyboard watcher there is no way to tell: show it
+            if (root.watcherSaid === "down" || root.watcherSaid === "" && !watcher.running || root.watcherSaid === "noperm")
+                root.reveal();
+            else if (watcher.running && root.watcherSaid === "")
+                restart();       // the watcher has not answered yet: check again shortly
+        }
+    }
+    // a lost release (a crash of the watcher, focus stolen) never leaves it hanging
+    Timer {
+        id: guard
+        interval: 30000
+        onTriggered: root.cancel()
+    }
+
+    property string watcherSaid: ""          // down | up | noperm
+    property string watcherStatus: ""        // last non-empty answer, for the settings page
+    Process {
+        id: watcher
+        command: ["python3", Quickshell.shellDir + "/scripts/alt-watch.py", "--timeout", "30"]
+        stdout: SplitParser {
+            onRead: line => {
+                const l = line.trim();
+                root.watcherSaid = l;
+                if (l !== "down")
+                    root.watcherStatus = l;
+                if (l === "up" && root.active && !root.demo)
+                    root.commit();
+                else if (l === "down" && root.active && !showTimer.running)
+                    root.reveal();
+                else if (l === "noperm")
+                    root.reveal();
+            }
+        }
+        onExited: code => {
+            if (code !== 0 && root.watcherSaid === "" && root.active)
+                root.reveal();
+        }
+    }
+
+    // ---- the niri side: binds + recent-windows off, or back to niri's own ----
+    property bool niriRouted: false          // cfg/angelos-windows.kdl has the angelOS block
+    property bool niriRead: false
+    property string log: ""
+    function apply() {
+        if (Shell.dev || writer.running)
+            return;
+        writer.command = ["python3", Quickshell.shellDir + "/scripts/window-config.py", JSON.stringify({
+                "alttab": ours
+            })];
+        writer.running = true;
+    }
+    function sync() {
+        if (Config.ready && niriRead && niriRouted !== ours)
+            apply();
+    }
+    onOursChanged: sync()
+    Connections {
+        target: Config
+        function onReadyChanged() {
+            root.sync();
+        }
+    }
+    Process {
+        id: reader
+        running: true
+        command: ["python3", Quickshell.shellDir + "/scripts/window-config.py"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    root.niriRouted = !!JSON.parse(text).alttab;
+                    root.niriRead = true;
+                    root.sync();
+                } catch (e) {}
+            }
+        }
+    }
+    Process {
+        id: writer
+        stdout: StdioCollector {
+            onStreamFinished: root.log = text.trim()
+        }
+        stderr: StdioCollector {
+            onStreamFinished: if (text.trim())
+                root.log = text.trim().split("\n").slice(-1)[0]
+        }
+        onExited: code => {
+            if (code === 0)
+                root.niriRouted = root.ours;
+        }
+    }
+}

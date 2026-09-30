@@ -8,7 +8,10 @@
                                as .wav, prints JSON
 
 Chimes are FM bells and detuned triangle pads with a small echo, levelled to
-about -6 dBFS so they sit under music and voice.
+about -6 dBFS peak and at most -20 dBFS RMS so they sit under music and voice.
+The helper's sounds are quieter still (LOUDNESS): her pips play once per letter,
+a whole sentence of square waves at chime level was deafening.
+The pack's version goes into <dir>/.version; the shell regenerates older packs.
 """
 import json
 import math
@@ -76,9 +79,20 @@ def note(n):
     return 440.0 * 2 ** ((n - 69) / 12)
 
 
-def level(x, peak_db=-6.0):
+def level(x, peak_db=-6.0, rms_db=-20.0):
+    """peak at peak_db, then turned down until the RMS is at most rms_db
+    (a square wave at -6 dBFS peak is ~12 dB louder than a bell at -6)"""
     m = np.max(np.abs(x)) or 1.0
-    return x / m * 10 ** (peak_db / 20)
+    x = x / m * 10 ** (peak_db / 20)
+    rms = float(np.sqrt(np.mean(x * x))) or 1.0
+    cap = 10 ** (rms_db / 20)
+    return x * (cap / rms) if rms > cap else x
+
+
+# RMS ceilings, dBFS: the helper speaks under everything else
+LOUDNESS = {"voiceAngel": -25.0, "voiceDemon": -26.0, "voice": -25.0, "angel": -24.0, "demon": -25.0,
+            "choir": -23.0, "crack": -25.0, "rocks": -23.0, "shatter": -23.0}
+PACK_VERSION = "2"
 
 
 def startup():
@@ -329,7 +343,8 @@ def pip(freq, duty, sec, drop, grit=0.0, seed=1):
     x = pulse(freq, freq * drop, sec, duty)
     if grit:
         x = x * (1 - grit) + lfsr(sec, 4, seed=seed) * grit
-    return crunch8(x * np.exp(-t * 18) * env(len(t), 0.002, 0.012))
+    # 8-bit steps, then the fizz taken off: a raw square pip hurts at any volume
+    return lowpass(crunch8(x * np.exp(-t * 18) * env(len(t), 0.002, 0.012)), 3800)
 
 
 def voice_angel():
@@ -379,7 +394,7 @@ def main():
     for name, fn in SOUNDS.items():
         if only and name not in only:
             continue
-        x = level(fn())
+        x = level(fn(), rms_db=LOUDNESS.get(name, -20.0))
         wav = out / (name + ".wav")
         write_wav(wav, x)
         if ffmpeg and name not in WAV_ONLY:
@@ -390,6 +405,8 @@ def main():
                 made[name] = str(ogg)
                 continue
         made[name] = str(wav)
+    if not only:
+        (out / ".version").write_text(PACK_VERSION + "\n")
     print(json.dumps({"ok": True, "sounds": made}))
 
 

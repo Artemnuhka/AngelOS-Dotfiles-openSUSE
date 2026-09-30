@@ -80,6 +80,16 @@ PxPage {
         Flow {
             width: parent.width
             spacing: Theme.u * 3
+            // she comes by herself too; this calls her now (and sends the demon off)
+            PxButton {
+                icon: "heart"
+                enabled: !Angel.transition
+                text: Angel.demon ? I18n.t("Призвать ангела (прогнать демоницу)", "Call the angel (send the demon off)") : I18n.t("Позвать ангела", "Call the angel")
+                onClicked: {
+                    const r = Angel.summon();
+                    summonNote.text = r === "hidden" ? I18n.t("стрим-режим прячет её с экранов в эфире — выбери экран не в эфире или выключи «Ангелочек уходит с экрана»", "Stream mode keeps her off the streamed screens: pick another screen or switch off “The angel leaves the screen”") : "";
+                }
+            }
             PxButton {
                 enabled: Config.y2k.helper
                 icon: "star"
@@ -98,6 +108,14 @@ PxPage {
                     Angel.joke();
                 }
             }
+        }
+        PxText {
+            id: summonNote
+            width: parent.width
+            visible: text !== ""
+            wrapMode: Text.Wrap
+            kind: "tiny"
+            color: Theme.danger
         }
     }
 
@@ -380,6 +398,23 @@ PxPage {
                 }
             }
         }
+        SettingRow {
+            label: I18n.t("Голос ангела и демоницы", "The angel's and the demon's voice")
+            hint: I18n.t("её «пип» на каждую букву, «хех», хор, трещины и камни — доля от общей громкости", "Her pip on every letter, the “heh”, the choir, cracks and rocks — a share of the volume above")
+            PxSlider {
+                width: parent.width
+                from: 0
+                to: 100
+                stepSize: 5
+                suffix: " %"
+                value: Math.round(Config.y2k.helperVolume * 100)
+                live: false
+                onReleased: v => {
+                    Config.y2k.helperVolume = v / 100;
+                    Sounds.preview("voice");
+                }
+            }
+        }
         Repeater {
             model: [
                 {
@@ -470,7 +505,7 @@ PxPage {
                 {
                     "id": "click",
                     "label": I18n.t("Клик", "Click"),
-                    "hint": I18n.t("для проверки громкости", "To check the volume")
+                    "hint": Sounds.clickStatus === "noperm" ? I18n.t("нет доступа к мыши (группа input) — клики не слышно", "No access to the mouse (the input group): clicks stay silent") : I18n.t("щелчок на каждый клик ЛКМ и ПКМ, во всех окнах", "A tick on every left and right click, in every window")
                 }
             ]
             SettingRow {

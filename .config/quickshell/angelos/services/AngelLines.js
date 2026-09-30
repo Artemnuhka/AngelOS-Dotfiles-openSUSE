@@ -185,6 +185,8 @@ const demon = {
     "grab": [["Руки убрал.", "Hands off."], ["О, любишь пожёстче?", "Oh, you like it rough?"], ["Куда тащишь? Я оттуда и пришла.", "Where to? That's where I came from."]],
     "drop": ["Я и так из ада, глупенький. Проси по-хорошему.", "I'm from hell already, silly. Ask nicely instead."],
     "hello": ["Чего надо?", "What do you want?"],
+    // Settings → Y2K → "Call the angel": the demon is shown the door
+    "summoned": ["Через настройки, значит? Без просьб? Фу, как скучно. Ладно, зову твою святошу ♥", "Through the settings? No begging? Ugh, how dull. Fine, I'll fetch your little saint ♥"],
     "who": ["Я демоница. Мне 666 лет, и я живу в углу твоего экрана. Можешь звать меня госпожой.", "I'm a demoness. I'm 666 years old and I live in the corner of your screen. Call me mistress."],
     "love": ["Все так говорят, пока я не начну пакостить.", "Everyone says that until I start messing with things."],
     "thanks": ["Не за что. Правда не за что, я ничего хорошего не делала.", "Don't mention it. Really, I did nothing good."],
@@ -199,6 +201,9 @@ const angel = {
              ["Только не вниз, там жарко!", "Not down there, it's hot!"]],
     "phew": ["Фух… Не делай так больше.", "Phew… don't do that again."],
     "hello": ["Привет-привет! ♡", "Hi hi! ♡"],
+    // called from the settings
+    "summoned": [["Звал? Я тут! ♡", "You called? I'm here! ♡"], ["Прилетела! Нимб на месте, крылья тоже ♡", "Flew right over! Halo on, wings too ♡"],
+                 ["Я здесь, я рядом ♡ Чем помочь?", "Right here ♡ What can I do?"]],
     "who": ["Я Ангелочек, живу в углу экрана и помогаю тебе с angelOS. Иногда шучу. Иногда удачно.", "I'm Angel. I live in the corner of your screen and help with angelOS. Sometimes I joke. Sometimes well."],
     "love": ["И я тебя! Только не говори демонице.", "Love you too! Just don't tell the demon."],
     "thanks": ["Всегда пожалуйста ♡", "Any time ♡"],

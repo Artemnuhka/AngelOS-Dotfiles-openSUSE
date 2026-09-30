@@ -82,27 +82,193 @@ PxPage {
                 }
             }
         }
-        SettingRow {
-            id: animRow
-            preview: "CloseFx"
-            label: I18n.t("Анимация закрытия", "Close animation")
-            hint: {
-                const s = CloseAnim.styles.find(x => x.id === CloseAnim.current);
-                return s ? s.hint : CloseAnim.current === "custom" ? I18n.t("свой шейдер в cfg/animation.kdl — выбери вариант, чтобы заменить", "A hand-written shader in cfg/animation.kdl — pick one to replace it") : "";
+    }
+    PxGroup {
+        width: parent.width
+        title: "Alt+Tab"
+        icon: "layers"
+        PxText {
+            width: parent.width
+            wrapMode: Text.Wrap
+            dim: true
+            text: I18n.t("Держи Alt и жми Tab — окна по порядку недавнего использования; отпусти Alt, чтобы переключиться. Shift+Tab и стрелки — назад, Esc — отмена, Delete — закрыть окно. Быстрое Alt+Tab просто прыгает на прошлое окно.", "Hold Alt and press Tab: windows in most-recently-used order; let go of Alt to switch. Shift+Tab and the arrows go back, Esc cancels, Delete closes a window. A quick Alt+Tab just jumps to the previous window.")
+        }
+        Grid {
+            width: parent.width
+            columns: Math.max(1, Math.floor(width / (Theme.u * 110)))
+            spacing: Theme.u * 3
+            Repeater {
+                model: AltTab.styles
+                PxBox {
+                    id: atCard
+                    required property var modelData
+                    readonly property bool current: AltTab.style === modelData.id
+                    width: (parent.width - (parent.columns - 1) * parent.spacing) / parent.columns
+                    height: atCol.implicitHeight + Theme.u * 8
+                    sunken: current
+                    color: current ? Theme.mix(Theme.face, Theme.accent, 0.3) : atMouse.containsMouse ? Theme.mix(Theme.face, Theme.accent, 0.1) : Theme.face
+                    Column {
+                        id: atCol
+                        x: Theme.u * 4
+                        y: Theme.u * 4
+                        width: parent.width - Theme.u * 8
+                        spacing: Theme.u
+                        PxText {
+                            text: (atCard.current ? "♡ " : "") + atCard.modelData.label
+                            font.bold: true
+                        }
+                        PxText {
+                            width: parent.width
+                            text: atCard.modelData.hint
+                            kind: "tiny"
+                            dim: true
+                            wrapMode: Text.Wrap
+                        }
+                    }
+                    MouseArea {
+                        id: atMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            Config.alttab.style = atCard.modelData.id;
+                            if (atCard.modelData.id !== "niri")
+                                AltTab.tryIt();
+                        }
+                    }
+                }
             }
-            PxCombo {
+        }
+        SettingRow {
+            visible: AltTab.ours
+            label: I18n.t("Какие окна", "Which windows")
+            PxSegmented {
+                model: [
+                    {
+                        "label": I18n.t("Все", "All"),
+                        "value": "all"
+                    },
+                    {
+                        "label": I18n.t("Этот монитор", "This monitor"),
+                        "value": "output"
+                    },
+                    {
+                        "label": I18n.t("Этот стол", "This desk"),
+                        "value": "workspace"
+                    }
+                ]
+                currentValue: Config.alttab.scope
+                onActivated: v => Config.alttab.scope = v
+            }
+        }
+        SettingRow {
+            visible: AltTab.ours
+            label: I18n.t("Подписи", "Titles")
+            PxToggle {
+                checked: Config.alttab.titles
+                onToggled: c => Config.alttab.titles = c
+            }
+        }
+        SettingRow {
+            visible: AltTab.ours
+            label: I18n.t("Показывать через", "Show after")
+            hint: I18n.t("пока Alt держится дольше — иначе просто переключает, без окошка", "only while Alt is held longer, otherwise it just switches")
+            PxSlider {
                 width: parent.width
-                enabled: !CloseAnim.busy
-                model: CloseAnim.styles.map(s => ({
-                            "label": s.label,
-                            "value": s.id
-                        }))
-                currentValue: CloseAnim.current
-                placeholder: CloseAnim.current === "custom" ? I18n.t("свой шейдер", "custom shader") : "—"
-                onActivated: v => {
-                    CloseAnim.pick(v);
-                    const s = CloseAnim.styles.find(x => x.id === v);
-                    animRow.show(v, s ? s.label : v);
+                from: 0
+                to: 500
+                stepSize: 10
+                suffix: I18n.t(" мс", " ms")
+                value: Config.alttab.delayMs
+                onReleased: v => Config.alttab.delayMs = v
+            }
+        }
+        Row {
+            spacing: Theme.u * 3
+            visible: AltTab.ours
+            PxButton {
+                compact: true
+                icon: "play"
+                text: I18n.t("Показать", "Try it")
+                onClicked: AltTab.tryIt()
+            }
+            PxText {
+                anchors.verticalCenter: parent.verticalCenter
+                width: Theme.u * 200
+                wrapMode: Text.Wrap
+                kind: "tiny"
+                color: AltTab.watcherStatus === "noperm" ? Theme.danger : Theme.textDim
+                text: AltTab.watcherStatus === "noperm" ? I18n.t("нет доступа к клавиатуре (группа input): отпускание Alt ловится только самим окошком — если оно не успело открыться, выбери окно Enter или кликом", "No keyboard access (the input group): only the switcher itself sees Alt being let go — if it was not open yet, pick with Enter or a click") : AltTab.log
+            }
+        }
+    }
+    PxGroup {
+        width: parent.width
+        title: I18n.t("Анимации окон", "Window animations")
+        icon: "sparkle"
+        Component.onCompleted: WindowAnim.refresh()
+        Repeater {
+            model: [
+                {
+                    "kind": "open",
+                    "label": I18n.t("Анимация открытия", "Open animation"),
+                    "speed": I18n.t("Скорость открытия", "Open speed"),
+                    "preview": "OpenFx"
+                },
+                {
+                    "kind": "close",
+                    "label": I18n.t("Анимация закрытия", "Close animation"),
+                    "speed": I18n.t("Скорость закрытия", "Close speed"),
+                    "preview": "CloseFx"
+                }
+            ]
+            Column {
+                id: animBlock
+                required property var modelData
+                readonly property string kind: modelData.kind
+                readonly property string currentId: animBlock.kind === "open" ? WindowAnim.open : WindowAnim.close
+                width: parent.width
+                spacing: Theme.u * 2
+                SettingRow {
+                    id: animRow
+                    preview: animBlock.modelData.preview
+                    label: animBlock.modelData.label
+                    hint: {
+                        const s = WindowAnim.styleOf(animBlock.kind, animBlock.currentId);
+                        return s ? s.hint : animBlock.currentId === "custom" ? I18n.t("свой шейдер в cfg/animation.kdl — выбери вариант, чтобы заменить", "A hand-written shader in cfg/animation.kdl — pick one to replace it") : "";
+                    }
+                    PxCombo {
+                        width: parent.width
+                        enabled: !WindowAnim.busy
+                        model: WindowAnim.styles(animBlock.kind).map(s => ({
+                                    "label": s.label,
+                                    "value": s.id
+                                }))
+                        currentValue: animBlock.currentId
+                        placeholder: animBlock.currentId === "custom" ? I18n.t("свой шейдер", "custom shader") : "—"
+                        onActivated: v => {
+                            WindowAnim.pick(animBlock.kind, v);
+                            const s = WindowAnim.styleOf(animBlock.kind, v);
+                            animRow.show(v, s ? s.label : v);
+                        }
+                    }
+                }
+                SettingRow {
+                    label: animBlock.modelData.speed
+                    hint: I18n.t("×2 — вдвое быстрее, ×0.5 — вдвое медленнее; niri ещё умножает всё на свой slowdown", "×2 is twice as fast, ×0.5 half as fast; niri also stretches everything by its slowdown")
+                    enabled: !WindowAnim.busy && animBlock.currentId !== "off" && animBlock.currentId !== "custom" && animBlock.currentId !== ""
+                    opacity: enabled ? 1 : 0.5
+                    PxSlider {
+                        width: parent.width
+                        from: 25
+                        to: 300
+                        stepSize: 5
+                        valueScale: 0.01
+                        decimals: 2
+                        suffix: "×"
+                        value: Math.round((animBlock.kind === "open" ? WindowAnim.openSpeed : WindowAnim.closeSpeed) * 100)
+                        onReleased: v => WindowAnim.setSpeed(animBlock.kind, v / 100)
+                    }
                 }
             }
         }
@@ -112,11 +278,11 @@ PxPage {
                 compact: true
                 icon: "play"
                 text: I18n.t("На настоящем окне", "On a real window")
-                onClicked: CloseAnim.preview()
+                onClicked: WindowAnim.preview()
             }
             PxText {
                 anchors.verticalCenter: parent.verticalCenter
-                text: CloseAnim.log
+                text: WindowAnim.log
                 kind: "tiny"
                 dim: true
                 width: Theme.u * 200

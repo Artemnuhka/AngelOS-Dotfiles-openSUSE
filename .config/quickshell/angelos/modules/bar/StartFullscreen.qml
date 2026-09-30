@@ -210,6 +210,7 @@ Item {
         }
         PxField {
             id: field
+            keepFocus: true
             anchors.horizontalCenter: parent.horizontalCenter
             width: Math.min(root.width - Theme.u * 40, Theme.u * 170)
             icon: "search"

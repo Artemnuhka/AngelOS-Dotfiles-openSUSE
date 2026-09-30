@@ -97,6 +97,7 @@ Scope {
                 }
                 PxField {
                     id: field
+                    keepFocus: true
                     width: parent.width
                     password: !(root.flow && root.flow.responseVisible)
                     enabled: root.flow && root.flow.isResponseRequired

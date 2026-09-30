@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Window
 import qs.config
 import qs.services
 
@@ -12,6 +13,9 @@ Item {
     readonly property var activeWs: Niri.activeWorkspace(screenName)
     readonly property string target: Wallpapers.resolve(screenName, activeWs ? activeWs.idx : 1)
     property string shown: ""
+    // decoded at the screen's real pixels: Qt reads sourceSize as physical
+    // pixels, so logical ones blur the picture on a scaled monitor (issue #18)
+    readonly property real dpr: Screen.devicePixelRatio > 0 ? Screen.devicePixelRatio : 1
     property real progress: 1
     // -1 = no transition; "random" picks again for every change
     property int styleIndex: Wallpapers.transitionIndex(Config.wallpaper.transition)
@@ -87,7 +91,7 @@ Item {
         property string path
         anchors.fill: parent
         fillMode: Image.PreserveAspectCrop
-        sourceSize: Qt.size(root.width, root.height)
+        sourceSize: Qt.size(Math.ceil(root.width * root.dpr), Math.ceil(root.height * root.dpr))
         asynchronous: true
         cache: true
         smooth: true
@@ -100,7 +104,7 @@ Item {
         property string path
         anchors.fill: parent
         fillMode: Image.PreserveAspectCrop
-        sourceSize: Qt.size(root.width, root.height)
+        sourceSize: Qt.size(Math.ceil(root.width * root.dpr), Math.ceil(root.height * root.dpr))
         asynchronous: true
         cache: true
         smooth: true
@@ -117,6 +121,7 @@ Item {
 
     ShaderEffectSource {
         id: fromSrc
+        textureSize: Qt.size(Math.ceil(root.width * root.dpr), Math.ceil(root.height * root.dpr))
         sourceItem: fromImg
         hideSource: true
         live: true
@@ -124,6 +129,7 @@ Item {
     }
     ShaderEffectSource {
         id: toSrc
+        textureSize: Qt.size(Math.ceil(root.width * root.dpr), Math.ceil(root.height * root.dpr))
         sourceItem: toImg
         hideSource: true
         live: true

@@ -390,32 +390,45 @@ PxPage {
         advanced: true
         icon: "heart"
         width: parent.width
+        // one choice, as pictures with their names (issue #15: buttons and pictures disagreed)
         SettingRow {
             label: I18n.t("Вариант", "Variant")
-            PxSegmented {
-                model: [
-                    {label: "Classic 95", value: "classic"},
-                    {label: "Angel +", value: "angel"}
-                ]
-                currentValue: Config.bar.logoStyle
-                onActivated: v => Config.bar.logoStyle = v
-            }
-        }
-        Flow {
-            width: parent.width
-            spacing: Theme.u * 8
-            Repeater {
-                model: ["classic", "angel"]
-                PxButton {
-                    required property string modelData
-                    width: preview.implicitWidth + Theme.u * 12
-                    height: Theme.u * 23
-                    checked: Config.bar.logoStyle === modelData
-                    onClicked: Config.bar.logoStyle = modelData
-                    AngelLogo {
-                        id: preview
-                        anchors.centerIn: parent
-                        variant: parent.modelData
+            Flow {
+                width: parent.width
+                spacing: Theme.u * 6
+                Repeater {
+                    model: [
+                        {
+                            "value": "classic",
+                            "label": "Classic 95"
+                        },
+                        {
+                            "value": "angel",
+                            "label": "Angel +"
+                        }
+                    ]
+                    PxButton {
+                        id: logoCard
+                        required property var modelData
+                        width: Math.max(preview.implicitWidth, caption.implicitWidth) + Theme.u * 12
+                        height: Theme.u * 34
+                        checked: Config.bar.logoStyle === modelData.value
+                        onClicked: Config.bar.logoStyle = modelData.value
+                        AngelLogo {
+                            id: preview
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            y: Theme.u * 5
+                            variant: logoCard.modelData.value
+                        }
+                        PxText {
+                            id: caption
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            anchors.bottom: parent.bottom
+                            anchors.bottomMargin: Theme.u * 4
+                            text: (logoCard.checked ? "♡ " : "") + logoCard.modelData.label
+                            kind: "tiny"
+                            font.bold: logoCard.checked
+                        }
                     }
                 }
             }
@@ -437,11 +450,29 @@ PxPage {
         PxText {
             width: parent.width
             wrapMode: Text.Wrap
-            text: I18n.t("Перетаскивай элементы между частями панели. «Окна» растягиваются на свободное место слева, «Лирика» лучше всего смотрится в центре. Виджеты новых плагинов сами появляются справа.", "Drag widgets between sections. Windows use the free space on the left; lyrics fit best in the center. New plugin widgets appear on the right.")
+            text: I18n.t("Перетаскивай элементы между частями панели. «Окна» растягиваются на свободное место слева (или по содержимому — настройка ниже), «Лирика» лучше всего смотрится в центре. Виджеты новых плагинов сами появляются справа.", "Drag widgets between sections. Windows use the free space on the left (or only what they need — below); lyrics fit best in the center. New plugin widgets appear on the right.")
             dim: true
         }
         BarLayoutEditor {
             width: parent.width
+        }
+        SettingRow {
+            label: I18n.t("Ширина «Окон»", "“Windows” width")
+            hint: Config.bar.tasksWidth === "compact" ? I18n.t("по кнопкам открытых окон — то, что после «Окон», встаёт сразу за ними", "As wide as the open windows' buttons: whatever comes after “Windows” sits right next to them") : I18n.t("занимает всё свободное место слева", "Takes all the free room on the left")
+            PxSegmented {
+                model: [
+                    {
+                        "label": I18n.t("Растягивать", "Fill"),
+                        "value": "fill"
+                    },
+                    {
+                        "label": I18n.t("По содержимому", "Compact"),
+                        "value": "compact"
+                    }
+                ]
+                currentValue: Config.bar.tasksWidth || "fill"
+                onActivated: v => Config.bar.tasksWidth = v
+            }
         }
         PxButton {
             text: I18n.t("Как было", "Reset")
@@ -476,6 +507,37 @@ PxPage {
                 ]
                 currentValue: Config.bar.trayTint
                 onActivated: v => Config.bar.trayTint = v
+            }
+        }
+        SettingRow {
+            label: I18n.t("Плотность трея", "Tray density")
+            hint: ({
+                    "compact": I18n.t("6 в ряд, мелкие иконки впритык", "6 per row, small icons close together"),
+                    "normal": I18n.t("5 в ряд, как было", "5 per row, as before"),
+                    "airy": I18n.t("4 в ряд, иконки крупнее и с отступами", "4 per row, bigger icons with room around them"),
+                    "spacious": I18n.t("3 в ряд, крупно и просторно — легко попасть мышкой", "3 per row, big and roomy — easy to hit")
+                })[Config.bar.trayDensity] || ""
+            PxSegmented {
+                model: [
+                    {
+                        "label": I18n.t("Плотно", "Compact"),
+                        "value": "compact"
+                    },
+                    {
+                        "label": I18n.t("Обычно", "Normal"),
+                        "value": "normal"
+                    },
+                    {
+                        "label": I18n.t("Свободно", "Airy"),
+                        "value": "airy"
+                    },
+                    {
+                        "label": I18n.t("Просторно", "Spacious"),
+                        "value": "spacious"
+                    }
+                ]
+                currentValue: Config.bar.trayDensity || "normal"
+                onActivated: v => Config.bar.trayDensity = v
             }
         }
         SettingRow {

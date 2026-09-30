@@ -39,6 +39,19 @@ Scene {
         const y = (0.45 - v) / Math.max(0.001, r) * 1.8 + 0.25;
         return Math.pow(x * x + y * y - 1, 3) - x * x * y * y * y <= 0;
     }
+    // the "heart" style takes the desk sprite's shape (Config.workspaces.sprite)
+    function star(u, v, r) {
+        const x = Math.abs((u - 0.5) / Math.max(0.001, r) * 1.6), y = Math.abs((v - 0.5) / Math.max(0.001, r) * 0.9);
+        return Math.sqrt(x) + Math.sqrt(y) <= 1;
+    }
+    function disc(u, v, r) {
+        const d = Math.hypot((u - 0.5) * 1.78, v - 0.5) / Math.max(0.001, r);
+        return d <= 0.9 && d >= 0.2 * (1 - k);
+    }
+    function shape(u, v, r) {
+        const sp = Config.workspaces.sprite;
+        return sp === "star" ? star(u, v, r * 1.6) : sp === "cd" ? disc(u, v, r) : heart(u, v, r);
+    }
     function cell(i, j) {
         const u = (i + 0.5) / cols, v = (j + 0.5) / rows;
         const p = steps(k, 10);
@@ -55,7 +68,7 @@ Scene {
         case "dissolve":
             return hash(i, j) < p ? neu(u, v) : old(u, v);
         case "heart":
-            return heart(u, v, p * 1.3) ? neu(u, v) : old(u, v);
+            return shape(u, v, p * 1.3) ? neu(u, v) : old(u, v);
         case "ender":
             {
                 const h = hash(i, j);

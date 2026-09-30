@@ -17,6 +17,8 @@ Loader {
 
     readonly property bool tall: wid === "start" || wid === "tasks" || wid === "media" || wid === "lyrics"
     Layout.fillWidth: fillTasks && wid === "tasks"
+    // compact "Windows": grows only as far as its buttons need, the next widgets follow right after (issue #16)
+    Layout.maximumWidth: wid === "tasks" && fillTasks && Config.bar.tasksWidth === "compact" && item ? Math.max(Theme.u * 16, item.naturalWidth) : Number.POSITIVE_INFINITY
     Layout.minimumWidth: wid === "tasks" ? Theme.u * 16 : -1
     Layout.preferredWidth: wid === "tasks" ? (fillTasks ? Theme.u * 16 : Theme.u * 120) : -1
     Layout.preferredHeight: tall ? bar.itemHeight : -1
@@ -26,6 +28,13 @@ Loader {
     visible: {
         if (wid === "tasks")
             return Config.bar.showWindows;
+        // network indicators show only where there is such hardware
+        if (wid === "wifi")
+            return Wifi.available && Wifi.hasWifi && Config.network.showWifi;
+        if (wid === "bluetooth")
+            return Bt.available && Config.network.showBluetooth;
+        if (wid === "wired")
+            return Wifi.available && !!Wifi.wiredDevice && Config.network.showWired;
         if (wid === "media")
             return Config.bar.showMedia && !!Lyrics.player && Lyrics.title !== "";
         if (wid === "lyrics")
@@ -58,6 +67,12 @@ Loader {
             return volumeC;
         case "bell":
             return bellC;
+        case "wifi":
+            return wifiC;
+        case "bluetooth":
+            return btC;
+        case "wired":
+            return wiredC;
         case "clock":
             return clockC;
         default:
@@ -125,6 +140,24 @@ Loader {
     Component {
         id: bellC
         Bell {}
+    }
+    Component {
+        id: wifiC
+        WifiButton {
+            above: root.bar.above
+        }
+    }
+    Component {
+        id: btC
+        BluetoothButton {
+            above: root.bar.above
+        }
+    }
+    Component {
+        id: wiredC
+        WiredButton {
+            above: root.bar.above
+        }
     }
     Component {
         id: clockC

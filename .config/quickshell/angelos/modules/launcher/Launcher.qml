@@ -23,7 +23,23 @@ PanelWindow {
     color: Qt.alpha(Theme.shadow, 0.25)
     WlrLayershell.namespace: "angelos-launcher"
     WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: visible ? (Shell.dev ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.Exclusive) : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: visible && !focusKick ? (Shell.dev ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.Exclusive) : WlrKeyboardFocus.None
+    // opened while a menu's grab was ending (issue #22): if the keyboard did not
+    // arrive, ask niri again — the interactivity goes None and back
+    property bool focusKick: false
+    Timer {
+        id: focusCheck
+        interval: 150
+        onTriggered: {
+            if (win.visible && !field.Window.active && !win.focusKick) {
+                win.focusKick = true;
+                Qt.callLater(() => {
+                    win.focusKick = false;
+                    field.focusField();
+                });
+            }
+        }
+    }
 
     property string query: ""
     property int current: 0
@@ -157,6 +173,7 @@ PanelWindow {
     }
 
     onVisibleChanged: if (visible) {
+        focusCheck.restart();
         query = Shell.launcherPrefill;
         field.text = Shell.launcherPrefill;
         Shell.launcherPrefill = "";
@@ -208,6 +225,7 @@ PanelWindow {
 
         PxField {
             id: field
+            keepFocus: true
             width: parent.width
             icon: "search"
             placeholder: I18n.t("Программа… ", "Application… ") + win.providers.filter(p => p.prefix).map(p => p.prefix + " …").concat([I18n.t("> команда", "> command")]).join(" · ")

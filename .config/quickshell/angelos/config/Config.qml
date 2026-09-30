@@ -23,6 +23,7 @@ Singleton {
     property alias bar: adapter.bar
     property alias wallpaper: adapter.wallpaper
     property alias workspaces: adapter.workspaces
+    property alias alttab: adapter.alttab
     property alias lyrics: adapter.lyrics
     property alias setup: adapter.setup
     property alias notifications: adapter.notifications
@@ -90,7 +91,7 @@ Singleton {
     // ---- Undo (Settings → "Undo"): every save remembers what the user changed ----
     // Each step is [{path, old, new}]; bookkeeping the shell does by itself
     // (counters, the angel's state, update checks) is never a step.
-    readonly property var sections: ["appearance", "bar", "wallpaper", "workspaces", "lyrics", "setup", "notifications", "osd", "launcher", "voxtype", "desktop", "lock", "idle", "sidebar", "capture", "plugins", "dotfiles", "system", "developer", "settingsUi", "y2k", "cursor", "updates", "network", "stream"]
+    readonly property var sections: ["appearance", "bar", "wallpaper", "workspaces", "alttab", "lyrics", "setup", "notifications", "osd", "launcher", "voxtype", "desktop", "lock", "idle", "sidebar", "capture", "plugins", "dotfiles", "system", "developer", "settingsUi", "y2k", "cursor", "updates", "network", "stream"]
     readonly property var notUndoable: ["launcher.usage", "settingsUi.usage", "settingsUi.expert", "updates.lastCheck", "updates.available", "setup.complete", "lyrics.sourcesVersion", "desktop.initialized", "plugins.data", "stream.dndSet", "y2k.helperGreeted", "y2k.character", "y2k.demonSince", "y2k.pleas", "y2k.lastPlea", "y2k.pranks", "y2k.nextPrank", "y2k.seenTips", "y2k.angelSaved"]
     property var undoStack: []
     readonly property bool canUndo: undoStack.length > 0

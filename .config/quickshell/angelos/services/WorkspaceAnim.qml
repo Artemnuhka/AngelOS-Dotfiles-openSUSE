@@ -45,8 +45,15 @@ Singleton {
             "niri": "instant",
             "fx": 1,
             "ms": 620,
-            "label": I18n.t("Сердечко", "Heart"),
-            "hint": I18n.t("новый стол открывается сквозь растущее сердце", "the new desk opens through a growing heart")
+            // the shape follows the desk sprite (Config.workspaces.sprite)
+            "label": ({
+                    "star": I18n.t("Звезда ✦", "Star ✦"),
+                    "cd": I18n.t("CD-диск", "CD")
+                })[Config.workspaces.sprite] || I18n.t("Сердечко", "Heart"),
+            "hint": ({
+                    "star": I18n.t("новый стол открывается сквозь растущую звезду-блёстку", "the new desk opens through a growing sparkle star"),
+                    "cd": I18n.t("новый стол открывается растущим радужным диском с дыркой посередине", "the new desk opens as a growing rainbow disc with a hole in the middle")
+                })[Config.workspaces.sprite] || I18n.t("новый стол открывается сквозь растущее сердце", "the new desk opens through a growing heart")
         },
         {
             "id": "ender",
@@ -81,7 +88,18 @@ Singleton {
     }
     property string niriPreset: ""       // what cfg/animation.kdl has now
     property real slowdown: 1            // animations { slowdown } in cfg/animation.kdl
-    readonly property int slideMs: niriPreset === "dash" ? 460 : 380
+    property real niriSpeed: 1           // the speed that file was written with
+    property int niriMs: 0               // its workspace-switch duration-ms
+    // Settings → Workspaces → Switch speed (×): niri's slides and the captured effects
+    readonly property real speed: Math.max(0.25, Math.min(4, Config.workspaces.switchSpeed > 0 ? Config.workspaces.switchSpeed : 1))
+    readonly property int slideMs: niriMs > 0 ? niriMs : Math.round((niriPreset === "dash" ? 460 : 380) / speed)
+    // the captured effect's length (SwitchFx)
+    readonly property int fxMs: Math.round((current.ms || 500) / speed)
+    // 0 heart, 1 star, 2 CD: the "Heart" transition's shape (shaders/ws_transition.frag)
+    readonly property int shape: ({
+            "star": 1,
+            "cd": 2
+        })[Config.workspaces.sprite] || 0
     property bool routed: false          // workspace keys go through `angelos ws`
     property string log: ""
     readonly property bool busy: writer.running
@@ -94,21 +112,44 @@ Singleton {
             return;
         Config.workspaces.switchFx = id;
         const route = wantsRoute(s);
-        if (s.niri === niriPreset && route === routed)
+        if (s.niri === niriPreset && route === routed && speedSynced(s))
             return;
         if (Shell.dev) {
             log = I18n.t("В dev-режиме конфиг niri не изменяется", "Dev mode does not modify niri");
             return;
         }
-        writer.command = ["python3", Quickshell.shellDir + "/scripts/workspace-anim.py", s.niri, route ? "--route" : "--native"];
+        write(s, route);
+    }
+    function write(s, route) {
+        writer.command = ["python3", Quickshell.shellDir + "/scripts/workspace-anim.py", s.niri, route ? "--route" : "--native", "--speed", String(speed)];
         writer.running = true;
+    }
+    // niri's own slide already runs at the chosen speed (instant has none)
+    function speedSynced(s) {
+        return s.niri === "instant" || Math.abs(niriSpeed - speed) < 0.02;
+    }
+    // Settings → Switch speed (also undo / "Reset this page"): niri's slide is
+    // rewritten once the value settles
+    onSpeedChanged: if (readDone)
+        speedWrite.restart()
+    Timer {
+        id: speedWrite
+        interval: 400
+        onTriggered: {
+            if (!root.speedSynced(root.current) && !Shell.dev) {
+                if (writer.running)
+                    restart();
+                else
+                    root.write(root.current, root.wantsRoute(root.current));
+            }
+        }
     }
     // the keys of earlier versions went straight to niri for its own slides
     property bool readDone: false
     property bool routeSynced: false     // once per start: a failed write must not loop
     function syncRoute() {
         readDone = true;
-        if (Config.ready && !routeSynced && routed !== wantsRoute(current) && current.niri === niriPreset) {
+        if (Config.ready && !routeSynced && (routed !== wantsRoute(current) || !speedSynced(current)) && current.niri === niriPreset) {
             routeSynced = true;
             reapply();
         }
@@ -128,8 +169,7 @@ Singleton {
     function reapply() {
         if (Shell.dev || writer.running)
             return;
-        writer.command = ["python3", Quickshell.shellDir + "/scripts/workspace-anim.py", current.niri, wantsRoute(current) ? "--route" : "--native"];
-        writer.running = true;
+        write(current, wantsRoute(current));
     }
 
     // ---- switching ----
@@ -140,7 +180,7 @@ Singleton {
             return;
         const out = Niri.focusedOutput;
         const screen = Shell.screenByName(out);
-        const list = Niri.workspacesOn(out).filter(w => w.name !== "privacy" || w.is_active);
+        const list = Niri.workspacesOn(out);
         const active = list.find(w => w.is_active);
         const idx = active ? active.idx : -1;
         // nothing would change: no transition
@@ -183,7 +223,7 @@ Singleton {
                 })[target], {});
     }
 
-    // `angelos ws …` from the niri keybinds lands here (a few ms instead of `qs ipc`)
+    // `angelos ws …` (and `angelos alttab …`) from the niri keybinds land here (a few ms instead of `qs ipc`)
     readonly property string runtimeDir: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/angelos"
     readonly property string socketPath: runtimeDir + (Shell.dev ? "/ctl-dev.sock" : "/ctl.sock")
     property bool socketReady: false
@@ -200,10 +240,17 @@ Singleton {
             parser: SplitParser {
                 onRead: line => {
                     const m = line.trim().match(/^ws ([0-9]{1,2}|up|down|prev)$/);
-                    client.write(m ? "ok\n" : "err\n");
+                    // Alt+Tab shares the socket (services/AltTab): one hop instead of `qs ipc`
+                    const a = line.trim().match(/^alttab (next|prev|cancel)$/);
+                    const ok = !!m || !!a && AltTab.ours;
+                    client.write(ok ? "ok\n" : "err\n");
                     client.flush();
                     if (m)
                         root.go(m[1]);
+                    else if (ok && a[1] === "cancel")
+                        AltTab.cancel();
+                    else if (ok)
+                        AltTab.step(a[1] === "prev" ? -1 : 1);
                 }
             }
         }
@@ -218,6 +265,8 @@ Singleton {
                 try {
                     const r = JSON.parse(text);
                     root.niriPreset = r.preset || "";
+                    root.niriSpeed = r.speed > 0 ? r.speed : 1;
+                    root.niriMs = r.ms > 0 ? r.ms : 0;
                     root.routed = !!r.routed;
                     root.slowdown = r.slowdown > 0 ? r.slowdown : 1;
                     // one-time move from the old style names

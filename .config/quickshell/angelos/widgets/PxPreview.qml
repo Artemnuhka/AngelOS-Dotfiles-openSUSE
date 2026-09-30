@@ -53,6 +53,7 @@ PxWindow {
     readonly property var scenes: ({
             "TaskClose": taskClose,
             "CloseFx": closeFx,
+            "OpenFx": openFx,
             "WallpaperFx": wallpaperFx,
             "StartMenu": startMenu,
             "BarStyle": barStyle,
@@ -79,6 +80,10 @@ PxWindow {
     Component {
         id: closeFx
         CloseFx {}
+    }
+    Component {
+        id: openFx
+        OpenFx {}
     }
     Component {
         id: wallpaperFx

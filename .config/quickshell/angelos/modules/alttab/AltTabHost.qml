@@ -1,0 +1,131 @@
+pragma ComponentBehavior: Bound
+
+import QtQuick
+import Quickshell
+import Quickshell.Wayland
+import qs.config
+import qs.services
+import qs.widgets
+
+// The Alt+Tab switcher (services/AltTab) on the screen Alt+Tab was pressed on.
+// It exists only while it is shown, so a quick Alt+Tab tap never takes the
+// keyboard from the app. Keys: Tab / arrows move, Enter or letting Alt go
+// picks, Esc cancels, Delete closes the highlighted window; the mouse picks too.
+Scope {
+    LazyLoader {
+        active: AltTab.shown
+        PanelWindow {
+            id: win
+
+            screen: Shell.screenByName(AltTab.screenName) || Shell.focusedScreen
+            color: "transparent"
+            exclusionMode: ExclusionMode.Ignore
+            implicitWidth: Math.min(stage.implicitWidth, (screen ? screen.width : 1920) - Theme.u * 16)
+            implicitHeight: stage.implicitHeight
+            WlrLayershell.namespace: "angelos-alttab"
+            WlrLayershell.layer: WlrLayer.Overlay
+            WlrLayershell.keyboardFocus: AltTab.demo ? WlrKeyboardFocus.None : WlrKeyboardFocus.Exclusive
+
+            function appName(w) {
+                const e = w && w.app_id ? DesktopEntries.heuristicLookup(w.app_id) : null;
+                return e ? e.name : (w && w.app_id ? w.app_id : "?");
+            }
+            function place(w) {
+                const ws = w ? Niri.workspaceById(w.workspace_id) : null;
+                if (!ws)
+                    return "";
+                const names = Config.workspaces.names || {};
+                const name = names[ws.output + ":" + ws.idx] || ws.name || "";
+                return (name ? name : I18n.t("стол ", "desk ") + ws.idx) + (Quickshell.screens.length > 1 ? " · " + ws.output : "");
+            }
+
+            Item {
+                id: keys
+                anchors.fill: parent
+                focus: true
+                Keys.onPressed: e => {
+                    const k = e.key;
+                    if (k === Qt.Key_Escape)
+                        AltTab.cancel();
+                    else if (k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space)
+                        AltTab.commit();
+                    else if (k === Qt.Key_Tab || k === Qt.Key_Right || k === Qt.Key_Down)
+                        AltTab.select((AltTab.index + 1) % AltTab.items.length);
+                    else if (k === Qt.Key_Backtab || k === Qt.Key_Left || k === Qt.Key_Up)
+                        AltTab.select((AltTab.index - 1 + AltTab.items.length) % AltTab.items.length);
+                    else if (k === Qt.Key_Delete && AltTab.current) {
+                        // close the highlighted window, stay in the switcher
+                        const id = AltTab.current.id;
+                        Niri.closeWindow(id);
+                        const rest = AltTab.items.filter(w => w.id !== id);
+                        if (!rest.length) {
+                            AltTab.cancel();
+                        } else {
+                            AltTab.items = rest;
+                            AltTab.index = Math.min(AltTab.index, rest.length - 1);
+                        }
+                    } else
+                        return;
+                    e.accepted = true;
+                }
+                // the fallback when the keyboard watcher is not allowed to read keys
+                Keys.onReleased: e => {
+                    if (e.key === Qt.Key_Alt || e.key === Qt.Key_AltGr) {
+                        if (!AltTab.demo)
+                            AltTab.commit();
+                        e.accepted = true;
+                    }
+                }
+            }
+
+            Item {
+                id: stage
+                anchors.fill: parent
+                implicitWidth: view.item ? view.item.implicitWidth : 0
+                implicitHeight: view.item ? view.item.implicitHeight : 0
+                opacity: 0
+                scale: 0.94
+                Component.onCompleted: {
+                    opacity = 1;
+                    scale = 1;
+                }
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: 110
+                    }
+                }
+                Behavior on scale {
+                    NumberAnimation {
+                        duration: 140
+                        easing.type: Easing.OutBack
+                    }
+                }
+                Loader {
+                    id: view
+                    anchors.fill: parent
+                    sourceComponent: AltTab.style === "ngo" ? ngo : AltTab.style === "y2k" ? y2k : angelos
+                }
+            }
+            Component {
+                id: angelos
+                AltTabAngel {
+                    host: win
+                }
+            }
+            Component {
+                id: ngo
+                AltTabNgo {
+                    host: win
+                }
+            }
+            Component {
+                id: y2k
+                AltTabY2k {
+                    host: win
+                }
+            }
+
+            RightClickGuard {}
+        }
+    }
+}

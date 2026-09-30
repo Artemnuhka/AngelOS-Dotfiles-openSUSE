@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Window
 import Quickshell
 import Quickshell.Services.UPower
 import qs.config
@@ -35,7 +36,8 @@ Item {
         anchors.fill: parent
         source: root.wall ? "file://" + Wallpapers.display(root.wall) : ""
         fillMode: Image.PreserveAspectCrop
-        sourceSize: Qt.size(width, height)
+        // physical pixels: sharp on a scaled monitor (issue #18)
+        sourceSize: Qt.size(Math.ceil(width * Math.max(1, Screen.devicePixelRatio)), Math.ceil(height * Math.max(1, Screen.devicePixelRatio)))
         asynchronous: true
         visible: !Config.lock.pixelate
         onStatusChanged: if (status === Image.Error)
@@ -250,6 +252,7 @@ Item {
                 }
                 PxField {
                     id: field
+                    keepFocus: true
                     width: parent.width
                     password: true
                     placeholder: I18n.t("пароль", "password")

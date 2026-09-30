@@ -10,6 +10,8 @@
       apps: {"kitty": "proportion 0.5", "helium": null (= remove rule)}
       taskmgr: {"appIds": ["angelos.taskmgr", …], "width": "fixed 1200",
                 "height": "fixed 760", "place": "center" | "corner"} | null (= no rule)
+      alttab: true (Alt+Tab / Alt+Shift+Tab → `angelos alttab next|prev`, niri's own
+              recent-windows switcher off) | false (niri's switcher, no block)
 
 Per-app rules live in cfg/angelos-windows.kdl, included after rules.kdl so they win.
 """
@@ -60,6 +62,40 @@ def width_of(body):
 TM_BEGIN = "// >>> angelOS task manager (Настройки → System → Диспетчер задач)"
 TM_END = "// <<< angelOS task manager"
 HEIGHT = re.compile(r"^(proportion\s+(0?\.\d+|1(\.0+)?)|fixed\s+\d{2,5})$")
+AT_BEGIN = "// >>> angelOS Alt+Tab (Настройки → Окна → Alt+Tab)"
+AT_END = "// <<< angelOS Alt+Tab"
+ANGELOS = "exec ~/.config/quickshell/angelos/bin/angelos alttab "
+
+
+def read_alttab(text=None):
+    if text is None:
+        text = apps_path.read_text() if apps_path.exists() else ""
+    return AT_BEGIN in text
+
+
+def render_alttab(on):
+    if not on:
+        return ""
+    return "\n".join([
+        AT_BEGIN,
+        "// the angelOS switcher: niri's own is off, the keys go to the shell",
+        "recent-windows {",
+        "    off",
+        "}",
+        "binds {",
+        f'    Alt+Tab repeat=false hotkey-overlay-title="angelOS: Alt+Tab" {{ spawn-sh "{ANGELOS}next"; }}',
+        f'    Alt+Shift+Tab repeat=false {{ spawn-sh "{ANGELOS}prev"; }}',
+        "}",
+        AT_END,
+        "",
+    ])
+
+
+def strip_block(text, begin, end):
+    if begin not in text:
+        return text
+    tail = text[text.index(end) + len(end):] if end in text else ""
+    return text[:text.index(begin)] + tail
 
 
 def read_taskmgr(text=None):
@@ -106,8 +142,8 @@ def read_apps():
     rules = {}
     if apps_path.exists():
         text = apps_path.read_text()
-        if TM_BEGIN in text:  # the task manager block is not a per-app width
-            text = text[:text.index(TM_BEGIN)] + (text[text.index(TM_END) + len(TM_END):] if TM_END in text else "")
+        # the task manager and Alt+Tab blocks are not per-app widths
+        text = strip_block(strip_block(text, TM_BEGIN, TM_END), AT_BEGIN, AT_END)
         for m in re.finditer(r'match app-id=r#"\^(.+?)\$"#\s*\n\s*default-column-width \{ ([^;]+); \}', text):
             rules[re.sub(r"\\(.)", r"\1", m.group(1))] = m.group(2).strip()
     return rules
@@ -127,6 +163,7 @@ def current():
         "presets": presets,
         "apps": read_apps(),
         "taskmgr": read_taskmgr(),
+        "alttab": read_alttab(),
     }
 
 
@@ -158,11 +195,11 @@ def set_block(text, name, lines):
     return new
 
 
-def render_apps(rules, taskmgr=None):
+def render_apps(rules, taskmgr=None, alttab=False):
     out = ["// Managed by angelOS → Настройки → Окна. Per-app default widths.", ""]
     for app, w in sorted(rules.items()):
         out += ["window-rule {", f'    match app-id=r#"^{re.escape(app)}$"#', f"    default-column-width {{ {w}; }}", "}", ""]
-    return "\n".join(out) + render_taskmgr(taskmgr)
+    return "\n".join(out) + render_taskmgr(taskmgr) + render_alttab(alttab)
 
 
 def atomic_write(path, content):
@@ -179,7 +216,7 @@ def atomic_write(path, content):
 
 
 def apply(changes):
-    unknown = set(changes) - {"gaps", "center", "defaultWidth", "presets", "apps", "taskmgr"}
+    unknown = set(changes) - {"gaps", "center", "defaultWidth", "presets", "apps", "taskmgr", "alttab"}
     if unknown:
         raise ValueError("unknown keys: " + ", ".join(sorted(unknown)))
     layout = layout_path.read_text()
@@ -203,7 +240,7 @@ def apply(changes):
         new_layout = set_block(new_layout, "preset-column-widths", ps)
 
     files = {layout_path: (layout, new_layout)} if new_layout != layout else {}
-    if "apps" in changes or "taskmgr" in changes:
+    if "apps" in changes or "taskmgr" in changes or "alttab" in changes:
         rules = read_apps()
         for app, w in (changes.get("apps") or {}).items():
             if not re.match(r"^[\w.+-]{1,120}$", app):
@@ -213,8 +250,9 @@ def apply(changes):
             else:
                 rules[app] = check_width(w)
         taskmgr = changes["taskmgr"] if "taskmgr" in changes else read_taskmgr()
+        alttab = bool(changes["alttab"]) if "alttab" in changes else read_alttab()
         old_apps = apps_path.read_text() if apps_path.exists() else None
-        files[apps_path] = (old_apps, render_apps(rules, taskmgr))
+        files[apps_path] = (old_apps, render_apps(rules, taskmgr, alttab))
         cfg = config_path.read_text()
         if 'include "./cfg/angelos-windows.kdl"' not in cfg:
             anchor = 'include "./cfg/rules.kdl"'

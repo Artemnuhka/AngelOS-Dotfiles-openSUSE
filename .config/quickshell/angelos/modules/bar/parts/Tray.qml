@@ -9,9 +9,18 @@ import qs.modules.bar
 PxButton {
     id: root
     property bool above: true
-    readonly property int cellSize: Theme.u * 17
-    readonly property int cellGap: Theme.u * 3
-    readonly property int columns: 5
+    // Settings → Bar → Icons → Tray density: columns, cell, icon and gap in art pixels
+    readonly property var densities: ({
+            "compact": [6, 13, 9, 2],
+            "normal": [5, 17, 11, 3],
+            "airy": [4, 20, 12, 5],
+            "spacious": [3, 24, 14, 7]
+        })
+    readonly property var density: densities[Config.bar.trayDensity] || densities.normal
+    readonly property int cellSize: Theme.u * density[1]
+    readonly property int iconSize: Theme.u * density[2]
+    readonly property int cellGap: Theme.u * density[3]
+    readonly property int columns: density[0]
     readonly property int rows: Math.ceil(SystemTray.items.values.length / columns)
     readonly property real gridHeight: Math.max(0, rows * (cellSize + cellGap) - cellGap)
     compact: true
@@ -27,7 +36,7 @@ PxButton {
         above: root.above
         title: I18n.t("Системный трей", "System tray")
         icon: "layers"
-        contentWidth: Theme.u * 116
+        contentWidth: Math.max(Theme.u * 80, root.columns * (root.cellSize + root.cellGap) - root.cellGap + Theme.u * 19)
         contentHeight: Math.min(Theme.u * 130, Math.max(Theme.u * 26, root.gridHeight + Theme.u * 4))
         Flickable {
             id: viewport
@@ -40,18 +49,18 @@ PxButton {
                 id: grid
                 width: parent.width
                 columns: root.columns
-                spacing: Theme.u * 3
+                spacing: root.cellGap
                 Repeater {
                     model: SystemTray.items
                     PxButton {
                         id: cell
                         required property var modelData
-                        width: Theme.u * 17
+                        width: root.cellSize
                         height: width
                         flat: true
                         TintedImage {
                             anchors.centerIn: parent
-                            size: Theme.u * 11
+                            size: root.iconSize
                             source: cell.modelData.icon
                             mode: cell.hovered ? "off" : Config.bar.trayTint
                         }

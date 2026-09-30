@@ -102,8 +102,13 @@ Item {
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
-                        root.currentValue = opt.modelData.value;
-                        root.activated(opt.modelData.value);
+                        // the owner's binding (currentValue: Config.x, onActivated: Config.x = v)
+                        // updates it; assigning here first would break that binding and leave a
+                        // stale pick when the value later changes elsewhere (issue #15)
+                        const picked = opt.modelData.value;
+                        root.activated(picked);
+                        if (root.currentValue !== picked)
+                            root.currentValue = picked;
                         popup.close();
                     }
                 }
