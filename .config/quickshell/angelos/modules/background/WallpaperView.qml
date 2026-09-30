@@ -13,15 +13,8 @@ Item {
     readonly property string target: Wallpapers.resolve(screenName, activeWs ? activeWs.idx : 1)
     property string shown: ""
     property real progress: 1
-    readonly property int styleIndex: {
-        const styles = {
-            "mosaic-dither": 0,
-            "mosaic": 1,
-            "dither": 2
-        };
-        const value = styles[Config.wallpaper.transition];
-        return value === undefined ? -1 : value;
-    }
+    // -1 = no transition; "random" picks again for every change
+    property int styleIndex: Wallpapers.transitionIndex(Config.wallpaper.transition)
 
     function url(p) {
         const d = Wallpapers.display(p);
@@ -48,6 +41,7 @@ Item {
     onConfigKeyChanged: configChanged = true
 
     function go(path) {
+        styleIndex = Qt.binding(() => Wallpapers.transitionIndex(Config.wallpaper.transition));
         const animate = configChanged && styleIndex >= 0 && Niri.ready && shown !== "";
         configChanged = false;
         anim.stop();
@@ -144,6 +138,7 @@ Item {
         property real maxBlock: Config.wallpaper.maxBlock
         property real style: Math.max(0, root.styleIndex)
         property size resolution: Qt.size(width, height)
+        property color accent: Theme.accent
         fragmentShader: Qt.resolvedUrl("../../shaders/pixel_transition.frag.qsb")
     }
 }

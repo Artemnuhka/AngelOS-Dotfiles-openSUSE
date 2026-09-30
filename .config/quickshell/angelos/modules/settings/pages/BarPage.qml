@@ -14,6 +14,8 @@ PxPage {
         icon: "pill"
         width: parent.width
         SettingRow {
+            id: startStyleRow
+            preview: "StartMenu"
             label: I18n.t("Вид меню", "Menu style")
             hint: Config.bar.startStyle === "win11" ? I18n.t("по центру: поиск, закреплённые (ПКМ — закрепить), все приложения, питание", "Centred: search, pinned apps (right-click pins), all apps, power") : Config.bar.startStyle === "fullscreen" ? I18n.t("на весь экран, как на iPhone: страницы иконок, док, колесо листает", "Full screen like an iPhone: pages of icons, a dock, the wheel flips pages") : I18n.t("список как в Win98 у кнопки", "A Win98 list next to the button")
             PxSegmented {
@@ -32,10 +34,19 @@ PxPage {
                     }
                 ]
                 currentValue: Config.bar.startStyle
-                onActivated: v => Config.bar.startStyle = v
+                onActivated: v => {
+                    Config.bar.startStyle = v;
+                    startStyleRow.show(v, ({
+                            "classic": I18n.t("классика", "classic"),
+                            "win11": "Windows 11",
+                            "fullscreen": I18n.t("как iPhone", "iPhone-like")
+                        })[v]);
+                }
             }
         }
         SettingRow {
+            id: startPosRow
+            preview: "StartMenu"
             visible: Config.bar.startStyle !== "fullscreen"
             label: I18n.t("Где открывать", "Position")
             hint: I18n.t("«Авто»: классика — у кнопки, Windows 11 — посередине", "Auto: classic at the button, Windows 11 in the middle")
@@ -59,7 +70,15 @@ PxPage {
                     }
                 ]
                 currentValue: Config.bar.startAlign || "auto"
-                onActivated: v => Config.bar.startAlign = v
+                onActivated: v => {
+                    Config.bar.startAlign = v;
+                    startPosRow.show(v, ({
+                            "auto": I18n.t("авто", "auto"),
+                            "left": I18n.t("слева", "left"),
+                            "center": I18n.t("посередине", "center"),
+                            "right": I18n.t("справа", "right")
+                        })[v]);
+                }
             }
         }
         SettingRow {
@@ -161,6 +180,8 @@ PxPage {
 
     PxGroup {
         title: I18n.t("Сайдбар (эксперимент)", "Sidebar (experimental)")
+
+        advanced: true
         icon: "layers"
         width: parent.width
         SettingRow {
@@ -231,6 +252,8 @@ PxPage {
         icon: "window"
         width: parent.width
         SettingRow {
+            id: barStyleRow
+            preview: "BarStyle"
             label: I18n.t("Вид панели", "Bar style")
             PxSegmented {
                 model: [
@@ -248,7 +271,14 @@ PxPage {
                     }
                 ]
                 currentValue: Config.bar.style
-                onActivated: v => Config.bar.style = v
+                onActivated: v => {
+                    Config.bar.style = v;
+                    barStyleRow.show(v, ({
+                            "taskbar": I18n.t("таскбар", "taskbar"),
+                            "top": I18n.t("полоса", "strip"),
+                            "island": I18n.t("остров", "island")
+                        })[v]);
+                }
             }
         }
         SettingRow {
@@ -356,6 +386,8 @@ PxPage {
 
     PxGroup {
         title: I18n.t("Логотип angelOS", "angelOS logo")
+
+        advanced: true
         icon: "heart"
         width: parent.width
         SettingRow {
@@ -398,6 +430,8 @@ PxPage {
 
     PxGroup {
         title: I18n.t("Раскладка", "Layout")
+
+        advanced: true
         icon: "layers"
         width: parent.width
         PxText {
@@ -418,6 +452,8 @@ PxPage {
 
     PxGroup {
         title: I18n.t("Иконки", "Icons")
+
+        advanced: true
         icon: "palette"
         width: parent.width
         SettingRow {
@@ -454,6 +490,8 @@ PxPage {
 
     PxGroup {
         title: I18n.t("Содержимое", "Contents")
+
+        advanced: true
         icon: "layers"
         width: parent.width
         SettingRow {

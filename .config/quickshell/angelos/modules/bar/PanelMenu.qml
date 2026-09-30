@@ -15,21 +15,30 @@ PopupWindow {
     Component.onCompleted: PopupManager.registerPopup(root)
     Component.onDestruction: PopupManager.unregisterPopup(root)
     // Reopening in the same event would reuse the old surface position, so a
-    // visible menu is closed first and shown again on the next turn of the loop.
+    // visible menu is closed first and shown again on the next turn of the loop;
+    // clicks while that is pending only move the target (fast double right-click).
+    property bool reopening: false
     function openAt(x, y) {
-        const again = visible;
-        visible = false;
         anchor.rect.x = x;
         anchor.rect.y = y;
-        if (again)
-            Qt.callLater(() => {
-                anchor.updateAnchor();
-                visible = true;
-            });
-        else
+        if (!visible && !reopening) {
             visible = true;
+            return;
+        }
+        visible = false;
+        if (reopening)
+            return;
+        reopening = true;
+        Qt.callLater(() => {
+            if (!reopening)
+                return;
+            reopening = false;
+            anchor.updateAnchor();
+            visible = true;
+        });
     }
     function run(action) {
+        reopening = false;
         visible = false;
         action();
     }

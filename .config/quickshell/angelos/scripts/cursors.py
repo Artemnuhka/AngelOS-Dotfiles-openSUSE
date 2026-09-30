@@ -41,6 +41,9 @@ CATALOG = [
     {"id": "angelos", "theme": "angelOS-Pixel", "name": "angelOS Pixel",
      "about": "pixel-cursors in the angelOS colours (accent, edge, light)", "license": "GPL-3.0 (mikaeladev/pixel-cursors)",
      "build": "pixel", "palette": None},
+    {"id": "glitter", "theme": "angelOS-Glitter", "name": "angelOS Glitter",
+     "about": "angelOS Pixel with twinkling Y2K sparkles", "license": "GPL-3.0 (mikaeladev/pixel-cursors)",
+     "build": "pixel", "palette": None, "glitter": True},
     {"id": "pixel-amethyst", "theme": "Pixel-Amethyst", "name": "Pixel Amethyst",
      "about": "lavender 8-bit set", "license": "GPL-3.0 (mikaeladev/pixel-cursors)",
      "build": "pixel", "palette": {"primary": "#fad6ff", "secondary": "#9c8bdb", "border": "#7864c6"}},
@@ -181,6 +184,33 @@ def hex_rgb(h):
     return tuple(int(h[i:i + 2], 16) for i in (1, 3, 5))
 
 
+def glitterize(img, accent, light, frames=6):
+    """Y2K glitter: the cursor on a larger canvas (hotspot unchanged) with
+    sparkles twinkling around it, one after another."""
+    from PIL import Image
+    x0, y0, x1, y1 = img.getbbox() or (0, 0, img.width, img.height)
+    canvas = (max(img.width, x1 + 5), max(img.height, y1 + 5))
+    my, mx = (y0 + y1) // 2, (x0 + x1) // 2
+    spots = [(x1 + 1, y0 + 1), (x1 + 3, my), (mx + 2, y1 + 2), (x0 + 1, y1 + 3), (x1 + 2, y1 + 2)]
+    out = []
+    for f in range(frames):
+        c = Image.new("RGBA", canvas, (0, 0, 0, 0))
+        c.paste(img, (0, 0), img)
+        px = c.load()
+        for i, (x, y) in enumerate(spots):
+            size = (0, 1, 2, 1, 0, 0)[(f + i * 2) % frames]
+            col = (accent if i % 2 else light) + (255,)
+            if size >= 1 and 0 <= x < canvas[0] and 0 <= y < canvas[1] and px[x, y][3] == 0:
+                px[x, y] = (255, 255, 255, 255) if size == 2 else col
+            if size == 2:
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    xx, yy = x + dx, y + dy
+                    if 0 <= xx < canvas[0] and 0 <= yy < canvas[1] and px[xx, yy][3] == 0:
+                        px[xx, yy] = col
+        out.append(c)
+    return out
+
+
 def build_pixel(entry, accent=None, edge=None, light=None):
     from PIL import Image
     data = fetch(*PIXEL_SRC)
@@ -217,6 +247,9 @@ def build_pixel(entry, accent=None, edge=None, light=None):
                 delay = int(opts.get("delay", 200))
             if opts.get("rotate"):
                 frames = [f.rotate(-int(opts["rotate"]), expand=True) for f in frames]
+            if entry.get("glitter") and len(frames) == 1:
+                frames = glitterize(frames[0], hex_rgb(palette["secondary"]), hex_rgb(palette["primary"]))
+                delay = 110
             hx, hy = int(spec.get("hot_x", 0)), int(spec.get("hot_y", 0))
             images = []
             for s in scales:

@@ -74,6 +74,11 @@ Item {
                     "id": "lyrics",
                     "label": I18n.t("Лирика", "Lyrics"),
                     "icon": "mic"
+                },
+                {
+                    "id": "y2k",
+                    "label": "Y2K ✧",
+                    "icon": "sparkle"
                 }
             ]
         },
@@ -184,7 +189,17 @@ Item {
                 "pages": g.pages.filter(p => (!p.owner || Owner.enabled) && (!p.developer || Config.developer.enabled))
             })).filter(g => g.pages.length > 0)
     readonly property var allPages: visibleGroups.reduce((a, g) => a.concat(g.pages), [])
-    readonly property var currentPage: allPages.find(p => p.id === Shell.settingsPage) || allPages[0]
+    readonly property var currentPage: allPages.find(p => p.id === Shell.settingsPage) || null
+    // simple view: home tiles + main settings (advanced groups folded); expert: every page in the sidebar
+    readonly property bool expert: Config.settingsUi.expert
+    readonly property bool atHome: !expert && (Shell.settingsPage === "home" || Shell.settingsPage === "more")
+    function setExpert(on) {
+        Config.settingsUi.expert = on;
+        if (on && (Shell.settingsPage === "home" || Shell.settingsPage === "more"))
+            Shell.settingsPage = "appearance";
+        else if (!on)
+            Shell.settingsPage = "home";
+    }
 
     // ---- search (services/SettingsSearch) ----
     property string query: ""
@@ -195,9 +210,10 @@ Item {
             results = [];
         searchTimer.restart();
     }
+    // one frame: keys typed together are searched once (a search takes ~1 ms)
     Timer {
         id: searchTimer
-        interval: 60
+        interval: 16
         onTriggered: win.results = win.query.trim() ? SettingsSearch.search(win.query, 14) : []
     }
     Connections {
@@ -263,6 +279,16 @@ Item {
         }
         return null;
     }
+    function unfoldAll(item) {
+        let any = false;
+        if (item.folded === true && item.advanced !== undefined) {
+            item.open = true;
+            any = true;
+        }
+        for (const c of item.children)
+            any = unfoldAll(c) || any;
+        return any;
+    }
     function showTarget() {
         const r = pendingTarget;
         pendingTarget = null;
@@ -273,8 +299,16 @@ Item {
                 "kind": "group",
                 "target": String(r.crumb).split(" › ")[1] || ""
             }) : null);
-        if (!it)
+        if (!it) {
+            // the setting may sit in a folded "Advanced" group of the simple view
+            if (!r.unfolded && unfoldAll(pg.flick.contentItem)) {
+                pendingTarget = Object.assign({}, r, {
+                    "unfolded": true
+                });
+                targetTimer.restart();
+            }
             return;
+        }
         const y = it.mapToItem(pg.flick.contentItem, 0, 0).y;
         pg.scrollBy(Math.max(0, y - Theme.u * 8) - pg.flick.contentY);
         flashComp.createObject(it);
@@ -319,7 +353,7 @@ Item {
         anchors.fill: parent
         anchors.rightMargin: Config.appearance.shadows ? Theme.u * 2 : 0
         anchors.bottomMargin: Config.appearance.shadows ? Theme.u * 2 : 0
-        title: "angelOS · " + (win.currentPage ? win.currentPage.label : I18n.t("Настройки", "Settings"))
+        title: "angelOS · " + (win.currentPage ? win.currentPage.label : Shell.settingsPage === "more" ? I18n.t("Все разделы", "All sections") : I18n.t("Настройки", "Settings"))
         icon: win.currentPage ? win.currentPage.icon : "gear"
         minimizable: false
         maximizable: true
@@ -330,19 +364,28 @@ Item {
             win.hostWindow.startSystemMove()
         bodyPadding: Theme.u * 4
 
-        // sidebar
+        // sidebar (expert view)
         PxBox {
             id: sidebar
+            visible: win.expert
             width: Theme.u * 95
             height: parent.height
             sunken: true
             color: Qt.alpha(Theme.sunken, 0.55)
+        }
+
+        // search box and results: in the sidebar (expert) or above the page (simple)
+        Item {
+            id: searchArea
+            parent: win.expert ? sidebar : pageBox
+            anchors.fill: parent
+            z: 5
 
             PxField {
                 id: search
-                x: Theme.u * 2
+                x: win.expert ? Theme.u * 2 : homeBtn.x + (homeBtn.visible ? homeBtn.width + Theme.u * 3 : 0)
                 y: Theme.u * 2
-                width: parent.width - Theme.u * 4
+                width: win.expert ? parent.width - Theme.u * 4 : expertBtn.x - x - Theme.u * 3
                 icon: "search"
                 placeholder: I18n.t("Поиск настроек…", "Search settings…")
                 onEdited: {
@@ -391,6 +434,12 @@ Item {
             }
 
             // results
+            Rectangle {
+                visible: !win.expert && resultsBox.visible
+                anchors.fill: parent
+                anchors.topMargin: search.height + Theme.u * 6
+                color: Theme.face
+            }
             PxScroll {
                 id: resultsBox
                 visible: win.query.trim() !== ""
@@ -461,69 +510,99 @@ Item {
                     }
                 }
             }
+        }
 
-            PxScroll {
-                visible: win.query.trim() === ""
-                anchors.fill: parent
-                anchors.margins: Theme.u * 2
-                anchors.topMargin: search.height + Theme.u * 4
-                contentHeight: side.implicitHeight
+        // expert sidebar: every page
+        PxScroll {
+            parent: sidebar
+            visible: win.query.trim() === ""
+            anchors.fill: parent
+            anchors.margins: Theme.u * 2
+            anchors.topMargin: search.height + Theme.u * 4
+            contentHeight: side.implicitHeight
 
-                Column {
-                    id: side
-                    width: parent.width
-                    spacing: Theme.u
+            Column {
+                id: side
+                width: parent.width
+                spacing: Theme.u
 
-                    Repeater {
-                        model: win.visibleGroups
-                        Column {
-                            id: grp
-                            required property var modelData
-                            width: side.width
-                            spacing: Theme.u
-                            PxText {
-                                text: "✧ " + grp.modelData.title
-                                kind: "tiny"
-                                dim: true
-                                topPadding: Theme.u * 4
-                                leftPadding: Theme.u * 3
-                                bottomPadding: Theme.u
-                            }
-                            Repeater {
-                                model: grp.modelData.pages
-                                Rectangle {
-                                    id: entry
-                                    required property var modelData
-                                    readonly property bool sel: Shell.settingsPage === modelData.id
-                                    width: grp.width
-                                    height: Theme.u * 15
-                                    color: sel ? Theme.select : em.containsMouse ? Theme.mix(Theme.face, Theme.accent, 0.15) : "transparent"
-                                    Row {
-                                        anchors.left: parent.left
-                                        anchors.leftMargin: Theme.u * 4
-                                        anchors.verticalCenter: parent ? parent.verticalCenter : undefined
-                                        spacing: Theme.u * 4
-                                        PxIcon {
-                                            name: entry.modelData.icon
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            ink: entry.sel ? Theme.selectText : (Theme.dark ? Theme.text : Theme.edge)
-                                        }
-                                        PxText {
-                                            width: entry.width - Theme.u * 24
-                                            elide: Text.ElideRight
-                                            text: entry.modelData.label
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            color: entry.sel ? Theme.selectText : Theme.text
-                                            font.bold: entry.sel
-                                        }
+                // back to the simple view
+                Rectangle {
+                    width: side.width
+                    height: Theme.u * 15
+                    color: sm.containsMouse ? Theme.mix(Theme.face, Theme.accent, 0.15) : "transparent"
+                    Row {
+                        anchors.left: parent.left
+                        anchors.leftMargin: Theme.u * 4
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: Theme.u * 4
+                        PxIcon {
+                            name: "grid"
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        PxText {
+                            text: I18n.t("Простой вид", "Simple view")
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+                    MouseArea {
+                        id: sm
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: win.setExpert(false)
+                    }
+                }
+
+                Repeater {
+                    model: win.visibleGroups
+                    Column {
+                        id: grp
+                        required property var modelData
+                        width: side.width
+                        spacing: Theme.u
+                        PxText {
+                            text: "✧ " + grp.modelData.title
+                            kind: "tiny"
+                            dim: true
+                            topPadding: Theme.u * 4
+                            leftPadding: Theme.u * 3
+                            bottomPadding: Theme.u
+                        }
+                        Repeater {
+                            model: grp.modelData.pages
+                            Rectangle {
+                                id: entry
+                                required property var modelData
+                                readonly property bool sel: Shell.settingsPage === modelData.id
+                                width: grp.width
+                                height: Theme.u * 15
+                                color: sel ? Theme.select : em.containsMouse ? Theme.mix(Theme.face, Theme.accent, 0.15) : "transparent"
+                                Row {
+                                    anchors.left: parent.left
+                                    anchors.leftMargin: Theme.u * 4
+                                    anchors.verticalCenter: parent ? parent.verticalCenter : undefined
+                                    spacing: Theme.u * 4
+                                    PxIcon {
+                                        name: entry.modelData.icon
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        ink: entry.sel ? Theme.selectText : (Theme.dark ? Theme.text : Theme.edge)
                                     }
-                                    MouseArea {
-                                        id: em
-                                        anchors.fill: parent
-                                        hoverEnabled: true
-                                        cursorShape: Qt.PointingHandCursor
-                                        onClicked: Shell.settingsPage = entry.modelData.id
+                                    PxText {
+                                        width: entry.width - Theme.u * 24
+                                        elide: Text.ElideRight
+                                        text: entry.modelData.label
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        color: entry.sel ? Theme.selectText : Theme.text
+                                        font.bold: entry.sel
                                     }
+                                }
+                                MouseArea {
+                                    id: em
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: Shell.settingsPage = entry.modelData.id
                                 }
                             }
                         }
@@ -535,22 +614,49 @@ Item {
         // page
         PxBox {
             id: pageBox
-            anchors.left: sidebar.right
-            anchors.leftMargin: Theme.u * 4
+            anchors.left: win.expert ? sidebar.right : parent.left
+            anchors.leftMargin: win.expert ? Theme.u * 4 : 0
             anchors.right: parent.right
             height: parent.height
             sunken: true
             color: Qt.alpha(Theme.face, Config.appearance.blur ? 0.55 : 1)
 
+            // simple view header: home, (search), expert
+            PxButton {
+                id: homeBtn
+                visible: !win.expert && Shell.settingsPage !== "home"
+                x: Theme.u * 2
+                y: Theme.u * 2
+                height: search.height
+                compact: true
+                icon: "arrowLeft"
+                text: I18n.t("Главная", "Home")
+                onClicked: Shell.settingsPage = "home"
+            }
+            PxButton {
+                id: expertBtn
+                visible: !win.expert
+                x: parent.width - width - Theme.u * 2
+                y: Theme.u * 2
+                height: search.height
+                compact: true
+                icon: "gear"
+                text: I18n.t("Эксперт", "Expert")
+                onClicked: win.setExpert(true)
+            }
+
             Loader {
                 id: page
                 anchors.fill: parent
                 anchors.margins: Theme.u * 3
+                anchors.topMargin: win.expert ? Theme.u * 3 : search.height + Theme.u * 6
                 active: win.hostWindow ? win.hostWindow.visible : true
                 onLoaded: if (win.pendingTarget)
                     targetTimer.restart()
                 source: {
                     const id = Shell.settingsPage;
+                    if (id === "home" || id === "more")
+                        return win.expert ? "pages/AppearancePage.qml" : id === "home" ? "pages/HomePage.qml" : "pages/MorePage.qml";
                     if (id.startsWith("plugin:"))
                         return "pages/PluginSettingsPage.qml";
                     if (id === "dotfiles")

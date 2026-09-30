@@ -84,6 +84,8 @@ PxPage {
 
     PxGroup {
         title: I18n.t("Повтор клавиш", "Key repeat")
+
+        advanced: true
         icon: "refresh"
         width: parent.width
         SettingRow {

@@ -6,6 +6,7 @@ import Quickshell.Wayland
 import qs.config
 import qs.services
 import qs.modules.desktop
+import qs.modules.y2k
 import qs.widgets
 
 // Two background-layer surfaces per screen:
@@ -74,9 +75,15 @@ Variants {
             WlrLayershell.layer: WlrLayer.Background
             WlrLayershell.namespace: "angelos-desktop"
 
+            readonly property bool sparkles: Config.y2k.sparkles && (!(Config.y2k.sparkleScreens || []).length || Config.y2k.sparkleScreens.includes(modelData.name))
             MouseArea {
                 anchors.fill: parent
                 acceptedButtons: Qt.RightButton | Qt.LeftButton
+                hoverEnabled: win.sparkles
+                onPositionChanged: m => {
+                    if (win.sparkles)
+                        trail.spawn(m.x, m.y);
+                }
                 onClicked: m => {
                     if (m.button === Qt.RightButton)
                         menu.openAt(m.x, m.y);
@@ -100,6 +107,13 @@ Variants {
                         onContextMenu: (x, y) => menu.openAt(x, y)
                     }
                 }
+            }
+
+            // Y2K glitter behind the pointer (Settings → Y2K)
+            SparkleTrail {
+                id: trail
+                anchors.fill: parent
+                visible: win.sparkles
             }
 
             DesktopMenu {

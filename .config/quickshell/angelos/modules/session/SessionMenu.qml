@@ -67,6 +67,24 @@ PanelWindow {
 
     function run(id) {
         Shell.sessionOpen = false;
+        if (id === "logout" || id === "reboot" || id === "poweroff") {
+            // let the Y2K goodbye chime play before the session goes away
+            if (Sounds.enabled("shutdown")) {
+                Sounds.play("shutdown");
+                bye.action = id;
+                bye.restart();
+                return;
+            }
+        }
+        act(id);
+    }
+    Timer {
+        id: bye
+        property string action
+        interval: 1300
+        onTriggered: win.act(action)
+    }
+    function act(id) {
         switch (id) {
         case "lock":
             Shell.lock();

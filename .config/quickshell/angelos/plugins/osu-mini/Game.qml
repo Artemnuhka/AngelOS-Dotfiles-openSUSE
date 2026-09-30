@@ -2,6 +2,8 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtMultimedia
+import Quickshell
+import Quickshell.Io
 import qs.config
 import qs.services
 import qs.widgets
@@ -73,48 +75,119 @@ Item {
     readonly property string rank: failed ? "F" : accuracy >= 0.9999 ? "SS" : accuracy > 0.95 && nMiss === 0 ? "S" : accuracy > 0.9 ? "A" : accuracy > 0.8 ? "B" : accuracy > 0.7 ? "C" : "D"
 
     function bestKey() {
-        return "best_" + level + "_" + seconds;
+        return "best_" + level + "_" + seconds + (musical ? "_" + music : "");
     }
 
-    // ---- map generation: beats at the level's BPM, a random walk of jumps ----
+    // ---- map generation: a random walk of jumps over the playfield ----
+    function newWalker() {
+        return {
+            "x": field.width / 2,
+            "y": field.height / 2,
+            "angle": Math.random() * Math.PI * 2,
+            "n": 0,
+            "set": 0
+        };
+    }
+    // the heart at time t, then a jump sized for the gap `s` (in beats) to the next one
+    function place(w, t, s) {
+        const m = radius * 1.4;
+        if (w.n % (4 + Math.floor(Math.random() * 4)) === 0)
+            w.set++, w.n = 0;
+        w.n++;
+        const o = {
+            "x": w.x,
+            "y": w.y,
+            "t": t,
+            "n": w.n,
+            "set": w.set % 3
+        };
+        const dist = lv.spacing * Theme.u / 2 * Math.min(1.6, s);
+        w.angle += (Math.random() - 0.5) * 2.2;
+        w.x += Math.cos(w.angle) * dist;
+        w.y += Math.sin(w.angle) * dist;
+        if (w.x < m || w.x > field.width - m) {
+            w.angle = Math.PI - w.angle;
+            w.x = Math.max(m, Math.min(field.width - m, w.x));
+        }
+        if (w.y < m || w.y > field.height - m) {
+            w.angle = -w.angle;
+            w.y = Math.max(m, Math.min(field.height - m, w.y));
+        }
+        return o;
+    }
+    // without music: beats at the level's BPM
     function generate() {
         const beat = 60000 / lv.bpm;
         const out = [];
-        const w = field.width, h = field.height, m = radius * 1.4;
-        let x = w / 2, y = h / 2, angle = Math.random() * Math.PI * 2;
-        let t = 1800, n = 0, comboSet = 0;
+        const w = newWalker();
+        let t = 1800;
         const end = seconds * 1000 + 1800;
         while (t < end) {
             const r = Math.random();
             // mostly single beats, sometimes a triple burst, now and then a rest
             const steps = r < 0.12 ? [0.5, 0.5, 1] : r < 0.2 ? [2] : [1];
-            for (const s of steps) {
-                if (n % (4 + Math.floor(Math.random() * 4)) === 0)
-                    comboSet++, n = 0;
-                n++;
-                out.push({
-                    "x": x,
-                    "y": y,
-                    "t": t,
-                    "n": n,
-                    "set": comboSet % 3
-                });
-                const dist = lv.spacing * Theme.u / 2 * Math.min(1.6, s);
-                angle += (Math.random() - 0.5) * 2.2;
-                x += Math.cos(angle) * dist;
-                y += Math.sin(angle) * dist;
-                if (x < m || x > w - m) {
-                    angle = Math.PI - angle;
-                    x = Math.max(m, Math.min(w - m, x));
-                }
-                if (y < m || y > h - m) {
-                    angle = -angle;
-                    y = Math.max(m, Math.min(h - m, y));
-                }
-                t += beat * s;
+            for (const st of steps) {
+                out.push(place(w, t, st));
+                t += beat * st;
             }
         }
         return out;
+    }
+
+    // ---- music mode: hearts on the beat of what plays (scripts/osu-beats.py) ----
+    property string music: plugin ? plugin.get("music", "off") : "off"   // off | spotify | system
+    readonly property bool musical: music !== "off"
+    property int musicOffset: plugin ? plugin.get("offset", 0) : 0      // ms; + = hearts later
+    property real bpm: 0
+    property real beatAt: 0               // game time (ms) of a detected beat
+    property real loudness: 0
+    property bool musicIdle: true
+    property string idleWhy: ""
+    property real lastNoteT: -1e9
+    property var walker: null
+    readonly property real endT: seconds * 1000 + 1800
+    function onBeats(msg) {
+        if (msg.idle) {
+            musicIdle = true;
+            idleWhy = msg.why || "";
+            return;
+        }
+        musicIdle = false;
+        bpm = msg.bpm;
+        loudness = msg.level || 0;
+        beatAt = msg.beat - startAt + musicOffset;
+    }
+    // queue the beats whose hearts have to start showing now
+    function scheduleMusic() {
+        if (!musical || musicIdle || bpm <= 0 || !walker)
+            return;
+        const P = 60000 / bpm;
+        const every = level === "easy" ? 2 : 1;
+        const halves = level === "insane" ? 0.55 : level === "hard" ? 0.25 : 0;
+        let k = Math.ceil((Math.max(lastNoteT, now) - beatAt) / P);
+        for (let t = beatAt + k * P; t <= now + lv.ar + 60 && t < endT; k++, t = beatAt + k * P) {
+            if (t < now + lv.ar * 0.6 || t < lastNoteT + P * 0.6 || k % every !== 0)
+                continue;
+            queue.push(place(walker, t, every));
+            lastNoteT = t;
+            // loud parts get an extra heart on the half beat
+            if (halves && loudness > 0.05 && Math.random() < halves && t + P / 2 < endT) {
+                queue.push(place(walker, t + P / 2, 0.5));
+                lastNoteT = t + P / 2;
+            }
+        }
+        queue.sort((a, b) => a.t - b.t);
+    }
+    Process {
+        running: game.phase === "play" && game.musical
+        command: ["python3", Quickshell.shellDir + "/scripts/osu-beats.py", game.music]
+        stdout: SplitParser {
+            onRead: line => {
+                try {
+                    game.onBeats(JSON.parse(line));
+                } catch (e) {}
+            }
+        }
     }
     function start(demo) {
         autoplay = !!demo;
@@ -123,7 +196,11 @@ Item {
         score = combo = maxCombo = n300 = n100 = n50 = nMiss = 0;
         hp = 1;
         failed = newBest = false;
-        queue = generate();
+        musicIdle = true;
+        bpm = 0;
+        lastNoteT = -1e9;
+        walker = newWalker();
+        queue = musical ? [] : generate();
         startAt = Date.now();
         now = 0;
         phase = "play";
@@ -208,6 +285,7 @@ Item {
         onTriggered: {
             const dt = frameTime;
             game.now = Date.now() - game.startAt;
+            game.scheduleMusic();
             // spawn
             while (game.queue.length && game.queue[0].t - game.lv.ar <= game.now) {
                 const o = game.queue.shift();
@@ -242,10 +320,12 @@ Item {
                         break;
                     }
                 }
-            game.hp = Math.max(0, game.hp - game.lv.drain * dt);
+            // silence in music mode doesn't drain the hearts
+            if (!(game.musical && game.musicIdle))
+                game.hp = Math.max(0, game.hp - game.lv.drain * dt);
             if (game.hp <= 0)
                 game.finish(true);
-            else if (!game.queue.length && circles.count === 0)
+            else if (!game.queue.length && circles.count === 0 && (!game.musical || game.now > game.endT))
                 game.finish(false);
         }
     }
@@ -477,6 +557,16 @@ Item {
         }
     }
     PxText {
+        visible: game.phase === "play" && game.musical
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.top: parent.top
+        anchors.topMargin: Theme.u * 18
+        text: game.musicIdle ? (game.idleWhy === "no-spotify" ? I18n.t("Spotify не играет — включи трек ♪", "Spotify isn't playing — start a track ♪") : game.idleWhy === "" ? I18n.t("слушаю ритм… ♪", "listening for the beat… ♪") : I18n.t("Тишина… включи музыку ♪", "Silence… put some music on ♪")) : "♪ " + (game.music === "spotify" ? "Spotify" : I18n.t("звук системы", "system audio")) + " · " + Math.round(game.bpm) + " BPM"
+        color: game.musicIdle ? Theme.accent3 : Theme.textDim
+        style: Text.Outline
+        styleColor: Theme.edge
+    }
+    PxText {
         visible: game.phase === "play" && game.combo > 1
         anchors.left: parent.left
         anchors.bottom: parent.bottom
@@ -553,6 +643,36 @@ Item {
                 if (game.plugin)
                     game.plugin.set("seconds", v);
             }
+        }
+        PxSegmented {
+            anchors.horizontalCenter: parent.horizontalCenter
+            model: [
+                {
+                    "label": I18n.t("Свой ритм", "Own beat"),
+                    "value": "off"
+                },
+                {
+                    "label": "♪ Spotify",
+                    "value": "spotify"
+                },
+                {
+                    "label": I18n.t("♪ Звук системы", "♪ System audio"),
+                    "value": "system"
+                }
+            ]
+            currentValue: game.music
+            onActivated: v => {
+                game.music = v;
+                if (game.plugin)
+                    game.plugin.set("music", v);
+            }
+        }
+        PxText {
+            visible: game.musical
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: game.music === "spotify" ? I18n.t("сердечки встанут в такт тому, что играет в Spotify", "hearts follow the beat of what Spotify plays") : I18n.t("сердечки встанут в такт всему, что играет на компьютере", "hearts follow the beat of everything the computer plays")
+            kind: "tiny"
+            dim: true
         }
         PxText {
             anchors.horizontalCenter: parent.horizontalCenter

@@ -469,6 +469,9 @@ class ScreenshotApp:
         # hide overlays so they aren't in the shot / recorder
         for w in self.windows:
             w.hide()
+        # whatever hangs after this (clipboard, notification daemon), the overlay
+        # must not outlive the shot: the default SIGALRM ends the process
+        signal.alarm(15)
         if GEOMETRY_ONLY:
             x, y, w, h = sel
             print(f"{x},{y} {w}x{h}", flush=True)
@@ -488,7 +491,12 @@ class ScreenshotApp:
         path = os.path.join(OUTDIR, f"Screenshot from {stamp}.png")
         geom = f"{x},{y} {w}x{h}"
         try:
-            subprocess.run(["grim", "-g", geom, path], check=True)
+            subprocess.run(["grim", "-g", geom, path], check=True, timeout=10)
+            # the overlays go away for good before the slower steps (issue #4)
+            for win in self.windows:
+                win.destroy()
+            while Gtk.events_pending():
+                Gtk.main_iteration_do(False)
             pling = os.path.expanduser("~/.local/share/sounds/screenshot-pling.ogg")
             if os.path.isfile(pling):
                 subprocess.Popen(
@@ -501,16 +509,15 @@ class ScreenshotApp:
                     ["wl-copy", "--type", "image/png"],
                     input=f.read(),
                     check=False,
+                    timeout=5,
                 )
             subprocess.run(
                 ["notify-send", "-a", "Screenshot", "Скриншот сохранён", path],
                 check=False,
+                timeout=5,
             )
         except Exception as e:
-            subprocess.run(
-                ["notify-send", "-a", "Screenshot", "Ошибка скриншота", str(e)],
-                check=False,
-            )
+            subprocess.Popen(["notify-send", "-a", "Screenshot", "Ошибка скриншота", str(e)])
         Gtk.main_quit()
         return False
 

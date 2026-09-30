@@ -21,6 +21,7 @@ import qs.modules.tour
 import qs.modules.voxtype
 import qs.modules.idle
 import qs.modules.sidebar
+import qs.modules.y2k
 import qs.widgets
 
 // angelOS — pixel pink shell for niri.
@@ -46,11 +47,14 @@ ShellRoot {
     SetupWizard {}
     TourOverlay {}
     PluginHost {}
+    AngelHelper {}
+    BootScreen {}
     Ipc {}
 
     // Keep dynamically loaded settings pages visible to Quickshell's static
     // QML importer. Without these type anchors, pages loaded later through a
-    // Loader report "PxPositionPicker/BarLayoutEditor is not a type".
+    // Loader report "PxPositionPicker/BarLayoutEditor is not a type" (same for
+    // the simple view's tiles and the settings previews).
     Component {
         id: positionPickerTypeAnchor
         PxPositionPicker {}
@@ -63,6 +67,14 @@ ShellRoot {
         id: textAreaTypeAnchor
         PxTextArea {}
     }
+    Component {
+        id: tileTypeAnchor
+        PxTile {}
+    }
+    Component {
+        id: previewTypeAnchor
+        PxPreview {}
+    }
 
     Component.onCompleted: {
         ThemeExport.signature; // wake the template exporter
@@ -74,5 +86,6 @@ ShellRoot {
         PluginStudio.loaded; // make the worker available to dynamically loaded pages
         Updates.state; // daily update check (Settings → Updates)
         WorkspaceAnim.current; // control socket for `angelos ws`
+        Sounds.ready; // Y2K sound pack (generated on first use)
     }
 }

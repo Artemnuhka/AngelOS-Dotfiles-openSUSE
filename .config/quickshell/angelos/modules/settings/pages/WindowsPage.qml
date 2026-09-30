@@ -22,6 +22,8 @@ PxPage {
         title: I18n.t("Закрытие окон", "Closing windows")
         icon: "close"
         SettingRow {
+            id: rightRow
+            preview: "TaskClose"
             label: I18n.t("ПКМ по кнопке окна на панели", "Right-click a window button")
             hint: ({
                     "menu": I18n.t("меню: во весь экран, плавающее, на другой стол или монитор, закрыть, завершить процесс", "A menu: fullscreen, floating, another desk or monitor, close, end task"),
@@ -44,26 +46,45 @@ PxPage {
                     }
                 ]
                 currentValue: Config.bar.taskRightClick || "menu"
-                onActivated: v => Config.bar.taskRightClick = v
+                onActivated: v => {
+                    Config.bar.taskRightClick = v;
+                    rightRow.show(v, ({
+                            "menu": I18n.t("меню", "menu"),
+                            "close": I18n.t("закрыть сразу", "close at once"),
+                            "none": I18n.t("ничего", "nothing")
+                        })[v]);
+                }
             }
         }
         SettingRow {
+            id: middleRow
+            preview: "TaskClose"
             label: I18n.t("Средняя кнопка закрывает", "Middle click closes")
             hint: I18n.t("колёсиком по кнопке окна на панели, как в браузере по вкладке", "Click the wheel on a window button, like on a browser tab")
             PxToggle {
                 checked: Config.bar.taskMiddleClose
-                onToggled: c => Config.bar.taskMiddleClose = c
+                onToggled: c => {
+                    Config.bar.taskMiddleClose = c;
+                    middleRow.show(c ? "middle-on" : "middle-off", c ? I18n.t("закрывает", "closes") : I18n.t("не закрывает", "does not close"));
+                }
             }
         }
         SettingRow {
+            id: hoverRow
+            preview: "TaskClose"
             label: I18n.t("Крестик при наведении", "× on hover")
             hint: I18n.t("на кнопке окна под курсором появляется крестик", "A close button appears on the hovered window button")
             PxToggle {
                 checked: Config.bar.taskHoverClose
-                onToggled: c => Config.bar.taskHoverClose = c
+                onToggled: c => {
+                    Config.bar.taskHoverClose = c;
+                    hoverRow.show(c ? "hover-on" : "hover-off", c ? I18n.t("крестик есть", "with ×") : I18n.t("без крестика", "no ×"));
+                }
             }
         }
         SettingRow {
+            id: animRow
+            preview: "CloseFx"
             label: I18n.t("Анимация закрытия", "Close animation")
             hint: {
                 const s = CloseAnim.styles.find(x => x.id === CloseAnim.current);
@@ -78,7 +99,11 @@ PxPage {
                         }))
                 currentValue: CloseAnim.current
                 placeholder: CloseAnim.current === "custom" ? I18n.t("свой шейдер", "custom shader") : "—"
-                onActivated: v => CloseAnim.pick(v)
+                onActivated: v => {
+                    CloseAnim.pick(v);
+                    const s = CloseAnim.styles.find(x => x.id === v);
+                    animRow.show(v, s ? s.label : v);
+                }
             }
         }
         Row {
@@ -86,7 +111,7 @@ PxPage {
             PxButton {
                 compact: true
                 icon: "play"
-                text: I18n.t("Посмотреть", "Preview")
+                text: I18n.t("На настоящем окне", "On a real window")
                 onClicked: CloseAnim.preview()
             }
             PxText {
@@ -102,6 +127,7 @@ PxPage {
     PxGroup {
         width: parent.width
         title: I18n.t("Размещение", "Layout")
+        advanced: true
         icon: "window"
         enabled: !WindowConfig.busy
         SettingRow {
@@ -154,6 +180,7 @@ PxPage {
     PxGroup {
         width: parent.width
         title: I18n.t("Ширина окон", "Window widths")
+        advanced: true
         icon: "layers"
         enabled: !WindowConfig.busy
 

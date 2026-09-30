@@ -163,7 +163,7 @@ PxPage {
                         PxText {
                             anchors.verticalCenter: parent.verticalCenter
                             width: parent.width - Theme.u * 170
-                            text: (card.info ? card.info.title : "?") + "  ·  " + (card.info ? card.info.label : "")
+                            text: (card.info ? DesktopWidgets.titleOf(card.info) : "?") + "  ·  " + (card.info ? card.info.label : "")
                             font.bold: true
                             elide: Text.ElideRight
                         }
@@ -186,6 +186,20 @@ PxPage {
                         }
                     }
 
+                    SettingRow {
+                        label: I18n.t("Размер", "Size")
+                        hint: I18n.t("70–130 %; ещё — колёсико над виджетом в режиме правки или с Ctrl", "70–130 %; also the wheel over the widget in edit mode or with Ctrl")
+                        PxSlider {
+                            width: parent.width
+                            from: 70
+                            to: 130
+                            stepSize: 5
+                            suffix: " %"
+                            value: Math.round(DesktopWidgets.scaleOf(card.w) * 100)
+                            live: false
+                            onReleased: v => DesktopWidgets.setScale(card.modelData, v / 100)
+                        }
+                    }
                     // per-type options
                     SettingRow {
                         visible: !!card.w && card.w.type === "clock"
@@ -256,6 +270,18 @@ PxPage {
             PxToggle {
                 checked: Config.desktop.snap
                 onToggled: c => Config.desktop.snap = c
+            }
+        }
+        SettingRow {
+            label: I18n.t("Окончание в заголовке", "Title ending")
+            hint: I18n.t("как подписаны окошки виджетов: clock.exe, clock.sh или clock.bin", "How widget windows are titled: clock.exe, clock.sh or clock.bin")
+            PxSegmented {
+                model: DesktopWidgets.suffixes.map(s => ({
+                            "label": "." + s,
+                            "value": s
+                        }))
+                currentValue: Config.desktop.titleSuffix || "exe"
+                onActivated: v => Config.desktop.titleSuffix = v
             }
         }
         Row {

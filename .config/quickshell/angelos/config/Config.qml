@@ -38,6 +38,8 @@ Singleton {
     property alias dotfiles: adapter.dotfiles
     property alias system: adapter.system
     property alias developer: adapter.developer
+    property alias settingsUi: adapter.settingsUi
+    property alias y2k: adapter.y2k
     property alias cursor: adapter.cursor
     property alias updates: adapter.updates
     property alias network: adapter.network
@@ -194,6 +196,7 @@ Singleton {
                 property var widgets: []            // [{uid, type, screen, x, y, settings}]; x/y < 0 = from the right/bottom
                 property bool initialized: false
                 property bool snap: true
+                property string titleSuffix: "exe"  // widget titles end in .exe | .sh | .bin
             }
 
             property JsonObject voxtype: JsonObject {
@@ -281,6 +284,24 @@ Singleton {
             property JsonObject network: JsonObject {
                 property bool showWifi: true        // bar/sidebar Wi-Fi indicator when a Wi-Fi adapter exists
                 property bool showBluetooth: true
+            }
+
+            property JsonObject y2k: JsonObject {
+                property bool helper: true          // the pixel angel in a screen corner
+                property string helperScreen: ""   // "" = the main screen
+                property string helperTips: "rare" // off | rare | often
+                property bool helperGreeted: false
+                property bool sparkles: true        // sparkle trail over the bare desktop
+                property var sparkleScreens: []     // empty = every screen
+                property bool sounds: true
+                property real soundVolume: 0.55
+                property var soundOff: ["click"]    // events kept quiet: startup notify error click shutdown angel
+                property bool boot: true            // CD-ROM style loading screen once per login
+                property var bootScreens: []        // empty = every screen
+            }
+
+            property JsonObject settingsUi: JsonObject {
+                property bool expert: false         // false: home tiles, main settings only; true: every page in a sidebar
             }
 
             property JsonObject developer: JsonObject {

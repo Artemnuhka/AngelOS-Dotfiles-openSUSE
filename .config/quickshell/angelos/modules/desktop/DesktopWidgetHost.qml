@@ -23,6 +23,9 @@ Item {
     readonly property bool wants: !content.item || content.item.wantVisible === undefined || content.item.wantVisible
     readonly property bool dragging: DesktopWidgets.drag.uid === uid
     readonly property alias frame: frame
+    // 70–130 %: the frame is drawn scaled, the host takes the scaled size, so the
+    // proxy, clamping and replayed input all work in scaled coordinates
+    readonly property real zoom: DesktopWidgets.scaleOf(widget)
 
     function clampX(v) {
         return Math.max(0, Math.min(area.width - width, v));
@@ -33,8 +36,8 @@ Item {
 
     visible: !!widget && (wants || DesktopWidgets.editMode)
     opacity: wants ? 1 : 0.45
-    width: frame.width
-    height: frame.height
+    width: Math.round(frame.width * zoom)
+    height: Math.round(frame.height * zoom)
     x: dragging ? DesktopWidgets.drag.x : widget ? clampX(widget.x < 0 ? area.width + widget.x - width : widget.x) : 0
     y: dragging ? DesktopWidgets.drag.y : widget ? clampY(widget.y < 0 ? area.height + widget.y - height : widget.y) : 0
 
@@ -117,10 +120,12 @@ Item {
 
     PxWindow {
         id: frame
+        scale: host.zoom
+        transformOrigin: Item.TopLeft
         width: Math.max(Theme.u * 70, content.implicitWidth + (inset + bodyPadding) * 2)
         height: titleHeight + content.implicitHeight + bodyPadding * 2 + inset * 2 + Theme.u * 2
         readonly property int inset: Theme.u * 2
-        title: host.info ? host.info.title : ""
+        title: DesktopWidgets.titleOf(host.info)
         icon: host.info ? host.info.icon : "heart"
         compact: true
         decor: false

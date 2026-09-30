@@ -144,6 +144,8 @@ PxPage {
 
     PxGroup {
         title: "OSD"
+
+        advanced: true
         icon: "heart"
         width: parent.width
         SettingRow {
@@ -185,6 +187,8 @@ PxPage {
 
     PxGroup {
         title: I18n.t("Голосовой ввод (VoxType)", "Voice typing (VoxType)")
+
+        advanced: true
         icon: "mic"
         width: parent.width
         SettingRow {

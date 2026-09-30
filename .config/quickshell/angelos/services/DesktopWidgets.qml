@@ -69,6 +69,27 @@ Singleton {
     readonly property var types: builtin.concat(pluginTypes)
     readonly property var widgets: (Config.desktop.widgets || []).filter(w => !!typeInfo(w.type))
 
+    // "clock.exe" → "clock.sh": the ending picked in Settings → Widgets
+    readonly property var suffixes: ["exe", "sh", "bin"]
+    function titleOf(info) {
+        if (!info)
+            return "";
+        const ext = suffixes.includes(Config.desktop.titleSuffix) ? Config.desktop.titleSuffix : "exe";
+        return String(info.title).replace(/\.[a-z0-9]{1,4}$/i, "") + "." + ext;
+    }
+    // widget size: 70–130 % of its natural size
+    readonly property real minScale: 0.7
+    readonly property real maxScale: 1.3
+    function scaleOf(w) {
+        return w && w.scale ? Math.max(minScale, Math.min(maxScale, w.scale)) : 1;
+    }
+    function setScale(uid, s) {
+        const v = Math.round(Math.max(minScale, Math.min(maxScale, s)) * 100) / 100;
+        _save((Config.desktop.widgets || []).map(w => w.uid === uid ? Object.assign({}, w, {
+                    "scale": v
+                }) : w));
+    }
+
     function typeInfo(t) {
         return types.find(x => x.type === t) || null;
     }

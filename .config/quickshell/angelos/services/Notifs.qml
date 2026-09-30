@@ -12,6 +12,9 @@ Singleton {
     id: root
 
     property var popups: []      // Notification objects currently on screen
+    // every incoming notification ({appName, summary, urgency, quiet}); the Y2K
+    // sounds and the angel listen here
+    signal arrived(var info)
     property var history: []     // plain objects, newest first
     readonly property int unread: history.filter(h => !h.read).length
     readonly property string historyFile: Config.stateDir + "/notifications.json"
@@ -105,6 +108,14 @@ Singleton {
             if (!dnd)
                 root.popups = root.popups.concat([n]).slice(-Config.notifications.maxPopups);
             n.closed.connect(() => root.dismissPopup(n));
+            root.arrived({
+                "appName": entry.appName,
+                "summary": entry.summary,
+                "critical": n.urgency === NotificationUrgency.Critical,
+                "quiet": dnd
+            });
+            if (!dnd)
+                Sounds.play(n.urgency === NotificationUrgency.Critical ? "error" : "notify");
         }
     }
 

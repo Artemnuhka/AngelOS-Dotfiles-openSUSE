@@ -128,28 +128,34 @@ PxPage {
             dim: true
         }
         SettingRow {
+            id: fxRow
+            preview: "WallpaperFx"
             label: I18n.t("Эффект", "Effect")
-            PxSegmented {
-                model: [
-                    {
-                        "label": I18n.t("Мозаика+дизер", "Mosaic + dither"),
-                        "value": "mosaic-dither"
-                    },
-                    {
-                        "label": I18n.t("Мозаика", "Mosaic"),
-                        "value": "mosaic"
-                    },
-                    {
-                        "label": I18n.t("Дизер", "Dither"),
-                        "value": "dither"
-                    },
-                    {
-                        "label": I18n.t("Нет", "None"),
-                        "value": "none"
-                    }
-                ]
+            hint: {
+                const s = Wallpapers.transitions.find(x => x.id === Config.wallpaper.transition);
+                return s ? s.hint : Config.wallpaper.transition === "random" ? I18n.t("каждый раз другой", "a different one every time") : I18n.t("картинка меняется сразу", "The picture changes at once");
+            }
+            PxCombo {
+                width: parent.width
+                model: Wallpapers.transitions.map(s => ({
+                            "label": s.label,
+                            "value": s.id
+                        })).concat([
+                        {
+                            "label": I18n.t("Случайный", "Random"),
+                            "value": "random"
+                        },
+                        {
+                            "label": I18n.t("Нет", "None"),
+                            "value": "none"
+                        }
+                    ])
                 currentValue: Config.wallpaper.transition
-                onActivated: v => Config.wallpaper.transition = v
+                onActivated: v => {
+                    Config.wallpaper.transition = v;
+                    const s = Wallpapers.transitions.find(x => x.id === v);
+                    fxRow.show(v, s ? s.label : v === "random" ? I18n.t("случайный", "random") : I18n.t("без перехода", "none"));
+                }
             }
         }
         SettingRow {

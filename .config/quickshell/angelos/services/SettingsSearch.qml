@@ -56,7 +56,8 @@ Singleton {
             "plugins": ["плагины", "расширения", "plugins", "extensions", "addons"],
             "lock": ["блокировка", "заставка", "пароль", "экран блокировки", "lock", "idle", "lock screen", "screensaver"],
             "updates": ["обновления", "версия", "updates", "upgrade", "version"],
-            "system": ["система", "диспетчер задач", "производительность", "отрисовка", "system", "task manager", "performance", "renderer"]
+            "system": ["система", "диспетчер задач", "производительность", "отрисовка", "system", "task manager", "performance", "renderer"],
+            "y2k": ["y2k", "блёстки", "блестки", "ангел", "ангелочек", "помощник", "звуки", "загрузка", "загрузочный экран", "диск", "glitter", "sparkles", "angel", "helper", "sounds", "boot", "loading screen"]
         })
     // words that mean the same thing; a query word pulls in its whole group
     readonly property var synonyms: [
@@ -126,25 +127,53 @@ Singleton {
         }
         return out;
     }
-    function dist(a, b) {
+    // three reusable rows: no allocation per comparison
+    property var _rows: [new Int32Array(64), new Int32Array(64), new Int32Array(64)]
+    // stops early once every cell of a row is over `max` (then returns max + 1)
+    function dist(a, b, max) {
         // Damerau–Levenshtein (optimal string alignment), small words only
         const m = a.length, n = b.length;
         if (Math.abs(m - n) > 2)
             return 9;
-        const d = [];
-        for (let i = 0; i <= m; i++) {
-            d.push([i]);
-            for (let j = 1; j <= n; j++)
-                d[i].push(i === 0 ? j : 0);
-        }
-        for (let i = 1; i <= m; i++)
+        if (n >= 63)
+            return 9;
+        let pp = _rows[0], prev = _rows[1], cur = _rows[2];
+        for (let j = 0; j <= n; j++)
+            prev[j] = j;
+        for (let i = 1; i <= m; i++) {
+            cur[0] = i;
+            let low = i;
             for (let j = 1; j <= n; j++) {
                 const c = a[i - 1] === b[j - 1] ? 0 : 1;
-                d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + c);
-                if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1])
-                    d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+                let v = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + c);
+                if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1] && pp[j - 2] + 1 < v)
+                    v = pp[j - 2] + 1;
+                cur[j] = v;
+                if (v < low)
+                    low = v;
             }
-        return d[m][n];
+            if (max !== undefined && low > max)
+                return max + 1;
+            const t = pp;
+            pp = prev;
+            prev = cur;
+            cur = t;
+        }
+        return prev[n];
+    }
+    // dist(a, b) <= 1 in one pass (one substitution, insertion, deletion or swap)
+    function withinOne(a, b) {
+        const m = a.length, n = b.length;
+        if (m - n > 1 || n - m > 1)
+            return false;
+        let i = 0;
+        while (i < m && i < n && a[i] === b[i])
+            i++;
+        if (i === m && i === n)
+            return true;
+        if (m === n)
+            return a.slice(i + 1) === b.slice(i + 1) || (a[i] === b[i + 1] && a[i + 1] === b[i] && a.slice(i + 2) === b.slice(i + 2));
+        return m > n ? a.slice(i + 1) === b.slice(i) : a.slice(i) === b.slice(i + 1);
     }
     // how well query word q matches text word t (0..1)
     function wordScore(q, t) {
@@ -168,23 +197,38 @@ Singleton {
             return 0.6;
         if (q.length >= 4 && q[0] === t[0]) {
             // a typo in the whole word or in the part typed so far ("blru" → "blur…")
-            const best = Math.min(dist(q, t), dist(q, t.slice(0, q.length)));
-            if (best <= 1)
+            const part = t.slice(0, q.length);
+            if (withinOne(q, t) || withinOne(q, part))
                 return 0.65;
-            if (best <= 2 && q.length >= 7)
+            if (q.length >= 7 && (dist(q, part, 2) <= 2 || dist(q, t, 2) <= 2))
                 return 0.5;
         }
         return 0;
     }
+    // synonym groups as normalized words, prepared once
+    readonly property var synonymWords: synonyms.map(g => {
+        const out = [];
+        for (const w of g)
+            for (const x of words(w))
+                if (!out.includes(x))
+                    out.push(x);
+        return {
+            "names": g.map(w => norm(w)),
+            "words": out
+        };
+    })
+    property var _expanded: ({})
     function expand(q) {
         // a query word and the words of its synonym groups
+        if (_expanded[q])
+            return _expanded[q];
         const out = [q];
-        for (const g of synonyms)
-            if (g.some(w => wordScore(q, norm(w)) >= 0.8))
-                for (const w of g)
-                    for (const x of words(w))
-                        if (!out.includes(x))
-                            out.push(x);
+        for (const g of synonymWords)
+            if (g.names.some(w => wordScore(q, w) >= 0.8))
+                for (const x of g.words)
+                    if (!out.includes(x))
+                        out.push(x);
+        _expanded[q] = out;
         return out;
     }
 
@@ -238,64 +282,159 @@ Singleton {
         return out;
     }
 
-    // query words with their synonyms, prepared once per search: [[ [word, weight], … ], …]
-    function prepare(qwords) {
-        return qwords.map(q => expand(q).map(v => [v, v === q ? 1 : 0.85]));
-    }
-    property var _cache: ({})
-    function cachedScore(v, t) {
-        const k = v + "\u0001" + t;
-        let r = _cache[k];
-        if (r === undefined) {
-            r = wordScore(v, t);
-            _cache[k] = r;
-        }
-        return r;
-    }
-    function bestIn(list, v, weight, best) {
-        for (const t of list) {
-            const x = cachedScore(v, t) * weight;
-            if (x > best)
-                best = x;
-        }
-        return best;
-    }
-    function scoreDoc(doc, prepared, phrase) {
-        let total = 0, hit = 0;
-        for (const exp of prepared) {
-            let best = 0;
-            for (const pair of exp) {
-                const v = pair[0], syn = pair[1];
-                best = bestIn(doc.primary, v, 3 * syn, best);
-                if (best < 2.5)
-                    best = bestIn(doc.other, v, 2.5 * syn, best);
-                if (best < 2.6)
-                    best = bestIn(doc.alias, v, 2.6 * syn, best);
-                if (best < 1.3)
-                    best = bestIn(doc.secondary, v, 1.3 * syn, best);
-                if (best < 1)
-                    best = bestIn(doc.context, v, syn, best);
+    // ---- inverted index: every distinct word once, with the entries it is in ----
+    // A keystroke used to score every word of every entry (~100 ms, far more on a
+    // laptop CPU). Now a query word is matched against the vocabulary once and the
+    // entries come from the posting lists. Field weights: name 3, alias 2.6, other
+    // language 2.5, description 1.3, group 1 (an entry keeps its best field).
+    readonly property var index: {
+        const vocab = [], ids = {}, post = [];      // post[id] = [entry, weight, entry, weight, …]
+        function add(w, d, weight, seen) {
+            let id = ids[w];
+            if (id === undefined) {
+                id = ids[w] = vocab.length;
+                vocab.push(w);
+                post.push([]);
             }
-            if (best > 0)
-                hit++;
-            total += best;
+            const at = seen[id];
+            if (at === undefined) {
+                seen[id] = post[id].length;
+                post[id].push(d, weight);
+            } else if (post[id][at + 1] < weight) {
+                post[id][at + 1] = weight;
+            }
         }
-        const qwords = prepared;
-        if (!hit)
-            return 0;
-        const cover = hit / qwords.length;
-        let s = total * Math.pow(cover, 1.5);
-        const title = norm(doc.title);
-        if (title === phrase)
-            s += 3;
-        else if (title.startsWith(phrase))
-            s += 1;
-        else if (phrase.length > 2 && title.includes(phrase))
-            s += 0.8;
-        // a page's everyday name typed as is: "экран" → Monitor, "display" → Monitor
-        if (doc.aliasNames.includes(phrase))
-            s += 3.5;
-        return s + (doc.kind === "page" ? 0.4 : doc.kind === "group" ? 0.2 : 0);
+        for (let d = 0; d < docs.length; d++) {
+            const doc = docs[d], seen = {};
+            for (const w of doc.context)
+                add(w, d, 1, seen);
+            for (const w of doc.secondary)
+                add(w, d, 1.3, seen);
+            for (const w of doc.other)
+                add(w, d, 2.5, seen);
+            for (const w of doc.alias)
+                add(w, d, 2.6, seen);
+            for (const w of doc.primary)
+                add(w, d, 3, seen);
+        }
+        const byFirst = {};
+        for (let i = 0; i < vocab.length; i++)
+            (byFirst[vocab[i][0]] = byFirst[vocab[i][0]] || []).push(i);
+        // the whole vocabulary as one string for native substring search
+        const starts = new Int32Array(vocab.length);
+        let at = 1;
+        for (let i = 0; i < vocab.length; i++) {
+            starts[i] = at;
+            at += vocab[i].length + 1;
+        }
+        return {
+            "vocab": vocab,
+            "post": post,
+            "byFirst": byFirst,
+            "joined": "\n" + vocab.join("\n") + "\n",
+            "starts": starts,
+            "titles": docs.map(x => norm(x.title))
+        };
+    }
+    // per query word: [wordId, score, …] of the vocabulary words it matches; per text: results
+    property var _hits: ({})
+    property var _results: ({})
+    onIndexChanged: {
+        _hits = {};
+        _results = {};
+        _warm = synonymWords.reduce((all, g) => all.concat(g.words), []);
+        warmer.restart();
+    }
+    // the first keystrokes that pull in a synonym group ("ра" → размер, размытие…)
+    // would match ~30 words at once; match them in the background, a few per frame
+    property var _warm: []
+    Timer {
+        id: warmer
+        interval: 16
+        repeat: true
+        onTriggered: {
+            for (let k = 0; k < 12 && root._warm.length; k++)
+                root.hitsFor(root._warm.shift());
+            if (!root._warm.length)
+                stop();
+        }
+    }
+    onSynonymWordsChanged: _expanded = {}
+    function hitsFor(v) {
+        let h = _hits[v];
+        if (h)
+            return h;
+        h = [];
+        const vocab = index.vocab;
+        // wordScore is 0 unless both start alike or t contains v (3+ letters)
+        for (const i of index.byFirst[v[0]] || []) {
+            const s = wordScore(v, vocab[i]);
+            if (s > 0)
+                h.push(i, s);
+        }
+        if (v.length >= 3 && !v.includes("\n")) {
+            const joined = index.joined, starts = index.starts;
+            let last = -1;
+            for (let at = joined.indexOf(v); at >= 0; at = joined.indexOf(v, at + 1)) {
+                // the word the match falls in: last start <= at
+                let lo = 0, hi = starts.length - 1;
+                while (lo < hi) {
+                    const mid = (lo + hi + 1) >> 1;
+                    if (starts[mid] <= at)
+                        lo = mid;
+                    else
+                        hi = mid - 1;
+                }
+                if (lo !== last && vocab[lo][0] !== v[0])
+                    h.push(lo, 0.6);
+                last = lo;
+            }
+        }
+        _hits[v] = h;
+        return h;
+    }
+
+    // one query variant against all entries at once
+    function scoreAll(qwords, phrase) {
+        const n = docs.length, post = index.post, titles = index.titles;
+        const total = new Float64Array(n), hit = new Uint8Array(n), best = new Float64Array(n);
+        for (const q of qwords) {
+            best.fill(0);
+            for (const v of expand(q)) {
+                const syn = v === q ? 1 : 0.85, h = hitsFor(v);
+                for (let k = 0; k < h.length; k += 2) {
+                    const s = h[k + 1] * syn, p = post[h[k]];
+                    for (let j = 0; j < p.length; j += 2) {
+                        const x = s * p[j + 1];
+                        if (x > best[p[j]])
+                            best[p[j]] = x;
+                    }
+                }
+            }
+            for (let d = 0; d < n; d++)
+                if (best[d] > 0) {
+                    total[d] += best[d];
+                    hit[d]++;
+                }
+        }
+        const out = new Float64Array(n);
+        for (let d = 0; d < n; d++) {
+            if (!hit[d])
+                continue;
+            let s = total[d] * Math.pow(hit[d] / qwords.length, 1.5);
+            const title = titles[d];
+            if (title === phrase)
+                s += 3;
+            else if (title.startsWith(phrase))
+                s += 1;
+            else if (phrase.length > 2 && title.includes(phrase))
+                s += 0.8;
+            // a page's everyday name typed as is: "экран" → Monitor, "display" → Monitor
+            if (docs[d].aliasNames.includes(phrase))
+                s += 3.5;
+            out[d] = s + (docs[d].kind === "page" ? 0.4 : docs[d].kind === "group" ? 0.2 : 0);
+        }
+        return out;
     }
 
     function meaningful(phrase) {
@@ -303,6 +442,9 @@ Singleton {
         return w.length ? w.join(" ") : phrase;
     }
     function search(text, limit) {
+        const key = (limit || 12) + "\u0001" + text;
+        if (_results[key])
+            return _results[key];
         const phrase = meaningful(norm(text));
         if (!phrase)
             return [];
@@ -314,34 +456,39 @@ Singleton {
         const ghost = complete(text);
         if (ghost)
             variants.push(meaningful(norm(text + ghost)));
-        const res = [];
-        const prepared = variants.map(v => prepare(v.split(" ")));
-        if (Object.keys(_cache).length > 50000)
-            _cache = {};
-        for (const doc of docs) {
-            let best = 0;
-            for (let i = 0; i < variants.length; i++)
-                best = Math.max(best, scoreDoc(doc, prepared[i], variants[i]) * (i === 0 ? 1 : variants[i] === swapped ? 0.92 : 1.1));
-            // one or two letters only count against names, not descriptions
-            if (best >= (phrase.length <= 2 ? 2.2 : 1.2))
-                res.push({
-                    "doc": doc,
-                    "score": best
-                });
+        const n = docs.length, best = new Float64Array(n);
+        for (let i = 0; i < variants.length; i++) {
+            const k = i === 0 ? 1 : variants[i] === swapped ? 0.92 : 1.1;
+            const sc = scoreAll(variants[i].split(" "), variants[i]);
+            for (let d = 0; d < n; d++)
+                if (sc[d] * k > best[d])
+                    best[d] = sc[d] * k;
         }
+        // one or two letters only count against names, not descriptions
+        const floor = phrase.length <= 2 ? 2.2 : 1.2;
+        const res = [];
+        for (let d = 0; d < n; d++)
+            if (best[d] >= floor)
+                res.push({
+                    "doc": docs[d],
+                    "score": best[d]
+                });
         res.sort((a, b) => b.score - a.score || a.doc.title.length - b.doc.title.length);
         const out = [], seen = {};
         for (const r of res) {
-            const key = r.doc.page + "|" + r.doc.title;
-            if (seen[key])
+            const key2 = r.doc.page + "|" + r.doc.title;
+            if (seen[key2])
                 continue;
-            seen[key] = true;
+            seen[key2] = true;
             out.push(Object.assign({
                 "score": r.score
             }, r.doc));
             if (out.length >= (limit || 12))
                 break;
         }
+        if (Object.keys(_results).length > 400)
+            _results = {};
+        _results[key] = out;
         return out;
     }
 
@@ -355,6 +502,8 @@ Singleton {
                 v[w] = true;
         return v;
     }
+    // whole names for completion: common words, then page / group / row names
+    readonly property var names: common.concat(docs.filter(d => d.kind === "page").map(d => d.title), docs.filter(d => d.kind === "group").map(d => d.title), docs.filter(d => d.kind === "row").map(d => d.title))
     // ghost completion for what is typed: the rest of the word or name ("Bl" → "ur")
     function complete(text) {
         const raw = String(text || "");
@@ -368,8 +517,6 @@ Singleton {
             return "";
         const fit = w => w.toLowerCase().startsWith(low) && w.length > raw.length ? w.slice(raw.length) : "";
         const fitLast = w => w.toLowerCase().startsWith(last) && w.length > last.length ? w.slice(last.length) : "";
-        // whole names first: common words, then page / group / row names
-        const names = common.concat(docs.filter(d => d.kind === "page").map(d => d.title), docs.filter(d => d.kind === "group").map(d => d.title), docs.filter(d => d.kind === "row").map(d => d.title));
         for (const n of names) {
             const r = fit(n);
             if (r)

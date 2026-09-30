@@ -23,24 +23,34 @@ PopupWindow {
     Component.onCompleted: PopupManager.registerPopup(root)
     Component.onDestruction: PopupManager.unregisterPopup(root)
 
+    // an open menu is shown again on the next turn of the loop (in the same event
+    // it kept the old position); clicks while that is pending only move the target
+    property bool reopening: false
     function openFor(item, w) {
-        const again = visible;
-        visible = false;
         win = w;
         const p = item.mapToItem(anchorItem, 0, 0);
         anchor.rect.x = p.x;
         anchor.rect.y = above ? p.y : p.y + item.height;
         anchor.rect.width = item.width;
-        if (again)
-            Qt.callLater(() => {
-                anchor.updateAnchor();
-                visible = true;
-            });
-        else
+        if (!visible && !reopening) {
             visible = true;
+            return;
+        }
+        visible = false;
+        if (reopening)
+            return;
+        reopening = true;
+        Qt.callLater(() => {
+            if (!reopening)
+                return;
+            reopening = false;
+            anchor.updateAnchor();
+            visible = true;
+        });
     }
     function run(fn) {
         const w = win;
+        reopening = false;
         visible = false;
         if (w)
             fn(w);

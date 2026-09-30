@@ -135,6 +135,13 @@ Item {
                 replay(() => proxy.host.doubleClick(m.x, m.y, m.button));
         }
         onWheel: w => {
+            // edit mode (or Ctrl) + wheel: widget size, 5 % a notch
+            if (proxy.host && (DesktopWidgets.editMode || (w.modifiers & Qt.ControlModifier))) {
+                const notch = (w.angleDelta.y || w.angleDelta.x) / 120;
+                if (notch)
+                    DesktopWidgets.setScale(proxy.uid, proxy.host.zoom + notch * 0.05);
+                return;
+            }
             let taken = false;
             if (proxy.host && !replaying)
                 replay(() => taken = proxy.host.wheel(w.x, w.y, w.angleDelta));

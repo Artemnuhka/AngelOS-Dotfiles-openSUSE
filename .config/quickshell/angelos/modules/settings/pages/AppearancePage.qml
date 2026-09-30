@@ -172,6 +172,8 @@ PxPage {
 
     PxGroup {
         title: I18n.t("Стекло и пиксели", "Glass and pixels")
+
+        advanced: true
         icon: "sparkle"
         width: parent.width
 
@@ -283,6 +285,8 @@ PxPage {
 
     PxGroup {
         title: I18n.t("Тема для приложений", "Application theme")
+
+        advanced: true
         icon: "terminal"
         width: parent.width
 

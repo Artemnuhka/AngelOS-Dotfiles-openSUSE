@@ -7,7 +7,8 @@ import qs.config
 import qs.services
 import qs.widgets
 
-// Flyout for the desktop menu. items: [{label, icon, hint, separator, checkable, checked, run}]
+// Flyout for the desktop menu. items: [{label, icon, hint, separator, checkable, checked, run}];
+// `checked` may be a function, re-read live while the flyout is open.
 PopupWindow {
     id: root
 
@@ -62,7 +63,7 @@ PopupWindow {
                     hint: modelData.hint || ""
                     separator: !!modelData.separator
                     checkable: !!modelData.checkable
-                    checked: !!modelData.checked
+                    checked: typeof modelData.checked === "function" ? !!modelData.checked() : !!modelData.checked
                     enabled: modelData.enabled !== false
                     onTriggered: {
                         if (modelData.run)

@@ -2,16 +2,21 @@ import QtQuick
 import qs.config
 
 // Win98 group box: etched frame with the title cut into the top edge.
+// `advanced` groups fold into a "▸ Дополнительно" header in the simple settings
+// view (Settings → Эксперт off); clicking the header unfolds them.
 Item {
     id: root
 
     property string title: ""
     property string icon: ""
     property int spacing: Theme.u * 5
+    property bool advanced: false
+    property bool open: false
+    readonly property bool folded: advanced && !open && !Config.settingsUi.expert
     default property alias content: col.data
 
     implicitWidth: col.implicitWidth + Theme.pad * 2
-    implicitHeight: col.implicitHeight + head.height + Theme.pad * 2
+    implicitHeight: folded ? head.height + Theme.u * 4 : col.implicitHeight + head.height + Theme.pad * 2
 
     readonly property int lineY: head.height / 2
     readonly property int b: Math.max(1, Theme.u / 2)
@@ -47,15 +52,38 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
         }
         PxText {
+            visible: root.advanced && !Config.settingsUi.expert
+            text: root.folded ? "▸" : "▾"
+            kind: "title"
+            color: Theme.dark ? Theme.accent : Theme.edge
+            anchors.verticalCenter: parent.verticalCenter
+        }
+        PxText {
             text: root.title
             kind: "title"
             color: Theme.dark ? Theme.accent : Theme.edge
             anchors.verticalCenter: parent.verticalCenter
         }
+        PxText {
+            visible: root.folded
+            text: I18n.t("· дополнительно", "· advanced")
+            kind: "tiny"
+            dim: true
+            anchors.verticalCenter: parent.verticalCenter
+        }
+    }
+    MouseArea {
+        visible: root.advanced && !Config.settingsUi.expert
+        x: head.x
+        width: head.width
+        height: head.height
+        cursorShape: Qt.PointingHandCursor
+        onClicked: root.open = !root.open
     }
 
     Column {
         id: col
+        visible: !root.folded
         x: Theme.pad
         y: head.height + Theme.u * 4
         width: root.width - Theme.pad * 2

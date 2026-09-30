@@ -17,6 +17,7 @@ Singleton {
     property bool launcherOpen: false
     property string launcherPrefill: ""
     property bool sessionOpen: false
+    property bool bootOpen: false            // Y2K loading screen (modules/y2k/BootScreen)
     property bool clipboardOpen: false
     property bool gameOpen: false            // osu!mini window (plugin osu-mini)
     property bool locked: false
@@ -90,6 +91,8 @@ Singleton {
     function openSettings(page) {
         if (page)
             settingsPage = page;
+        else if (!settingsOpen && !Config.settingsUi.expert)
+            settingsPage = "home";      // the simple view starts from the tiles
         settingsOpen = true;
     }
     function toggleSettings(page) {

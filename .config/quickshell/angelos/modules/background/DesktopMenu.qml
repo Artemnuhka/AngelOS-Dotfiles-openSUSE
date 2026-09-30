@@ -18,24 +18,35 @@ PopupWindow {
     property real px: 0
     property real py: 0
 
+    // An open menu is hidden and shown again on the next turn of the event loop:
+    // shown in the same event, the new surface kept the old position and jumped
+    // aside. Clicks while that is pending only move the target, so a fast double
+    // right-click shows the menu once, where it was asked for last.
+    property bool reopening: false
     function openAt(x, y) {
         px = x;
         py = y;
         sub.visible = false;
-        const again = visible;
-        visible = false;
         anchor.rect.x = x;
         anchor.rect.y = y;
-        // reopening in the same event keeps the old surface position (it jumped aside)
-        if (again)
-            Qt.callLater(() => {
-                anchor.updateAnchor();
-                visible = true;
-            });
-        else
+        if (!visible && !reopening) {
             visible = true;
+            return;
+        }
+        visible = false;
+        if (reopening)
+            return;
+        reopening = true;
+        Qt.callLater(() => {
+            if (!reopening)
+                return;
+            reopening = false;
+            anchor.updateAnchor();
+            visible = true;
+        });
     }
     function close() {
+        reopening = false;
         sub.visible = false;
         visible = false;
     }
@@ -45,11 +56,13 @@ PopupWindow {
     }
 
     // ---- flyout contents ----
+    // `checked` is a function: the open flyout keeps a copy of its list, and the
+    // tick has to follow the setting while it is open (issue #5)
     readonly property var viewItems: DesktopWidgets.types.map(t => ({
                 "label": t.label,
                 "icon": t.icon,
                 "checkable": true,
-                "checked": DesktopWidgets.has(t.type, root.screenName),
+                "checked": () => DesktopWidgets.has(t.type, root.screenName),
                 "keepOpen": true,
                 "run": () => DesktopWidgets.toggle(t.type, root.screenName)
             })).concat([
@@ -60,13 +73,13 @@ PopupWindow {
                 "label": I18n.t("Редактировать виджеты", "Edit widgets"),
                 "icon": "gear",
                 "checkable": true,
-                "checked": DesktopWidgets.editMode,
+                "checked": () => DesktopWidgets.editMode,
                 "run": () => DesktopWidgets.editMode = !DesktopWidgets.editMode
             },
             {
                 "label": I18n.t("Прилипать к сетке", "Snap to grid"),
                 "checkable": true,
-                "checked": Config.desktop.snap,
+                "checked": () => Config.desktop.snap,
                 "keepOpen": true,
                 "run": () => Config.desktop.snap = !Config.desktop.snap
             }
