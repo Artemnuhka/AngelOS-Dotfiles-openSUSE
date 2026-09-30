@@ -150,7 +150,7 @@ binds {
     Mod+M                               { maximize-window-to-edges; }
 
     // ─── Screenshots (Win+Shift+S style) ───
-    Mod+Shift+S                         hotkey-overlay-title="Screenshot: region → Screenshots (ropes)" { spawn "@HOME@/.local/bin/niri-screenshot-region"; }
+    Mod+Shift+S                         repeat=false hotkey-overlay-title="Screenshot: region → Screenshots (ropes)" { spawn "@HOME@/.local/bin/niri-screenshot-region"; }
     Mod+Shift+T                         hotkey-overlay-title="OCR: region to clipboard" { spawn "@HOME@/.local/bin/niri-ocr"; }
     Mod+Shift+V                         repeat=false hotkey-overlay-title="Voice: toggle dictation" { spawn "@HOME@/.local/bin/voxtype" "record" "toggle"; }
     CTRL+Shift+2                        { screenshot-screen; }
