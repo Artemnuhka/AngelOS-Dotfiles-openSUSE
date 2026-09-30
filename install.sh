@@ -722,6 +722,7 @@ summary() {
     say "$(_ 'angelOS: on the first login a setup wizard and interface tips open by themselves;' \
              'angelOS: при первом входе сами откроются мастер настройки и подсказки по интерфейсу;')"
     say "$(_ '  later: Mod+S — settings, `angelos help` — CLI' '  потом: Mod+S — настройки, `angelos help` — CLI')"
+    say "$(_ '  next updates: Settings → Updates' '  следующие обновления: Настройки → Обновления')"
   fi
   say "$(_ "Files: $N_INSTALLED installed, $N_UNCHANGED unchanged, $N_KEPT kept" \
            "Файлы: $N_INSTALLED установлено, $N_UNCHANGED без изменений, $N_KEPT сохранено")"
@@ -736,6 +737,25 @@ summary() {
   fi
   say "$(_ 'Cheat sheet: Mod+Shift+Esc  (Mod = Super/Windows key)' \
            'Шпаргалка по клавишам: Mod+Shift+Esc  (Mod = клавиша Super/Windows)')"
+}
+
+# A running angelOS keeps the old version in memory (it only watches its files in
+# dev mode), so an update — new settings pages included — shows up after a restart.
+restart_shell() {
+  [[ "$DESKTOP_SHELL" == angelos ]] || return 0
+  local bin="$HOME_DIR/.local/bin/angelos" qs
+  qs="$(command -v qs || echo "$HOME_DIR/.local/bin/qs")"
+  [[ -x "$bin" && -x "$qs" ]] || return 0
+  [[ "$("$qs" -c angelos list 2>/dev/null)" == *Instance* ]] || return 0
+  if ((INTERACTIVE)) && [[ -n "${WAYLAND_DISPLAY:-}" ]] &&
+     confirm "$(_ 'angelOS is still running the previous version. Restart it now?' \
+                  'angelOS ещё работает на прошлой версии. Перезапустить его сейчас?')" y; then
+    if "$bin" restart; then say "$(_ 'angelOS restarted' 'angelOS перезапущен')"
+    else warn "$(_ 'Could not restart angelOS: run `angelos restart`' 'Не удалось перезапустить angelOS: выполните `angelos restart`')"; fi
+  else
+    warn "$(_ 'angelOS is still running the previous version: run `angelos restart` or log in again' \
+              'angelOS ещё работает на прошлой версии: выполните `angelos restart` или перезайдите в систему')"
+  fi
 }
 
 # ── Main ─────────────────────────────────────────────────────────────────────
@@ -760,3 +780,4 @@ install_sddm
 enable_services
 validate
 summary
+restart_shell

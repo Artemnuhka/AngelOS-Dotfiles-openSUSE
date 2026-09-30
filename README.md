@@ -303,6 +303,20 @@ Run the repository check before installing. Besides syntax and hygiene checks it
 
 </details>
 
+## ✧ Updating
+
+With angelOS: **Settings → Updates** checks the repository you installed from, shows what is new and, on a click, runs `git pull` and the installer without packages (a snapshot of your configs is taken first). It can also check once a day and only notify you.
+
+Installs made before this page existed need one manual update to get it:
+
+```bash
+cd PixelStreetArt_Dotfiles_Niri
+git pull
+./install.sh
+```
+
+A running angelOS keeps the previous version in memory: the installer offers to restart it, or run `angelos restart` (logging out and back in works too).
+
 ## ✧ Login screen (SDDM)
 
 The installer sets up [SDDM](https://github.com/sddm/sddm) with **pixel-cyberpunk**, an animated pixel-art theme from [Qylock](https://github.com/Darkkal44/qylock) by Darkkal44: a looping video background, a pixel font, clock, user and session switchers, reboot and shutdown buttons.
