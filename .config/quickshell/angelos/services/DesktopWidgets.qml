@@ -10,6 +10,29 @@ Singleton {
 
     property bool editMode: false
 
+    // Widgets are drawn inside the wallpaper surface, which niri keeps in the
+    // backdrop: pinned while workspaces slide, a single copy in the overview.
+    // The backdrop gets no input, so invisible proxies on the angelos-desktop
+    // surface take the pointer and forward it (modules/desktop/WidgetProxy.qml).
+    property var hosts: ({})                 // uid -> DesktopWidgetHost (the visible copy)
+    property var drag: ({
+            "uid": "",
+            "x": 0,
+            "y": 0
+        })
+    function registerHost(uid, item) {
+        const m = Object.assign({}, hosts);
+        m[uid] = item;
+        hosts = m;
+    }
+    function unregisterHost(uid, item) {
+        if (hosts[uid] !== item)
+            return;
+        const m = Object.assign({}, hosts);
+        delete m[uid];
+        hosts = m;
+    }
+
     readonly property var builtin: [
         {
             "type": "clock",

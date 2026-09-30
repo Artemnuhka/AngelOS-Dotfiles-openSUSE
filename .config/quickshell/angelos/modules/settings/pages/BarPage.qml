@@ -14,6 +14,28 @@ PxPage {
         icon: "pill"
         width: parent.width
         SettingRow {
+            label: I18n.t("Вид меню", "Menu style")
+            hint: Config.bar.startStyle === "win11" ? I18n.t("по центру: поиск, закреплённые (ПКМ — закрепить), все приложения, питание", "Centred: search, pinned apps (right-click pins), all apps, power") : Config.bar.startStyle === "fullscreen" ? I18n.t("на весь экран, как на iPhone: страницы иконок, док, колесо листает", "Full screen like an iPhone: pages of icons, a dock, the wheel flips pages") : I18n.t("список как в Win98 у кнопки", "A Win98 list next to the button")
+            PxSegmented {
+                model: [
+                    {
+                        "label": I18n.t("Классика", "Classic"),
+                        "value": "classic"
+                    },
+                    {
+                        "label": "Windows 11",
+                        "value": "win11"
+                    },
+                    {
+                        "label": I18n.t("Как iPhone", "iPhone-like"),
+                        "value": "fullscreen"
+                    }
+                ]
+                currentValue: Config.bar.startStyle
+                onActivated: v => Config.bar.startStyle = v
+            }
+        }
+        SettingRow {
             label: I18n.t("Открывать по нажатию Meta", "Open with a Meta tap")
             hint: I18n.t("короткое нажатие Super — меню «Пуск», как в Windows. Зажатая клавиша и сочетания (Mod+…) меню не открывают.", "A short Super tap opens Start, like on Windows. Holding it or shortcuts (Mod+…) never do.")
             PxToggle {

@@ -124,6 +124,79 @@ Scope {
         }
     }
 
+    // ---- lock before sleep, and on `loginctl lock-session` ----
+    // logind waits for a "delay" inhibitor before suspending, so the lock surface
+    // is up and confirmed by niri before the machine sleeps; waking up never
+    // shows the desktop. The inhibitor is released once the lock is secure and
+    // taken again after resume.
+    readonly property bool sleepLock: Config.lock.onSleep && !Shell.dev
+    property bool sleeping: false
+    // logind object path of this session (sd_bus_path_encode: "3" -> "_33")
+    readonly property string sessionPath: {
+        const id = Quickshell.env("XDG_SESSION_ID") || "";
+        if (!id)
+            return "";
+        let out = "";
+        for (let i = 0; i < id.length; i++) {
+            const c = id[i];
+            if (/[A-Za-z0-9]/.test(c) && !(i === 0 && /[0-9]/.test(c)))
+                out += c;
+            else
+                out += "_" + ("0" + c.charCodeAt(0).toString(16)).slice(-2);
+        }
+        return "/org/freedesktop/login1/session/" + out;
+    }
+    // if the lock cannot come up, sleep must still happen (logind waits at most
+    // InhibitDelayMaxSec anyway); this lets go a little earlier
+    property bool sleepTimedOut: false
+    onSleepingChanged: {
+        sleepTimedOut = false;
+        if (sleeping)
+            sleepGrace.restart();
+    }
+    Timer {
+        id: sleepGrace
+        interval: 4000
+        onTriggered: root.sleepTimedOut = true
+    }
+    Process {
+        id: inhibitor
+        // held while awake; let go once the lock is confirmed (or after 4 s)
+        running: root.sleepLock && !(root.sleeping && (lock.secure || root.sleepTimedOut))
+        stdinEnabled: true           // `cat` exits with the pipe, so nothing is left behind
+        command: ["systemd-inhibit", "--what=sleep", "--mode=delay", "--who=angelOS", "--why=Lock the screen before sleep", "cat"]
+    }
+    Process {
+        id: logind
+        running: root.sleepLock
+        command: ["gdbus", "monitor", "--system", "--dest", "org.freedesktop.login1"]
+        stdout: SplitParser {
+            onRead: line => {
+                const sleep = line.match(/\.Manager\.PrepareForSleep \((true|false)/);
+                if (sleep) {
+                    if (sleep[1] === "true") {
+                        root.sleeping = true;
+                        Shell.lock();
+                    } else {
+                        root.sleeping = false;
+                        // in case the lock could not come up before sleeping
+                        if (!Shell.locked)
+                            Shell.lock();
+                    }
+                } else if (root.sessionPath && line.startsWith(root.sessionPath + ":") && /\.Session\.Lock \(\)/.test(line)) {
+                    Shell.lock();
+                }
+            }
+        }
+        onExited: if (root.sleepLock)
+            logindRestart.start()
+    }
+    Timer {
+        id: logindRestart
+        interval: 2000
+        onTriggered: logind.running = root.sleepLock
+    }
+
     // idle auto-lock
     IdleMonitor {
         enabled: Config.lock.idleMinutes > 0

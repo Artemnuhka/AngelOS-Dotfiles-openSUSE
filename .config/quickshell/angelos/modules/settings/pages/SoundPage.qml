@@ -88,6 +88,29 @@ PxPage {
                 }
             }
         }
+        SettingRow {
+            label: I18n.t("Сейчас", "Live level")
+            hint: I18n.t("скажи что-нибудь ♡ зелёный — норм, жёлтый — громко, красный — перегруз", "Say something ♡ green is fine, yellow is loud, red clips")
+            Row {
+                width: parent.width
+                spacing: Theme.u * 3
+                PxLevelMeter {
+                    id: pageMeter
+                    width: parent.width - Theme.u * 23
+                    anchors.verticalCenter: parent.verticalCenter
+                    node: Audio.source
+                    opacity: Audio.micMuted ? 0.4 : 1
+                }
+                PxText {
+                    width: Theme.u * 20
+                    anchors.verticalCenter: parent.verticalCenter
+                    horizontalAlignment: Text.AlignRight
+                    kind: "tiny"
+                    color: pageMeter.clipping ? Theme.danger : Theme.textDim
+                    text: Audio.micMuted ? I18n.t("выкл", "muted") : pageMeter.db > -90 ? Math.round(pageMeter.db) + " dB" : "—"
+                }
+            }
+        }
     }
 
     PxGroup {

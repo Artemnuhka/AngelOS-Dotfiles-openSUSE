@@ -91,7 +91,7 @@ PxPage {
             spacing: Theme.u * 4
             PxText {
                 readonly property var p: PluginStudio.providers.find(x => x.value === Config.developer.provider)
-                text: (p ? p.label : Config.developer.provider) + " · " + (PluginStudio.model || I18n.t("модель по умолчанию", "default model")) + " · " + (PluginStudio.isCli ? (!PluginStudio.cliState.installed ? I18n.t("CLI не установлен", "CLI not installed") : PluginStudio.cliState.loggedIn ? I18n.t("вход выполнен ♡", "signed in ♡") : I18n.t("нужно войти", "sign-in needed")) : (PluginStudio.hasKey ? I18n.t("ключ сохранён", "key saved") : I18n.t("нужен API-ключ", "API key needed")))
+                text: (p ? p.label : Config.developer.provider) + " · " + (PluginStudio.model || I18n.t("модель по умолчанию", "default model")) + (PluginStudio.effort ? " · " + PluginStudio.effort : "") + " · " + (PluginStudio.isCli ? (!PluginStudio.cliState.installed ? I18n.t("CLI не установлен", "CLI not installed") : PluginStudio.cliState.loggedIn ? I18n.t("вход выполнен ♡", "signed in ♡") : I18n.t("нужно войти", "sign-in needed")) : (PluginStudio.hasKey ? I18n.t("ключ сохранён", "key saved") : I18n.t("нужен API-ключ", "API key needed")))
                 wrapMode: Text.Wrap
                 width: Math.min(implicitWidth, parent.width)
             }
@@ -119,14 +119,100 @@ PxPage {
                     }
                 }
             }
+            // ---- model: cards with what each is good for ----
+            PxText {
+                text: I18n.t("Модель", "Model")
+                font.bold: true
+            }
+            Grid {
+                width: parent.width
+                columns: Math.max(1, Math.floor(width / (Theme.u * 105)))
+                spacing: Theme.u * 2
+                Repeater {
+                    model: PluginStudio.modelList
+                    PxBox {
+                        id: mcard
+                        required property var modelData
+                        readonly property bool current: PluginStudio.model === modelData.id
+                        width: (parent.width - (parent.columns - 1) * parent.spacing) / parent.columns
+                        height: mcol.implicitHeight + Theme.u * 6
+                        sunken: current
+                        color: current ? Theme.mix(Theme.face, Theme.accent, 0.3) : mm.containsMouse ? Theme.mix(Theme.face, Theme.accent, 0.1) : Theme.face
+                        Column {
+                            id: mcol
+                            x: Theme.u * 3
+                            y: Theme.u * 3
+                            width: parent.width - Theme.u * 6
+                            PxText {
+                                width: parent.width
+                                elide: Text.ElideRight
+                                text: (mcard.current ? "♡ " : "") + (mcard.modelData.id === "" ? I18n.t("По умолчанию", "Default") : mcard.modelData.label)
+                                font.bold: true
+                            }
+                            PxText {
+                                width: parent.width
+                                elide: Text.ElideRight
+                                kind: "tiny"
+                                dim: true
+                                text: mcard.modelData.id === "" ? mcard.modelData.label : ({
+                                        "fast": I18n.t("быстрая, для простых плагинов", "fast, for simple plugins"),
+                                        "balanced": I18n.t("баланс скорости и качества ♡", "speed and quality ♡"),
+                                        "smart": I18n.t("умнее, для сложной логики", "smarter, for complex logic"),
+                                        "deep": I18n.t("самая мощная, дольше и дороже", "the strongest, slower and pricier")
+                                    })[mcard.modelData.speed] || mcard.modelData.id
+                            }
+                        }
+                        MouseArea {
+                            id: mm
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: PluginStudio.setModel(mcard.modelData.id)
+                        }
+                    }
+                }
+            }
             SettingRow {
-                label: PluginStudio.isCli ? I18n.t("Модель", "Model") : I18n.t("Модель · API ID", "Model · API ID")
-                hint: PluginStudio.isCli ? I18n.t("пусто — модель по умолчанию в CLI", "Empty uses the CLI default") : ""
+                label: I18n.t("Своя модель", "Custom model")
+                hint: PluginStudio.isCli ? I18n.t("точное имя, если нужной нет в списке", "an exact name if yours is not listed") : I18n.t("API ID модели", "the model's API ID")
                 PxField {
                     width: parent.width
-                    text: PluginStudio.model
-                    placeholder: Config.developer.provider === "claude-cli" ? "sonnet / opus" : Config.developer.provider === "codex-cli" ? I18n.t("как в ~/.codex/config.toml", "as in ~/.codex/config.toml") : ""
-                    onEdited: PluginStudio.setModel(text.trim())
+                    text: PluginStudio.modelInfo ? "" : PluginStudio.model
+                    placeholder: PluginStudio.modelInfo ? PluginStudio.model || "—" : ""
+                    onEdited: if (text.trim() !== "")
+                        PluginStudio.setModel(text.trim())
+                }
+            }
+            // ---- reasoning level ----
+            SettingRow {
+                visible: PluginStudio.effortLevels.length > 0
+                label: I18n.t("Уровень рассуждений", "Reasoning level")
+                hint: PluginStudio.effortHint(PluginStudio.effort) + I18n.t(". Для плагинов обычно хватает medium; high/xhigh — для сложных, max — если не получилось.", ". medium is usually enough for plugins; high/xhigh for complex ones, max when nothing else worked.")
+                Flow {
+                    width: parent.width
+                    spacing: Theme.u * 2
+                    Repeater {
+                        model: [""].concat(PluginStudio.effortLevels)
+                        PxButton {
+                            required property string modelData
+                            compact: true
+                            text: modelData === "" ? I18n.t("авто", "auto") : modelData
+                            checked: PluginStudio.effort === modelData
+                            onClicked: PluginStudio.setEffort(modelData)
+                        }
+                    }
+                }
+            }
+            SettingRow {
+                label: I18n.t("Автоисправление", "Auto-repair")
+                hint: I18n.t("если проверка нашла ошибки, ИИ сам исправляет их столько раз", "when checks fail, the AI fixes them itself this many times")
+                PxSegmented {
+                    model: [0, 1, 2].map(v => ({
+                                "label": v === 0 ? I18n.t("нет", "off") : String(v),
+                                "value": v
+                            }))
+                    currentValue: Config.developer.autoRepair
+                    onActivated: v => Config.developer.autoRepair = v
                 }
             }
 
@@ -203,8 +289,8 @@ PxPage {
                     hint: I18n.t("Токенов на генерацию", "Tokens per generation")
                     PxSpin {
                         from: 2048
-                        to: 32000
-                        stepSize: 1000
+                        to: 64000
+                        stepSize: 2000
                         value: Config.developer.maxOutputTokens
                         onMoved: value => Config.developer.maxOutputTokens = value
                     }
@@ -427,7 +513,7 @@ PxPage {
             color: page.draft && page.draft.errors.length ? Theme.danger : Theme.ok
             text: page.draft ? (page.draft.errors.length
                 ? I18n.t("Нужно исправить:\n", "Needs fixing:\n") + page.draft.errors.join("\n")
-                : I18n.t("Структура и синтаксис проверены. Проверь код и поведение после установки.", "Structure and syntax checked. Review the code and verify behavior after installation.")) : ""
+                : (page.draft.check && page.draft.check.startsWith("runtime check:") ? I18n.t("Проверено: структура, синтаксис и загрузка в Quickshell (в песочнице). Посмотри код и поведение после установки.", "Checked: structure, syntax and loading in Quickshell (sandboxed). Review the code and behaviour after installing.") : I18n.t("Структура и синтаксис проверены", "Structure and syntax checked") + (page.draft.check ? " (" + page.draft.check + ")" : "") + ".")) : ""
         }
         PxCombo {
             width: parent.width
@@ -469,7 +555,7 @@ PxPage {
             visible: !page.installed
             width: parent.width
             wrapMode: Text.Wrap
-            text: I18n.t("После установки код работает с правами твоего пользователя. До нажатия «Установить» он не запускается.", "Installed code runs with your user permissions. It does not run before you click Install.")
+            text: I18n.t("После установки код работает с правами твоего пользователя. До нажатия «Установить» он только один раз загружается для проверки в песочнице — без сети, домашней папки и сокетов.", "Installed code runs with your user permissions. Before you click Install it is only loaded once for checks, in a sandbox without network, home folder or sockets.")
             dim: true
         }
         PxToggle {

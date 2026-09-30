@@ -9,6 +9,8 @@ import qs.widgets
 
 // Start menu as a layer-shell overlay: opens from the Start button, from a
 // Meta tap or over IPC, takes the keyboard and closes on a click outside.
+// Three looks (Settings → Bar → Start): classic Win98 list, Windows 11 panel,
+// iPhone-like full screen grid. All of them animate through `reveal` (0 → 1).
 Variants {
     model: Shell.screens
 
@@ -18,7 +20,10 @@ Variants {
         required property var modelData
         readonly property string screenName: modelData.name
         readonly property bool open: Shell.startScreen === screenName
+        readonly property string style: ["classic", "win11", "fullscreen"].includes(Config.bar.startStyle) ? Config.bar.startStyle : "classic"
+        readonly property bool full: style === "fullscreen"
         property bool shown: false
+        property real reveal: 0
 
         screen: modelData
         visible: shown
@@ -36,13 +41,29 @@ Variants {
 
         onOpenChanged: {
             if (open) {
-                body.current = -1;
                 shown = true;
-                popIn.restart();
+                if (body.item && body.item.reset)
+                    body.item.reset();
+                if (body.item)
+                    body.item.current = -1;
+                revealAnim.to = 1;
+                revealAnim.duration = win.full ? 340 : 230;
+                revealAnim.easing.type = win.full ? Easing.OutQuint : Easing.OutCubic;
+                revealAnim.restart();
                 Qt.callLater(() => keys.forceActiveFocus());
             } else if (shown) {
-                popOut.restart();
+                revealAnim.to = 0;
+                revealAnim.duration = win.full ? 200 : 140;
+                revealAnim.easing.type = Easing.InCubic;
+                revealAnim.restart();
             }
+        }
+        NumberAnimation {
+            id: revealAnim
+            target: win
+            property: "reveal"
+            onFinished: if (!win.open)
+                win.shown = false
         }
 
         // where the Start button of this screen sits (layer shell does not tell
@@ -66,7 +87,7 @@ Variants {
         BackgroundEffect.blurRegion: Config.appearance.blur && win.shown ? blurRegion : null
         Region {
             id: blurRegion
-            item: body
+            item: win.full ? catcher : body
         }
 
         MouseArea {
@@ -79,80 +100,48 @@ Variants {
         Item {
             id: keys
             focus: true
-            Keys.onPressed: e => body.key(e)
+            Keys.onPressed: e => {
+                if (body.item)
+                    body.item.key(e);
+            }
         }
 
-        StartMenuBody {
+        Loader {
             id: body
-            x: Math.max(Theme.u * 2, Math.min(win.width - width - Theme.u * 2, win.button.x))
-            y: win.above ? win.button.y - height - Theme.u * 2 : win.button.y + win.button.height + Theme.u * 2
+            // classic sits at the button; win11 is centred over the bar; fullscreen fills
+            readonly property real restY: win.above ? win.button.y - height - Theme.u * 2 : win.button.y + win.button.height + Theme.u * 2
+            x: win.full ? 0 : win.style === "win11" ? Math.round((win.width - width) / 2) : Math.max(Theme.u * 2, Math.min(win.width - width - Theme.u * 2, win.button.x))
+            y: win.full ? 0 : restY + (win.style === "win11" ? (win.above ? 1 : -1) * (1 - win.reveal) * Theme.u * 24 : 0)
+            opacity: win.full ? 1 : win.reveal
+            // classic pops out of its corner, win11 slides
+            scale: win.style === "classic" ? 0.9 + 0.1 * win.reveal : 1
             transformOrigin: win.above ? Item.BottomLeft : Item.TopLeft
-            onCloseRequested: Shell.closeStart()
+            sourceComponent: win.full ? fullComp : win.style === "win11" ? win11Comp : classicComp
+            onLoaded: {
+                item.closeRequested.connect(Shell.closeStart);
+                if (win.open && item.reset)
+                    item.reset();
+            }
             MouseArea {
+                visible: !win.full
                 anchors.fill: parent
                 z: -1
             }
         }
-
-        // stepped "pixel" pop, same rhythm as the workspace popup
-        SequentialAnimation {
-            id: popIn
-            PropertyAction {
-                target: body
-                property: "opacity"
-                value: 1
-            }
-            PropertyAction {
-                target: body
-                property: "scale"
-                value: 0.7
-            }
-            PauseAnimation {
-                duration: 30
-            }
-            PropertyAction {
-                target: body
-                property: "scale"
-                value: 0.92
-            }
-            PauseAnimation {
-                duration: 30
-            }
-            PropertyAction {
-                target: body
-                property: "scale"
-                value: 1.03
-            }
-            PauseAnimation {
-                duration: 40
-            }
-            PropertyAction {
-                target: body
-                property: "scale"
-                value: 1
-            }
+        Component {
+            id: classicComp
+            StartMenuBody {}
         }
-        SequentialAnimation {
-            id: popOut
-            PropertyAction {
-                target: body
-                property: "scale"
-                value: 0.9
-            }
-            PauseAnimation {
-                duration: 30
-            }
-            PropertyAction {
-                target: body
-                property: "opacity"
-                value: 0.4
-            }
-            PauseAnimation {
-                duration: 30
-            }
-            ScriptAction {
-                script: if (!win.open)
-                    win.shown = false
+        Component {
+            id: win11Comp
+            StartWin11 {}
+        }
+        Component {
+            id: fullComp
+            StartFullscreen {
+                reveal: win.reveal
+                width: win.width
+                height: win.height
             }
         }
     }

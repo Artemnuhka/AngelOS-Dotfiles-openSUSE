@@ -54,6 +54,16 @@ BarPopup {
             kind: "title"
             text: I18n.t("Микрофон", "Microphone")
         }
+        PxCombo {
+            visible: Audio.sources.length > 1
+            width: parent.width
+            model: Audio.sources.map(n => ({
+                        "label": Audio.nodeName(n),
+                        "value": n.id
+                    }))
+            currentValue: Audio.source ? Audio.source.id : -1
+            onActivated: v => Audio.setDefaultSource(Audio.sources.find(n => n.id === v))
+        }
         Row {
             width: parent.width
             spacing: Theme.u * 3
@@ -74,6 +84,33 @@ BarPopup {
                     if (Audio.source && Audio.source.audio)
                         Audio.source.audio.volume = v;
                 }
+            }
+        }
+        // live input level: talk and watch it move (only measured while this is open)
+        Row {
+            width: parent.width
+            spacing: Theme.u * 3
+            PxIcon {
+                name: micLevel.clipping ? "warn" : "mic"
+                anchors.verticalCenter: parent.verticalCenter
+                opacity: Audio.micMuted ? 0.4 : 1
+            }
+            PxLevelMeter {
+                id: micLevel
+                width: parent.width - Theme.u * 34
+                anchors.verticalCenter: parent.verticalCenter
+                node: Audio.source
+                active: root.visible
+                opacity: Audio.micMuted ? 0.4 : 1
+            }
+            PxText {
+                width: Theme.u * 20
+                anchors.verticalCenter: parent.verticalCenter
+                horizontalAlignment: Text.AlignRight
+                kind: "tiny"
+                dim: !micLevel.clipping
+                color: micLevel.clipping ? Theme.danger : Theme.textDim
+                text: Audio.micMuted ? I18n.t("выкл", "muted") : micLevel.db > -90 ? Math.round(micLevel.db) + " dB" : "—"
             }
         }
         PxText {

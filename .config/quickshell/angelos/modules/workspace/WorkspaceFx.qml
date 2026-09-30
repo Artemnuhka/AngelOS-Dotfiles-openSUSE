@@ -41,7 +41,7 @@ Variants {
         }
         SwitchFx {
             screen: scope.modelData
-            serial: scope.serial
+            screenName: scope.screenName
         }
     }
 }

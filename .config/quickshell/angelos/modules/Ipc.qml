@@ -28,6 +28,41 @@ IpcHandler {
     function startMenu(screen: string): void {
         Shell.toggleStart(screen);
     }
+    // switch workspaces through angelOS: a number, up, down or prev
+    function ws(target: string): void {
+        WorkspaceAnim.go(target);
+    }
+    // dev only: fake niri workspaces on an output and switch between them the way
+    // niri reports it (a new workspace list, then the activation), to test the
+    // bar animations without touching real workspaces
+    function fakeSwitch(output: string, count: int, idx: int): string {
+        if (!Shell.dev)
+            return "dev only";
+        let list = Niri.workspaces.filter(w => w.output !== output);
+        for (let i = 1; i <= count; i++)
+            list.push({"id": 9000 + i, "idx": i, "name": null, "output": output, "is_active": i === idx, "is_focused": false, "is_urgent": false, "active_window_id": null});
+        Niri._setWorkspaces(list);
+        Niri.workspaceActivated(Niri.workspaces.find(w => w.id === 9000 + idx), false);
+        return "ok";
+    }
+    // the heart animation on every bar, without switching workspaces (0-based cells)
+    function heartDemo(from: int, to: int): void {
+        Shell.heartDemo(from, to);
+    }
+    function heartAnim(style: string): string {
+        const all = ["smart", "collide", "ender", "hop", "worm", "pixel", "beat", "sparkle", "drop", "glitch", "slide", "off"];
+        if (!all.includes(style))
+            return "styles: " + all.join(", ");
+        Config.workspaces.heartAnim = style;
+        return "ok";
+    }
+    // classic | win11 | fullscreen
+    function startStyle(style: string): string {
+        if (!["classic", "win11", "fullscreen"].includes(style))
+            return "styles: classic, win11, fullscreen";
+        Config.bar.startStyle = style;
+        return "ok";
+    }
     function launcher(): void {
         Shell.launcherOpen = !Shell.launcherOpen;
     }
@@ -50,6 +85,30 @@ IpcHandler {
     }
     function widgetEdit(): void {
         DesktopWidgets.editMode = !DesktopWidgets.editMode;
+    }
+    // replays a left click at (x, y) of a desktop widget, as its proxy would
+    function widgetClick(uid: string, x: int, y: int): string {
+        const h = DesktopWidgets.hosts[uid];
+        if (!h)
+            return "no widget";
+        if (!h.takes(x, y, Qt.LeftButton))
+            return "nothing clickable there";
+        h.press(x, y, Qt.LeftButton);
+        h.release(x, y, Qt.LeftButton);
+        return "ok";
+    }
+    // what a pointer at (x, y) of a desktop widget would hit: {title, cursor, target}
+    function widgetProbe(uid: string, x: int, y: int): string {
+        const h = DesktopWidgets.hosts[uid];
+        if (!h)
+            return "no widget " + uid + "; have: " + Object.keys(DesktopWidgets.hosts).join(", ");
+        const t = h.targetAt(x, y, "clicked");
+        return JSON.stringify({
+            "title": h.isTitleDrag(x, y),
+            "cursor": h.cursorAt(x, y),
+            "target": t ? String(t.item) : null,
+            "size": [h.width, h.height]
+        });
     }
     function settingsPage(page: string): void {
         Shell.openSettings(page);
@@ -184,6 +243,20 @@ IpcHandler {
     }
     function reload(): void {
         Quickshell.reload(true);
+    }
+    // soft | dash | dissolve | heart | ender | instant
+    function switchFx(style: string): string {
+        if (!WorkspaceAnim.styles.some(x => x.id === style))
+            return "styles: " + WorkspaceAnim.styles.map(x => x.id).join(", ");
+        WorkspaceAnim.pick(style);
+        return WorkspaceAnim.log || "ok";
+    }
+    // the current workspace transition over an output, without switching
+    function testTransition(output: string): string {
+        if (!WorkspaceAnim.captured)
+            return "the current style (" + WorkspaceAnim.current.id + ") is niri's own animation";
+        WorkspaceAnim.preview(output);
+        return "ok";
     }
     // replay the workspace switch animation on an output (handy after tweaking settings)
     function testFx(output: string): void {

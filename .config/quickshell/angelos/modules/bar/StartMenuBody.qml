@@ -60,6 +60,12 @@ PxBox {
             "act": () => Shell.openSettings("dotfiles")
         },
         {
+            "text": I18n.t("Обновление готово ♡", "Update available ♡"),
+            "icon": "download",
+            "show": Updates.available,
+            "act": () => Shell.openSettings("updates")
+        },
+        {
             "text": I18n.t("Мини-игра osu!", "osu! mini game"),
             "icon": "heart",
             "show": Plugins.enabledPlugins.some(p => p.id === "osu-mini"),

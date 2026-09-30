@@ -72,5 +72,7 @@ ShellRoot {
         Idle.active; // idle-minutes watcher
         NautilusSetup.status; // first run: Nautilus defaults + mediafix
         PluginStudio.loaded; // make the worker available to dynamically loaded pages
+        Updates.state; // daily update check (Settings → Updates)
+        WorkspaceAnim.current; // control socket for `angelos ws`
     }
 }

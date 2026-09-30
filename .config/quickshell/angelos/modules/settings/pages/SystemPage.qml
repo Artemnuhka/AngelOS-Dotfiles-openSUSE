@@ -35,6 +35,73 @@ PxPage {
     }
 
     PxGroup {
+        title: I18n.t("Отрисовка", "Rendering")
+        icon: "monitor"
+        width: parent.width
+        Component.onCompleted: Renderer.refresh()
+        SettingRow {
+            label: I18n.t("Движок", "Renderer")
+            hint: Renderer.mode === "vulkan" ? I18n.t("Vulkan: плавно на NVIDIA без сборки, но менее обкатан в Quickshell", "Vulkan: smooth on NVIDIA without building anything, but less tested in Quickshell") : Renderer.mode === "opengl" ? I18n.t("обычный Qt; на NVIDIA анимации упираются в ~60 кадров и дёргаются", "stock Qt; on NVIDIA animations are capped near 60 fps and stutter") : I18n.t("OpenGL + исправленный плагин Qt (если он собран) — рекомендуется", "OpenGL + the fixed Qt plugin (when built) — recommended")
+            PxSegmented {
+                model: [
+                    {
+                        "label": I18n.t("Авто", "Auto"),
+                        "value": "auto"
+                    },
+                    {
+                        "label": "Vulkan",
+                        "value": "vulkan"
+                    },
+                    {
+                        "label": I18n.t("Обычный", "Stock"),
+                        "value": "opengl"
+                    }
+                ]
+                currentValue: Renderer.mode
+                onActivated: v => Renderer.setMode(v)
+            }
+        }
+        PxText {
+            width: parent.width
+            wrapMode: Text.Wrap
+            dim: true
+            text: I18n.t("Сейчас: ", "Now: ") + ({
+                    "patched": I18n.t("OpenGL, многопоточная отрисовка (исправленный плагин)", "OpenGL, threaded rendering (fixed plugin)"),
+                    "vulkan": "Vulkan",
+                    "stock": I18n.t("стандартный OpenGL", "stock OpenGL")
+                })[Renderer.active] + I18n.t(". Новый режим включится после перезапуска оболочки.", ". A new mode applies after the shell restarts.")
+        }
+        SettingRow {
+            visible: !!Renderer.fix.qt
+            label: I18n.t("Исправление Qt для NVIDIA", "Qt fix for NVIDIA")
+            hint: "Qt " + (Renderer.fix.qt || "?") + " · " + (!Renderer.fix.needed ? I18n.t("не нужно: в этой версии Qt уже исправлено", "not needed: this Qt already has it") : Renderer.fix.built ? I18n.t("собрано ♡", "built ♡") : I18n.t("не собрано", "not built")) + (Renderer.fix.nvidia ? "" : I18n.t(" · видеокарта не NVIDIA", " · not an NVIDIA GPU"))
+            Row {
+                spacing: Theme.u * 3
+                PxButton {
+                    visible: !!Renderer.fix.needed
+                    icon: "gear"
+                    enabled: !Renderer.building
+                    text: Renderer.building ? I18n.t("собираю…", "building…") : Renderer.fix.built ? I18n.t("Пересобрать", "Rebuild") : I18n.t("Собрать", "Build")
+                    onClicked: Renderer.build()
+                }
+                PxButton {
+                    icon: "power"
+                    text: I18n.t("Перезапустить оболочку", "Restart the shell")
+                    onClicked: Quickshell.execDetached([Quickshell.shellDir + "/bin/angelos", "restart"])
+                }
+            }
+        }
+        PxText {
+            visible: Renderer.log.length > 0
+            width: parent.width
+            wrapMode: Text.WrapAnywhere
+            kind: "tiny"
+            dim: true
+            text: Renderer.log.join("\n")
+        }
+    }
+
+    PxGroup {
         title: I18n.t("Диспетчер задач", "Task Manager")
         icon: "chip"
         width: parent.width

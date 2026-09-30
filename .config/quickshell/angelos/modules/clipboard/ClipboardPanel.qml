@@ -27,16 +27,35 @@ PanelWindow {
 
     property string query: ""
     property int current: 0
-    readonly property var results: Clipboard.history.filter(h => !query || h.toLowerCase().includes(query.toLowerCase()))
+    property string kind: "all"          // all | text | image
+    readonly property var results: Clipboard.history.filter(h => {
+        if (kind !== "all" && (h.kind || "text") !== kind)
+            return false;
+        if (!query)
+            return true;
+        const q = query.toLowerCase();
+        return h.kind === "image" ? (I18n.t("картинка", "image") + " image " + (h.mime || "")).includes(q) : String(h.text || "").toLowerCase().includes(q);
+    })
+    function sizeLabel(h) {
+        const parts = [];
+        if (h.width && h.height)
+            parts.push(h.width + "×" + h.height);
+        if (h.bytes)
+            parts.push(h.bytes > 1048576 ? (h.bytes / 1048576).toFixed(1) + I18n.t(" МБ", " MB") : Math.max(1, Math.round(h.bytes / 1024)) + I18n.t(" КБ", " KB"));
+        parts.push(String(h.mime || "image").replace("image/", "").toUpperCase());
+        return parts.join(" · ");
+    }
 
-    function pick(text) {
-        Clipboard.copy(text);
+    function pick(entry) {
+        Clipboard.copy(entry);
         Shell.clipboardOpen = false;
     }
 
     onVisibleChanged: if (visible) {
         query = "";
         current = 0;
+        kind = "all";
+        kinds.currentValue = "all";
         field.text = "";
         field.focusField();
     }
@@ -80,6 +99,12 @@ PanelWindow {
                 if (e.key === Qt.Key_Escape) {
                     Shell.clipboardOpen = false;
                     e.accepted = true;
+                } else if (e.key === Qt.Key_Tab || e.key === Qt.Key_Backtab) {
+                    const order = ["all", "text", "image"];
+                    win.kind = order[(order.indexOf(win.kind) + (e.key === Qt.Key_Tab ? 1 : 2)) % 3];
+                    kinds.currentValue = win.kind;   // PxSegmented keeps its own value after clicks
+                    win.current = 0;
+                    e.accepted = true;
                 } else if (e.key === Qt.Key_Down) {
                     win.current = Math.min(win.results.length - 1, win.current + 1);
                     list.positionViewAtIndex(win.current, ListView.Contain);
@@ -102,8 +127,34 @@ PanelWindow {
             onClicked: Clipboard.clear()
         }
 
+        PxSegmented {
+            id: kinds
+            y: field.height + Theme.u * 4
+            width: parent.width
+            model: [
+                {
+                    "label": I18n.t("Всё", "All") + " · " + Clipboard.history.length,
+                    "value": "all"
+                },
+                {
+                    "label": I18n.t("Текст", "Text"),
+                    "value": "text"
+                },
+                {
+                    "label": I18n.t("Картинки", "Images") + " · " + Clipboard.imageCount,
+                    "value": "image"
+                }
+            ]
+            currentValue: win.kind
+            onActivated: v => {
+                win.kind = v;
+                win.current = 0;
+                field.focusField();
+            }
+        }
+
         PxBox {
-            y: field.height + Theme.u * 5
+            y: kinds.y + kinds.height + Theme.u * 4
             width: parent.width
             height: parent.height - y
             sunken: true
@@ -125,18 +176,98 @@ PanelWindow {
                 boundsBehavior: Flickable.StopAtBounds
                 delegate: Rectangle {
                     id: item
-                    required property string modelData
+                    required property var modelData
                     required property int index
                     readonly property bool sel: index === win.current
+                    readonly property bool isImage: item.modelData.kind === "image"
                     width: list.width
-                    height: txt.implicitHeight + Theme.u * 6
+                    height: isImage ? (sel ? Theme.u * 70 : Theme.u * 44) : txt.implicitHeight + Theme.u * 6
                     color: sel ? Theme.select : m.containsMouse ? Theme.mix(Theme.face, Theme.accent, 0.12) : "transparent"
+                    Behavior on height {
+                        NumberAnimation {
+                            duration: Theme.fast
+                            easing.type: Easing.OutCubic
+                        }
+                    }
+                    // checkerboard behind transparent pictures
+                    Rectangle {
+                        id: frame
+                        visible: item.isImage
+                        x: Theme.u * 3
+                        y: Theme.u * 3
+                        width: Math.min(parent.width * 0.62, (parent.height - Theme.u * 6) * Math.max(0.6, Math.min(2.4, preview.ratio)))
+                        height: parent.height - Theme.u * 6
+                        color: Theme.sunken
+                        border.width: Math.max(1, Theme.u / 2)
+                        border.color: item.sel ? Theme.selectText : Theme.lo
+                        clip: true
+                        Image {
+                            id: preview
+                            readonly property real ratio: item.modelData.width && item.modelData.height ? item.modelData.width / item.modelData.height : (implicitHeight > 0 ? implicitWidth / implicitHeight : 1.6)
+                            anchors.fill: parent
+                            anchors.margins: parent.border.width
+                            source: item.isImage ? "file://" + item.modelData.path : ""
+                            // never decode a full-size screenshot for a thumbnail
+                            sourceSize.width: Math.ceil(list.width * 0.62)
+                            sourceSize.height: Theme.u * 70
+                            fillMode: Image.PreserveAspectFit
+                            asynchronous: true
+                            cache: false
+                            smooth: true
+                            mipmap: true
+                        }
+                        PxText {
+                            anchors.centerIn: parent
+                            visible: preview.status === Image.Error
+                            text: I18n.t("файл удалён", "file missing")
+                            kind: "tiny"
+                            dim: true
+                        }
+                    }
+                    Column {
+                        visible: item.isImage
+                        anchors.left: frame.right
+                        anchors.leftMargin: Theme.u * 4
+                        anchors.right: parent.right
+                        anchors.rightMargin: Theme.u * 3
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: Theme.u
+                        Row {
+                            spacing: Theme.u * 2
+                            PxIcon {
+                                name: "image"
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            PxText {
+                                text: I18n.t("Картинка", "Image")
+                                color: item.sel ? Theme.selectText : Theme.text
+                                font.bold: true
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+                        PxText {
+                            width: parent.width
+                            text: win.sizeLabel(item.modelData)
+                            kind: "tiny"
+                            wrapMode: Text.Wrap
+                            color: item.sel ? Theme.selectText : Theme.textDim
+                        }
+                        PxText {
+                            visible: item.sel
+                            width: parent.width
+                            text: I18n.t("Enter — вставить в буфер", "Enter — copy back")
+                            kind: "tiny"
+                            wrapMode: Text.Wrap
+                            color: item.sel ? Theme.selectText : Theme.textDim
+                        }
+                    }
                     PxText {
                         id: txt
+                        visible: !item.isImage
                         x: Theme.u * 4
                         width: parent.width - Theme.u * 8
                         anchors.verticalCenter: parent ? parent.verticalCenter : undefined
-                        text: item.modelData.replace(/\s+/g, " ").slice(0, 300)
+                        text: String(item.modelData.text || "").replace(/\s+/g, " ").slice(0, 300)
                         maximumLineCount: 2
                         wrapMode: Text.WrapAnywhere
                         elide: Text.ElideRight

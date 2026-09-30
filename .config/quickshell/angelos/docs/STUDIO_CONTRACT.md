@@ -93,8 +93,49 @@ questions/limitations instead of a fake functioning plugin.
 
 Follow the approved plan exactly. Complete every declared entry point.
 Supply a README explaining settings, data, dependencies and manual checks in
-both languages. Keep the total output below 24 files and 512 KiB. Generated
-QML is reviewed as source and parsed before install, not executed for preview.
-Generated code runs as the desktop user after installation; no sandbox is
-promised. After local validation fails, repair the supplied files and return a
-complete replacement bundle. Never ask for the Studio API key in chat.
+both languages. Keep the total output below 24 files and 512 KiB.
+
+Every draft is checked automatically before the user sees it: JSON/Python/
+shell syntax and `qmlformat`, then each QML entry point is loaded once, the
+way angelOS hosts it, in Quickshell running offscreen inside a sandbox (no
+network, no home directory, no sockets). Load-time errors — unknown
+properties or types, bad imports, ReferenceError/TypeError in bindings, zero
+implicit size of visual content — are sent back to you with the files; then
+return a complete corrected bundle, not a diff. Generated code runs as the
+desktop user after installation; no sandbox is promised there. Never ask for
+the Studio API key in chat.
+
+## Checklist before answering
+
+1. Every type, property, signal and function you use exists in Qt Quick 6,
+   Quickshell 0.3 (Quickshell, Quickshell.Io, Quickshell.Services.*,
+   Quickshell.Networking, Quickshell.Bluetooth) or the API REFERENCE and files
+   supplied here. Do not guess names: PxButton has `text`, `icon`, `accent`,
+   `compact`, `checked`, signal `clicked` — not `label` or `onPressed`.
+   PxText has `kind` ("body" | "title" | "tiny" | "big" | "huge" | "mono") and `dim`.
+2. Imports: `import QtQuick`; `import Quickshell` / `import Quickshell.Io` only
+   when used; `import qs.config` (Theme, Config, I18n), `import qs.widgets`,
+   `import qs.services` only when a listed service is used. Never
+   `QtQuick.Controls`, `QtQuick.Layouts` sizing tricks or relative imports of
+   shell files.
+3. Injected properties are plain `property var plugin`, `property string
+   screenName`, `property var widget` / `barWindow` / `menu` / `pluginId` /
+   `width` as the entry point table says — never `required`.
+4. With `pragma ComponentBehavior: Bound`, every delegate declares
+   `required property var modelData` (and `required property int index` when
+   used) and outer ids are referenced explicitly. Without the pragma, do not
+   declare them. Pick one and stay consistent.
+5. Children of Row/Column/Flow/Grid do not set x/y or anchors along the
+   stacking axis. Text that can be long has an explicit width with
+   `wrapMode` or `elide`.
+6. Processes: `Process { command: ["prog", arg] }` from Quickshell.Io,
+   started by `running = true`, output via
+   `stdout: StdioCollector { onStreamFinished: handle(text) }`; one run at a
+   time; user text only as separate argv items.
+7. Timers ≥ 1000 ms and only running while the content is visible or the
+   plugin needs them; no per-frame JavaScript animation loops.
+8. Colours and sizes come from Theme (`Theme.accent`, `Theme.text`,
+   `Theme.u` …); every label is `I18n.t("Русский", "English")`.
+9. `plugin` may arrive after creation: `plugin ? plugin.get("k", d) : d`.
+10. manifest.json is valid JSON, file names match exactly (case-sensitive),
+    `enabledByDefault` is false, and the entry point of the plan's kind exists.

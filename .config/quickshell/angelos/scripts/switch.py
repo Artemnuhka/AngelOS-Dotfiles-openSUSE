@@ -146,7 +146,8 @@ def to_angelos(restart=True):
     subprocess.run([sys.executable, str(SHELL / "scripts/render-templates.py"), str(SHELL / "templates/palette-default.json")], check=False)
     if not (NIRI / "angelos.kdl").exists():
         sys.exit("angelos.kdl не создан — отмена")
-    edit(NIRI / "cfg/autostart.kdl", lambda t: re.sub(r'spawn-at-startup\s+"noctalia"', 'spawn-at-startup "qs" "-c" "angelos" "-n"', t))
+    # `angelos run` sets the renderer environment (bin/angelos) before starting qs
+    edit(NIRI / "cfg/autostart.kdl", lambda t: re.sub(r'spawn-at-startup\s+(?:"noctalia"|"qs"\s+"-c"\s+"angelos"\s+"-n")', 'spawn-at-startup "angelos" "run"', t))
     edit(NIRI / "config.kdl", lambda t: t.replace('include "noctalia.kdl"', 'include "angelos.kdl"'))
     edit(NIRI / "cfg/keybinds.kdl", patch_keys)
     edit(NIRI / "cfg/rules.kdl", patch_rules)
@@ -167,7 +168,7 @@ def to_angelos(restart=True):
     if restart:
         subprocess.run(["pkill", "-x", "noctalia"])
         time.sleep(0.8)
-        subprocess.Popen(["setsid", "-f", "qs", "-c", "angelos", "-n"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.Popen([str(SHELL / "bin/angelos"), "start"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         log("angelOS запущен ♡")
 
 
@@ -188,7 +189,7 @@ def unpatch_rules(t):
 def to_noctalia_forward():
     """No switch backup (e.g. a fresh install from the repo): rewrite the wiring in place."""
     backup("switch-back")
-    edit(NIRI / "cfg/autostart.kdl", lambda t: re.sub(r'spawn-at-startup\s+"qs"\s+"-c"\s+"angelos"', 'spawn-at-startup "noctalia"', t))
+    edit(NIRI / "cfg/autostart.kdl", lambda t: re.sub(r'spawn-at-startup\s+(?:"qs"\s+"-c"\s+"angelos"\s+"-n"|"angelos"\s+"run")', 'spawn-at-startup "noctalia"', t))
     edit(NIRI / "config.kdl", lambda t: t.replace('include "angelos.kdl"', 'include "noctalia.kdl"'))
     edit(NIRI / "cfg/keybinds.kdl", unpatch_keys)
     edit(NIRI / "cfg/rules.kdl", unpatch_rules)

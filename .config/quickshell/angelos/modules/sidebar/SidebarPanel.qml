@@ -46,6 +46,22 @@ PxWindow {
             }
         },
         {
+            "id": "wifi",
+            "show": Wifi.hasWifi && Config.network.showWifi,
+            "icon": Wifi.enabled ? "wifi" : "wifiOff",
+            "label": Wifi.connected ? Wifi.connected.name : "Wi-Fi",
+            "on": Wifi.enabled,
+            "act": () => Wifi.setEnabled(!Wifi.enabled)
+        },
+        {
+            "id": "bluetooth",
+            "show": Bt.available && Config.network.showBluetooth,
+            "icon": "bluetooth",
+            "label": Bt.connectedDevices.length ? Bt.connectedDevices[0].name : "Bluetooth",
+            "on": Bt.enabled,
+            "act": () => Bt.setEnabled(!Bt.enabled)
+        },
+        {
             "id": "lyrics",
             "icon": "mic",
             "label": I18n.t("Лирика", "Lyrics"),
@@ -206,6 +222,13 @@ PxWindow {
                             onMoved: v => vol.modelData.set(v)
                         }
                     }
+                }
+                PxLevelMeter {
+                    width: parent.width
+                    height: Theme.u * 5
+                    node: Audio.source
+                    active: Sidebar.open && Sidebar.has("sound")
+                    opacity: Audio.micMuted ? 0.4 : 1
                 }
             }
 

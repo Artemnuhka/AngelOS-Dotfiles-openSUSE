@@ -5,10 +5,202 @@ import Quickshell
 import qs.config
 import qs.services
 import qs.widgets
+import qs.modules.workspace
 
 PxPage {
     heading: I18n.t("Воркспейсы", "Workspaces")
-    subtitle: I18n.t("Анимации при переключении: пиксельный переход обоев, NGO-попап и полоска сердечек.", "Workspace animations: pixel wallpaper transition, popup, and heart strip.")
+    subtitle: I18n.t("Анимации при переключении: сердечки на панели, переход между столами, NGO-попап и полоска сердечек.", "Switching animations: the hearts on the bar, the transition between desks, the popup and the heart strip.")
+
+    PxGroup {
+        id: heartsGroup
+        title: I18n.t("Анимация сердечек", "Heart animation")
+        icon: "heart"
+        width: parent.width
+        readonly property var heartStyles: [
+            {
+                "id": "smart",
+                "label": I18n.t("Умная", "Smart"),
+                "hint": I18n.t("соседний — столкновение, далеко — телепорт эндермена", "next door: collide, far away: enderman teleport")
+            },
+            {
+                "id": "collide",
+                "label": I18n.t("Столкновение", "Collide"),
+                "hint": I18n.t("медленно, рывок — и стычок с соседним", "slow, a rush, and a knock into the next one")
+            },
+            {
+                "id": "ender",
+                "label": I18n.t("Эндермен", "Enderman"),
+                "hint": I18n.t("фиолетовые частицы, телепорт", "purple particles, teleport")
+            },
+            {
+                "id": "hop",
+                "label": I18n.t("Прыжок", "Hop"),
+                "hint": I18n.t("перепрыгивает дугой", "jumps over in an arc")
+            },
+            {
+                "id": "worm",
+                "label": I18n.t("Червячок", "Worm"),
+                "hint": I18n.t("тянется следом", "stretches along")
+            },
+            {
+                "id": "pixel",
+                "label": I18n.t("Пиксели", "Pixels"),
+                "hint": I18n.t("рассыпается и собирается", "falls apart and rebuilds")
+            },
+            {
+                "id": "beat",
+                "label": I18n.t("Сердцебиение", "Heartbeat"),
+                "hint": I18n.t("тук-тук и волна", "lub-dub and a ripple")
+            },
+            {
+                "id": "sparkle",
+                "label": I18n.t("Звёздочки", "Sparkles"),
+                "hint": I18n.t("комета и звёздный взрыв", "a comet and a starburst")
+            },
+            {
+                "id": "drop",
+                "label": I18n.t("Падение", "Drop"),
+                "hint": I18n.t("падает сверху и пружинит", "falls from above and bounces")
+            },
+            {
+                "id": "glitch",
+                "label": I18n.t("Глитч", "Glitch"),
+                "hint": I18n.t("RGB-помехи", "RGB interference")
+            },
+            {
+                "id": "slide",
+                "label": I18n.t("Скольжение", "Slide"),
+                "hint": I18n.t("просто и аккуратно", "simple and tidy")
+            },
+            {
+                "id": "off",
+                "label": I18n.t("Без анимации", "Off"),
+                "hint": I18n.t("сразу", "instant")
+            }
+        ]
+
+        // live preview: six hearts on a strip
+        PxBox {
+            width: parent.width
+            height: Theme.u * 30
+            sunken: true
+            color: Theme.sunken
+            Row {
+                id: previewRow
+                anchors.centerIn: parent
+                spacing: Theme.u * 2
+                property int active: 0
+                Repeater {
+                    id: previewCells
+                    model: 6
+                    Item {
+                        id: pc
+                        required property int index
+                        readonly property bool lit: previewRow.active === index && previewAnim.hiddenIndex !== index
+                        width: Theme.u * 13
+                        height: Theme.u * 13
+                        PxIcon {
+                            anchors.centerIn: parent
+                            name: "heart"
+                            hollow: !pc.lit && pc.index > 3
+                            fill: pc.lit ? Theme.accent : Theme.accent4
+                            scale: pc.lit ? 1 : 0.8
+                        }
+                    }
+                }
+            }
+            Connections {
+                target: Shell
+                function onHeartDemo(from, to) {
+                    if (from < 0 || to < 0 || from > 5 || to > 5)
+                        return;
+                    previewRow.active = to;
+                    previewAnim.play(from, to);
+                }
+            }
+            WsAnimator {
+                id: previewAnim
+                x: previewRow.x
+                y: previewRow.y
+                width: previewRow.width
+                height: previewRow.height
+                style: Config.workspaces.heartAnim
+                cellRect: i => {
+                    const c = previewCells.itemAt(i);
+                    return c ? c.mapToItem(previewAnim, 0, 0, c.width, c.height) : Qt.rect(0, 0, 0, 0);
+                }
+            }
+        }
+        Row {
+            spacing: Theme.u * 3
+            PxButton {
+                icon: "arrowRight"
+                text: I18n.t("На соседний", "Next door")
+                onClicked: {
+                    const from = previewRow.active, to = (from + 1) % 6;
+                    previewRow.active = to;
+                    previewAnim.play(from, to);
+                }
+            }
+            PxButton {
+                icon: "sparkle"
+                text: I18n.t("С первого на последний", "First to last")
+                onClicked: {
+                    const from = previewRow.active === 5 ? 5 : 0, to = from === 5 ? 0 : 5;
+                    previewRow.active = to;
+                    previewAnim.play(from, to);
+                }
+            }
+        }
+        Grid {
+            width: parent.width
+            columns: Math.max(1, Math.floor(width / (Theme.u * 100)))
+            spacing: Theme.u * 3
+            Repeater {
+                model: heartsGroup.heartStyles
+                PxBox {
+                    id: hsCard
+                    required property var modelData
+                    readonly property bool current: (Config.workspaces.heartAnim || "smart") === modelData.id
+                    width: (parent.width - (parent.columns - 1) * parent.spacing) / parent.columns
+                    height: hsCol.implicitHeight + Theme.u * 8
+                    sunken: current
+                    color: current ? Theme.mix(Theme.face, Theme.accent, 0.3) : hsMouse.containsMouse ? Theme.mix(Theme.face, Theme.accent, 0.1) : Theme.face
+                    Column {
+                        id: hsCol
+                        x: Theme.u * 4
+                        y: Theme.u * 4
+                        width: parent.width - Theme.u * 8
+                        spacing: Theme.u
+                        PxText {
+                            text: (hsCard.current ? "♡ " : "") + hsCard.modelData.label
+                            font.bold: true
+                        }
+                        PxText {
+                            width: parent.width
+                            text: hsCard.modelData.hint
+                            kind: "tiny"
+                            dim: true
+                            wrapMode: Text.Wrap
+                        }
+                    }
+                    MouseArea {
+                        id: hsMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            Config.workspaces.heartAnim = hsCard.modelData.id;
+                            // show it right away
+                            const from = previewRow.active, to = hsCard.modelData.id === "ender" ? (from === 5 ? 0 : 5) : (from + 1) % 6;
+                            previewRow.active = to;
+                            Qt.callLater(() => previewAnim.play(from, to));
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     PxGroup {
         title: I18n.t("Анимация переключения", "Switch animation")
@@ -63,11 +255,9 @@ PxPage {
             PxButton {
                 text: I18n.t("Показать", "Try it")
                 icon: "sparkle"
-                onClicked: {
-                    const ws = Niri.activeWorkspace(Niri.focusedOutput);
-                    if (ws)
-                        Niri.workspaceActivated(ws, false);
-                }
+                enabled: WorkspaceAnim.captured
+                // the effect over the current screen, without switching
+                onClicked: WorkspaceAnim.preview(Niri.focusedOutput)
             }
             PxText {
                 anchors.verticalCenter: parent.verticalCenter
@@ -80,7 +270,7 @@ PxPage {
             width: parent.width
             wrapMode: Text.Wrap
             dim: true
-            text: I18n.t("Мягкий, слайд и подпрыг — пружина niri (cfg/animation.kdl, с бэкапом и проверкой). Остальные переключают мгновенно и прячут склейку под эффектом angelOS. В полноэкранных играх game-mode всё равно выключает анимации.", "Soft, slide and bounce are niri springs (cfg/animation.kdl, backed up and validated). The others switch instantly and hide the cut under an angelOS effect. Game mode still turns animations off for fullscreen games.")
+            text: I18n.t("«Мягкий» и «Рывок» — анимация самого niri по кривой Безье (cfg/animation.kdl, с бэкапом и проверкой), попробуй Mod+1…9. «Пиксели», «Сердечко» и «Телепорт» — angelOS снимает экран, niri переключает мгновенно, а старый стол уходит эффектом: для них клавиши Mod+1…9, Mod+колесо и Mod+O идут через angelOS (если оболочка не запущена — напрямую в niri). Переключения мышью в обзоре остаются мгновенными. В полноэкранных играх game-mode всё равно выключает анимации.", "Soft and Dash are niri's own animation on a bezier curve (cfg/animation.kdl, backed up and validated) — try Mod+1…9. Pixels, Heart and Teleport: angelOS grabs the screen, niri switches instantly and the old desk leaves with an effect; for them Mod+1…9, Mod+wheel and Mod+O go through angelOS (straight to niri if the shell is not running). Switching with the mouse in the overview stays instant. Game mode still turns animations off for fullscreen games.")
         }
     }
 

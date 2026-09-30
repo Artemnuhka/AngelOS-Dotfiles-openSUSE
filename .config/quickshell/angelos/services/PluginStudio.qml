@@ -12,6 +12,42 @@ Singleton {
     property var session: ({messages: [], plan: null, draft: null, installed: ""})
     property var keys: ({openai: false, anthropic: false})
     property var cli: ({})              // {"claude-cli": {installed, loggedIn, method}, "codex-cli": {…}}
+    property var models: ({})           // provider -> [{id, label, efforts, default, speed}]
+    property int repairRound: 0
+    property int repairOf: 0
+    property real startedAt: 0
+    property int elapsed: 0             // seconds since the request started
+    readonly property var modelList: models[Config.developer.provider] || []
+    readonly property var modelInfo: modelList.find(m => m.id === model) || null
+    // levels this model takes; an unknown model id gets the common ones
+    readonly property var effortLevels: modelInfo ? modelInfo.efforts : ["low", "medium", "high", "xhigh", "max"]
+    readonly property string effort: {
+        const e = (Config.developer.efforts || {})[Config.developer.provider];
+        return e !== undefined && (e === "" || effortLevels.includes(e)) ? e : (modelInfo ? modelInfo["default"] || "" : "");
+    }
+    function setEffort(value) {
+        const m = Object.assign({}, Config.developer.efforts || {});
+        m[Config.developer.provider] = value;
+        Config.developer.efforts = m;
+    }
+    // rough wall-clock expectations shown next to the level
+    function effortHint(e) {
+        return ({
+                "": I18n.t("как решит модель", "the model decides"),
+                "low": I18n.t("быстро · ~1–2 мин", "fast · ~1–2 min"),
+                "medium": I18n.t("баланс · ~2–4 мин", "balanced · ~2–4 min"),
+                "high": I18n.t("тщательно · ~4–8 мин", "careful · ~4–8 min"),
+                "xhigh": I18n.t("очень тщательно · ~6–15 мин", "very careful · ~6–15 min"),
+                "max": I18n.t("максимум · до 30 мин", "maximum · up to 30 min"),
+                "ultra": I18n.t("ультра · до 40 мин", "ultra · up to 40 min")
+            })[e] || "";
+    }
+    Timer {
+        interval: 1000
+        repeat: true
+        running: root.busy
+        onTriggered: root.elapsed = Math.round((Date.now() - root.startedAt) / 1000)
+    }
     property string error: ""
     property string stage: ""
     property string action: ""
@@ -57,11 +93,14 @@ Singleton {
         const argv = Config.developer.provider === "codex-cli" ? ["codex", "login"] : ["claude", "auth", "login"];
         Quickshell.execDetached(Shell.terminalArgv(["sh", "-c", 'PATH="$HOME/.local/bin:$PATH"; "$@"; printf "\\n♡ Готово — вернись в angelOS и нажми «Проверить вход». Enter закроет окно."; read _', "sh"].concat(argv)));
     }
-    readonly property string statusText: !busy ? "" : stage === "validation"
+    readonly property string elapsedText: elapsed >= 60 ? Math.floor(elapsed / 60) + I18n.t(" мин ", " min ") + (elapsed % 60) + I18n.t(" с", " s") : elapsed + I18n.t(" с", " s")
+    readonly property string statusText: !busy ? "" : (stage === "validation"
         ? I18n.t("Проверяю файлы…", "Checking files…")
-        : action === "generate" ? I18n.t("ИИ пишет плагин… это может занять несколько минут.", "AI is writing your plugin… this may take a few minutes.")
+        : stage === "runtime" ? I18n.t("Запускаю плагин в песочнице и проверяю, что всё загружается…", "Loading the plugin in a sandbox to see that everything works…")
+        : stage === "repair" ? I18n.t("Нашлись ошибки — ИИ исправляет (попытка ", "Checks failed — AI is fixing them (attempt ") + repairRound + "/" + repairOf + ")…"
+        : action === "generate" ? I18n.t("ИИ пишет плагин… ", "AI is writing your plugin… ") + effortHint(effort)
         : action === "plan" ? I18n.t("ИИ разбирает запрос…", "AI is reviewing your request…")
-        : I18n.t("Обрабатываю…", "Working…")
+        : I18n.t("Обрабатываю…", "Working…")) + (elapsed > 2 ? "  ·  " + elapsedText : "")
 
     function send(name, params) {
         if (busy || worker.running || (!Config.developer.enabled && name !== "status"))
@@ -75,11 +114,18 @@ Singleton {
             language: Config.appearance.language,
             provider: Config.developer.provider,
             model: model,
+            effort: effort,
+            autoRepair: Math.max(0, Math.min(2, Config.developer.autoRepair)),
             maxOutputTokens: Config.developer.maxOutputTokens
         }, params || {})) + "\n";
         busy = true;
+        startedAt = Date.now();
+        elapsed = 0;
+        repairRound = 0;
         worker.running = true;
-        deadline.interval = isCli ? 660000 : 240000;
+        // the worker enforces its own per-request limit; this only catches a stuck worker
+        const perRequest = ({"low": 420, "medium": 720, "high": 1080, "xhigh": 1500, "max": 2100, "ultra": 2400})[effort] || 900;
+        deadline.interval = (perRequest * (name === "generate" ? 1 + Math.max(0, Config.developer.autoRepair) : 1) + 120) * 1000;
         deadline.restart();
         return true;
     }
@@ -115,6 +161,10 @@ Singleton {
     function receive(event) {
         if (event.event === "progress") {
             stage = event.stage;
+            if (event.round) {
+                repairRound = event.round;
+                repairOf = event.of || 0;
+            }
             return;
         }
         _received = true;
@@ -126,6 +176,8 @@ Singleton {
             keys = event.keys;
         if (event.cli !== undefined)
             cli = event.cli;
+        if (event.models !== undefined)
+            models = event.models;
         if (event.session !== undefined)
             session = event.session;
         if (action === "plan" || action === "reset")

@@ -6,82 +6,95 @@ import Quickshell
 import Quickshell.Io
 import qs.config
 
-// Text clipboard history via `wl-paste --watch` (kept in ~/.local/state/angelos/clipboard.json).
+// MIME-aware clipboard history via `wl-paste --watch scripts/clipboard.py capture`.
+// Text entries stay in clipboard.json; images are private files under
+// ~/.local/state/angelos/clipboard/ (removed together with their entry).
 Singleton {
     id: root
 
-    property var history: []      // newest first, strings
+    property var history: []      // newest first, {kind, id, mime, text|path}
     readonly property int limit: 60
 
-    // base64 -> UTF-8 string (Qt.atob is Latin-1 only and deprecated)
-    readonly property string _abc: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-    function decode(b64) {
-        const bytes = [];
-        let buf = 0, bits = 0;
-        for (const ch of b64) {
-            const v = _abc.indexOf(ch);
-            if (v < 0)
-                continue;
-            buf = (buf << 6) | v;
-            bits += 6;
-            if (bits >= 8) {
-                bits -= 8;
-                bytes.push((buf >> bits) & 0xff);
-            }
-        }
-        let out = "";
-        for (let i = 0; i < bytes.length;) {
-            const b = bytes[i];
-            let cp, n;
-            if (b < 0x80) {
-                cp = b;
-                n = 1;
-            } else if (b >> 5 === 6) {
-                cp = b & 0x1f;
-                n = 2;
-            } else if (b >> 4 === 14) {
-                cp = b & 0x0f;
-                n = 3;
-            } else {
-                cp = b & 0x07;
-                n = 4;
-            }
-            for (let k = 1; k < n; k++)
-                cp = (cp << 6) | ((bytes[i + k] || 0) & 0x3f);
-            out += String.fromCodePoint(cp);
-            i += n;
-        }
-        return out;
+    function normalize(entry) {
+        if (typeof entry === "string")
+            return {
+                "kind": "text",
+                "id": entry,
+                "mime": "text/plain;charset=utf-8",
+                "text": entry
+            };
+        return entry || {};
     }
-    function push(text) {
-        if (!text || !text.trim())
+
+    function key(entry) {
+        return (entry.kind || "text") + ":" + (entry.id || entry.text || entry.path || "");
+    }
+
+    readonly property string helper: Quickshell.shellDir + "/scripts/clipboard.py"
+    readonly property int imageCount: history.filter(h => h.kind === "image").length
+
+    function push(entry) {
+        entry = normalize(entry);
+        if (!entry.id || (entry.kind === "text" && !String(entry.text || "").trim()) || (entry.kind === "image" && !entry.path))
             return;
-        history = [text].concat(history.filter(h => h !== text)).slice(0, limit);
+        const dropped = history.length >= limit || history.some(h => key(h) === key(entry));
+        history = [entry].concat(history.filter(h => key(h) !== key(entry))).slice(0, limit);
         saveTimer.restart();
+        if (dropped)
+            pruneTimer.restart();
     }
-    // via stdin: argv is readable by every process (/proc/*/cmdline)
-    function copy(text) {
+
+    function copy(entry) {
         if (copier.running)
             copier.running = false;
-        copier.pending = text;
+        copier.pending = normalize(entry);
         copier.running = true;
     }
-    function remove(text) {
-        history = history.filter(h => h !== text);
+
+    function remove(entry) {
+        entry = normalize(entry);
+        history = history.filter(h => key(h) !== key(entry));
         saveTimer.restart();
+        pruneTimer.restart();
     }
     function clear() {
         history = [];
         saveTimer.restart();
+        pruneTimer.restart();
+    }
+    function clearImages() {
+        history = history.filter(h => h.kind !== "image");
+        saveTimer.restart();
+        pruneTimer.restart();
     }
 
+    // image files no entry points to any more
+    Timer {
+        id: pruneTimer
+        interval: 1500
+        onTriggered: if (!Shell.dev)
+            Quickshell.execDetached(["python3", root.helper, "prune"].concat(root.history.filter(h => h.kind === "image").map(h => h.id)))
+    }
+
+    // watchers left behind by a shell that crashed or was killed keep running
+    // (and capturing twice): clear them before starting ours
+    Process {
+        id: sweep
+        running: !Shell.dev
+        command: ["pkill", "-f", "^wl-paste --watch python3 " + root.helper + " capture"]
+        onExited: watcher.running = true
+    }
     Process {
         id: watcher
-        running: !Shell.dev
-        // password managers mark secrets with x-kde-passwordManagerHint: never keep those
-        command: ["wl-paste", "--type", "text", "--watch", "sh", "-c", "if wl-paste --list-types 2>/dev/null | grep -qx 'x-kde-passwordManagerHint'; then cat >/dev/null; echo; else base64 -w0; echo; fi"]
+        // The helper inspects MIME types and returns one JSON object per change.
+        // setpriv: wl-paste dies together with the shell, even if the shell crashes
+        command: ["setpriv", "--pdeathsig", "TERM", "wl-paste", "--watch", "python3", root.helper, "capture"]
         stdout: SplitParser {
-            onRead: line => root.push(root.decode(line))
+            onRead: line => {
+                try {
+                    root.push(JSON.parse(line));
+                } catch (e) {}
+            }
         }
         onExited: restart.start()
     }
@@ -92,12 +105,12 @@ Singleton {
     }
     Process {
         id: copier
-        property string pending: ""
-        command: ["wl-copy"]
+        property var pending: ({})
+        command: ["python3", root.helper, "copy"]
         stdinEnabled: true
         onStarted: {
-            write(pending);
-            pending = "";
+            write(JSON.stringify(pending));
+            pending = ({});
             stdinEnabled = false;
         }
         onExited: stdinEnabled = true
@@ -114,7 +127,8 @@ Singleton {
         printErrors: false
         onLoaded: {
             try {
-                root.history = JSON.parse(text()) || [];
+                const old = JSON.parse(text()) || [];
+                root.history = old.map(root.normalize).filter(e => e.id || e.path).slice(0, root.limit);
             } catch (e) {}
         }
     }

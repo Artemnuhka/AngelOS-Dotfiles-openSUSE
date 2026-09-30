@@ -4,6 +4,7 @@ import QtQuick
 import qs.config
 import qs.services
 import qs.widgets
+import qs.modules.workspace
 
 // Hearts: filled = active, lavender = has windows, hollow = empty.
 Item {
@@ -17,8 +18,16 @@ Item {
     property real slot: 0
     implicitWidth: row.implicitWidth + slot
     implicitHeight: row.implicitHeight
-    property int bounceToken: 0
-    property int bounceWorkspace: -1
+    // the active cell before the switch: the animation starts there (niri updates
+    // the workspace list before it reports the activation)
+    readonly property int activeIndex: list.findIndex(w => w.is_active)
+    property int currentIndex: -1
+    property int previousIndex: -1
+    onActiveIndexChanged: {
+        previousIndex = currentIndex;
+        currentIndex = activeIndex;
+    }
+    Component.onCompleted: currentIndex = activeIndex
     FontMetrics {
         id: badgeMetrics
         font: badgeText.font
@@ -28,12 +37,20 @@ Item {
         id: row
         spacing: Theme.u * 2
 
+        // model = the count, not the list: niri rebuilds the list on every switch and
+        // a list model would recreate every heart (no layout yet when the animation
+        // measures them, no smooth scale on the old heart)
         Repeater {
-            model: root.list
+            id: cells
+            model: root.list.length
             Item {
                 id: cell
-                required property var modelData
+                required property int index
+                readonly property var modelData: root.list[index] || ({})
                 readonly property bool active: modelData.is_active
+                // looks inactive while the animation is still flying here
+                readonly property bool lit: active && anim.hiddenIndex !== index
+                readonly property alias heartItem: heart
                 readonly property var wins: Niri.sortedWindows(Niri.windowsOn(modelData.id))
                 readonly property bool occupied: wins.length > 0
                 readonly property string style: Config.bar.workspaceStyle
@@ -49,8 +66,8 @@ Item {
                     anchors.fill: parent
                     anchors.topMargin: Theme.u
                     anchors.bottomMargin: Theme.u
-                    color: cell.active ? Qt.alpha(Theme.accent, 0.28) : mouse.containsMouse ? Qt.alpha(Theme.accent, 0.12) : "transparent"
-                    border.width: cell.active ? Math.max(1, Theme.u / 2) : 0
+                    color: cell.lit ? Qt.alpha(Theme.accent, 0.28) : mouse.containsMouse ? Qt.alpha(Theme.accent, 0.12) : "transparent"
+                    border.width: cell.lit ? Math.max(1, Theme.u / 2) : 0
                     border.color: Theme.accent
                 }
                 Row {
@@ -65,8 +82,8 @@ Item {
                             required property var modelData
                             appId: modelData.app_id || ""
                             size: Theme.u * 8
-                            opacity: cell.active ? 1 : 0.7
-                            tint: Config.bar.tintTasks && !cell.active ? Config.bar.trayTint : "off"
+                            opacity: cell.lit ? 1 : 0.7
+                            tint: Config.bar.tintTasks && !cell.lit ? Config.bar.trayTint : "off"
                         }
                     }
                     PxText {
@@ -85,62 +102,14 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     name: "heart"
                     pixel: Theme.u
-                    hollow: !cell.active && !cell.occupied
-                    fill: cell.modelData.is_urgent ? Theme.danger : cell.active ? Theme.accent : Theme.accent4
-                    opacity: cell.active || mouse.containsMouse ? 1 : 0.75
-                    property real bounceScale: 1
-                    scale: (cell.active ? 1.0 : 0.8) * bounceScale
+                    hollow: !cell.lit && !cell.occupied
+                    fill: cell.modelData.is_urgent ? Theme.danger : cell.lit ? Theme.accent : Theme.accent4
+                    opacity: cell.lit || mouse.containsMouse ? 1 : 0.75
+                    scale: cell.lit ? 1.0 : 0.8
                     Behavior on scale {
                         NumberAnimation {
                             duration: Theme.fast
                             easing.type: Easing.OutBack
-                        }
-                    }
-                    SequentialAnimation {
-                        id: bounce
-                        NumberAnimation {
-                            target: heart
-                            property: "anchors.verticalCenterOffset"
-                            from: 0
-                            to: -Theme.u * 3
-                            duration: 110
-                            easing.type: Easing.OutQuad
-                        }
-                        NumberAnimation {
-                            target: heart
-                            property: "anchors.verticalCenterOffset"
-                            to: 0
-                            duration: 180
-                            easing.type: Easing.OutBounce
-                        }
-                        NumberAnimation {
-                            target: heart
-                            property: "bounceScale"
-                            to: 1.24
-                            duration: 110
-                            easing.type: Easing.OutBack
-                        }
-                        NumberAnimation {
-                            target: heart
-                            property: "bounceScale"
-                            to: 0.88
-                            duration: 100
-                            easing.type: Easing.InOutQuad
-                        }
-                        NumberAnimation {
-                            target: heart
-                            property: "bounceScale"
-                            to: 1
-                            duration: 160
-                            easing.type: Easing.OutBack
-                        }
-                        onStopped: heart.bounceScale = 1
-                    }
-                    Connections {
-                        target: root
-                        function onBounceTokenChanged() {
-                            if (cell.modelData.id === root.bounceWorkspace)
-                                bounce.restart();
                         }
                     }
                     SequentialAnimation on opacity {
@@ -172,9 +141,39 @@ Item {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: Niri.focusWorkspace(cell.modelData.id)
+                    // on the focused screen through angelOS (animated transitions)
+                    onClicked: cell.modelData.output === Niri.focusedOutput ? WorkspaceAnim.go(String(cell.modelData.idx)) : Niri.focusWorkspace(cell.modelData.id)
                 }
             }
+        }
+    }
+
+    Connections {
+        target: Shell
+        function onHeartDemo(from, to) {
+            if (from >= 0 && to >= 0 && from < root.list.length && to < root.list.length)
+                anim.play(from, to);
+        }
+    }
+    WsAnimator {
+        id: anim
+        x: row.x
+        y: row.y
+        width: row.width
+        height: row.height
+        z: 5
+        style: Config.workspaces.heartAnim
+        heart: Config.bar.workspaceStyle !== "icons"
+        plate: Config.bar.workspaceStyle !== "hearts"
+        cellRect: i => {
+            row.forceLayout();
+            const c = cells.itemAt(i);
+            return c ? c.mapToItem(anim, 0, 0, c.width, c.height) : Qt.rect(0, 0, 0, 0);
+        }
+        heartRect: i => {
+            row.forceLayout();
+            const c = cells.itemAt(i);
+            return c && c.heartItem.visible ? c.heartItem.mapToItem(anim, 0, 0, c.heartItem.width, c.heartItem.height) : (c ? c.mapToItem(anim, 0, 0, c.width, c.height) : Qt.rect(0, 0, 0, 0));
         }
     }
 
@@ -185,8 +184,7 @@ Item {
         function onWorkspaceActivated(ws, focused) {
             if (ws.output !== root.screenName || ws.name === "privacy")
                 return;
-            root.bounceWorkspace = ws.id;
-            root.bounceToken++;
+            anim.play(root.previousIndex, root.list.findIndex(w => w.id === ws.id));
             if (Config.workspaces.popupMode !== "bar")
                 return;
             const names = Config.workspaces.names || {};
@@ -257,6 +255,6 @@ Item {
         // wheel anywhere on the row switches workspaces
         anchors.fill: parent
         acceptedButtons: Qt.NoButton
-        onWheel: w => Niri.action(w.angleDelta.y > 0 ? "FocusWorkspaceUp" : "FocusWorkspaceDown", {})
+        onWheel: w => root.screenName === Niri.focusedOutput ? WorkspaceAnim.go(w.angleDelta.y > 0 ? "up" : "down") : Niri.action(w.angleDelta.y > 0 ? "FocusWorkspaceUp" : "FocusWorkspaceDown", {})
     }
 }

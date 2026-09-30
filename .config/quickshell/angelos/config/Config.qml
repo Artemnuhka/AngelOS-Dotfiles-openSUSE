@@ -38,6 +38,9 @@ Singleton {
     property alias dotfiles: adapter.dotfiles
     property alias system: adapter.system
     property alias developer: adapter.developer
+    property alias cursor: adapter.cursor
+    property alias updates: adapter.updates
+    property alias network: adapter.network
 
     function expand(path) {
         if (!path)
@@ -118,6 +121,8 @@ Singleton {
                 property bool showMedia: true
                 property bool showSeconds: false
                 property string startLabel: "angelOS"
+                property string startStyle: "classic" // classic (Win98 list) | win11 (centred, pinned grid) | fullscreen (iPhone-like app grid)
+                property var startPinned: []        // desktop entry ids pinned in Start
                 property string logoStyle: "classic" // classic | angel
                 property bool metaTap: true         // a short Meta tap opens Start (Windows-like)
                 property int metaTapMs: 400         // longer presses are holds, not taps
@@ -142,9 +147,10 @@ Singleton {
                 property string popupMode: "bar"    // bar (flash next to the hearts) | window | off
                 property string popupPosition: "bottom-center"
                 property bool indicator: false      // heart strip on the right edge
-                property int popupMs: 650
-                property bool phrases: true
-                property string switchFx: "soft"    // soft | slide | bounce | teleport | pixel | heart | glitch | instant
+            property int popupMs: 650
+            property bool phrases: true
+            property string switchFx: "soft"    // soft | slide | bounce | teleport | pixel | heart | glitch | instant
+                property string heartAnim: "smart"  // hearts/icons indicator: smart | collide | ender | hop | worm | pixel | beat | sparkle | drop | glitch | slide | off
                 property var names: ({})            // "DP-1:1" -> "работа"
             }
 
@@ -195,6 +201,7 @@ Singleton {
 
             property JsonObject lock: JsonObject {
                 property int idleMinutes: 0         // 0 = never lock automatically
+                property bool onSleep: true         // lock before suspend/hibernate (logind), so waking up shows the lock
                 property bool pixelate: true
                 property bool hearts: true          // floating pixel hearts
                 property bool reactions: true       // hearts on typing, a broken heart on a mistake, a burst on unlock
@@ -246,14 +253,34 @@ Singleton {
                 property bool nautilusDefaults: false // angelOS Nautilus extensions + prefs applied once
             }
 
+            property JsonObject cursor: JsonObject {
+                property string theme: ""           // "" = leave the system cursor alone
+                property int size: 24
+                property bool flatpak: true         // also hand the theme to Flatpak apps
+            }
+
+            property JsonObject updates: JsonObject {
+                property string repo: ""            // "" = found automatically (installer marker, ~/PixelStreetArt_Dotfiles_Niri)
+                property bool autoCheck: true       // look for updates once a day, never installs by itself
+                property string lastCheck: ""
+                property int available: 0
+            }
+
+            property JsonObject network: JsonObject {
+                property bool showWifi: true        // bar/sidebar Wi-Fi indicator when a Wi-Fi adapter exists
+                property bool showBluetooth: true
+            }
+
             property JsonObject developer: JsonObject {
                 property bool enabled: false
                 property string provider: "claude-cli" // claude-cli | codex-cli (browser login) | openai | anthropic (API key)
                 property string openaiModel: "gpt-5.4"
-                property string anthropicModel: "claude-sonnet-4-6"
-                property string claudeCliModel: ""  // "" = the CLI default; aliases like sonnet / opus work
+                property string anthropicModel: "claude-opus-5-5"
+                property string claudeCliModel: "sonnet" // "" = the CLI default; aliases: haiku / sonnet / opus / fable
                 property string codexCliModel: ""
-                property int maxOutputTokens: 16000
+                property var efforts: ({})          // provider -> low | medium | high | xhigh | max | ultra ("" = model default)
+                property int autoRepair: 1          // automatic repair rounds after failed checks (0–2)
+                property int maxOutputTokens: 32000
             }
         }
     }

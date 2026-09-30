@@ -21,7 +21,17 @@ PanelWindow {
             return;
         shown = true;
         hideTimer.restart();
+        // the strip was hidden: play once it has slid in far enough to be seen
+        Qt.callLater(() => anim.play(win.previousIndex, win.activeIndex));
     }
+    readonly property int activeIndex: list.findIndex(w => w.is_active)
+    property int currentIndex: -1
+    property int previousIndex: -1
+    onActiveIndexChanged: {
+        previousIndex = currentIndex;
+        currentIndex = activeIndex;
+    }
+    Component.onCompleted: currentIndex = activeIndex
 
     visible: shown || slide.running
     anchors.right: true
@@ -67,24 +77,38 @@ PanelWindow {
             anchors.centerIn: parent
             spacing: Theme.u * 3
             Repeater {
-                model: win.list
+                id: cells
+                model: win.list.length
                 Item {
                     id: cell
-                    required property var modelData
+                    required property int index
+                    readonly property var modelData: win.list[index] || ({})
+                    readonly property bool lit: modelData.is_active && anim.hiddenIndex !== index
                     width: Theme.u * 14
                     height: Theme.u * 12
                     Rectangle {
                         anchors.fill: parent
-                        visible: cell.modelData.is_active
+                        visible: cell.lit
                         color: Qt.alpha(Theme.accent, 0.25)
                     }
                     PxIcon {
                         anchors.centerIn: parent
                         name: "heart"
-                        hollow: !cell.modelData.is_active && Niri.windowsOn(cell.modelData.id).length === 0
-                        fill: cell.modelData.is_active ? Theme.accent : Theme.accent4
+                        hollow: !cell.lit && Niri.windowsOn(cell.modelData.id).length === 0
+                        fill: cell.lit ? Theme.accent : Theme.accent4
                     }
                 }
+            }
+        }
+        WsAnimator {
+            id: anim
+            anchors.fill: col
+            vertical: true
+            style: Config.workspaces.heartAnim
+            cellRect: i => {
+                col.forceLayout();
+                const c = cells.itemAt(i);
+                return c ? c.mapToItem(anim, 0, 0, c.width, c.height) : Qt.rect(0, 0, 0, 0);
             }
         }
     }

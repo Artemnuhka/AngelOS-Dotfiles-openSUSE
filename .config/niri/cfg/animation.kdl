@@ -3,7 +3,8 @@
         slowdown 1.2
 
         workspace-switch {
-            spring damping-ratio=0.82 stiffness=650 epsilon=0.0001
+            duration-ms 380
+            curve "cubic-bezier" 0.22 1 0.36 1
         }
         window-open {
             duration-ms 280

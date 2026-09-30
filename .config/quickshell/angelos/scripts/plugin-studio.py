@@ -30,8 +30,32 @@ API_PROVIDERS = ("openai", "anthropic")
 # "Sign in with the browser": the local Claude Code / Codex CLIs, logged in with a
 # Claude or ChatGPT account. angelOS never sees their credentials.
 CLI_PROVIDERS = ("claude-cli", "codex-cli")
-CLI_TIMEOUT = 600
 CODEX_DISABLE = ("shell_tool", "computer_use", "browser_use", "browser_use_external", "apps")
+EFFORTS = ("low", "medium", "high", "xhigh", "max", "ultra")
+# how long one request may take, by reasoning level (seconds)
+EFFORT_TIMEOUT = {"": 900, "low": 420, "medium": 720, "high": 1080, "xhigh": 1500, "max": 2100, "ultra": 2400}
+MAX_REPAIRS = 2
+# Claude Code accepts model aliases; effort levels per `claude --help`
+CLAUDE_CLI_MODELS = [
+    {"id": "", "label": "CLI default", "efforts": ["low", "medium", "high", "xhigh", "max"], "default": ""},
+    {"id": "haiku", "label": "Haiku", "efforts": [], "default": "", "speed": "fast"},
+    {"id": "sonnet", "label": "Sonnet", "efforts": ["low", "medium", "high", "xhigh", "max"], "default": "medium", "speed": "balanced"},
+    {"id": "opus", "label": "Opus", "efforts": ["low", "medium", "high", "xhigh", "max"], "default": "medium", "speed": "smart"},
+    {"id": "fable", "label": "Fable", "efforts": ["low", "medium", "high", "xhigh", "max"], "default": "low", "speed": "deep"},
+]
+ANTHROPIC_MODELS = [
+    {"id": "claude-haiku-4-5", "label": "Claude Haiku 4.5", "efforts": [], "default": "", "speed": "fast"},
+    {"id": "claude-sonnet-5-5", "label": "Claude Sonnet 5.5", "efforts": ["low", "medium", "high", "xhigh", "max"], "default": "medium", "speed": "balanced"},
+    {"id": "claude-opus-5-5", "label": "Claude Opus 5.5", "efforts": ["low", "medium", "high", "xhigh", "max"], "default": "medium", "speed": "smart"},
+    {"id": "claude-fable-5-1", "label": "Claude Fable 5.1", "efforts": ["low", "medium", "high", "xhigh", "max"], "default": "low", "speed": "deep"},
+]
+# models that get the server-side refusal fallback
+ANTHROPIC_FALLBACK = ("claude-fable-5-1", "claude-opus-5-5", "claude-opus-5", "claude-sonnet-5-5")
+OPENAI_MODELS = [
+    {"id": "gpt-5.4-mini", "label": "GPT-5.4 mini", "efforts": ["low", "medium", "high"], "default": "low", "speed": "fast"},
+    {"id": "gpt-5.4", "label": "GPT-5.4", "efforts": ["low", "medium", "high", "xhigh"], "default": "medium", "speed": "balanced"},
+    {"id": "gpt-5.5", "label": "GPT-5.5", "efforts": ["low", "medium", "high", "xhigh"], "default": "medium", "speed": "smart"},
+]
 
 
 class StudioError(Exception):
@@ -114,7 +138,7 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
-def provider_request(provider, model, key, system, messages, schema, tokens):
+def provider_request(provider, model, key, system, messages, schema, tokens, effort=""):
     headers = {"Content-Type": "application/json", "User-Agent": "angelOS-PluginStudio/1"}
     if provider == "openai":
         url = "https://api.openai.com/v1/responses"
@@ -123,11 +147,21 @@ def provider_request(provider, model, key, system, messages, schema, tokens):
                 "max_output_tokens": tokens, "store": False,
                 "text": {"format": {"type": "json_schema", "name": "angelos_plugin",
                                     "strict": True, "schema": schema}}}
+        if effort:
+            body["reasoning"] = {"effort": effort}
     elif provider == "anthropic":
         url = "https://api.anthropic.com/v1/messages"
         headers.update({"x-api-key": key, "anthropic-version": "2023-06-01"})
+        output = {"format": {"type": "json_schema", "schema": schema}}
+        # effort sets how deeply current models think (Haiku 4.5 does not take it)
+        if effort and not model.startswith("claude-haiku"):
+            output["effort"] = effort
         body = {"model": model, "system": system, "messages": messages, "max_tokens": tokens,
-                "output_config": {"format": {"type": "json_schema", "schema": schema}}}
+                "output_config": output}
+        if model in ANTHROPIC_FALLBACK:
+            # a declined request is retried by the API on a suitable model instead of failing
+            headers["anthropic-beta"] = "server-side-fallback-2026-07-01"
+            body["fallbacks"] = "default"
     else:
         raise StudioError("Unknown provider.", "Неизвестный провайдер.")
     return urllib.request.Request(url, data=json.dumps(body).encode(), headers=headers)
@@ -144,6 +178,12 @@ def parse_response(provider, data):
             raise StudioError("The provider declined this request.", "Провайдер отклонил запрос.")
         text = "".join(b.get("text", "") for b in blocks if b.get("type") == "output_text")
     else:
+        if data.get("stop_reason") == "refusal":
+            raise StudioError("The model declined this request. Rephrase the idea or pick another model.",
+                              "Модель отказалась выполнять запрос. Переформулируйте идею или выберите другую модель.")
+        if data.get("stop_reason") == "max_tokens":
+            raise StudioError("The answer hit the output limit. Raise the limit or lower the reasoning level.",
+                              "Ответ упёрся в лимит токенов. Увеличьте лимит или снизьте уровень рассуждений.")
         if data.get("stop_reason") != "end_turn":
             raise StudioError("Response incomplete or declined. Check the output limit.",
                               "Ответ неполный или отклонён. Проверьте лимит ответа.")
@@ -155,9 +195,9 @@ def parse_response(provider, data):
                           "Провайдер вернул некорректный JSON. Повторите запрос.")
 
 
-def call_provider(request, provider):
+def call_provider(request, provider, timeout=600):
     try:
-        with urllib.request.build_opener(NoRedirect()).open(request, timeout=180) as response:
+        with urllib.request.build_opener(NoRedirect()).open(request, timeout=timeout) as response:
             raw = response.read(4 * MAX_BYTES + 1)
         if len(raw) > 4 * MAX_BYTES:
             raise StudioError("Provider response is too large.", "Ответ провайдера слишком большой.")
@@ -220,6 +260,88 @@ def cli_status():
     return status
 
 
+def codex_models():
+    """Models and reasoning levels the local Codex CLI offers (its own catalog)."""
+    import tomllib
+    home = Path.home() / ".codex"
+    config = {}
+    try:
+        config = tomllib.loads((home / "config.toml").read_text())
+    except (OSError, ValueError):
+        pass
+    sources = [config.get("model_catalog_json"), home / "models_cache.json"]
+    items = []
+    for src in sources:
+        if not src:
+            continue
+        try:
+            data = json.loads(Path(src).expanduser().read_text())
+        except (OSError, ValueError):
+            continue
+        rows = data.get("models", data) if isinstance(data, dict) else data
+        for m in rows if isinstance(rows, list) else []:
+            if not isinstance(m, dict) or not (m.get("slug") or m.get("id")):
+                continue
+            levels = m.get("supported_reasoning_levels") or []
+            levels = [x.get("effort") if isinstance(x, dict) else x for x in levels]
+            items.append({"id": str(m.get("slug") or m.get("id")), "label": str(m.get("display_name") or m.get("slug")),
+                          "efforts": [x for x in levels if x in EFFORTS],
+                          "default": m.get("default_reasoning_level") if m.get("default_reasoning_level") in EFFORTS else ""})
+        if items:
+            break
+    default = {"id": "", "label": "CLI default" + (" (" + str(config["model"]) + ")" if config.get("model") else ""),
+               "efforts": ["low", "medium", "high", "xhigh"], "default": ""}
+    return [default] + items[:40], str(config.get("model_reasoning_effort") or "")
+
+
+def models_catalog():
+    codex, codex_effort = codex_models()
+    return {"claude-cli": CLAUDE_CLI_MODELS, "codex-cli": codex, "anthropic": ANTHROPIC_MODELS,
+            "openai": OPENAI_MODELS, "codexDefaultEffort": codex_effort}
+
+
+# ---------- what generated code can use, taken from the current sources ----------
+DECL_RE = re.compile(r"^    (?:readonly |required |default )*(property\s+\S+\s+\w+|signal\s+\w+(?:\([^)]*\))?|function\s+\w+\([^)]*\))")
+
+
+def qml_api(path, limit=40):
+    """Top-level declarations of a QML file: its public API."""
+    out = []
+    try:
+        lines = path.read_text().splitlines()
+    except OSError:
+        return out
+    doc = next((l.strip("/ ").strip() for l in lines[:12] if l.startswith("//")), "")
+    for line in lines:
+        m = DECL_RE.match(line)
+        if m and not re.search(r"\b_\w", m.group(1)):
+            out.append(re.sub(r"\s+", " ", m.group(1)))
+    return doc, out[:limit]
+
+
+def api_reference():
+    parts = ["API REFERENCE (generated from the installed angelOS sources; use only what is listed here or in the documents)"]
+    parts.append("\n## qs.widgets")
+    for f in sorted((ROOT / "widgets").glob("*.qml")):
+        doc, decls = qml_api(f, 25)
+        parts.append(f"- {f.stem}: {doc}\n    " + "; ".join(decls))
+    theme = (ROOT / "config/Theme.qml").read_text()
+    props = sorted(set(re.findall(r"^    readonly property \w+ (\w+)", theme, re.M)))
+    funcs = sorted(set(re.findall(r"^    function (\w+\([^)]*\))", theme, re.M)))
+    parts.append("\n## qs.config Theme (singleton)\nproperties: " + ", ".join(p for p in props if not p.startswith("_"))
+                 + "\nfunctions: " + ", ".join(funcs))
+    parts.append("## qs.config I18n (singleton): I18n.t(ru, en) returns the string for the UI language; I18n.label(stringOrObject)")
+    icons = re.findall(r"^    (\w+): \[", (ROOT / "widgets/Icons.js").read_text(), re.M)
+    parts.append("## PxIcon names (name: \"…\"): " + ", ".join(icons))
+    parts.append("\n## qs.services (singletons; the most useful ones)")
+    for name in ("SystemInfo", "Audio", "Niri", "Shell", "Notifs", "Plugins", "DesktopWidgets", "Lyrics", "Wifi", "Bt", "Clipboard", "Capture"):
+        f = ROOT / "services" / (name + ".qml")
+        if f.exists():
+            doc, decls = qml_api(f, 30)
+            parts.append(f"- {name}: {doc}\n    " + "; ".join(decls))
+    return "\n".join(parts)
+
+
 def transcript(messages):
     parts = []
     for message in messages:
@@ -228,7 +350,7 @@ def transcript(messages):
     return "\n\n".join(parts) + "\n\nReply to the last USER message with JSON matching the schema."
 
 
-def run_cli(provider, model, system, messages, schema, workdir):
+def run_cli(provider, model, system, messages, schema, workdir, effort=""):
     """One structured request through a logged-in CLI; returns (value, usage)."""
     env = dict(os.environ)
     if provider == "claude-cli":
@@ -245,6 +367,8 @@ def run_cli(provider, model, system, messages, schema, workdir):
                 "--no-session-persistence", "--system-prompt-file", str(system_file)]
         if model:
             argv += ["--model", model]
+        if effort and effort != "ultra":
+            argv += ["--effort", effort]
         prompt = transcript(messages)
     else:
         binary = cli_path("codex")
@@ -265,13 +389,18 @@ def run_cli(provider, model, system, messages, schema, workdir):
                 argv += ["--disable", feature]
         if model:
             argv += ["-m", model]
+        if effort:
+            argv += ["-c", f'model_reasoning_effort="{effort}"']
         argv.append("-")
         prompt = "SYSTEM INSTRUCTIONS:\n" + system + "\n\nCONVERSATION:\n" + transcript(messages)
     try:
+        limit = EFFORT_TIMEOUT.get(effort, 900)
         done = subprocess.run(argv, input=prompt, capture_output=True, text=True,
-                              timeout=CLI_TIMEOUT, cwd=workdir, env=env)
+                              timeout=limit, cwd=workdir, env=env)
     except subprocess.TimeoutExpired:
-        raise StudioError("The CLI did not answer in 10 minutes.", "CLI не ответил за 10 минут.")
+        minutes = EFFORT_TIMEOUT.get(effort, 900) // 60
+        raise StudioError(f"The CLI did not answer in {minutes} minutes. Try a lower reasoning level.",
+                          f"CLI не ответил за {minutes} мин. Попробуйте уровень рассуждений пониже.")
     except OSError:
         raise StudioError("Could not start the CLI.", "Не удалось запустить CLI.")
     tail = (done.stderr or done.stdout or "").strip().splitlines()[-1:] or [""]
@@ -427,8 +556,88 @@ def validate_files(files, directory, spec, taken):
     return manifest, errors[:30]
 
 
+HARNESS = """//@ pragma UseQApplication
+//@ pragma Env QT_QUICK_CONTROLS_STYLE=Basic
+import QtQuick
+import Quickshell
+@IMPORTS@
+// angelOS Plugin Studio: loads each entry point of a draft the way the shell
+// hosts do and reports what fails. Runs offscreen inside bubblewrap.
+ShellRoot {
+    Item {
+        id: host
+        width: 900
+        height: 700
+    }
+    readonly property var check: JSON.parse(Quickshell.env("ANGELOS_CHECK") || "{}")
+    Component.onCompleted: {
+        const store = {};
+        const plugin = {"id": check.id, "dir": check.dir, "manifest": check.manifest,
+            "url": rel => "file://" + check.dir + "/" + rel, "settings": () => store,
+            "get": (k, d) => store[k] === undefined ? d : store[k], "set": (k, v) => { store[k] = v; }};
+        for (const e of check.entries || []) {
+            const c = Qt.createComponent(e.url);
+            if (c.status === Component.Error) {
+                console.log("CHECK-FAIL " + e.kind + " :: " + c.errorString().replace(/\\n/g, " | "));
+                continue;
+            }
+            const props = {"plugin": plugin};
+            if (e.kind === "desktopWidget") { props.screenName = "CHECK-1"; props.widget = {"uid": "check", "x": 0, "y": 0, "settings": {}}; }
+            if (e.kind === "barWidget") { props.screenName = "CHECK-1"; props.barWindow = null; }
+            if (e.kind === "launcher") props.pluginId = check.id;
+            if (e.kind === "menuComponent") props.menu = {"close": () => {}};
+            if (e.kind === "sidebarWidget") props.width = 300;
+            const o = c.createObject(host, props);
+            if (!o) { console.log("CHECK-FAIL " + e.kind + " :: could not be created"); continue; }
+            if (e.kind === "launcher" && typeof o.query === "function") {
+                try { o.query("test", false); } catch (err) { console.log("CHECK-FAIL launcher :: query() threw " + err); }
+            }
+            console.log("CHECK-OK " + e.kind + " " + Math.round(o.implicitWidth) + "x" + Math.round(o.implicitHeight));
+        }
+        done.start();
+    }
+    // let timers and first process runs fire once
+    Timer {
+        id: done
+        interval: 2500
+        onTriggered: { console.log("CHECK-DONE"); Qt.quit(); }
+    }
+}
+"""
+ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def quickshell_binary():
+    """(binary, env, read-only binds) for running quickshell inside the sandbox."""
+    system = shutil.which("quickshell", path="/usr/bin:/usr/local/bin")
+    if system:
+        return system, {}, []
+    local = Path.home() / ".local/opt/quickshell/usr"
+    if (local / "bin/quickshell").exists():
+        return str(local / "bin/quickshell"), {"LD_LIBRARY_PATH": str(local / "lib"),
+                                                "QML_IMPORT_PATH": str(local / "lib/qt6/qml")}, [str(local)]
+    return None, {}, []
+
+
+def sandbox_probe(bwrap):
+    """Check that this host can create the isolated namespaces before loading QML."""
+    argv = [bwrap, "--ro-bind", "/", "/", "--dev", "/dev", "--proc", "/proc",
+            "--tmpfs", "/tmp", "--tmpfs", "/run", "--tmpfs", str(Path.home()),
+            "--unshare-all", "--die-with-parent", "--new-session", "--cap-drop", "ALL",
+            "--clearenv", "--setenv", "HOME", "/tmp", "--setenv", "XDG_RUNTIME_DIR", "/tmp",
+            "--", "/usr/bin/true"]
+    try:
+        result = subprocess.run(argv, capture_output=True, text=True, timeout=5)
+    except (OSError, subprocess.TimeoutExpired) as error:
+        return False, str(error).splitlines()[-1][:180]
+    if result.returncode == 0:
+        return True, ""
+    detail = (result.stderr or result.stdout or "sandbox setup failed").strip().splitlines()
+    return False, detail[-1][:180] if detail else "sandbox setup failed"
+
+
 class Studio:
-    def __init__(self, home=None, emit=None, api=None, cli=None):
+    def __init__(self, home=None, emit=None, api=None, cli=None, runtime=True):
         self.home = Path(home) if home else Path.home()
         self.config = self.home / ".config/angelos"
         self.state = self.home / ".local/state/angelos/studio"
@@ -438,6 +647,8 @@ class Studio:
         self.emit = emit or (lambda event: None)
         self.api = api or call_provider
         self.cli = cli or run_cli
+        self.runtime = runtime
+        self._sandbox_status = None
 
     def session(self):
         return read_json(self.session_file, {"messages": [], "plan": None, "draft": None, "installed": ""})
@@ -458,16 +669,23 @@ class Studio:
     def context(self, language, generate=False):
         names = ["docs/STUDIO_CONTRACT.md", "docs/PLUGINS.md"]
         if generate:
-            names += ["plugins/_template/DesktopWidget.qml", "plugins/_template/Settings.qml",
-                      "widgets/PxField.qml", "widgets/PxButton.qml", "widgets/PxToggle.qml",
-                      "widgets/PxCombo.qml", "widgets/PxText.qml", "widgets/SettingRow.qml"]
-        text = "\n\n".join("FILE " + name + "\n" + (ROOT / name).read_text() for name in names)
+            # a small, real plugin that works, plus the scaffold for every entry point
+            names += ["plugins/_template/manifest.json", "plugins/_template/DesktopWidget.qml",
+                      "plugins/_template/BarWidget.qml", "plugins/_template/Main.qml",
+                      "plugins/_template/Settings.qml", "plugins/cat/manifest.json",
+                      "plugins/cat/BarWidget.qml", "plugins/cat/Settings.qml", "plugins/cat/Cpu.qml"]
+        text = "\n\n".join("FILE " + name + "\n" + (ROOT / name).read_text() for name in names if (ROOT / name).exists())
+        if generate:
+            text += "\n\n" + api_reference()
         return (text + "\n\nRespond in " + ("English" if language == "en" else "Russian")
                 + ". Existing IDs (do not reuse): " + ", ".join(sorted(self.taken_ids()))
                 + "\nReturn exactly the requested JSON schema.")
 
     def ask(self, request, messages, schema, generate=False):
         provider = request.get("provider")
+        effort = request.get("effort", "")
+        if effort not in ("",) + EFFORTS:
+            raise StudioError("Unknown reasoning level.", "Неизвестный уровень рассуждений.")
         if provider in CLI_PROVIDERS:
             model = request.get("model", "")
             if not isinstance(model, str) or not re.fullmatch(r"[A-Za-z0-9_.:\[\]-]{0,100}", model):
@@ -477,7 +695,7 @@ class Studio:
             private_dir(self.state)
             workdir = Path(tempfile.mkdtemp(prefix="cli-", dir=self.state))
             try:
-                value, usage = self.cli(provider, model, system, messages, schema, workdir)
+                value, usage = self.cli(provider, model, system, messages, schema, workdir, effort)
             finally:
                 shutil.rmtree(workdir, ignore_errors=True)
             check_schema(value, schema)
@@ -490,14 +708,14 @@ class Studio:
         model = request.get("model", "")
         if not isinstance(model, str) or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,100}", model):
             raise StudioError("Enter a valid API model ID.", "Введите корректный API ID модели.")
-        tokens = request.get("maxOutputTokens", 16000)
-        if type(tokens) is not int or not 2048 <= tokens <= 32000:
-            raise StudioError("Output limit must be 2048–32000 tokens.", "Лимит ответа: 2048–32000 токенов.")
+        tokens = request.get("maxOutputTokens", 32000)
+        if type(tokens) is not int or not 2048 <= tokens <= 64000:
+            raise StudioError("Output limit must be 2048–64000 tokens.", "Лимит ответа: 2048–64000 токенов.")
         system = self.context(request.get("language"), generate)
         wire = provider_request(provider, model, key, system, messages, schema,
-                                tokens if generate else min(tokens, 6000))
+                                tokens if generate else min(tokens, 12000), effort)
         self.emit({"event": "progress", "stage": "request"})
-        value, usage = self.api(wire, provider)
+        value, usage = self.api(wire, provider, EFFORT_TIMEOUT.get(effort, 900))
         check_schema(value, schema)
         # Guard against an accidentally pasted key being echoed into generated files/history.
         serialized = json.dumps(value, ensure_ascii=False)
@@ -505,6 +723,22 @@ class Studio:
             raise StudioError("The response contains a saved API key and was discarded.",
                               "Ответ содержит сохранённый API-ключ и был отброшен.")
         return value, usage
+
+    def store_draft(self, session, value, usage):
+        files = bundle_files(value)
+        token = uuid.uuid4().hex
+        directory = self.state / "drafts" / token
+        private_dir(directory)
+        for name, text in files.items():
+            target = directory / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(text)
+            target.chmod(0o600)
+        old = session.get("draft") or {}
+        if old.get("token") and old["token"] != token:
+            shutil.rmtree(self.state / "drafts" / old["token"], ignore_errors=True)
+        self.emit({"event": "progress", "stage": "validation"})
+        session.update({"draft": {"token": token, "summary": value["summary"], "notes": value["notes"]}, "usage": usage})
 
     def draft_dir(self, token):
         if not isinstance(token, str) or not re.fullmatch(r"[a-f0-9]{32}", token):
@@ -531,6 +765,80 @@ class Studio:
             files.append({"path": entry.relative_to(path).as_posix(), "content": entry.read_text()})
         return bundle_files({"summary": "", "notes": [], "files": files})
 
+    def runtime_check(self, directory, manifest):
+        """Load every QML entry point offscreen in a bubblewrap sandbox (no network, no home,
+        no sockets). Returns (errors, note). Skipped when bwrap or quickshell is missing."""
+        bwrap = shutil.which("bwrap")
+        binary, extra_env, extra_binds = quickshell_binary()
+        if not bwrap:
+            return [], "runtime check skipped: bubblewrap (bwrap) is not installed"
+        if not binary:
+            return [], "runtime check skipped: quickshell not found"
+        if self._sandbox_status is None:
+            self._sandbox_status = sandbox_probe(bwrap)
+        if not self._sandbox_status[0]:
+            detail = self._sandbox_status[1]
+            suffix = f" ({detail})" if detail else ""
+            return [], "runtime check skipped: bubblewrap sandbox unavailable" + suffix
+        entries = [{"kind": f, "url": "file://" + str(directory / manifest[f])}
+                   for f in ENTRYPOINTS if isinstance(manifest.get(f), str) and manifest[f].endswith(".qml")]
+        if not entries:
+            return [], ""
+        private_dir(self.state)
+        tmp = Path(tempfile.mkdtemp(prefix="check-", dir=self.state))
+        try:
+            root, home, run = tmp / "shell", tmp / "home", tmp / "run"
+            (home / ".config/angelos").mkdir(parents=True)
+            run.mkdir(mode=0o700)
+            imports, binds = [], []
+            for sub in ("config", "services", "widgets", "modules", "plugins", "scripts", "shaders", "templates", "bin"):
+                if not (ROOT / sub).is_dir():
+                    continue
+                (root / sub).mkdir(parents=True)
+                binds += ["--ro-bind", str(ROOT / sub), str(root / sub)]
+                if sub in ("config", "services", "widgets", "modules"):
+                    for d in [ROOT / sub] + sorted(p for p in (ROOT / sub).rglob("*") if p.is_dir()):
+                        if "__pycache__" not in d.parts and any(d.glob("*.qml")):
+                            imports.append("import qs." + ".".join(d.relative_to(ROOT).parts))
+            (root / "shell.qml").write_text(HARNESS.replace("@IMPORTS@", "\n".join(imports)))
+            check = {"id": manifest.get("id", ""), "dir": str(directory), "manifest": manifest, "entries": entries}
+            env = {"HOME": str(home), "XDG_RUNTIME_DIR": str(run), "QT_QPA_PLATFORM": "offscreen",
+                   "ANGELOS_DEV": "1", "PATH": "/usr/bin:/bin", "LANG": "C.UTF-8", "ANGELOS_CHECK": json.dumps(check)}
+            env.update(extra_env)
+            # the home is hidden; the scratch dir first, then the read-only shell parts inside it
+            argv = [bwrap, "--ro-bind", "/", "/", "--dev", "/dev", "--proc", "/proc",
+                    "--tmpfs", "/tmp", "--tmpfs", "/run", "--tmpfs", str(Path.home()), "--bind", str(tmp), str(tmp)]
+            for b in extra_binds:
+                argv += ["--ro-bind", b, b]
+            argv += binds + ["--ro-bind", str(directory), str(directory),
+                             "--unshare-all", "--die-with-parent", "--new-session", "--cap-drop", "ALL", "--clearenv"]
+            for k, v in env.items():
+                argv += ["--setenv", k, v]
+            argv += [binary, "-p", str(root)]
+            try:
+                done = subprocess.run(argv, capture_output=True, text=True, timeout=30)
+                output = ANSI_RE.sub("", done.stdout + done.stderr)
+            except subprocess.TimeoutExpired as e:
+                output = ANSI_RE.sub("", (e.stdout or b"").decode(errors="replace") if isinstance(e.stdout, bytes) else (e.stdout or ""))
+                output += "\nCHECK-TIMEOUT"
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+        errors, where = [], str(directory) + "/"
+        for line in output.splitlines():
+            text = line.strip()
+            if "CHECK-FAIL" in text:
+                errors.append("runtime: " + text.split("CHECK-FAIL", 1)[1].strip().replace("file://" + where, "").replace(where, ""))
+            elif where in text and re.search(r"\b(WARN|ERROR|CRIT)", text):
+                errors.append("runtime: " + re.sub(r"^.*?(WARN|ERROR|CRIT)\S*\s*", "", text).replace("file://" + where, "").replace(where, ""))
+            else:
+                m = re.search(r"CHECK-OK (\w+) (\d+)x(\d+)", text)
+                if m and m.group(1) in ("desktopWidget", "barWidget", "sidebarWidget") and (m.group(2) == "0" or m.group(3) == "0"):
+                    errors.append(f"runtime: {m.group(1)} has zero implicit size ({m.group(2)}x{m.group(3)}); set implicitWidth/implicitHeight")
+        if "CHECK-DONE" not in output:
+            errors.append("runtime: the QML check did not finish (crash, hang or a blocking call at load time)")
+        # the same warning can repeat per binding evaluation
+        return list(dict.fromkeys(errors))[:25], "runtime check: entry points loaded in a sandbox"
+
     def review(self, session):
         draft = session.get("draft")
         if not draft:
@@ -542,6 +850,12 @@ class Studio:
                               "Уберите сохранённый API-ключ из черновика перед продолжением.")
         manifest, errors = validate_files(files, self.draft_dir(draft["token"]),
                                           session["plan"]["spec"], self.taken_ids())
+        note = ""
+        if not errors and self.runtime:
+            self.emit({"event": "progress", "stage": "runtime"})
+            runtime_errors, note = self.runtime_check(self.draft_dir(draft["token"]), manifest)
+            errors = runtime_errors
+        draft["check"] = note
         draft.update({"manifest": manifest, "errors": errors, "digest": digest(files),
                       "files": [{"path": name, "content": text} for name, text in files.items()],
                       "directory": str(self.draft_dir(draft["token"]))})
@@ -593,7 +907,7 @@ class Studio:
         if action == "status":
             keys = self.credentials()
             return {"keys": {p: bool(keys.get(p)) for p in API_PROVIDERS},
-                    "cli": cli_status(), "session": self.session()}
+                    "cli": cli_status(), "session": self.session(), "models": models_catalog()}
         if action in ("save_key", "delete_key"):
             provider = request.get("provider")
             if provider not in API_PROVIDERS:
@@ -648,20 +962,27 @@ class Studio:
                 previous = self.review(session)
                 messages[-1]["content"] += "\nRepair/replace this complete previous bundle:\n" + json.dumps(
                     {key: previous[key] for key in ("files", "errors", "summary", "notes")}, ensure_ascii=False)
-            value, usage = self.ask(request, messages, BUNDLE, True)
-            files = bundle_files(value)
-            token = uuid.uuid4().hex
-            directory = self.state / "drafts" / token
-            private_dir(directory)
-            for name, text in files.items():
-                target = directory / name
-                target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_text(text)
-                target.chmod(0o600)
-            self.emit({"event": "progress", "stage": "validation"})
-            session.update({"draft": {"token": token, "summary": value["summary"], "notes": value["notes"]}, "usage": usage})
-            self.review(session)
-            self.save(session)
+            rounds = request.get("autoRepair", 1)
+            rounds = rounds if type(rounds) is int and 0 <= rounds <= MAX_REPAIRS else 1
+            total = {"input_tokens": 0, "output_tokens": 0}
+            attempt = 0
+            while True:
+                value, usage = self.ask(request, messages, BUNDLE, True)
+                for k in total:
+                    total[k] += int((usage or {}).get(k) or 0)
+                self.store_draft(session, value, total)
+                draft = self.review(session)
+                self.save(session)
+                if not draft["errors"] or attempt >= rounds:
+                    break
+                attempt += 1
+                # feed the failures back once or twice before bothering the user
+                self.emit({"event": "progress", "stage": "repair", "round": attempt, "of": rounds})
+                messages = session["messages"] + [{"role": "user", "content":
+                    "Implement this approved plan:\n" + json.dumps(plan, ensure_ascii=False)
+                    + "\nYour previous bundle failed the automatic checks below (static checks, then loading every "
+                    "entry point in Quickshell). Fix every item, keep what works, and return the complete corrected "
+                    "bundle:\n" + json.dumps({key: draft[key] for key in ("files", "errors")}, ensure_ascii=False)}]
         elif action == "review":
             self.review(session)
             self.save(session)

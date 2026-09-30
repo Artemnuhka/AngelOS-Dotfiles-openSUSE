@@ -3,15 +3,57 @@
 #   angelos launcher | settings [page] | lock | session | clipboard | lyrics
 #   angelos theme light|dark|auto|toggle | wallpaper <path|random> | bar taskbar|top|island
 #   angelos startMenu | sidebar | idle | lockPreview | fontPreset arcade|soft|block|angelos
-#   angelos start | restart | stop | log | switch angelos|noctalia | status
+#   angelos ws <n|up|down|prev> | start | restart | stop | run | log | switch angelos|noctalia | status
 SHELL_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/angelos"
+CONF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/angelos"
+
+# Renderer for the shell only (Settings → System → Rendering, file ~/.config/angelos/renderer):
+#   auto   — Qt's OpenGL; on NVIDIA with Qt < 6.12 the patched wayland-egl plugin
+#            (scripts/qt-egl-fix.sh) brings back the threaded, vsync-driven render loop
+#   vulkan — Qt's Vulkan backend (threaded by design)
+#   opengl — stock Qt, nothing changed
+# The variables are remembered so apps started from angelOS get the originals back.
+shell_env() {
+  mode="$(cat "$CONF_DIR/renderer" 2>/dev/null | tr -cd 'a-z')"
+  export ANGELOS_PRE_QT_PLUGIN_PATH="${QT_PLUGIN_PATH:-}" ANGELOS_PRE_QSG_RHI_BACKEND="${QSG_RHI_BACKEND:-}"
+  case "$mode" in
+    vulkan) export QSG_RHI_BACKEND=vulkan ;;
+    opengl) ;;
+    *)
+      ver=""
+      for q in /usr/lib/qt6/bin/qtpaths6 /usr/lib64/qt6/bin/qtpaths6; do
+        [ -x "$q" ] && ver="$("$q" --qt-version 2>/dev/null)" && break
+      done
+      plugins="${XDG_DATA_HOME:-$HOME/.local/share}/angelos/qt/$ver/plugins"
+      if [ -n "$ver" ] && [ -f "$plugins/wayland-graphics-integration-client/libqt-plugin-wayland-egl.so" ]; then
+        export QT_PLUGIN_PATH="$plugins${QT_PLUGIN_PATH:+:$QT_PLUGIN_PATH}"
+      fi
+      ;;
+  esac
+}
+
 case "$1" in
-  ""|help|-h|--help) sed -n '2,7p' "$0"; exec qs -c angelos ipc show ;;
-  start)   exec setsid -f qs -c angelos -n ;;
+  ""|help|-h|--help) sed -n '2,6p' "$0"; exec qs -c angelos ipc show ;;
+  run)     shell_env; exec qs -c angelos -n ;;
+  start)   exec setsid -f "$0" run >/dev/null 2>&1 ;;
   stop)    exec qs -c angelos kill ;;
-  restart) qs -c angelos kill >/dev/null 2>&1; sleep 0.5; exec setsid -f qs -c angelos -n ;;
+  restart) qs -c angelos kill >/dev/null 2>&1; sleep 0.5; exec setsid -f "$0" run >/dev/null 2>&1 ;;
   log)     exec qs -c angelos log -f ;;
   switch)  shift; exec python3 "$SHELL_DIR/scripts/switch.py" "$@" ;;
   settings) exec qs -c angelos ipc call angelos settings "${2:-}" ;;
+  ws)
+    # workspace switch through the shell (animated transitions), niri directly as a fallback
+    target="$(printf '%s' "${2:-}" | tr -cd 'a-z0-9-')"
+    sock="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/angelos/ctl.sock"
+    if [ -S "$sock" ] && command -v socat >/dev/null 2>&1 && printf 'ws %s\n' "$target" | socat -t1 - "UNIX-CONNECT:$sock" 2>/dev/null | grep -q '^ok'; then
+      exit 0
+    fi
+    case "$target" in
+      up) exec niri msg action focus-workspace-up ;;
+      down) exec niri msg action focus-workspace-down ;;
+      prev) exec niri msg action focus-workspace-previous ;;
+      *) exec niri msg action focus-workspace "$target" ;;
+    esac
+    ;;
   *)       exec qs -c angelos ipc call angelos "$@" ;;
 esac

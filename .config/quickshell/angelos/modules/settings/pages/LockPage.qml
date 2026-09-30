@@ -28,6 +28,14 @@ PxPage {
             }
         }
         SettingRow {
+            label: I18n.t("Блокировать перед сном", "Lock before sleep")
+            hint: I18n.t("экран блокируется до ухода в сон, после пробуждения сразу виден замок, а не рабочий стол; также срабатывает на loginctl lock-session", "The lock comes up before the system sleeps, so waking up shows the lock, never the desktop; loginctl lock-session works too")
+            PxToggle {
+                checked: Config.lock.onSleep
+                onToggled: c => Config.lock.onSleep = c
+            }
+        }
+        SettingRow {
             label: I18n.t("Пикселизовать обои", "Pixelate the wallpaper")
             PxToggle {
                 checked: Config.lock.pixelate

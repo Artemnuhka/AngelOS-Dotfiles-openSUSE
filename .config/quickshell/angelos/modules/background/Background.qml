@@ -8,9 +8,12 @@ import qs.services
 import qs.modules.desktop
 
 // Two background-layer surfaces per screen:
-//   angelos-wallpaper — the picture; niri puts it into the overview backdrop, where
-//                       surfaces get NO input at all (layer-rule place-within-backdrop)
-//   angelos-desktop   — transparent, on top: right-click menu and desktop widgets
+//   angelos-wallpaper — the picture and the desktop widgets; niri keeps it in the
+//                       backdrop (layer-rule place-within-backdrop): it does not
+//                       slide with workspaces and shows once in the overview, but
+//                       gets NO input at all
+//   angelos-desktop   — transparent, drawn inside every workspace: right-click
+//                       menu and invisible widget proxies that take the pointer
 Variants {
     model: Shell.screens
 
@@ -34,6 +37,21 @@ Variants {
             WallpaperView {
                 anchors.fill: parent
                 screenName: scope.modelData.name
+            }
+
+            // desktop widgets (built-in + plugins): pinned with the wallpaper
+            Item {
+                id: widgetLayer
+                anchors.fill: parent
+                Repeater {
+                    model: DesktopWidgets.uidsFor(scope.modelData.name)
+                    DesktopWidgetHost {
+                        required property string modelData
+                        uid: modelData
+                        screenName: scope.modelData.name
+                        area: widgetLayer
+                    }
+                }
             }
         }
 
@@ -66,17 +84,17 @@ Variants {
                 }
             }
 
-            // desktop widgets (built-in + plugins), above the click catcher so they get their own input
+            // input for the widgets drawn in the wallpaper surface (see WidgetProxy)
             Item {
                 id: deskArea
                 anchors.fill: parent
                 Repeater {
                     model: DesktopWidgets.uidsFor(win.modelData.name)
-                    DesktopWidgetHost {
+                    WidgetProxy {
                         required property string modelData
                         uid: modelData
-                        screenName: win.modelData.name
                         area: deskArea
+                        onContextMenu: (x, y) => menu.openAt(x, y)
                     }
                 }
             }

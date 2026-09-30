@@ -1,12 +1,17 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtTest
 import Quickshell
 import qs.config
 import qs.services
 import qs.widgets
 
-// Frame around one desktop widget: title bar drags it, ✕ (in edit mode) removes it.
+// Frame around one desktop widget, drawn in the wallpaper surface (niri backdrop:
+// it stays put while workspaces move and shows once in the overview). That
+// surface gets no input: WidgetProxy on the desktop surface drags the title bar
+// and replays the pointer here as real Qt mouse events (QtTest's TestEvent sends
+// them straight to this window), so buttons, hover and wheel behave as usual.
 Item {
     id: host
 
@@ -16,7 +21,8 @@ Item {
     readonly property var widget: DesktopWidgets.byUid(uid)
     readonly property var info: widget ? DesktopWidgets.typeInfo(widget.type) : null
     readonly property bool wants: !content.item || content.item.wantVisible === undefined || content.item.wantVisible
-    property bool dragging: dragArea.drag.active
+    readonly property bool dragging: DesktopWidgets.drag.uid === uid
+    readonly property alias frame: frame
 
     function clampX(v) {
         return Math.max(0, Math.min(area.width - width, v));
@@ -29,13 +35,84 @@ Item {
     opacity: wants ? 1 : 0.45
     width: frame.width
     height: frame.height
-    Binding on x {
-        when: !host.dragging && !!host.widget
-        value: host.clampX(host.widget.x < 0 ? host.area.width + host.widget.x - host.width : host.widget.x)
+    x: dragging ? DesktopWidgets.drag.x : widget ? clampX(widget.x < 0 ? area.width + widget.x - width : widget.x) : 0
+    y: dragging ? DesktopWidgets.drag.y : widget ? clampY(widget.y < 0 ? area.height + widget.y - height : widget.y) : 0
+
+    Component.onCompleted: DesktopWidgets.registerHost(uid, host)
+    Component.onDestruction: DesktopWidgets.unregisterHost(uid, host)
+
+    // ---- input forwarding (called by WidgetProxy with host coordinates) ----
+    // The deepest visible, enabled item under the point that has `signalName`
+    // (a MouseArea's clicked/wheel/doubleClicked, or a widget's own signal).
+    function targetAt(px, py, signalName) {
+        let item = host, x = px, y = py, found = null;
+        while (item) {
+            if (item !== host && item.visible && item.enabled !== false && typeof item[signalName] === "function")
+                found = {
+                    "item": item,
+                    "x": x,
+                    "y": y
+                };
+            const child = item.childAt(x, y);
+            if (!child)
+                break;
+            const p = item.mapToItem(child, x, y);
+            item = child;
+            x = p.x;
+            y = p.y;
+        }
+        return found;
     }
-    Binding on y {
-        when: !host.dragging && !!host.widget
-        value: host.clampY(host.widget.y < 0 ? host.area.height + host.widget.y - host.height : host.widget.y)
+    function inTitle(px, py) {
+        const p = host.mapToItem(frame.titleBar, px, py);
+        return p.x >= 0 && p.y >= 0 && p.x < frame.titleBar.width && p.y < frame.titleBar.height;
+    }
+    function isTitleDrag(px, py) {
+        // on the title bar, but not on one of its buttons
+        const t = targetAt(px, py, "clicked");
+        return inTitle(px, py) && (!t || t.item === frame.titleMouse);
+    }
+    // does anything under the point take this button? (else the desktop menu opens)
+    function takes(px, py, button) {
+        const t = targetAt(px, py, "clicked");
+        return !!t && t.item !== frame.titleMouse && (t.item.acceptedButtons === undefined || !!(t.item.acceptedButtons & button));
+    }
+    function press(px, py, button) {
+        sim.mousePress(host, px, py, button, Qt.NoModifier, -1);
+    }
+    function release(px, py, button) {
+        sim.mouseRelease(host, px, py, button, Qt.NoModifier, -1);
+    }
+    function move(px, py, buttons) {
+        sim.mouseMove(host, px, py, -1, buttons, Qt.NoModifier);
+    }
+    function leave() {
+        // hover leaves every item of the widget
+        sim.mouseMove(host, -Theme.u * 4, -Theme.u * 4, -1, Qt.NoButton, Qt.NoModifier);
+    }
+    function doubleClick(px, py, button) {
+        if (button === Qt.LeftButton && isTitleDrag(px, py)) {
+            DesktopWidgets.editMode = !DesktopWidgets.editMode;
+            return;
+        }
+        if (targetAt(px, py, "doubleClicked"))
+            sim.mouseDoubleClick(host, px, py, button, Qt.NoModifier, -1);
+    }
+    function wheel(px, py, angleDelta) {
+        if (!targetAt(px, py, "wheel"))
+            return false;
+        sim.mouseWheel(host, px, py, Qt.NoButton, Qt.NoModifier, angleDelta.x, angleDelta.y, -1);
+        return true;
+    }
+    function cursorAt(px, py) {
+        if (isTitleDrag(px, py))
+            return Qt.OpenHandCursor;
+        const t = targetAt(px, py, "clicked");
+        return t && t.item.cursorShape !== undefined ? t.item.cursorShape : Qt.ArrowCursor;
+    }
+
+    TestEvent {
+        id: sim
     }
 
     PxWindow {
@@ -73,28 +150,5 @@ Item {
                 }
             }
         }
-    }
-
-    // drag by the title bar (leaves the ✕ clickable)
-    MouseArea {
-        id: dragArea
-        x: frame.titleBar.x
-        y: frame.titleBar.y
-        width: frame.titleBar.width - (DesktopWidgets.editMode ? frame.titleHeight : 0)
-        height: frame.titleBar.height
-        cursorShape: drag.active ? Qt.ClosedHandCursor : Qt.OpenHandCursor
-        drag.target: host
-        drag.threshold: 2
-        drag.minimumX: 0
-        drag.minimumY: 0
-        drag.maximumX: host.area.width - host.width
-        drag.maximumY: host.area.height - host.height
-        property bool moved: false
-        onPressed: moved = false
-        onPositionChanged: if (pressed && drag.active)
-            moved = true
-        onReleased: if (moved)
-            DesktopWidgets.move(host.uid, host.x, host.y)
-        onDoubleClicked: DesktopWidgets.editMode = !DesktopWidgets.editMode
     }
 }

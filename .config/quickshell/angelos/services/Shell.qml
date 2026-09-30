@@ -31,6 +31,8 @@ Singleton {
     readonly property bool demo: Quickshell.env("ANGELOS_DEMO") === "1"
     property var desktopMenus: ({})   // screen name -> DesktopMenu
     property string launcherText: ""
+    // plays the workspace heart animation on the bars without switching (settings preview, `angelos heartDemo`)
+    signal heartDemo(int from, int to)
 
     function lock() {
         closeStart();
@@ -96,11 +98,38 @@ Singleton {
         else
             openSettings(page);
     }
-    function exec(cmd) {
-        Quickshell.execDetached(cmd);
+    // Apps started from angelOS get the environment the shell itself started with:
+    // the renderer variables bin/angelos set for the shell are put back, and the
+    // cursor follows Settings → Cursor even before the next login.
+    function _pre(name) {
+        const v = Quickshell.env("ANGELOS_PRE_" + name);
+        return v === null || v === undefined || v === "" ? null : v;
+    }
+    readonly property var childEnv: {
+        const e = {};
+        if (Quickshell.env("ANGELOS_PRE_QT_PLUGIN_PATH") != null)
+            e.QT_PLUGIN_PATH = _pre("QT_PLUGIN_PATH");
+        if (Quickshell.env("ANGELOS_PRE_QSG_RHI_BACKEND") != null)
+            e.QSG_RHI_BACKEND = _pre("QSG_RHI_BACKEND");
+        e.ANGELOS_PRE_QT_PLUGIN_PATH = null;
+        e.ANGELOS_PRE_QSG_RHI_BACKEND = null;
+        if (Cursors.theme) {
+            e.XCURSOR_THEME = Cursors.theme;
+            e.XCURSOR_SIZE = String(Cursors.size);
+        }
+        return e;
+    }
+    function exec(cmd, workingDirectory) {
+        const ctx = {
+            "command": cmd,
+            "environment": childEnv
+        };
+        if (workingDirectory)
+            ctx.workingDirectory = workingDirectory;
+        Quickshell.execDetached(ctx);
     }
     function sh(script) {
-        Quickshell.execDetached(["sh", "-c", script]);
+        exec(["sh", "-c", script]);
     }
     // argv to run a command in the configured terminal (kitty/foot take the program directly)
     function terminalArgv(argv) {

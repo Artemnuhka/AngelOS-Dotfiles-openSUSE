@@ -48,6 +48,11 @@ Item {
                     "icon": "image"
                 },
                 {
+                    "id": "cursor",
+                    "label": I18n.t("Курсор", "Cursor"),
+                    "icon": "cursor"
+                },
+                {
                     "id": "widgets",
                     "label": I18n.t("Виджеты", "Widgets"),
                     "icon": "layers"
@@ -91,6 +96,21 @@ Item {
                     "id": "sound",
                     "label": I18n.t("Звук", "Sound"),
                     "icon": "speaker"
+                },
+                {
+                    "id": "network",
+                    "label": I18n.t("Сеть и Wi-Fi", "Network and Wi-Fi"),
+                    "icon": "wifi"
+                },
+                {
+                    "id": "bluetooth",
+                    "label": "Bluetooth",
+                    "icon": "bluetooth"
+                },
+                {
+                    "id": "gamepad",
+                    "label": I18n.t("Геймпад", "Gamepad"),
+                    "icon": "gamepad"
                 }
             ]
         },
@@ -128,6 +148,11 @@ Item {
                     "id": "lock",
                     "label": I18n.t("Блокировка и заставка", "Lock and idle"),
                     "icon": "lock"
+                },
+                {
+                    "id": "updates",
+                    "label": I18n.t("Обновления", "Updates"),
+                    "icon": "download"
                 },
                 {
                     "id": "system",
