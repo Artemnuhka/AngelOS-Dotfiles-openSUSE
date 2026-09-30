@@ -53,6 +53,18 @@ Item {
         anchorItem: root
         above: root.above
     }
+    // Over the widgets: any press on the bar closes the open popup first (the
+    // grab of an xdg popup does not end on clicks inside the same client), then
+    // lets the press through to whatever is underneath.
+    MouseArea {
+        anchors.fill: parent
+        z: 100
+        acceptedButtons: Qt.AllButtons
+        onPressed: mouse => {
+            PopupManager.barPressed();
+            mouse.accepted = false;
+        }
+    }
 
     // ---- inline (island) ----
     Row {
@@ -121,7 +133,8 @@ Item {
             bar: root
             // widest centred run that still leaves room for the left side (+ a few task buttons) and the right side
             readonly property real leftNeed: Theme.u * 2 + left.implicitWidth + (parent.tasksLeft ? (root.compact ? Theme.u * 4 : Theme.u * 44) : 0) + root.gap
-            lyricsMax: Math.max(0, Math.min(Theme.u * 240, right.x - root.gap - leftNeed - (root.layout.center.length > 1 ? Theme.u * 60 : 0)))
+            // the lyrics box takes the song's longest line, up to all the room between the sides
+            lyricsMax: Math.max(0, Math.min(parent.width * 0.6, right.x - root.gap - leftNeed - (root.layout.center.length > 1 ? Theme.u * 60 : 0)))
         }
 
         BarSection {

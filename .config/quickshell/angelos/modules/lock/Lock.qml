@@ -220,6 +220,8 @@ Scope {
                 primary: surface.screen === Shell.focusedScreen || Quickshell.screens.length === 1
                 lockScope: root
             }
+
+            RightClickGuard {}
         }
     }
 
@@ -249,6 +251,8 @@ Scope {
                 lockScope: root
                 preview: true
             }
+
+            RightClickGuard {}
         }
     }
 }

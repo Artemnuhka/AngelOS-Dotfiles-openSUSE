@@ -36,6 +36,77 @@ PxPage {
             }
         }
         SettingRow {
+            visible: Config.bar.startStyle !== "fullscreen"
+            label: I18n.t("Где открывать", "Position")
+            hint: I18n.t("«Авто»: классика — у кнопки, Windows 11 — посередине", "Auto: classic at the button, Windows 11 in the middle")
+            PxSegmented {
+                model: [
+                    {
+                        "label": I18n.t("Авто", "Auto"),
+                        "value": "auto"
+                    },
+                    {
+                        "label": I18n.t("Слева", "Left"),
+                        "value": "left"
+                    },
+                    {
+                        "label": I18n.t("Посередине", "Center"),
+                        "value": "center"
+                    },
+                    {
+                        "label": I18n.t("Справа", "Right"),
+                        "value": "right"
+                    }
+                ]
+                currentValue: Config.bar.startAlign || "auto"
+                onActivated: v => Config.bar.startAlign = v
+            }
+        }
+        SettingRow {
+            visible: Config.bar.startStyle !== "fullscreen"
+            label: I18n.t("Размер меню", "Menu size")
+            hint: I18n.t("ширина; у Windows 11 вместе с ней растёт число колонок", "Width; the Windows 11 menu gains columns as it grows")
+            PxSlider {
+                width: parent.width
+                from: 70
+                to: 180
+                stepSize: 10
+                value: Config.bar.startWidth || 100
+                suffix: " %"
+                onReleased: v => Config.bar.startWidth = v
+            }
+        }
+        SettingRow {
+            visible: Config.bar.startStyle === "win11"
+            label: I18n.t("Рядов закреплённых", "Pinned rows")
+            hint: I18n.t("выше меню — больше приложений без прокрутки", "A taller menu shows more apps without scrolling")
+            PxSpin {
+                from: 2
+                to: 6
+                value: Config.bar.startRows || 3
+                onMoved: v => Config.bar.startRows = v
+            }
+        }
+        Row {
+            visible: Config.bar.startStyle !== "fullscreen"
+            spacing: Theme.u * 3
+            PxButton {
+                compact: true
+                icon: "pill"
+                text: I18n.t("Открыть «Пуск»", "Open Start")
+                onClicked: Shell.openStart(Shell.focusedScreen ? Shell.focusedScreen.name : "")
+            }
+            PxButton {
+                compact: true
+                icon: "refresh"
+                text: I18n.t("Размер по умолчанию", "Default size")
+                onClicked: {
+                    Config.bar.startWidth = 100;
+                    Config.bar.startRows = 3;
+                }
+            }
+        }
+        SettingRow {
             label: I18n.t("Открывать по нажатию Meta", "Open with a Meta tap")
             hint: I18n.t("короткое нажатие Super — меню «Пуск», как в Windows. Зажатая клавиша и сочетания (Mod+…) меню не открывают.", "A short Super tap opens Start, like on Windows. Holding it or shortcuts (Mod+…) never do.")
             PxToggle {
@@ -182,7 +253,7 @@ PxPage {
         }
         SettingRow {
             label: I18n.t("Подписывать окна", "Show window titles")
-            hint: I18n.t("выключи, чтобы оставить на панели только иконки", "Turn off to show application icons only")
+            hint: I18n.t("подписи видны, пока хватает места; дальше только иконки, потом прокрутка. Выключи — всегда иконки", "Titles show while there is room, then icons only, then scrolling. Off: always icons")
             PxToggle {
                 checked: Config.bar.taskLabels
                 onToggled: c => Config.bar.taskLabels = c

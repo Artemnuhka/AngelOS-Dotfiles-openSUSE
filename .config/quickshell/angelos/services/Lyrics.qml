@@ -238,7 +238,31 @@ Singleton {
     // ---- what to search for ----
     readonly property bool fromBrowser: !!player && /firefox|chrom|brave|vivaldi|helium|zen|edge|opera|librewolf|browser|yandex/i.test((player.identity || "") + " " + (player.desktopEntry || ""))
     readonly property var cleaned: clean(title, artist)
-    readonly property var sources: Config.lyrics.sources && Config.lyrics.sources.length ? Config.lyrics.sources : ["lrclib", "netease", "ovh"]
+    readonly property var allSources: ["local", "player", "lrclib", "netease", "kugou", "qq", "ovh"]
+    readonly property var sources: Config.lyrics.sources && Config.lyrics.sources.length ? Config.lyrics.sources : allSources
+    // settings from before Kugou / QQ / local files: add the new sources once, keep the user's order
+    Connections {
+        target: Config
+        function onReadyChanged() {
+            root.migrateSources();
+        }
+    }
+    Component.onCompleted: migrateSources()
+    function migrateSources() {
+        if (!Config.ready || Config.lyrics.sourcesVersion >= 2)
+            return;
+        const cur = (Config.lyrics.sources || []).slice();
+        const fresh = ["local", "player"].filter(s => !cur.includes(s));
+        const net = ["kugou", "qq"].filter(s => !cur.includes(s));
+        let out = fresh.concat(cur);
+        const ovh = out.indexOf("ovh");
+        if (ovh >= 0)
+            out.splice(ovh, 0, ...net);
+        else
+            out = out.concat(net);
+        Config.lyrics.sources = out;
+        Config.lyrics.sourcesVersion = 2;
+    }
 
     // "Artist - Song (Official Video) [4K]" from a browser or YouTube → {artist, title}
     function clean(t, a) {
@@ -271,7 +295,163 @@ Singleton {
 
     // NetEase LRC starts with credit lines ("作词 : …"); drop them
     function stripCredits(lrc) {
-        return String(lrc || "").split("\n").filter(l => !/^\s*\[\d+:\d+(?:[.:]\d+)?\]\s*[^\[\]]{1,24}\s[:：]\s/.test(l) || !/作|曲|词|编|制作|混音|录音|Producer|Lyricist|Composer/i.test(l)).join("\n");
+        return String(lrc || "").split(/\r?\n/).filter(l => {
+            if (/^\s*\[\d+:\d+(?:[.:]\d+)?\]\s*[^\[\]]{1,24}\s?[:：]\s?/.test(l) && /作|曲|词|编|制作|混音|录音|Producer|Lyricist|Composer|Written|Composed|Arranged|Lyrics by|Music by/i.test(l))
+                return false;
+            // Kugou / QQ put "Artist - Title" and "Written by：…" on the first seconds
+            if (/^\s*\[00:(?:0\d|1[0-5])[.:]\d+\]\s*(?:.{1,80}\s[-–]\s.{1,80}|(?:written|composed|produced|arranged|lyrics|music)\s+by\s*[:：].*|词\s*[:：].*|曲\s*[:：].*)$/i.test(l))
+                return false;
+            return true;
+        }).join("\n");
+    }
+    // Kugou sends base64 of UTF-8 bytes. Qt.atob may hand back text already decoded
+    // (then it has characters above 0xFF or is not valid UTF-8 as bytes) or one
+    // character per byte; only the latter is decoded here.
+    function utf8(bin) {
+        bin = String(bin || "").replace(/^\ufeff/, "");
+        let valid = true;
+        for (let k = 0; k < bin.length && valid; k++) {
+            const c = bin.charCodeAt(k);
+            if (c > 0xff)
+                valid = false;
+            else if (c >= 0x80) {
+                const n = c >= 0xf0 ? 3 : c >= 0xe0 ? 2 : c >= 0xc0 ? 1 : -1;
+                if (n < 0)
+                    valid = false;
+                for (let j = 1; valid && j <= n; j++) {
+                    const cc = bin.charCodeAt(k + j);
+                    if (!(cc >= 0x80 && cc < 0xc0))
+                        valid = false;
+                }
+                k += Math.max(0, n);
+            }
+        }
+        if (!valid)
+            return bin;
+        let out = "", i = 0;
+        if (bin.charCodeAt(0) === 0xef && bin.charCodeAt(1) === 0xbb && bin.charCodeAt(2) === 0xbf)
+            i = 3;
+        while (i < bin.length) {
+            const c = bin.charCodeAt(i++);
+            if (c < 0x80)
+                out += String.fromCharCode(c);
+            else if (c >= 0xc0 && c < 0xe0)
+                out += String.fromCharCode(((c & 0x1f) << 6) | (bin.charCodeAt(i++) & 0x3f));
+            else if (c >= 0xe0 && c < 0xf0) {
+                const c2 = bin.charCodeAt(i++), c3 = bin.charCodeAt(i++);
+                out += String.fromCharCode(((c & 0x0f) << 12) | ((c2 & 0x3f) << 6) | (c3 & 0x3f));
+            } else if (c >= 0xf0) {
+                const c2 = bin.charCodeAt(i++), c3 = bin.charCodeAt(i++), c4 = bin.charCodeAt(i++);
+                const cp = ((c & 0x07) << 18) | ((c2 & 0x3f) << 12) | ((c3 & 0x3f) << 6) | (c4 & 0x3f);
+                out += String.fromCodePoint(cp);
+            }
+        }
+        return out;
+    }
+    function entities(t) {
+        return String(t || "").replace(/&#(\d+);/g, (m, n) => String.fromCodePoint(parseInt(n))).replace(/&apos;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+    }
+    function lrcData(source, lrc, extra) {
+        lrc = stripCredits(lrc);
+        return Object.assign({
+            "source": source
+        }, /\[\d+:\d+/.test(lrc) ? {
+            "syncedLyrics": lrc
+        } : {
+            "plainLyrics": lrc
+        }, extra || {});
+    }
+
+    // ---- local files and the player's own lyrics ----
+    readonly property string trackUrl: player && player.metadata ? String(player.metadata["xesam:url"] || "") : ""
+    function localCandidates(c) {
+        const out = [];
+        if (trackUrl.startsWith("file://")) {
+            const path = decodeURIComponent(trackUrl.slice(7));
+            out.push(path.replace(/\.[^./]+$/, "") + ".lrc");
+        }
+        const name = (c.artist ? c.artist + " - " : "") + c.title;
+        for (const dir of [Config.home + "/.lyrics", Config.home + "/Music/Lyrics", Config.home + "/Music/lyrics"])
+            out.push(dir + "/" + name.replace(/[\/]/g, "_") + ".lrc");
+        return out;
+    }
+    FileView {
+        id: localReader
+        property var cb: null
+        printErrors: false
+        // callbacks run on the next turn: they may point this reader at the next file
+        onLoaded: {
+            const f = cb, t = text();
+            cb = null;
+            if (f)
+                Qt.callLater(() => f(t));
+        }
+        onLoadFailed: {
+            const f = cb;
+            cb = null;
+            if (f)
+                Qt.callLater(() => f(null));
+        }
+    }
+    // setting the path loads the file (loaded / loadFailed call cb back)
+    function readLocal(path, cb) {
+        localReader.cb = cb;
+        localReader.path = "";
+        localReader.path = path;
+    }
+    // QQ Music wants a Referer, which XMLHttpRequest may not set: curl does it
+    Process {
+        id: curl
+        property var cb: null
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const f = curl.cb;
+                curl.cb = null;
+                let body = null;
+                try {
+                    body = JSON.parse(text);
+                } catch (e) {}
+                if (f)
+                    f(body);
+            }
+        }
+    }
+    function curlJson(url, referer, cb) {
+        curl.running = false;
+        curl.cb = cb;
+        curl.command = ["curl", "-s", "-m", "8", "-A", "Mozilla/5.0", "-e", referer, url];
+        curl.running = true;
+    }
+    // Kugou: song search → lyric candidates for its hash → base64 LRC
+    function kugouLyrics(hash, durMs, cb) {
+        http("https://krcs.kugou.com/search?" + query({
+            "ver": 1,
+            "man": "yes",
+            "client": "mobi",
+            "keyword": "",
+            "duration": durMs || "",
+            "hash": hash
+        }), (code, body) => {
+            const cand = body && body.candidates && body.candidates[0];
+            if (!cand)
+                return cb(null);
+            http("https://lyrics.kugou.com/download?" + query({
+                "ver": 1,
+                "client": "pc",
+                "id": cand.id,
+                "accesskey": cand.accesskey,
+                "fmt": "lrc",
+                "charset": "utf8"
+            }), (code2, dl) => cb(dl && dl.content ? root.utf8(Qt.atob(dl.content)) : null));
+        });
+    }
+    function qqLyrics(mid, cb) {
+        curlJson("https://c.y.qq.com/lyric/fcgi-bin/fcg_query_lyric_new.fcg?" + query({
+            "songmid": mid,
+            "format": "json",
+            "nobase64": 1,
+            "g_tk": 5381
+        }), "https://y.qq.com/", body => cb(body && body.lyric ? root.entities(body.lyric) : null));
     }
 
     // ---- source chain: lrclib exact → lrclib search → lrclib free text → NetEase → lyrics.ovh ----
@@ -311,8 +491,83 @@ Singleton {
             return synced[0] || null;
         };
         const base = "https://lrclib.net/api/";
-        if (sources.includes("lrclib")) {
-            steps.push(() => http(base + "get?" + query({
+        const addStep = {};
+        // .lrc next to the track, or ~/.lyrics/Artist - Title.lrc
+        addStep.local = () => {
+            const paths = localCandidates(c);
+            const tryNext = () => {
+                const path = paths.shift();
+                if (!path)
+                    return next();
+                root.readLocal(path, text => {
+                    if (key !== _pendingKey)
+                        return;
+                    if (text && text.trim()) {
+                        const data = root.lrcData("local", text);
+                        if (data.syncedLyrics)
+                            return finish(data);
+                        if (!plain)
+                            plain = data;
+                    }
+                    tryNext();
+                });
+            };
+            tryNext();
+        };
+        // players that publish lyrics themselves (xesam:asText)
+        addStep.player = () => {
+            const t = player && player.metadata ? String(player.metadata["xesam:asText"] || "") : "";
+            if (t.trim()) {
+                const data = root.lrcData("player", t);
+                if (data.syncedLyrics)
+                    return finish(data);
+                if (!plain)
+                    plain = data;
+            }
+            next();
+        };
+        addStep.kugou = () => http("http://mobilecdn.kugou.com/api/v3/search/song?" + query({
+                "format": "json",
+                "keyword": (c.artist + " " + c.title).trim(),
+                "page": 1,
+                "pagesize": 10
+            }), (code, body) => {
+            const list = body && body.data && body.data.info ? body.data.info : [];
+            const match = list.filter(x => similar(x.songname, c.title) && (!d || !x.duration || Math.abs(x.duration - d) < 8)).sort((x, y) => (similar(y.singername, c.artist) ? 1 : 0) - (similar(x.singername, c.artist) ? 1 : 0))[0];
+            if (!match)
+                return next();
+            root.kugouLyrics(match.hash, d ? Math.round(d * 1000) : (match.duration || 0) * 1000, lrc => {
+                if (key !== _pendingKey)
+                    return;
+                if (lrc && /\[\d+:\d+/.test(lrc))
+                    finish(root.lrcData("Kugou", lrc, {
+                        "trackName": match.songname,
+                        "duration": match.duration || 0
+                    }));
+                else
+                    next();
+            });
+        });
+        addStep.qq = () => http("https://c.y.qq.com/splcloud/fcgi-bin/smartbox_new.fcg?" + query({
+                "key": (c.artist + " " + c.title).trim(),
+                "format": "json"
+            }), (code, body) => {
+            const list = body && body.data && body.data.song ? body.data.song.itemlist || [] : [];
+            const match = list.filter(x => similar(x.name, c.title)).sort((x, y) => (similar(y.singer, c.artist) ? 1 : 0) - (similar(x.singer, c.artist) ? 1 : 0))[0];
+            if (!match)
+                return next();
+            root.qqLyrics(match.mid, lrc => {
+                if (key !== _pendingKey)
+                    return;
+                if (lrc && /\[\d+:\d+/.test(lrc))
+                    finish(root.lrcData("QQ Music", lrc, {
+                        "trackName": match.name
+                    }));
+                else
+                    next();
+            });
+        });
+        addStep.lrclib = [() => http(base + "get?" + query({
                     "track_name": c.title,
                     "artist_name": c.artist,
                     "album_name": fromBrowser ? "" : album,
@@ -329,8 +584,7 @@ Singleton {
                         "source": "lrclib"
                     }, body);
                 next();
-            }));
-            steps.push(() => http(base + "search?" + query({
+            }), () => http(base + "search?" + query({
                     "track_name": c.title,
                     "artist_name": c.artist
                 }), (code, list) => {
@@ -338,18 +592,15 @@ Singleton {
                 best ? finish(Object.assign({
                     "source": "lrclib"
                 }, best)) : next();
-            }));
-            steps.push(() => http(base + "search?" + query({
+            }), () => http(base + "search?" + query({
                     "q": (c.artist + " " + c.title).trim()
                 }), (code, list) => {
                 const best = pickLrclib(Array.isArray(list) ? list.filter(r => similar(r.trackName, c.title)) : list);
                 best ? finish(Object.assign({
                     "source": "lrclib"
                 }, best)) : next();
-            }));
-        }
-        if (sources.includes("netease"))
-            steps.push(() => http("https://music.163.com/api/cloudsearch/pc?" + query({
+            })];
+        addStep.netease = () => http("https://music.163.com/api/cloudsearch/pc?" + query({
                     "s": (c.title + " " + c.artist).trim(),
                     "type": 1,
                     "limit": 8
@@ -370,20 +621,24 @@ Singleton {
                     else
                         next();
                 });
-            }));
-        if (sources.includes("ovh"))
-            steps.push(() => {
-                if (plain || !c.artist)
-                    return next();
-                http("https://api.lyrics.ovh/v1/" + encodeURIComponent(c.artist) + "/" + encodeURIComponent(c.title), (code, body) => {
-                    if (body && body.lyrics && body.lyrics.trim())
-                        plain = {
-                            "source": "lyrics.ovh",
-                            "plainLyrics": body.lyrics.trim()
-                        };
-                    next();
-                });
             });
+        // lyrics.ovh: plain text only, so it is skipped once some text was met
+        addStep.ovh = () => {
+            if (plain || !c.artist)
+                return next();
+            http("https://api.lyrics.ovh/v1/" + encodeURIComponent(c.artist) + "/" + encodeURIComponent(c.title), (code, body) => {
+                if (body && body.lyrics && body.lyrics.trim())
+                    plain = {
+                        "source": "lyrics.ovh",
+                        "plainLyrics": body.lyrics.trim()
+                    };
+                next();
+            });
+        };
+        // in the order chosen in Settings → Lyrics
+        for (const src of sources)
+            if (addStep[src])
+                steps.push(...[].concat(addStep[src]));
         _offline = false;
         next();
     }
@@ -398,7 +653,7 @@ Singleton {
             return;
         searching = true;
         results = [];
-        let pending = 2;
+        let pending = 4;
         const out = [];
         const done = () => {
             if (--pending === 0) {
@@ -417,6 +672,38 @@ Singleton {
                     "duration": r.duration || 0,
                     "synced": !!r.syncedLyrics,
                     "data": r
+                });
+            done();
+        });
+        http("http://mobilecdn.kugou.com/api/v3/search/song?" + query({
+            "format": "json",
+            "keyword": text,
+            "page": 1,
+            "pagesize": 8
+        }), (code, body) => {
+            for (const x of (body && body.data && body.data.info ? body.data.info : []))
+                out.push({
+                    "source": "Kugou",
+                    "title": x.songname,
+                    "artist": x.singername,
+                    "duration": x.duration || 0,
+                    "synced": true,
+                    "hash": x.hash
+                });
+            done();
+        });
+        http("https://c.y.qq.com/splcloud/fcgi-bin/smartbox_new.fcg?" + query({
+            "key": text,
+            "format": "json"
+        }), (code, body) => {
+            for (const x of (body && body.data && body.data.song ? body.data.song.itemlist || [] : []))
+                out.push({
+                    "source": "QQ Music",
+                    "title": x.name,
+                    "artist": x.singer,
+                    "duration": 0,
+                    "synced": true,
+                    "mid": x.mid
                 });
             done();
         });
@@ -450,6 +737,17 @@ Singleton {
             apply(data);
             return;
         }
+        const use = (source, lrc) => {
+            if (!lrc || key !== trackKey)
+                return;
+            const data = root.lrcData(source, lrc);
+            store(key, data);
+            apply(data);
+        };
+        if (r.hash)
+            return kugouLyrics(r.hash, (r.duration || 0) * 1000, lrc => use("Kugou", lrc));
+        if (r.mid)
+            return qqLyrics(r.mid, lrc => use("QQ Music", lrc));
         http("https://music.163.com/api/song/lyric?id=" + r.id + "&lv=1", (code, lyr) => {
             const lrc = lyr && lyr.lrc ? root.stripCredits(lyr.lrc.lyric) : "";
             if (!lrc || key !== trackKey)

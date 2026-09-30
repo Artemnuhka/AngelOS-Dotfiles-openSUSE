@@ -10,7 +10,10 @@ import qs.widgets
 Item {
     id: win
 
-    Component.onCompleted: Shell.settingsView = win
+    Component.onCompleted: {
+        Shell.settingsView = win;
+        SettingsSearch.load();
+    }
     Component.onDestruction: if (Shell.settingsView === win)
         Shell.settingsView = null
     function diagnostics() {
@@ -85,6 +88,11 @@ Item {
                 {
                     "id": "keyboard",
                     "label": I18n.t("Клавиатура и мышь", "Keyboard and mouse"),
+                    "icon": "keyboard"
+                },
+                {
+                    "id": "shortcuts",
+                    "label": I18n.t("Горячие клавиши", "Shortcuts"),
                     "icon": "keyboard"
                 },
                 {
@@ -178,6 +186,134 @@ Item {
     readonly property var allPages: visibleGroups.reduce((a, g) => a.concat(g.pages), [])
     readonly property var currentPage: allPages.find(p => p.id === Shell.settingsPage) || allPages[0]
 
+    // ---- search (services/SettingsSearch) ----
+    property string query: ""
+    property int sel: 0
+    property var results: []
+    onQueryChanged: {
+        if (!query.trim())
+            results = [];
+        searchTimer.restart();
+    }
+    Timer {
+        id: searchTimer
+        interval: 60
+        onTriggered: win.results = win.query.trim() ? SettingsSearch.search(win.query, 14) : []
+    }
+    Connections {
+        target: SettingsSearch
+        function onDocsChanged() {
+            if (win.query.trim())
+                searchTimer.restart();
+        }
+    }
+    readonly property string ghost: query ? SettingsSearch.complete(query) : ""
+    property var pendingTarget: null
+    Binding {
+        target: SettingsSearch
+        property: "pageInfo"
+        value: {
+            const m = {};
+            for (const p of win.allPages)
+                m[p.id] = {
+                    "label": p.label,
+                    "icon": p.icon
+                };
+            return m;
+        }
+    }
+    // `angelos settingsQuery "…"`: type into the search box (scripts, previews)
+    function setQuery(t) {
+        search.text = t;
+        query = t;
+        sel = 0;
+        search.focusField();
+    }
+    function acceptGhost() {
+        if (!ghost)
+            return false;
+        search.text = query + ghost;
+        query = search.text;
+        sel = 0;
+        return true;
+    }
+    function openResult(r) {
+        if (!r)
+            return;
+        pendingTarget = r.kind === "page" ? null : r;
+        query = "";
+        search.text = "";
+        if (Shell.settingsPage === r.page)
+            targetTimer.restart();
+        else
+            Shell.settingsPage = r.page;
+    }
+    // scroll the page to the found setting and flash it
+    function findItem(item, r) {
+        if (!item || !item.visible)
+            return null;
+        if (r.kind === "row" && item.label === r.target && item.hint !== undefined)
+            return item;
+        if (r.kind === "group" && item.title === r.target && item.spacing !== undefined)
+            return item;
+        for (const c of item.children) {
+            const f = findItem(c, r);
+            if (f)
+                return f;
+        }
+        return null;
+    }
+    function showTarget() {
+        const r = pendingTarget;
+        pendingTarget = null;
+        const pg = page.item;
+        if (!r || !pg || !pg.flick)
+            return;
+        const it = findItem(pg.flick.contentItem, r) || (r.kind === "row" ? findItem(pg.flick.contentItem, {
+                "kind": "group",
+                "target": String(r.crumb).split(" › ")[1] || ""
+            }) : null);
+        if (!it)
+            return;
+        const y = it.mapToItem(pg.flick.contentItem, 0, 0).y;
+        pg.scrollBy(Math.max(0, y - Theme.u * 8) - pg.flick.contentY);
+        flashComp.createObject(it);
+    }
+    Timer {
+        id: targetTimer
+        interval: 60
+        onTriggered: win.showTarget()
+    }
+    Component {
+        id: flashComp
+        Rectangle {
+            id: flash
+            anchors.fill: parent
+            anchors.margins: -Theme.u * 2
+            z: 100
+            color: Qt.alpha(Theme.accent, 0.12)
+            border.width: Math.max(2, Theme.u)
+            border.color: Theme.accent
+            SequentialAnimation on opacity {
+                running: true
+                PauseAnimation {
+                    duration: 900
+                }
+                NumberAnimation {
+                    to: 0
+                    duration: 900
+                }
+                ScriptAction {
+                    script: flash.destroy()
+                }
+            }
+        }
+    }
+    Shortcut {
+        sequence: "Ctrl+F"
+        onActivated: search.focusField()
+    }
+
     PxWindow {
         id: frame
         anchors.fill: parent
@@ -202,9 +338,135 @@ Item {
             sunken: true
             color: Qt.alpha(Theme.sunken, 0.55)
 
+            PxField {
+                id: search
+                x: Theme.u * 2
+                y: Theme.u * 2
+                width: parent.width - Theme.u * 4
+                icon: "search"
+                placeholder: I18n.t("Поиск настроек…", "Search settings…")
+                onEdited: {
+                    win.query = text;
+                    win.sel = 0;
+                }
+                onAccepted: win.openResult(win.results[Math.min(win.sel, win.results.length - 1)])
+                onKeyPressed: e => {
+                    if (e.key === Qt.Key_Tab || (e.key === Qt.Key_Right && search.input.cursorPosition === search.text.length)) {
+                        if (win.acceptGhost())
+                            e.accepted = true;
+                    } else if (e.key === Qt.Key_Down) {
+                        win.sel = Math.min(win.results.length - 1, win.sel + 1);
+                        e.accepted = true;
+                    } else if (e.key === Qt.Key_Up) {
+                        win.sel = Math.max(0, win.sel - 1);
+                        e.accepted = true;
+                    } else if (e.key === Qt.Key_Escape && search.text !== "") {
+                        search.text = "";
+                        win.query = "";
+                        e.accepted = true;
+                    }
+                }
+                // the rest of the suggested word, dimmed after the caret: "Bl" → "ur"
+                PxText {
+                    visible: win.ghost !== "" && search.input.activeFocus && search.input.contentWidth + implicitWidth < search.input.width
+                    x: search.input.x + search.input.contentWidth
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: win.ghost
+                    font: search.input.font
+                    color: Theme.textDim
+                    opacity: 0.8
+                }
+            }
+            PxText {
+                visible: win.ghost !== "" && search.input.activeFocus
+                anchors.top: search.bottom
+                anchors.right: search.right
+                anchors.topMargin: Theme.u
+                text: "Tab ↹ " + search.text + win.ghost
+                kind: "tiny"
+                dim: true
+                width: search.width
+                horizontalAlignment: Text.AlignRight
+                elide: Text.ElideLeft
+            }
+
+            // results
             PxScroll {
+                id: resultsBox
+                visible: win.query.trim() !== ""
                 anchors.fill: parent
                 anchors.margins: Theme.u * 2
+                anchors.topMargin: search.height + Theme.u * 10
+                contentHeight: resultCol.implicitHeight
+                Column {
+                    id: resultCol
+                    width: parent.width
+                    spacing: Theme.u
+                    PxText {
+                        visible: win.results.length === 0
+                        width: parent.width
+                        wrapMode: Text.Wrap
+                        text: SettingsSearch.loaded ? I18n.t("Ничего не нашлось. Попробуй другое слово — «экран», «прозрачность», «хоткеи»…", "Nothing found. Try another word — “display”, “transparency”, “hotkeys”…") : "…"
+                        dim: true
+                        leftPadding: Theme.u * 3
+                    }
+                    Repeater {
+                        model: win.results
+                        Rectangle {
+                            id: res
+                            required property var modelData
+                            required property int index
+                            readonly property bool picked: win.sel === index
+                            width: resultCol.width
+                            height: resRow.implicitHeight + Theme.u * 4
+                            color: picked ? Theme.select : rm.containsMouse ? Theme.mix(Theme.face, Theme.accent, 0.15) : "transparent"
+                            Row {
+                                id: resRow
+                                x: Theme.u * 3
+                                anchors.verticalCenter: parent.verticalCenter
+                                spacing: Theme.u * 3
+                                PxIcon {
+                                    name: res.modelData.icon || "gear"
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    ink: res.picked ? Theme.selectText : (Theme.dark ? Theme.text : Theme.edge)
+                                }
+                                Column {
+                                    width: res.width - Theme.u * 20
+                                    PxText {
+                                        width: parent.width
+                                        text: res.modelData.title
+                                        elide: Text.ElideRight
+                                        font.bold: res.modelData.kind === "page"
+                                        color: res.picked ? Theme.selectText : Theme.text
+                                    }
+                                    PxText {
+                                        visible: text !== ""
+                                        width: parent.width
+                                        text: res.modelData.crumb || res.modelData.hint
+                                        kind: "tiny"
+                                        elide: Text.ElideRight
+                                        color: res.picked ? Theme.selectText : Theme.textDim
+                                    }
+                                }
+                            }
+                            MouseArea {
+                                id: rm
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onEntered: win.sel = res.index
+                                onClicked: win.openResult(res.modelData)
+                            }
+                        }
+                    }
+                }
+            }
+
+            PxScroll {
+                visible: win.query.trim() === ""
+                anchors.fill: parent
+                anchors.margins: Theme.u * 2
+                anchors.topMargin: search.height + Theme.u * 4
                 contentHeight: side.implicitHeight
 
                 Column {
@@ -285,6 +547,8 @@ Item {
                 anchors.fill: parent
                 anchors.margins: Theme.u * 3
                 active: win.hostWindow ? win.hostWindow.visible : true
+                onLoaded: if (win.pendingTarget)
+                    targetTimer.restart()
                 source: {
                     const id = Shell.settingsPage;
                     if (id.startsWith("plugin:"))

@@ -19,6 +19,88 @@ PxPage {
     subtitle: I18n.t("niri располагает окна в прокручиваемых колонках. Изменения сохраняются с бэкапом и проверкой.", "niri arranges windows in scrolling columns. Changes are backed up and validated.")
     PxGroup {
         width: parent.width
+        title: I18n.t("Закрытие окон", "Closing windows")
+        icon: "close"
+        SettingRow {
+            label: I18n.t("ПКМ по кнопке окна на панели", "Right-click a window button")
+            hint: ({
+                    "menu": I18n.t("меню: во весь экран, плавающее, на другой стол или монитор, закрыть, завершить процесс", "A menu: fullscreen, floating, another desk or monitor, close, end task"),
+                    "close": I18n.t("закрывает окно сразу, без вопросов", "Closes the window at once"),
+                    "none": I18n.t("ничего не делает", "Does nothing")
+                })[Config.bar.taskRightClick] || ""
+            PxSegmented {
+                model: [
+                    {
+                        "label": I18n.t("Меню", "Menu"),
+                        "value": "menu"
+                    },
+                    {
+                        "label": I18n.t("Закрыть", "Close"),
+                        "value": "close"
+                    },
+                    {
+                        "label": I18n.t("Ничего", "Nothing"),
+                        "value": "none"
+                    }
+                ]
+                currentValue: Config.bar.taskRightClick || "menu"
+                onActivated: v => Config.bar.taskRightClick = v
+            }
+        }
+        SettingRow {
+            label: I18n.t("Средняя кнопка закрывает", "Middle click closes")
+            hint: I18n.t("колёсиком по кнопке окна на панели, как в браузере по вкладке", "Click the wheel on a window button, like on a browser tab")
+            PxToggle {
+                checked: Config.bar.taskMiddleClose
+                onToggled: c => Config.bar.taskMiddleClose = c
+            }
+        }
+        SettingRow {
+            label: I18n.t("Крестик при наведении", "× on hover")
+            hint: I18n.t("на кнопке окна под курсором появляется крестик", "A close button appears on the hovered window button")
+            PxToggle {
+                checked: Config.bar.taskHoverClose
+                onToggled: c => Config.bar.taskHoverClose = c
+            }
+        }
+        SettingRow {
+            label: I18n.t("Анимация закрытия", "Close animation")
+            hint: {
+                const s = CloseAnim.styles.find(x => x.id === CloseAnim.current);
+                return s ? s.hint : CloseAnim.current === "custom" ? I18n.t("свой шейдер в cfg/animation.kdl — выбери вариант, чтобы заменить", "A hand-written shader in cfg/animation.kdl — pick one to replace it") : "";
+            }
+            PxCombo {
+                width: parent.width
+                enabled: !CloseAnim.busy
+                model: CloseAnim.styles.map(s => ({
+                            "label": s.label,
+                            "value": s.id
+                        }))
+                currentValue: CloseAnim.current
+                placeholder: CloseAnim.current === "custom" ? I18n.t("свой шейдер", "custom shader") : "—"
+                onActivated: v => CloseAnim.pick(v)
+            }
+        }
+        Row {
+            spacing: Theme.u * 3
+            PxButton {
+                compact: true
+                icon: "play"
+                text: I18n.t("Посмотреть", "Preview")
+                onClicked: CloseAnim.preview()
+            }
+            PxText {
+                anchors.verticalCenter: parent.verticalCenter
+                text: CloseAnim.log
+                kind: "tiny"
+                dim: true
+                width: Theme.u * 200
+                elide: Text.ElideMiddle
+            }
+        }
+    }
+    PxGroup {
+        width: parent.width
         title: I18n.t("Размещение", "Layout")
         icon: "window"
         enabled: !WindowConfig.busy

@@ -241,12 +241,14 @@ PxPage {
                         edgeColor: thumb.active ? Theme.accent : Theme.edge
                         Image {
                             anchors.fill: parent
-                            source: "file://" + thumb.modelData
+                            source: "file://" + Wallpapers.display(thumb.modelData)
                             sourceSize: Qt.size(width, height)
                             fillMode: Image.PreserveAspectCrop
                             asynchronous: true
                             cache: true
                             smooth: true
+                            onStatusChanged: if (status === Image.Error)
+                                Wallpapers.fit(thumb.modelData)
                         }
                     }
                     Rectangle {

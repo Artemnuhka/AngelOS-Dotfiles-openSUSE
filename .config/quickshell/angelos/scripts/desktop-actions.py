@@ -10,23 +10,26 @@ import shlex
 import subprocess
 import tempfile
 
+# (command, label, runs in a terminal, app-id of its window). Terminal monitors
+# get TASKMGR_ID as their terminal's app-id, so niri can float them.
+TASKMGR_ID = "angelos.taskmgr"
 MONITORS = [
-    ("btop", "btop", True),
-    ("missioncenter", "Mission Center", False),
-    ("resources", "Resources", False),
-    ("gnome-system-monitor", "GNOME System Monitor", False),
-    ("plasma-systemmonitor", "Plasma System Monitor", False),
-    ("xfce4-taskmanager", "Xfce Task Manager", False),
-    ("lxtask", "LXTask", False),
-    ("htop", "htop", True),
-    ("top", "top", True),
+    ("btop", "btop", True, TASKMGR_ID),
+    ("missioncenter", "Mission Center", False, "io.missioncenter.MissionCenter"),
+    ("resources", "Resources", False, "net.nokyan.Resources"),
+    ("gnome-system-monitor", "GNOME System Monitor", False, "gnome-system-monitor|org.gnome.SystemMonitor"),
+    ("plasma-systemmonitor", "Plasma System Monitor", False, "org.kde.plasma-systemmonitor|org.kde.plasmasystemmonitor"),
+    ("xfce4-taskmanager", "Xfce Task Manager", False, "xfce4-taskmanager"),
+    ("lxtask", "LXTask", False, "lxtask"),
+    ("htop", "htop", True, TASKMGR_ID),
+    ("top", "top", True, TASKMGR_ID),
 ]
 DIRECTORIES = {"HOME", "DOWNLOAD", "DOCUMENTS", "PICTURES", "MUSIC", "VIDEOS", "DESKTOP"}
 
 
 def monitors():
-    return [{"value": cmd, "label": label, "terminal": terminal}
-            for cmd, label, terminal in MONITORS if shutil.which(cmd)]
+    return [{"value": cmd, "label": label, "terminal": terminal, "appId": app_id}
+            for cmd, label, terminal, app_id in MONITORS if shutil.which(cmd)]
 
 
 def directory(kind):

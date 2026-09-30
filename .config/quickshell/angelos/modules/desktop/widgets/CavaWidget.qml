@@ -6,18 +6,22 @@ import Quickshell.Io
 import qs.config
 import qs.widgets
 
-// Pixel spectrum from cava (raw ASCII output).
+// Pixel spectrum from cava (raw ASCII output). Sound comes through
+// scripts/audio-tap.py: pw-record of an output's monitor, a whole multichannel
+// interface or one channel pair → FIFO → cava. cava's own `source = <sink>`
+// silently fell back to the default *input*, i.e. the microphone.
 Item {
     id: root
 
     property string screenName
     property var widget
     readonly property int bars: widget && widget.settings && widget.settings.bars ? widget.settings.bars : 32
-    // "" = default output; otherwise a sink's node name (cava listens to its monitor)
+    // "" = everything the computer plays (see audio-tap.py for the other specs)
     readonly property string source: widget && widget.settings && widget.settings.source ? widget.settings.source : ""
     property var levels: []
     property bool missing: false
     readonly property string conf: Quickshell.env("HOME") + "/.cache/angelos/cava-" + (widget ? widget.uid : "x") + ".conf"
+    readonly property string fifo: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/angelos-cava-" + (widget ? widget.uid : "x") + ".fifo"
 
     implicitWidth: Theme.u * 6 * bars / 2 + Theme.u * 4
     implicitHeight: Theme.u * 44
@@ -34,7 +38,7 @@ Item {
         if (!ready)
             return;
         proc.running = false;
-        confFile.setText(["[general]", "bars = " + bars, "framerate = 30", "sensitivity = 70", "autosens = 1", "[input]", "method = pipewire", "source = " + (root.source || "auto"), "[output]", "method = raw", "raw_target = /dev/stdout", "data_format = ascii", "ascii_max_range = 100", "bar_delimiter = 59", "frame_delimiter = 10", "channels = mono", "[smoothing]", "noise_reduction = 60", ""].join("\n"));
+        confFile.setText(["[general]", "bars = " + bars, "framerate = 30", "sensitivity = 70", "autosens = 1", "[input]", "method = fifo", "source = " + root.fifo, "sample_rate = 22050", "sample_bits = 16", "[output]", "method = raw", "raw_target = /dev/stdout", "data_format = ascii", "ascii_max_range = 100", "bar_delimiter = 59", "frame_delimiter = 10", "channels = mono", "[smoothing]", "noise_reduction = 60", ""].join("\n"));
     }
     Component.onCompleted: {
         ready = true;
@@ -45,7 +49,7 @@ Item {
 
     Process {
         id: proc
-        command: ["cava", "-p", root.conf]
+        command: ["python3", Quickshell.shellDir + "/scripts/audio-tap.py", "run", "--conf", root.conf, "--fifo", root.fifo, root.source]
         stdout: SplitParser {
             onRead: line => root.levels = line.split(";").filter(s => s !== "").map(n => parseInt(n) / 100)
         }

@@ -112,4 +112,6 @@ PanelWindow {
             }
         }
     }
+
+    RightClickGuard {}
 }

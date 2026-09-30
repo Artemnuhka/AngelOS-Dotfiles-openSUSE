@@ -6,7 +6,7 @@ import qs.widgets
 
 PxPage {
     heading: I18n.t("Лирика", "Lyrics")
-    subtitle: I18n.t("Текущая строка песни посередине панели. Трек берётся из любого MPRIS-плеера (Spotify, браузер с YouTube, mpv…), текст ищется по названию песни в нескольких источниках. Клик по строке открывает эту страницу.", "The current lyric line appears in the bar. Any MPRIS player works (Spotify, a browser with YouTube, mpv…); lyrics are searched by the song title in several sources. Click the line to open this page.")
+    subtitle: I18n.t("Текущая строка песни посередине панели. Трек берётся из любого MPRIS-плеера (Spotify, браузер с YouTube, mpv…), текст ищется по названию песни в нескольких источниках. Клик по строке открывает эту страницу, правый клик ставит трек на паузу.", "The current lyric line appears in the bar. Any MPRIS player works (Spotify, a browser with YouTube, mpv…); lyrics are searched by the song title in several sources. Click the line to open this page; right-click pauses the track.")
     id: page
 
     PxGroup {
@@ -99,22 +99,66 @@ PxPage {
             width: parent.width
             wrapMode: Text.Wrap
             dim: true
-            text: I18n.t("Проверяются по порядку, пока не найдётся текст с таймкодами. Название чистится от «(Official Video)», «[MV]», feat. и «- Topic»; «Артист - Песня» из браузера разбирается на части.", "Tried in order until synced lyrics turn up. Titles lose “(Official Video)”, “[MV]”, feat. and “- Topic”; “Artist - Song” from a browser is split.")
+            text: I18n.t("Проверяются по порядку (стрелки меняют его), пока не найдётся текст с таймкодами. Название чистится от «(Official Video)», «[MV]», feat. и «- Topic»; «Артист - Песня» из браузера разбирается на части.", "Tried in order (arrows change it) until synced lyrics turn up. Titles lose “(Official Video)”, “[MV]”, feat. and “- Topic”; “Artist - Song” from a browser is split.")
         }
         Repeater {
-            model: [["lrclib", "lrclib.net", I18n.t("синхронный текст, открытая база", "synced lyrics, open database")], ["netease", "NetEase Cloud Music", I18n.t("синхронный текст, много азиатской и мировой музыки", "synced lyrics, large Asian and worldwide catalogue")], ["ovh", "lyrics.ovh", I18n.t("только текст без таймкодов, запасной вариант", "plain text only, last resort")]]
+            id: srcList
+            readonly property var info: ({
+                    "local": [I18n.t("Локальные .lrc", "Local .lrc files"), I18n.t("файл .lrc рядом с треком или ~/.lyrics/Артист - Песня.lrc", ".lrc next to the track or ~/.lyrics/Artist - Title.lrc")],
+                    "player": [I18n.t("Текст от плеера", "Lyrics from the player"), I18n.t("если плеер сам отдаёт текст (MPRIS xesam:asText)", "When the player publishes lyrics itself (MPRIS xesam:asText)")],
+                    "lrclib": ["lrclib.net", I18n.t("синхронный текст, открытая база", "synced lyrics, open database")],
+                    "netease": ["NetEase Cloud Music", I18n.t("синхронный текст, много азиатской и мировой музыки", "synced lyrics, large Asian and worldwide catalogue")],
+                    "kugou": ["Kugou", I18n.t("синхронный текст, большой каталог (Китай, K-pop, мировые хиты)", "synced lyrics, large catalogue (China, K-pop, worldwide hits)")],
+                    "qq": ["QQ Music", I18n.t("синхронный текст, нужен curl", "synced lyrics, needs curl")],
+                    "ovh": ["lyrics.ovh", I18n.t("только текст без таймкодов, запасной вариант", "plain text only, last resort")]
+                })
+            // enabled sources in their order, then the switched-off ones
+            readonly property var order: {
+                const on = (Config.lyrics.sources || []).filter(x => info[x]);
+                return on.concat(Lyrics.allSources.filter(x => !on.includes(x)));
+            }
+            function move(id, dir) {
+                const on = (Config.lyrics.sources || []).slice();
+                const i = on.indexOf(id), j = i + dir;
+                if (i < 0 || j < 0 || j >= on.length)
+                    return;
+                on[i] = on[j];
+                on[j] = id;
+                Config.lyrics.sources = on;
+            }
+            model: order
             SettingRow {
-                required property var modelData
-                label: modelData[1]
-                hint: modelData[2]
-                PxToggle {
-                    checked: (Config.lyrics.sources || []).includes(modelData[0])
-                    onToggled: c => {
-                        const order = ["lrclib", "netease", "ovh"];
-                        const on = (Config.lyrics.sources || []).filter(s => s !== modelData[0]);
-                        if (c)
-                            on.push(modelData[0]);
-                        Config.lyrics.sources = order.filter(s => on.includes(s));
+                id: srcRow
+                required property string modelData
+                required property int index
+                readonly property bool on: (Config.lyrics.sources || []).includes(modelData)
+                label: (on ? (index + 1) + ". " : "") + srcList.info[modelData][0]
+                hint: srcList.info[modelData][1]
+                Row {
+                    spacing: Theme.u * 2
+                    PxToggle {
+                        anchors.verticalCenter: parent.verticalCenter
+                        checked: srcRow.on
+                        onToggled: c => {
+                            const cur = (Config.lyrics.sources || []).filter(x => x !== srcRow.modelData);
+                            if (c)
+                                cur.push(srcRow.modelData);
+                            Config.lyrics.sources = cur;
+                        }
+                    }
+                    PxButton {
+                        visible: srcRow.on
+                        compact: true
+                        icon: "arrowUp"
+                        enabled: srcRow.index > 0
+                        onClicked: srcList.move(srcRow.modelData, -1)
+                    }
+                    PxButton {
+                        visible: srcRow.on
+                        compact: true
+                        icon: "arrowDown"
+                        enabled: srcRow.index < (Config.lyrics.sources || []).length - 1
+                        onClicked: srcList.move(srcRow.modelData, 1)
                     }
                 }
             }

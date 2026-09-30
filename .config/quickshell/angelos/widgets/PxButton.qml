@@ -13,12 +13,14 @@ Item {
     property bool flat: false
     property bool compact: false
     property int iconPixel: Theme.u
+    property bool middleButton: false      // also report middle clicks (task buttons close windows with them)
     property string kind: "body"
     property alias hovered: mouse.containsMouse
     property alias pressed: mouse.pressed
     readonly property bool down: mouse.pressed || checked
     signal clicked
     signal rightClicked
+    signal middleClicked
 
     implicitWidth: row.implicitWidth + (compact ? Theme.u * 6 : Theme.pad * 2 + Theme.u * 2)
     implicitHeight: Math.max(row.implicitHeight + Theme.u * (compact ? 5 : 8), Theme.u * (compact ? 11 : 15))
@@ -60,11 +62,15 @@ Item {
         anchors.fill: parent
         hoverEnabled: true
         enabled: root.enabled
-        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        acceptedButtons: Qt.LeftButton | Qt.RightButton | (root.middleButton ? Qt.MiddleButton : 0)
         cursorShape: Qt.PointingHandCursor
         onClicked: e => {
             if (e.button === Qt.RightButton) {
                 root.rightClicked();
+                return;
+            }
+            if (e.button === Qt.MiddleButton) {
+                root.middleClicked();
                 return;
             }
             if (root.checkable)

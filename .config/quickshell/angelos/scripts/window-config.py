@@ -8,6 +8,8 @@
       defaultWidth: "proportion 0.5" | "fixed 1200"
       presets: ["proportion 0.33333", "fixed 900", ...]
       apps: {"kitty": "proportion 0.5", "helium": null (= remove rule)}
+      taskmgr: {"appIds": ["angelos.taskmgr", …], "width": "fixed 1200",
+                "height": "fixed 760", "place": "center" | "corner"} | null (= no rule)
 
 Per-app rules live in cfg/angelos-windows.kdl, included after rules.kdl so they win.
 """
@@ -55,10 +57,58 @@ def width_of(body):
     return re.sub(r"\s+", " ", m.group(1)) if m else ""
 
 
+TM_BEGIN = "// >>> angelOS task manager (Настройки → System → Диспетчер задач)"
+TM_END = "// <<< angelOS task manager"
+HEIGHT = re.compile(r"^(proportion\s+(0?\.\d+|1(\.0+)?)|fixed\s+\d{2,5})$")
+
+
+def read_taskmgr(text=None):
+    """the task manager block of angelos-windows.kdl as a spec (None when absent)"""
+    if text is None:
+        text = apps_path.read_text() if apps_path.exists() else ""
+    if TM_BEGIN not in text:
+        return None
+    body = text[text.index(TM_BEGIN):text.index(TM_END) if TM_END in text else len(text)]
+    ids = [re.sub(r"\\(.)", r"\1", m) for m in re.findall(r'match app-id=r#"\^(.+?)\$"#', body)]
+    w = re.search(r"default-column-width \{ ([^;]+); \}", body)
+    h = re.search(r"default-window-height \{ ([^;]+); \}", body)
+    return {
+        "appIds": ids,
+        "width": w.group(1).strip() if w else "",
+        "height": h.group(1).strip() if h else "",
+        "place": "corner" if "default-floating-position" in body else "center",
+    }
+
+
+def render_taskmgr(spec):
+    if not spec:
+        return ""
+    ids = [a for a in spec.get("appIds") or [] if re.match(r"^[\w.+-]{1,120}$", a)]
+    if not ids:
+        return ""
+    out = [TM_BEGIN, "window-rule {"]
+    out += [f'    match app-id=r#"^{re.escape(a)}$"#' for a in ids]
+    out.append("    open-floating true")
+    if spec.get("width"):
+        out.append(f"    default-column-width {{ {check_width(spec['width'])}; }}")
+    if spec.get("height"):
+        hgt = re.sub(r"\s+", " ", str(spec["height"]).strip())
+        if not HEIGHT.match(hgt):
+            raise ValueError("bad height: " + hgt)
+        out.append(f"    default-window-height {{ {hgt}; }}")
+    if spec.get("place") == "corner":
+        out.append('    default-floating-position x=16 y=16 relative-to="bottom-right"')
+    out += ["}", TM_END, ""]
+    return "\n".join(out)
+
+
 def read_apps():
     rules = {}
     if apps_path.exists():
-        for m in re.finditer(r'match app-id=r#"\^(.+?)\$"#\s*\n\s*default-column-width \{ ([^;]+); \}', apps_path.read_text()):
+        text = apps_path.read_text()
+        if TM_BEGIN in text:  # the task manager block is not a per-app width
+            text = text[:text.index(TM_BEGIN)] + (text[text.index(TM_END) + len(TM_END):] if TM_END in text else "")
+        for m in re.finditer(r'match app-id=r#"\^(.+?)\$"#\s*\n\s*default-column-width \{ ([^;]+); \}', text):
             rules[re.sub(r"\\(.)", r"\1", m.group(1))] = m.group(2).strip()
     return rules
 
@@ -76,6 +126,7 @@ def current():
         "defaultWidth": width_of(text[d[0]:d[1]]) if d else "",
         "presets": presets,
         "apps": read_apps(),
+        "taskmgr": read_taskmgr(),
     }
 
 
@@ -107,11 +158,11 @@ def set_block(text, name, lines):
     return new
 
 
-def render_apps(rules):
+def render_apps(rules, taskmgr=None):
     out = ["// Managed by angelOS → Настройки → Окна. Per-app default widths.", ""]
     for app, w in sorted(rules.items()):
         out += ["window-rule {", f'    match app-id=r#"^{re.escape(app)}$"#', f"    default-column-width {{ {w}; }}", "}", ""]
-    return "\n".join(out)
+    return "\n".join(out) + render_taskmgr(taskmgr)
 
 
 def atomic_write(path, content):
@@ -128,7 +179,7 @@ def atomic_write(path, content):
 
 
 def apply(changes):
-    unknown = set(changes) - {"gaps", "center", "defaultWidth", "presets", "apps"}
+    unknown = set(changes) - {"gaps", "center", "defaultWidth", "presets", "apps", "taskmgr"}
     if unknown:
         raise ValueError("unknown keys: " + ", ".join(sorted(unknown)))
     layout = layout_path.read_text()
@@ -151,24 +202,29 @@ def apply(changes):
             raise ValueError("need at least one preset")
         new_layout = set_block(new_layout, "preset-column-widths", ps)
 
-    files = {layout_path: (layout, new_layout)}
-    if "apps" in changes:
+    files = {layout_path: (layout, new_layout)} if new_layout != layout else {}
+    if "apps" in changes or "taskmgr" in changes:
         rules = read_apps()
-        for app, w in changes["apps"].items():
+        for app, w in (changes.get("apps") or {}).items():
             if not re.match(r"^[\w.+-]{1,120}$", app):
                 raise ValueError("bad app id: " + app)
             if w in (None, "", "default"):
                 rules.pop(app, None)
             else:
                 rules[app] = check_width(w)
+        taskmgr = changes["taskmgr"] if "taskmgr" in changes else read_taskmgr()
         old_apps = apps_path.read_text() if apps_path.exists() else None
-        files[apps_path] = (old_apps, render_apps(rules))
+        files[apps_path] = (old_apps, render_apps(rules, taskmgr))
         cfg = config_path.read_text()
         if 'include "./cfg/angelos-windows.kdl"' not in cfg:
             anchor = 'include "./cfg/rules.kdl"'
             new_cfg = cfg.replace(anchor, anchor + '\ninclude "./cfg/angelos-windows.kdl"') if anchor in cfg else cfg + '\ninclude "./cfg/angelos-windows.kdl"\n'
             files[config_path] = (cfg, new_cfg)
 
+    files = {p: v for p, v in files.items() if v[0] != v[1]}
+    if not files:
+        print("No changes")
+        return
     # backup into a fresh folder, write, validate, roll back on failure
     backup_root = home / ".local/state/angelos/backups"
     backup_root.mkdir(parents=True, exist_ok=True)

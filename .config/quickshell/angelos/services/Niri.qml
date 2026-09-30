@@ -101,6 +101,36 @@ Singleton {
             "id": id
         });
     }
+    function fullscreenWindow(id) {
+        action("FullscreenWindow", {
+            "id": id
+        });
+    }
+    function maximizeWindow(id) {
+        action("MaximizeWindowToEdges", {
+            "id": id
+        });
+    }
+    function toggleFloating(id) {
+        action("ToggleWindowFloating", {
+            "id": id
+        });
+    }
+    function moveWindowToWorkspace(id, wsIdx) {
+        action("MoveWindowToWorkspace", {
+            "window_id": id,
+            "reference": {
+                "Index": wsIdx
+            },
+            "focus": false
+        });
+    }
+    function moveWindowToMonitor(id, output) {
+        action("MoveWindowToMonitor", {
+            "id": id,
+            "output": output
+        });
+    }
     function switchLayout(next) {
         action("SwitchLayout", {
             "layout": next === false ? "Prev" : "Next"

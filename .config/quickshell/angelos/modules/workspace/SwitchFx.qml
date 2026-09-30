@@ -6,6 +6,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import qs.config
 import qs.services
+import qs.widgets
 
 // Workspace transition over one screen (styles with `fx` in WorkspaceAnim):
 //   capture — `grim` grabs the old workspace into a private file
@@ -157,4 +158,6 @@ PanelWindow {
         property color purple: "#b429f9"
         fragmentShader: Qt.resolvedUrl("../../shaders/ws_transition.frag.qsb")
     }
+
+    RightClickGuard {}
 }

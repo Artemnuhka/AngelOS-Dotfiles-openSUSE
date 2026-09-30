@@ -11,6 +11,8 @@ Singleton {
     property string defaultWidth: ""      // "proportion 0.5" | "fixed 1200" | "" (niri default)
     property var presets: []              // Mod+R cycle
     property var apps: ({})               // app-id -> width
+    property var taskmgr: null            // task manager floating rule as written (window-config.py)
+    property bool loaded: false
     property string log: ""
 
     // "proportion 0.5" -> "50%", "fixed 900" -> "900" (niri msg action set-window-width)
@@ -81,6 +83,24 @@ Singleton {
         for (const w of Niri.windows.filter(w => w.app_id === appId && !w.is_floating))
             Quickshell.execDetached(["niri", "msg", "action", "set-window-width", "--id", String(w.id), arg]);
     }
+    // write the task manager rule only when it differs from what is in the file
+    property var _pendingTaskmgr: undefined
+    function setTaskManager(spec) {
+        if (!loaded) {
+            _pendingTaskmgr = spec;
+            return;
+        }
+        if (JSON.stringify(spec || null) === JSON.stringify(taskmgr || null))
+            return;
+        if (writer.running) {
+            _pendingTaskmgr = spec;
+            return;
+        }
+        _pendingTaskmgr = undefined;
+        save({
+            "taskmgr": spec
+        });
+    }
     readonly property bool busy: writer.running
     function save(changes) {
         if (writer.running)
@@ -101,6 +121,10 @@ Singleton {
                     root.defaultWidth = v.defaultWidth || "";
                     root.presets = v.presets || [];
                     root.apps = v.apps || {};
+                    root.taskmgr = v.taskmgr || null;
+                    root.loaded = true;
+                    if (root._pendingTaskmgr !== undefined)
+                        root.setTaskManager(root._pendingTaskmgr);
                 } catch (e) {
                     root.log = String(e);
                 }

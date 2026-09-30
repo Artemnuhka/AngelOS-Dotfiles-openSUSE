@@ -110,8 +110,44 @@ IpcHandler {
             "size": [h.width, h.height]
         });
     }
+    // the configured system monitor, floating (Settings → System → Task Manager)
+    function taskManager(): void {
+        DesktopActions.launchMonitor();
+    }
     function settingsPage(page: string): void {
         Shell.openSettings(page);
+    }
+    // settings search: `angelos searchSettings "прозрачность панели"` → the best matches
+    function searchSettings(text: string): string {
+        SettingsSearch.load();
+        return JSON.stringify({
+            "complete": SettingsSearch.complete(text),
+            "results": SettingsSearch.search(text, 8).map(r => ({
+                        "title": r.title,
+                        "where": r.crumb,
+                        "page": r.page,
+                        "score": Math.round(r.score * 100) / 100
+                    }))
+        });
+    }
+    function settingsQuery(text: string): void {
+        Shell.openSettings();
+        Qt.callLater(() => {
+            if (Shell.settingsView)
+                Shell.settingsView.setQuery(text);
+        });
+    }
+    // open settings at the best match: `angelos openSetting blur`
+    function openSetting(text: string): string {
+        Shell.openSettings();
+        const r = SettingsSearch.search(text, 1)[0];
+        if (!r)
+            return "not found";
+        Qt.callLater(() => {
+            if (Shell.settingsView)
+                Shell.settingsView.openResult(r);
+        });
+        return r.title + (r.crumb ? " · " + r.crumb : "");
     }
     function launcherText(text: string): void {
         if (!Shell.launcherOpen)
@@ -164,6 +200,10 @@ IpcHandler {
     // screensaver: animated ASCII art until any input
     function idle(): void {
         Idle.toggle();
+    }
+    // look the current song up again, skipping the caches
+    function lyricsRefetch(): void {
+        Lyrics.refetch();
     }
     function lyrics(): void {
         Config.lyrics.enabled = !Config.lyrics.enabled;
@@ -331,6 +371,8 @@ IpcHandler {
             bars: bars,
             lyrics: {
                 status: Lyrics.status,
+                source: Lyrics.source,
+                track: Lyrics.artist + " — " + Lyrics.title,
                 hasLyrics: Lyrics.hasLyrics,
                 enabled: Config.lyrics.enabled,
                 visible: Lyrics.visibleToggle,

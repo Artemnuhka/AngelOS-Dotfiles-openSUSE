@@ -131,17 +131,21 @@ Singleton {
     function sh(script) {
         exec(["sh", "-c", script]);
     }
-    // argv to run a command in the configured terminal (kitty/foot take the program directly)
-    function terminalArgv(argv) {
+    // argv to run a command in the configured terminal (kitty/foot take the program directly);
+    // appId names the terminal window so niri rules can match it (the task manager floats)
+    function terminalArgv(argv, appId) {
         const t = Config.system.terminal || "kitty";
         const base = t.split("/").pop();
+        let cls = [];
+        if (appId)
+            cls = base === "foot" ? ["--app-id=" + appId] : base === "ghostty" ? ["--class=" + appId] : base === "wezterm" ? ["--class", appId] : base === "kitty" || base === "alacritty" ? ["--class", appId] : [];
         if (!argv || argv.length === 0)
-            return [t];
+            return [t].concat(cls);
         if (base === "kitty" || base === "foot")
-            return [t].concat(argv);
+            return [t].concat(cls, argv);
         if (base === "wezterm")
-            return [t, "start", "--"].concat(argv);
-        return [t, "-e"].concat(argv);
+            return [t, "start"].concat(cls, ["--"], argv);
+        return [t].concat(cls, ["-e"], argv);
     }
     function terminal(cmd) {
         exec(terminalArgv(cmd ? ["sh", "-c", cmd] : []));

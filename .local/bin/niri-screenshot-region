@@ -2,6 +2,7 @@
 """Region screenshot with gravity ropes; always saves under Pictures/Screenshots."""
 from __future__ import annotations
 
+import fcntl
 import math
 import os
 import signal
@@ -9,6 +10,28 @@ import subprocess
 import sys
 import time
 from dataclasses import dataclass, field
+
+GEOMETRY_ONLY = "--geometry" in sys.argv
+
+
+def single_instance():
+    """One selection at a time (screenshot or record region): a held Mod+Shift+S
+    or another call while one is open exits right away. The lock dies with us."""
+    path = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or "/tmp", "niri-screenshot-region.lock")
+    fd = os.open(path, os.O_RDWR | os.O_CREAT, 0o600)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        os.close(fd)
+        return None
+    return fd
+
+
+# before GTK loads: repeats must cost nothing
+_LOCK = single_instance()
+if _LOCK is None:
+    # --geometry callers (niri-record-region) read a non-zero exit as "cancelled"
+    sys.exit(1 if GEOMETRY_ONLY else 0)
 
 import cairo
 import gi
@@ -32,7 +55,6 @@ SLACK_SIDE = 1.0
 SLACK_TETHER = 1.06  # tighter corner tethers
 PHYSICS_SUBSTEPS = 2  # integrate in smaller steps so fast drags don't overshoot/jitter
 MIN_SIZE = 4
-GEOMETRY_ONLY = "--geometry" in sys.argv
 
 
 def load_skin():

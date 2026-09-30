@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Io
 import qs.config
 import qs.services
+import qs.widgets
 
 // The game window, opened from Start, the launcher, the desktop menu or IPC.
 Item {
@@ -51,6 +52,8 @@ Item {
                 plugin: root.plugin
                 onQuitRequested: Shell.gameOpen = false
             }
+
+            RightClickGuard {}
         }
     }
 }

@@ -24,7 +24,21 @@ Item {
     }
 
     function url(p) {
-        return p ? (p.startsWith("/") ? "file://" + p : p) : "";
+        const d = Wallpapers.display(p);
+        return d ? (d.startsWith("/") ? "file://" + d : d) : "";
+    }
+    function load(img, p) {
+        img.path = p;
+        img.source = url(p);
+    }
+    // a picture too big for Qt came back as a fitted copy: show that instead
+    Connections {
+        target: Wallpapers
+        function onFittedChanged() {
+            for (const img of [fromImg, toImg])
+                if (Wallpapers.fitted[img.path])
+                    img.source = root.url(img.path);
+        }
     }
 
     // pixel transition only when the picture itself is changed (settings / IPC);
@@ -39,14 +53,14 @@ Item {
         anim.stop();
         if (!animate) {
             shown = path;
-            fromImg.source = url(path);
-            toImg.source = url(path);
+            load(fromImg, path);
+            load(toImg, path);
             progress = 1;
             return;
         }
-        fromImg.source = url(shown);
+        load(fromImg, shown);
         shown = path;
-        toImg.source = url(path);
+        load(toImg, path);
         progress = 0;
         if (toImg.status === Image.Ready)
             anim.start();
@@ -59,8 +73,8 @@ Item {
         Qt.callLater(() => go(target))
     Component.onCompleted: {
         shown = target;
-        fromImg.source = url(target);
-        toImg.source = url(target);
+        load(fromImg, target);
+        load(toImg, target);
         configChanged = false;
     }
 
@@ -76,6 +90,7 @@ Item {
 
     Image {
         id: fromImg
+        property string path
         anchors.fill: parent
         fillMode: Image.PreserveAspectCrop
         sourceSize: Qt.size(root.width, root.height)
@@ -83,9 +98,12 @@ Item {
         cache: true
         smooth: true
         visible: false
+        onStatusChanged: if (status === Image.Error)
+            Wallpapers.fit(path)
     }
     Image {
         id: toImg
+        property string path
         anchors.fill: parent
         fillMode: Image.PreserveAspectCrop
         sourceSize: Qt.size(root.width, root.height)
@@ -93,9 +111,13 @@ Item {
         cache: true
         smooth: true
         visible: false
-        onStatusChanged: if (status === Image.Ready && root.waitingForLoad) {
-            root.waitingForLoad = false;
-            anim.start();
+        onStatusChanged: {
+            if (status === Image.Error)
+                Wallpapers.fit(path);
+            else if (status === Image.Ready && root.waitingForLoad) {
+                root.waitingForLoad = false;
+                anim.start();
+            }
         }
     }
 

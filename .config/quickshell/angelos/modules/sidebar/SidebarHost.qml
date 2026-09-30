@@ -87,6 +87,8 @@ Scope {
                         }
                     }
                 }
+
+                RightClickGuard {}
             }
 
             // ---- where the tab lands while dragging ----
@@ -129,6 +131,8 @@ Scope {
                         fill: "#ffffff"
                     }
                 }
+
+                RightClickGuard {}
             }
 
             // ---- the panel ----
@@ -203,6 +207,8 @@ Scope {
                         z: -1
                     }
                 }
+
+                RightClickGuard {}
             }
         }
     }

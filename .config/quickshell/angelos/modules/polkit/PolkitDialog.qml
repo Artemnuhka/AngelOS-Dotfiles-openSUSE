@@ -130,6 +130,8 @@ Scope {
                 }
             }
         }
+
+        RightClickGuard {}
     }
 
     Connections {

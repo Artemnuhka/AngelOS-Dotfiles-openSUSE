@@ -490,4 +490,6 @@ FloatingWindow {
             }
         }
     }
+
+    RightClickGuard {}
 }

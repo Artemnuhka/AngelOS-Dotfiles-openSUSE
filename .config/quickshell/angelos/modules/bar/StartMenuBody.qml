@@ -136,7 +136,7 @@ PxBox {
         e.accepted = true;
     }
 
-    width: Theme.u * 160
+    width: Math.round(Theme.u * 160 * Math.max(0.7, Math.min(1.8, (Config.bar.startWidth || 100) / 100)))
     height: brand.height + Theme.u * 4 + col.implicitHeight + footer.height + inset * 2
     color: Qt.alpha(Theme.menuSurface, Theme.panelAlpha)
     edgeColor: Theme.menuBorder

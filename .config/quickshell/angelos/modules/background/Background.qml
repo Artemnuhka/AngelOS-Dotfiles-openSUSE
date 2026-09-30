@@ -6,6 +6,7 @@ import Quickshell.Wayland
 import qs.config
 import qs.services
 import qs.modules.desktop
+import qs.widgets
 
 // Two background-layer surfaces per screen:
 //   angelos-wallpaper — the picture and the desktop widgets; niri keeps it in the
@@ -53,6 +54,8 @@ Variants {
                     }
                 }
             }
+
+            RightClickGuard {}
         }
 
         PanelWindow {
@@ -108,6 +111,8 @@ Variants {
                     Shell.desktopMenus = m;
                 }
             }
+
+            RightClickGuard {}
         }
     }
 }

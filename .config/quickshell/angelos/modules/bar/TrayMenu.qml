@@ -96,4 +96,6 @@ PopupWindow {
             }
         }
     }
+
+    RightClickGuard {}
 }

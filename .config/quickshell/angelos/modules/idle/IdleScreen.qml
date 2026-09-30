@@ -142,5 +142,7 @@ Variants {
             color: Theme.textDim
             opacity: 0.6
         }
+
+        RightClickGuard {}
     }
 }

@@ -55,4 +55,6 @@ PanelWindow {
             itemHeight: Theme.u * 15
         }
     }
+
+    RightClickGuard {}
 }

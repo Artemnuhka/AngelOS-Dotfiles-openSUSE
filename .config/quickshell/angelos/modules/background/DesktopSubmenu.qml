@@ -74,4 +74,6 @@ PopupWindow {
             }
         }
     }
+
+    RightClickGuard {}
 }

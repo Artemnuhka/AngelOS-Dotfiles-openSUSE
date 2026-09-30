@@ -33,11 +33,13 @@ Item {
     Image {
         id: img
         anchors.fill: parent
-        source: root.wall ? "file://" + root.wall : ""
+        source: root.wall ? "file://" + Wallpapers.display(root.wall) : ""
         fillMode: Image.PreserveAspectCrop
         sourceSize: Qt.size(width, height)
         asynchronous: true
         visible: !Config.lock.pixelate
+        onStatusChanged: if (status === Image.Error)
+            Wallpapers.fit(root.wall)
     }
     ShaderEffect {
         id: pixels

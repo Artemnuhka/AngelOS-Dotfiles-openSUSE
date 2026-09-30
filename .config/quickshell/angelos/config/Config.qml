@@ -123,6 +123,9 @@ Singleton {
                 property string startLabel: "angelOS"
                 property string startStyle: "classic" // classic (Win98 list) | win11 (centred, pinned grid) | fullscreen (iPhone-like app grid)
                 property var startPinned: []        // desktop entry ids pinned in Start
+                property string startAlign: "auto" // auto (classic at the button, win11 centred) | left | center | right
+                property int startWidth: 100        // Start menu width, % of the default
+                property int startRows: 3           // win11: rows of pinned apps
                 property string logoStyle: "classic" // classic | angel
                 property bool metaTap: true         // a short Meta tap opens Start (Windows-like)
                 property int metaTapMs: 400         // longer presses are holds, not taps
@@ -131,6 +134,9 @@ Singleton {
                 property var hidden: []             // widget ids removed from the bar
                 property string trayTint: "accent"  // off | mono | accent — recolor tray icons to the theme
                 property bool tintTasks: false      // same for window buttons
+                property string taskRightClick: "menu" // menu (window menu with Close) | close (closes at once) | none
+                property bool taskMiddleClose: true // middle click on a window button closes the window
+                property bool taskHoverClose: false // × on the hovered window button
             }
 
             property JsonObject wallpaper: JsonObject {
@@ -161,7 +167,8 @@ Singleton {
                 property string artwork: "note"          // note | cover
                 property bool typewriter: true
                 property string preferPlayer: "spotify"
-                property var sources: ["lrclib", "netease", "ovh"] // tried in this order
+                property var sources: ["local", "player", "lrclib", "netease", "kugou", "qq", "ovh"] // tried in this order
+                property int sourcesVersion: 0      // 2 = the list knows kugou/qq/local/player (older lists get them once)
             }
 
             property JsonObject setup: JsonObject {
@@ -250,6 +257,11 @@ Singleton {
                 property string monitor: "auto"
                 property string monitorProgram: ""
                 property bool monitorInTerminal: false
+                property bool monitorFloat: true    // the task manager opens as a floating window (niri rule)
+                property string monitorSize: "medium" // compact | medium | large | tall | custom
+                property int monitorWidth: 1200     // custom size, logical px
+                property int monitorHeight: 760
+                property string monitorPlace: "center" // center | corner (bottom-right, next to the tray)
                 property bool nautilusDefaults: false // angelOS Nautilus extensions + prefs applied once
             }
 

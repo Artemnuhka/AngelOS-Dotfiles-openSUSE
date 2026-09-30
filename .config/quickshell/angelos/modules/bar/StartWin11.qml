@@ -15,8 +15,11 @@ PxBox {
     property int current: -1
     property bool showAll: false
     property string query: ""
-    readonly property int columns: 6
-    readonly property var shown: query.trim() !== "" ? StartApps.search(query).slice(0, 24) : showAll ? StartApps.apps : StartApps.pinned.slice(0, 18)
+    // Settings → Bar → Start: width in % of the default and rows of pinned apps
+    readonly property real sizeFactor: Math.max(0.7, Math.min(1.8, (Config.bar.startWidth || 100) / 100))
+    readonly property int columns: Math.max(4, Math.min(10, Math.round(6 * sizeFactor)))
+    readonly property int rows: Math.max(2, Math.min(6, Config.bar.startRows || 3))
+    readonly property var shown: query.trim() !== "" ? StartApps.search(query).slice(0, columns * Math.max(4, rows)) : showAll ? StartApps.apps : StartApps.pinned.slice(0, columns * rows)
     readonly property var recommended: [
         {
             "text": I18n.t("Настройки", "Settings"),
@@ -102,7 +105,7 @@ PxBox {
         return true;
     }
 
-    width: Theme.u * 250
+    width: Math.round(Theme.u * 250 * sizeFactor)
     height: col.implicitHeight + footer.height + Theme.u * 10
     color: Qt.alpha(Theme.menuSurface, Theme.panelAlpha)
     edgeColor: Theme.menuBorder
@@ -215,10 +218,10 @@ PxBox {
             id: grid
             visible: !root.showAll || root.query !== ""
             width: parent.width
-            height: cellHeight * Math.max(1, Math.min(3, Math.ceil(count / root.columns)))
+            height: cellHeight * Math.max(1, Math.min(root.rows, Math.ceil(count / root.columns)))
             cellWidth: width / root.columns
             cellHeight: Theme.u * 30
-            interactive: count > root.columns * 3
+            interactive: count > root.columns * root.rows
             clip: true
             model: grid.visible ? root.shown : []
             delegate: Tile {}
@@ -229,7 +232,7 @@ PxBox {
             id: allList
             visible: root.showAll && root.query === ""
             width: parent.width
-            height: grid.cellHeight * 3 + recHead.implicitHeight + recFlow.implicitHeight + Theme.u * 5
+            height: grid.cellHeight * root.rows + recHead.implicitHeight + recFlow.implicitHeight + Theme.u * 5
             clip: true
             boundsBehavior: Flickable.StopAtBounds
             model: allList.visible ? root.shown : []

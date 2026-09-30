@@ -11,6 +11,7 @@
             curve "ease-out-cubic"
         }
         window-close {
+            // angelOS close: default
             duration-ms 220
             curve "ease-out-quad"
         }

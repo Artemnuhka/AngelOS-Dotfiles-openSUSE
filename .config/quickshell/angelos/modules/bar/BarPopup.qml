@@ -65,4 +65,6 @@ PopupWindow {
         focus: true
         Keys.onEscapePressed: PopupManager.close(root)
     }
+
+    RightClickGuard {}
 }

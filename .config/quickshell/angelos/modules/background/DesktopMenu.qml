@@ -7,9 +7,9 @@ import qs.config
 import qs.services
 import qs.widgets
 
-// Right-click desktop menu, laid out like Windows 11: a row of quick actions on top,
-// then Вид ▸ / Создать ▸ / Открыть ▸, screen & personalization shortcuts, and
-// "Показать больше ▸" for plugin entries.
+// Right-click desktop menu, laid out like Windows 11: signed quick actions on top
+// (terminal, files, task manager, wallpaper, settings), then Вид ▸ / Создать ▸ /
+// Обои ▸ / Открыть ▸, display & personalization, and "Показать больше ▸" for plugins.
 PopupWindow {
     id: root
 
@@ -17,16 +17,23 @@ PopupWindow {
     readonly property string screenName: parentWindow && parentWindow.screen ? parentWindow.screen.name : ""
     property real px: 0
     property real py: 0
-    property string hoverHint: ""
 
     function openAt(x, y) {
         px = x;
         py = y;
         sub.visible = false;
+        const again = visible;
         visible = false;
         anchor.rect.x = x;
         anchor.rect.y = y;
-        visible = true;
+        // reopening in the same event keeps the old surface position (it jumped aside)
+        if (again)
+            Qt.callLater(() => {
+                anchor.updateAnchor();
+                visible = true;
+            });
+        else
+            visible = true;
     }
     function close() {
         sub.visible = false;
@@ -87,6 +94,57 @@ PopupWindow {
             "run": () => NautilusSetup.mediafix([])
         }
     ]
+    readonly property int wsIdx: {
+        const ws = Niri.activeWorkspace(screenName);
+        return ws ? ws.idx : 1;
+    }
+    readonly property var wallpaperItems: [
+        {
+            "label": I18n.t("Следующие обои", "Next wallpaper"),
+            "icon": "arrowRight",
+            "keepOpen": true,
+            "run": () => Wallpapers.next(root.screenName, root.wsIdx, 1)
+        },
+        {
+            "label": I18n.t("Предыдущие обои", "Previous wallpaper"),
+            "icon": "arrowLeft",
+            "keepOpen": true,
+            "run": () => Wallpapers.next(root.screenName, root.wsIdx, -1)
+        },
+        {
+            "label": I18n.t("Случайные", "Random"),
+            "icon": "sparkle",
+            "keepOpen": true,
+            "run": () => Wallpapers.shuffle(root.screenName, root.wsIdx)
+        },
+        {
+            "label": I18n.t("Случайные на всех экранах", "Random everywhere"),
+            "icon": "monitor",
+            "run": () => Wallpapers.random("")
+        },
+        {
+            "separator": true
+        },
+        {
+            "label": I18n.t("Выбрать обои…", "Choose wallpaper…"),
+            "icon": "image",
+            "run": () => Shell.openSettings("wallpaper")
+        },
+        {
+            "label": I18n.t("Открыть папку с обоями", "Open the wallpaper folder"),
+            "icon": "folder",
+            "run": () => Shell.openPath(Wallpapers.dir)
+        },
+        {
+            "label": I18n.t("Обновить список", "Rescan pictures"),
+            "icon": "refresh",
+            "hint": Wallpapers.images.length ? String(Wallpapers.images.length) : "",
+            "run": () => {
+                Wallpapers.scan();
+                Plugins.reload();
+            }
+        }
+    ]
     readonly property var openItems: [
         {
             "key": "HOME",
@@ -132,7 +190,9 @@ PopupWindow {
     anchor.window: parentWindow
     anchor.rect.width: 1
     anchor.rect.height: 1
-    anchor.edges: Edges.Top | Edges.Left
+    // the menu starts one pixel past the pointer, so a second right-click on the
+    // same spot lands on the desktop (menu moves there) instead of its corner
+    anchor.edges: Edges.Bottom | Edges.Right
     anchor.gravity: Edges.Bottom | Edges.Right
     anchor.adjustment: PopupAdjustment.Flip | PopupAdjustment.Slide
     grabFocus: !Shell.demo
@@ -170,11 +230,12 @@ PopupWindow {
         onTriggered: if (item && item.hovered)
             sub.openFor(item, list)
     }
-    // scripting: open a flyout by name ("view" | "new" | "open" | "more")
+    // scripting: open a flyout by name ("view" | "new" | "wallpaper" | "open" | "more")
     function openSub(name) {
         const m = {
             "view": [viewItem, viewItems],
             "new": [newItem, newItems],
+            "wallpaper": [wallItem, wallpaperItems],
             "open": [openItem, openItems],
             "more": [moreItem, moreItems]
         }[name];
@@ -202,61 +263,84 @@ PopupWindow {
             id: col
             width: parent.width - frame.inset * 2
 
-            // quick actions row (Windows 11 puts cut/copy/paste here; we put the everyday stuff)
-            Item {
-                width: parent.width
-                height: quick.height + Theme.u * 4
-                Row {
-                    id: quick
-                    anchors.centerIn: parent
-                    spacing: Theme.u * 2
-                    Repeater {
-                        model: [
-                            {
-                                "icon": "terminal",
-                                "tip": I18n.t("Терминал", "Terminal"),
-                                "run": () => Shell.terminal()
-                            },
-                            {
-                                "icon": "folder",
-                                "tip": I18n.t("Файлы", "Files"),
-                                "run": () => DesktopActions.openDirectory("HOME")
-                            },
-                            {
-                                "icon": "chip",
-                                "tip": I18n.t("Системный монитор", "System monitor"),
-                                "run": () => DesktopActions.launchMonitor()
-                            },
-                            {
-                                "icon": "image",
-                                "tip": I18n.t("Обои", "Wallpaper"),
-                                "run": () => Shell.openSettings("wallpaper")
-                            },
-                            {
-                                "icon": "gear",
-                                "tip": I18n.t("Настройки", "Settings"),
-                                "run": () => Shell.openSettings()
+            // quick actions (Windows 11 puts cut/copy/paste here; we put the everyday stuff), signed
+            Row {
+                id: quick
+                anchors.horizontalCenter: parent.horizontalCenter
+                topPadding: Theme.u * 2
+                bottomPadding: Theme.u * 2
+                spacing: Theme.u
+                Repeater {
+                    model: [
+                        {
+                            "icon": "terminal",
+                            "label": I18n.t("Терминал", "Terminal"),
+                            "run": () => Shell.terminal()
+                        },
+                        {
+                            "icon": "folder",
+                            "label": I18n.t("Файлы", "Files"),
+                            "run": () => DesktopActions.openDirectory("HOME")
+                        },
+                        {
+                            "icon": "chip",
+                            "label": I18n.t("Диспетчер", "Tasks"),
+                            "run": () => DesktopActions.launchMonitor()
+                        },
+                        {
+                            "icon": "image",
+                            "label": I18n.t("Обои", "Wallpaper"),
+                            "run": () => Shell.openSettings("wallpaper")
+                        },
+                        {
+                            "icon": "gear",
+                            "label": I18n.t("Настройки", "Settings"),
+                            "run": () => Shell.openSettings()
+                        }
+                    ]
+                    Item {
+                        id: qa
+                        required property var modelData
+                        width: Theme.u * 30
+                        height: qaCol.implicitHeight + Theme.u * 4
+                        PxBox {
+                            anchors.fill: parent
+                            visible: qm.containsMouse
+                            sunken: qm.pressed
+                            color: Theme.mix(Theme.face, Theme.accent, 0.18)
+                        }
+                        Column {
+                            id: qaCol
+                            anchors.centerIn: parent
+                            spacing: Theme.u
+                            Item {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                width: Theme.u * 12
+                                height: Theme.u * 12
+                                PxIcon {
+                                    anchors.centerIn: parent
+                                    name: qa.modelData.icon
+                                }
                             }
-                        ]
-                        PxButton {
-                            required property var modelData
-                            compact: true
-                            flat: true
-                            icon: modelData.icon
-                            width: Theme.u * 17
-                            height: Theme.u * 15
-                            onHoveredChanged: root.hoverHint = hovered ? modelData.tip : ""
-                            onClicked: root.run(modelData.run)
+                            PxText {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                width: qa.width - Theme.u * 2
+                                horizontalAlignment: Text.AlignHCenter
+                                elide: Text.ElideRight
+                                text: qa.modelData.label
+                                kind: "tiny"
+                            }
+                        }
+                        MouseArea {
+                            id: qm
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onEntered: sub.visible = false
+                            onClicked: root.run(qa.modelData.run)
                         }
                     }
                 }
-            }
-            PxText {
-                width: parent.width
-                horizontalAlignment: Text.AlignHCenter
-                text: root.hoverHint || " "
-                kind: "tiny"
-                dim: true
             }
             PxMenuItem {
                 separator: true
@@ -281,6 +365,15 @@ PopupWindow {
                 onTriggered: sub.openFor(newItem, root.newItems)
             }
             PxMenuItem {
+                id: wallItem
+                text: I18n.t("Обои", "Wallpaper")
+                icon: "image"
+                submenu: true
+                onHoveredChanged: if (hovered)
+                    root.hoverSub(wallItem, root.wallpaperItems)
+                onTriggered: sub.openFor(wallItem, root.wallpaperItems)
+            }
+            PxMenuItem {
                 id: openItem
                 text: I18n.t("Открыть", "Open")
                 icon: "folder"
@@ -291,16 +384,6 @@ PopupWindow {
             }
             PxMenuItem {
                 separator: true
-            }
-            PxMenuItem {
-                text: I18n.t("Обновить", "Refresh")
-                icon: "refresh"
-                onHoveredChanged: if (hovered)
-                    sub.visible = false
-                onTriggered: root.run(() => {
-                    Wallpapers.scan();
-                    Plugins.reload();
-                })
             }
             PxMenuItem {
                 text: I18n.t("Параметры экрана", "Display settings")
@@ -315,26 +398,6 @@ PopupWindow {
                 onHoveredChanged: if (hovered)
                     sub.visible = false
                 onTriggered: root.run(() => Shell.openSettings("appearance"))
-            }
-            PxMenuItem {
-                text: I18n.t("Открыть в терминале", "Open in Terminal")
-                icon: "terminal"
-                onHoveredChanged: if (hovered)
-                    sub.visible = false
-                onTriggered: root.run(() => Shell.terminal())
-            }
-            PxMenuItem {
-                visible: DesktopActions.available
-                height: visible ? implicitHeight : 0
-                text: I18n.t("Системный монитор", "System monitor")
-                icon: "chip"
-                hint: DesktopActions.selectedMonitor ? DesktopActions.selectedMonitor.label : ""
-                onHoveredChanged: if (hovered)
-                    sub.visible = false
-                onTriggered: root.run(() => DesktopActions.launchMonitor())
-            }
-            PxMenuItem {
-                separator: true
             }
             PxMenuItem {
                 id: moreItem
@@ -359,13 +422,8 @@ PopupWindow {
                     })
                 }
             }
-            PxMenuItem {
-                text: I18n.t("Настройки angelOS", "angelOS settings")
-                icon: "gear"
-                onHoveredChanged: if (hovered)
-                    sub.visible = false
-                onTriggered: root.run(() => Shell.openSettings())
-            }
         }
     }
+
+    RightClickGuard {}
 }

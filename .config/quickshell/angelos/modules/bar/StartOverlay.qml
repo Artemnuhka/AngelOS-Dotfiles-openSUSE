@@ -108,14 +108,17 @@ Variants {
 
         Loader {
             id: body
-            // classic sits at the button; win11 is centred over the bar; fullscreen fills
+            // Settings → Bar → Start: auto keeps classic at the button and win11 centred;
+            // left / center / right pin either of them there. Fullscreen fills.
             readonly property real restY: win.above ? win.button.y - height - Theme.u * 2 : win.button.y + win.button.height + Theme.u * 2
-            x: win.full ? 0 : win.style === "win11" ? Math.round((win.width - width) / 2) : Math.max(Theme.u * 2, Math.min(win.width - width - Theme.u * 2, win.button.x))
+            readonly property string align: Config.bar.startAlign && Config.bar.startAlign !== "auto" ? Config.bar.startAlign : win.style === "win11" ? "center" : "button"
+            readonly property real edge: Theme.u * 4
+            x: win.full ? 0 : align === "center" ? Math.round((win.width - width) / 2) : align === "left" ? edge : align === "right" ? win.width - width - edge : Math.max(Theme.u * 2, Math.min(win.width - width - Theme.u * 2, win.button.x))
             y: win.full ? 0 : restY + (win.style === "win11" ? (win.above ? 1 : -1) * (1 - win.reveal) * Theme.u * 24 : 0)
             opacity: win.full ? 1 : win.reveal
             // classic pops out of its corner, win11 slides
             scale: win.style === "classic" ? 0.9 + 0.1 * win.reveal : 1
-            transformOrigin: win.above ? Item.BottomLeft : Item.TopLeft
+            transformOrigin: align === "right" ? (win.above ? Item.BottomRight : Item.TopRight) : align === "center" ? (win.above ? Item.Bottom : Item.Top) : (win.above ? Item.BottomLeft : Item.TopLeft)
             sourceComponent: win.full ? fullComp : win.style === "win11" ? win11Comp : classicComp
             onLoaded: {
                 item.closeRequested.connect(Shell.closeStart);
@@ -144,5 +147,7 @@ Variants {
                 height: win.height
             }
         }
+
+        RightClickGuard {}
     }
 }

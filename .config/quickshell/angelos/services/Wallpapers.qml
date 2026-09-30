@@ -44,6 +44,55 @@ Singleton {
             setEverywhere(p);
     }
 
+    // next / random picture for the screen's current workspace: a workspace that has
+    // its own wallpaper gets a new one, otherwise the whole monitor does
+    function _setLike(output, idx, path) {
+        if ((Config.wallpaper.workspaces || {})[key(output, idx)])
+            setForWorkspace(output, idx, path);
+        else
+            setForOutput(output, path);
+    }
+    function next(output, idx, step) {
+        if (images.length === 0)
+            return;
+        const cur = resolve(output, idx);
+        const i = images.indexOf(cur);
+        const n = images.length;
+        _setLike(output, idx, images[((i < 0 ? -1 : i) + (step || 1) + n) % n]);
+    }
+    function shuffle(output, idx) {
+        if (images.length === 0)
+            return;
+        const cur = resolve(output, idx);
+        let p = cur;
+        for (let k = 0; k < 8 && p === cur; k++)
+            p = images[Math.floor(Math.random() * images.length)];
+        _setLike(output, idx, p);
+    }
+
+    // Qt will not decode a picture over 256 MB of pixels (15360×10240 PNG and up),
+    // with sourceSize or not. Views report such a failure with fit(); the picture is
+    // then shown from a copy that fits a 4K box, made once into the cache.
+    property var fitted: ({})          // original path -> fitted copy
+    property var fitQueue: []
+    property var fitFailed: []
+    function display(path) {
+        return fitted[path] || path;
+    }
+    function fit(path) {
+        if (!path || !path.startsWith("/") || fitted[path] || fitQueue.includes(path) || fitFailed.includes(path))
+            return;
+        fitQueue = fitQueue.concat([path]);
+        _fitNext();
+    }
+    function _fitNext() {
+        if (fitter.running || fitQueue.length === 0)
+            return;
+        fitter.source = fitQueue[0];
+        fitter.target = Config.cacheDir + "/wallpapers/" + Qt.md5(fitter.source) + ".png";
+        fitter.running = true;
+    }
+
     function scan() {
         scanner.running = false;
         scanner.running = true;
@@ -51,6 +100,26 @@ Singleton {
 
     onDirChanged: scan()
     Component.onCompleted: scan()
+
+    Process {
+        id: fitter
+        property string source
+        property string target
+        // reuse the copy while it is newer than the picture; libvips streams the
+        // picture, ImageMagick is the fallback
+        command: ["sh", "-c", 'mkdir -p "${2%/*}" && { [ "$2" -nt "$1" ] || if command -v vipsthumbnail >/dev/null; then vipsthumbnail "$1" --size 3840x3840 -o "$2"; else magick "$1" -resize "3840x3840>" "$2"; fi; }', "sh", source, target]
+        onExited: code => {
+            if (code === 0) {
+                const m = Object.assign({}, root.fitted);
+                m[source] = target;
+                root.fitted = m;
+            } else {
+                root.fitFailed = root.fitFailed.concat([source]);
+            }
+            root.fitQueue = root.fitQueue.filter(p => p !== source);
+            Qt.callLater(root._fitNext);
+        }
+    }
 
     Process {
         id: scanner

@@ -32,4 +32,6 @@ FloatingWindow {
         anchors.fill: parent
         hostWindow: win
     }
+
+    RightClickGuard {}
 }

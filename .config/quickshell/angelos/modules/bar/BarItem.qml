@@ -84,6 +84,7 @@ Loader {
         id: tasksC
         Tasks {
             screenName: root.bar.screenName
+            above: root.bar.above
             iconsOnly: root.bar.compact || root.bar.style === "island" || !Config.bar.taskLabels
             visible: Config.bar.showWindows
         }

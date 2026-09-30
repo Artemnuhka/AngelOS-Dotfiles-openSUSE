@@ -14,11 +14,20 @@ PopupWindow {
     readonly property string outputName: anchorItem && anchorItem.QsWindow.window && anchorItem.QsWindow.window.screen ? anchorItem.QsWindow.window.screen.name : ""
     Component.onCompleted: PopupManager.registerPopup(root)
     Component.onDestruction: PopupManager.unregisterPopup(root)
+    // Reopening in the same event would reuse the old surface position, so a
+    // visible menu is closed first and shown again on the next turn of the loop.
     function openAt(x, y) {
+        const again = visible;
         visible = false;
         anchor.rect.x = x;
         anchor.rect.y = y;
-        visible = true;
+        if (again)
+            Qt.callLater(() => {
+                anchor.updateAnchor();
+                visible = true;
+            });
+        else
+            visible = true;
     }
     function run(action) {
         visible = false;
@@ -77,4 +86,6 @@ PopupWindow {
             }
         }
     }
+
+    RightClickGuard {}
 }

@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import qs.config
 import qs.services
 import qs.widgets
@@ -18,6 +19,77 @@ PxPage {
                 "label": s.name,
                 "value": s.name
             }))
+
+    // what the cava widget can listen to: outputs, whole multichannel interfaces,
+    // their labelled channel pairs, and (marked) inputs — scripts/audio-tap.py list
+    property var tap: ({
+            "auto": "",
+            "nodes": []
+        })
+    readonly property var tapModel: {
+        const out = [
+            {
+                "label": I18n.t("Авто: весь звук ПК", "Auto: all computer sound") + (tap.auto ? " · " + tap.auto : ""),
+                "value": ""
+            }
+        ];
+        const outs = tap.nodes.filter(n => n.kind === "output");
+        const ins = tap.nodes.filter(n => n.kind === "input");
+        for (const n of outs) {
+            out.push({
+                "label": "♪ " + n.description,
+                "value": "monitor:" + n.name
+            });
+            if (n.pairs.length) {
+                out.push({
+                    "label": "♪ " + n.description + I18n.t(" — все каналы (", " — all channels (") + n.channels.length + ")",
+                    "value": "all:" + n.name
+                });
+                for (const pr of n.pairs)
+                    out.push({
+                        "label": "   ↳ " + (pr.label ? pr.label + " · " : "") + pr.channels.join("/"),
+                        "value": "pair:" + n.name + ":" + pr.channels.join(",")
+                    });
+            }
+        }
+        for (const n of ins) {
+            out.push({
+                "label": "🎤 " + n.description + I18n.t(" (вход)", " (input)"),
+                "value": "input:" + n.name
+            });
+            for (const pr of n.pairs)
+                out.push({
+                    "label": "   ↳ 🎤 " + (pr.label ? pr.label + " · " : "") + pr.channels.join("/"),
+                    "value": "pair:" + n.name + ":" + pr.channels.join(",")
+                });
+        }
+        return out;
+    }
+    function tapValue(v) {
+        // older settings stored a bare sink name
+        return v && !/^(monitor|all|pair|input):/.test(v) ? "monitor:" + v : (v || "");
+    }
+    function tapIsInput(v) {
+        v = tapValue(v);
+        if (v.startsWith("input:"))
+            return true;
+        if (!v.startsWith("pair:"))
+            return false;
+        const name = v.slice(5, v.lastIndexOf(":"));
+        return tap.nodes.some(n => n.name === name && n.kind === "input");
+    }
+    Process {
+        id: tapList
+        running: DesktopWidgets.widgets.some(w => w.type === "cava")
+        command: ["python3", Quickshell.shellDir + "/scripts/audio-tap.py", "list"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    page.tap = JSON.parse(text);
+                } catch (e) {}
+            }
+        }
+    }
 
     PxGroup {
         title: I18n.t("Добавить", "Add")
@@ -137,20 +209,22 @@ PxPage {
                     SettingRow {
                         visible: !!card.w && card.w.type === "cava"
                         label: I18n.t("Что слушать", "Listen to")
-                        hint: I18n.t("выход, чей звук рисовать (только чтение, маршрутизация не меняется)", "which output to draw (read-only, routing is untouched)")
-                        PxCombo {
+                        hint: page.tapIsInput(card.st.source) ? I18n.t("⚠ это вход: визуализатор будет рисовать микрофон", "⚠ this is an input: the visualizer will draw your microphone") : I18n.t("выход, всё устройство или пара каналов (только чтение, маршрутизация не меняется)", "an output, a whole interface or one channel pair (read-only, routing is untouched)")
+                        Row {
                             width: parent.width
-                            model: [
-                                {
-                                    "label": I18n.t("выход по умолчанию", "default output"),
-                                    "value": ""
-                                }
-                            ].concat(Audio.sinks.map(n => ({
-                                        "label": Audio.nodeName(n),
-                                        "value": n.name
-                                    })))
-                            currentValue: card.st.source || ""
-                            onActivated: v => DesktopWidgets.setSetting(card.modelData, "source", v)
+                            spacing: Theme.u * 2
+                            PxCombo {
+                                width: parent.width - refreshTap.width - Theme.u * 2
+                                model: page.tapModel
+                                currentValue: page.tapValue(card.st.source)
+                                onActivated: v => DesktopWidgets.setSetting(card.modelData, "source", v)
+                            }
+                            PxButton {
+                                id: refreshTap
+                                compact: true
+                                icon: "refresh"
+                                onClicked: tapList.running = true
+                            }
                         }
                     }
                     PxButton {

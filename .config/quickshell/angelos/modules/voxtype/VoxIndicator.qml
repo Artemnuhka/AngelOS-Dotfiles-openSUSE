@@ -164,5 +164,7 @@ Scope {
                 }
             }
         }
+
+        RightClickGuard {}
     }
 }

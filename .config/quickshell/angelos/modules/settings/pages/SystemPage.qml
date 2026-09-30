@@ -133,6 +133,103 @@ PxPage {
                 onToggled: c => Config.system.monitorInTerminal = c
             }
         }
+        SettingRow {
+            label: I18n.t("Всегда плавающее окно", "Always a floating window")
+            hint: I18n.t("правило niri для окна диспетчера: не встаёт в колонки, открывается поверх", "A niri rule: the task manager never joins the columns, it opens on top")
+            PxToggle {
+                checked: Config.system.monitorFloat
+                onToggled: c => Config.system.monitorFloat = c
+            }
+        }
+        SettingRow {
+            visible: Config.system.monitorFloat
+            label: I18n.t("Размер окна", "Window size")
+            hint: ({
+                    "compact": "900 × 560",
+                    "medium": "1200 × 760",
+                    "large": "1500 × 950",
+                    "tall": I18n.t("40% ширины × 90% высоты экрана — колонка сбоку", "40% of the width × 90% of the height — a side column"),
+                    "custom": I18n.t("свои значения ниже", "your values below")
+                })[Config.system.monitorSize] || ""
+            PxSegmented {
+                model: [
+                    {
+                        "label": I18n.t("Компактный", "Compact"),
+                        "value": "compact"
+                    },
+                    {
+                        "label": I18n.t("Средний", "Medium"),
+                        "value": "medium"
+                    },
+                    {
+                        "label": I18n.t("Большой", "Large"),
+                        "value": "large"
+                    },
+                    {
+                        "label": I18n.t("Высокий", "Tall"),
+                        "value": "tall"
+                    },
+                    {
+                        "label": I18n.t("Свой", "Custom"),
+                        "value": "custom"
+                    }
+                ]
+                currentValue: Config.system.monitorSize
+                onActivated: v => Config.system.monitorSize = v
+            }
+        }
+        SettingRow {
+            visible: Config.system.monitorFloat && Config.system.monitorSize === "custom"
+            label: I18n.t("Ширина × высота", "Width × height")
+            hint: I18n.t("логические пиксели", "logical pixels")
+            Row {
+                spacing: Theme.u * 3
+                PxSpin {
+                    from: 320
+                    to: 7680
+                    stepSize: 20
+                    value: Config.system.monitorWidth
+                    onMoved: v => Config.system.monitorWidth = v
+                }
+                PxText {
+                    text: "×"
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+                PxSpin {
+                    from: 240
+                    to: 4320
+                    stepSize: 20
+                    value: Config.system.monitorHeight
+                    onMoved: v => Config.system.monitorHeight = v
+                }
+            }
+        }
+        SettingRow {
+            visible: Config.system.monitorFloat
+            label: I18n.t("Где открывать", "Where it opens")
+            PxSegmented {
+                model: [
+                    {
+                        "label": I18n.t("По центру", "Centre"),
+                        "value": "center"
+                    },
+                    {
+                        "label": I18n.t("У трея (справа внизу)", "By the tray (bottom right)"),
+                        "value": "corner"
+                    }
+                ]
+                currentValue: Config.system.monitorPlace
+                onActivated: v => Config.system.monitorPlace = v
+            }
+        }
+        PxText {
+            visible: Config.system.monitorFloat && WindowConfig.log !== ""
+            width: parent.width
+            wrapMode: Text.Wrap
+            kind: "tiny"
+            dim: true
+            text: WindowConfig.log
+        }
         PxButton {
             text: I18n.t("Открыть диспетчер задач", "Open Task Manager")
             icon: "chip"

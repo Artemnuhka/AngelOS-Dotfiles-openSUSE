@@ -54,10 +54,17 @@ Row {
             text: Lyrics.title + (Lyrics.artist ? " — " + Lyrics.artist : "")
             elide: Text.ElideRight
         }
+        // left: lyrics on/off, right: pause / play
         MouseArea {
             anchors.fill: parent
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
             cursorShape: Qt.PointingHandCursor
-            onClicked: Lyrics.visibleToggle = !Lyrics.visibleToggle
+            onClicked: m => {
+                if (m.button === Qt.RightButton)
+                    root.player.togglePlaying();
+                else
+                    Lyrics.visibleToggle = !Lyrics.visibleToggle;
+            }
         }
     }
 }

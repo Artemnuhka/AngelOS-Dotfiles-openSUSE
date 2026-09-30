@@ -55,7 +55,7 @@ Singleton {
         }
         _running = path;
         _switch = !!switchFlavor;
-        process.command = ["python3", Quickshell.shellDir + "/scripts/wallpaper-color.py", path];
+        process.command = ["python3", Quickshell.shellDir + "/scripts/wallpaper-color.py", Wallpapers.display(path)];
         process.running = true;
     }
     property bool _switch: false
