@@ -66,15 +66,40 @@ Item {
         onTriggered: host.lingering = false
     }
     readonly property bool shown: !face && (engaged || lingering) && !DesktopWidgets.steppedAside(screenName)
-    // face: always, except while its input copy is dragged around on top of it
+    // face: always, except while its input copy is dragged around on top of it —
+    // and only if that copy is on show (not stepped aside): otherwise the face
+    // itself follows the drag (x/y below), so the widget never vanishes
     readonly property var twin: face ? DesktopWidgets.hosts[uid] || null : null
-    opacity: face ? (twin && twin.interactive && twin.dragging ? 0 : baseOpacity) : (shown ? baseOpacity : 0)
+    opacity: face ? (twin && twin.shown && twin.dragging ? 0 : baseOpacity) : (shown ? baseOpacity : 0)
+    // input over its face: the face already draws the translucent body and the
+    // shadow — twice they'd darken the widget — so the copy adds only what's on
+    // top (text, buttons and their hover). The face reaches the screen a frame or
+    // two later than the copy, so the body goes away a moment after it is back.
+    readonly property var faceTwin: face ? null : DesktopWidgets.faces[uid] || null
+    readonly property bool faceShowing: !!faceTwin && faceTwin.visible && faceTwin.opacity > 0
+    property bool overFace: false
+    onFaceShowingChanged: {
+        if (faceShowing)
+            faceLag.restart();
+        else {
+            faceLag.stop();
+            overFace = false;
+        }
+    }
+    Timer {
+        id: faceLag
+        interval: 60
+        onTriggered: host.overFace = host.faceShowing
+    }
     width: Math.round(frame.width * zoom)
     height: Math.round(frame.height * zoom)
     x: dragging ? DesktopWidgets.drag.x : widget ? clampX(widget.x < 0 ? area.width + widget.x - width : widget.x) : 0
     y: dragging ? DesktopWidgets.drag.y : widget ? clampY(widget.y < 0 ? area.height + widget.y - height : widget.y) : 0
 
-    Component.onCompleted: face ? DesktopWidgets.registerFace(uid, host) : DesktopWidgets.registerHost(uid, host)
+    Component.onCompleted: {
+        face ? DesktopWidgets.registerFace(uid, host) : DesktopWidgets.registerHost(uid, host);
+        overFace = faceShowing;
+    }
     Component.onDestruction: face ? DesktopWidgets.unregisterFace(uid, host) : DesktopWidgets.unregisterHost(uid, host)
 
     HoverHandler {
@@ -222,6 +247,41 @@ Item {
     TestEvent {
         id: sim
     }
+    // dev (`angelos widgetDrag uid dx dy ms`): a real drag by the title bar, replayed
+    function devDrag(dx, dy, ms) {
+        // in the desk's coordinates: the widget itself moves under the pointer
+        const p = frame.titleBar.mapToItem(host.area, frame.titleBar.width / 3, frame.titleBar.height / 2);
+        const n = Math.max(2, Math.round(ms / 16));
+        const path = [];
+        for (let i = 1; i <= n; i++)
+            path.push({
+                "x": p.x + dx * i / n,
+                "y": p.y + dy * i / n
+            });
+        path.push({
+            "x": p.x + dx,
+            "y": p.y + dy,
+            "up": true
+        });
+        sim.mousePress(host.area, p.x, p.y, Qt.LeftButton, Qt.NoModifier, -1);
+        dragReplay.path = path;
+        dragReplay.start();
+    }
+    Timer {
+        id: dragReplay
+        property var path: []
+        interval: 16
+        repeat: true
+        onTriggered: {
+            const q = path.shift();
+            if (q.up)
+                sim.mouseRelease(host.area, q.x, q.y, Qt.LeftButton, Qt.NoModifier, -1);
+            else
+                sim.mouseMove(host.area, q.x, q.y, -1, Qt.LeftButton, Qt.NoModifier);
+            if (!path.length)
+                stop();
+        }
+    }
 
     PxWindow {
         id: frame
@@ -234,6 +294,8 @@ Item {
         icon: host.info ? host.info.icon : "heart"
         compact: true
         decor: false
+        bodyColor: host.overFace ? "transparent" : Theme.panel
+        shadow: Config.appearance.shadows && !host.overFace
         closable: DesktopWidgets.editMode
         active: !host.dragging
         onCloseClicked: DesktopWidgets.remove(host.uid)

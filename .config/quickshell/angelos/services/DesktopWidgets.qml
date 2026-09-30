@@ -33,7 +33,12 @@ Singleton {
         u[screen] = Math.max(u[screen] || 0, now + (ms || switchMs));
         asideUntil = u;
         asideClock = now;
-        settle.interval = Math.max(1, u[screen] - now + 20);
+        // one clock for every screen: wake up when the last of them is done, or
+        // an earlier screen's end would leave a later one stepped aside for good
+        let last = now;
+        for (const k in u)
+            last = Math.max(last, u[k]);
+        settle.interval = Math.max(1, last - now + 20);
         settle.restart();
     }
     Timer {

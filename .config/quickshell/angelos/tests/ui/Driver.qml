@@ -7,6 +7,7 @@ import Quickshell
 import qs.config
 import qs.services
 import qs.modules.settings
+import qs.modules.y2k
 import qs.widgets
 
 // angelOS UI self-test, started by scripts/test-ui.sh (ANGELOS_TEST=1, Qt's
@@ -15,6 +16,8 @@ import qs.widgets
 //   pages     every settings page, simple view and Expert, loads (no errors)
 //   previews  every preview scene loads and plays through its frames
 //   search    settings search: 40 typical queries, average and worst time
+//   rig       the helper's pictures (SpriteRig): both figures read, sized as
+//             their rig.json says, swapped and played through without errors
 //   rmb       a right click into the window's corner pixel does not crash Qt
 // Prints "TEST <name> PASS|FAIL [detail]" and "TEST-PAGE <id>" markers (the
 // script ties log errors to the page that caused them), "TEST DONE <n>" last.
@@ -47,6 +50,9 @@ Scope {
         }
         TestEvent {
             id: sim
+        }
+        SpriteRig {
+            id: rig
         }
         RightClickGuard {}
     }
@@ -253,6 +259,30 @@ Scope {
             Config.appearance.px = 4;
             Config.resetKeys(["appearance.px"]);
             report("settings-reset", Config.appearance.px === Config.defaults.appearance.px, "px " + Config.appearance.px);
+            console.log("TEST-PAGE sprite-rig");
+            phase = "rig";
+            return;
+        }
+        if (phase === "rig") {
+            // the swap flips `who` in one go; every frame of every part gets shown
+            const seen = [];
+            for (const who of ["angel", "demon", "angel"]) {
+                rig.who = who;
+                const r = rig.rig;
+                if (!rig.ready)
+                    seen.push(who + " FAIL: no rig");
+                else if (rig.implicitWidth !== r.size[0] * rig.px || rig.implicitHeight !== r.size[1] * rig.px || rig.body.width !== r.body.w * rig.px)
+                    seen.push(who + " FAIL: " + rig.implicitWidth + "×" + rig.implicitHeight + " for " + r.size);
+                else
+                    seen.push(who + " " + r.size[0] + "×" + r.size[1] + " " + Object.keys(r.parts).join("+"));
+                for (let i = 0; i < 16; i++) {
+                    rig.tick = i;
+                    rig.blink = i % 3 === 0;
+                    rig.talk = i % 2 === 0;
+                }
+                rig.flutter = !rig.flutter;
+            }
+            report("sprite-rig", seen.every(s => s.indexOf("FAIL") < 0), seen.join(", "));
             phase = "rmb";
             return;
         }

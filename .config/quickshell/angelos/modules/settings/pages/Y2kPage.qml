@@ -114,6 +114,28 @@ PxPage {
             }
         }
         SettingRow {
+            label: I18n.t("Дрожание текста", "Text tremble")
+            hint: I18n.t("буквы в её репликах иногда подёргиваются на пиксель, как в Undertale", "Now and then a letter in her lines twitches by a pixel, like in Undertale")
+            PxSegmented {
+                model: [
+                    {
+                        "label": I18n.t("Нет", "Off"),
+                        "value": "off"
+                    },
+                    {
+                        "label": I18n.t("Слегка", "Light"),
+                        "value": "light"
+                    },
+                    {
+                        "label": I18n.t("Сильно", "Strong"),
+                        "value": "strong"
+                    }
+                ]
+                currentValue: Config.y2k.textShake
+                onActivated: v => Config.y2k.textShake = v
+            }
+        }
+        SettingRow {
             label: I18n.t("Тёмные обои демоницы", "The demon's dark wallpaper")
             hint: I18n.t("пиксельный ад на всех экранах, пока она тут; ангел вернёт твои обои. Выключишь — твои обои вернутся сразу", "Pixel hell on every screen while she's here; the angel gives yours back. Switching it off brings yours back at once")
             PxToggle {

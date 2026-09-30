@@ -227,6 +227,7 @@ JsonAdapter {
         property double nextPrank: 0        // ms; not before
         property string cracks: "full"      // the demon's broken screen corner: full | weak | off
         property bool heavenFx: true        // sun rays and a choir when the angel comes back
+        property string textShake: "light"  // the helper's letters twitch now and then: off | light | strong
         property string hellStyle: "pack"   // the demon's wallpaper: pack (pixel paintings, Hell pack) | drawn
         property bool shake: true           // the angel ↔ demon swap shakes the screen (the demon brings 8-bit rocks)
         property bool hellWallpaper: true   // the demon brings dark wallpaper, the angel gives yours back

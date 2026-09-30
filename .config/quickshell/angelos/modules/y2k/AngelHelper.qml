@@ -48,7 +48,7 @@ Scope {
             // the bubble's own `visible` follows the window's: the mask uses the state
             readonly property bool bubbleOn: (Angel.talking || Angel.menuOpen) && !Angel.transition
             mask: Region {
-                item: angel
+                item: hit
                 Region {
                     item: win.bubbleOn ? bubble : null
                 }
@@ -64,11 +64,14 @@ Scope {
             }
             // the swap flips the sprite halfway through (Angel.becomeDemon/becomeAngel)
             readonly property bool demonArt: Angel.demon
+            readonly property bool blinking: tick % 29 === 0
+            readonly property bool mouthOpen: Angel.talking && typer.shown < Angel.text.length && tick % 2 === 0
+            // the pixel sprite, when the pictures are missing (SpriteRig.ready)
             readonly property var art: demonArt ? DemonArt : AngelArt
             readonly property var frame: {
-                if (Angel.talking && typer.shown < Angel.text.length && tick % 2 === 0)
+                if (mouthOpen)
                     return art.talk;
-                if (tick % 29 === 0)
+                if (blinking)
                     return art.blink;
                 return Math.floor(tick / 3) % 2 ? art.down : art.up;
             }
@@ -149,7 +152,9 @@ Scope {
                                 width: parent.width - closeBtn.width - Theme.u * 2
                                 text: Angel.text
                                 shown: typer.shown
-                                shake: Angel.demon ? Math.max(1, Theme.u) : Math.max(1, Theme.u / 2)
+                                shake: 1
+                                // Y2K → Text tremble: off | light | strong; the demon twitches a bit more
+                                twitch: Config.y2k.textShake === "off" ? 0 : (Config.y2k.textShake === "strong" ? 0.18 : 0.05) * (Angel.demon ? 1.6 : 1)
                             }
                             PxText {
                                 visible: Angel.menuOpen
@@ -386,6 +391,16 @@ Scope {
                     width: sprite.width
                     height: sprite.height + Theme.u * 4
 
+                    // the window takes the pointer over her body, where she stands at
+                    // rest; the air around the wings and the tail lets clicks through
+                    Item {
+                        id: hit
+                        x: sprite.body.x
+                        y: Theme.u * 2 + sprite.body.y
+                        width: sprite.body.width
+                        height: sprite.body.height
+                    }
+
                     // her stage reaches up into the sky and across the window while she
                     // moves; below the floor she is cut off (drops through it instead of
                     // over the bar)
@@ -410,8 +425,8 @@ Scope {
                                     duration: 450
                                 }
                             }
-                            readonly property real cx: sprite.x + sprite.width / 2
-                            readonly property real cy: sprite.y + sprite.height / 2
+                            readonly property real cx: sprite.x + sprite.body.x + sprite.body.width / 2
+                            readonly property real cy: sprite.y + sprite.body.y + sprite.body.height / 2
                             Rectangle {
                                 x: rise.cx - width / 2
                                 width: sprite.width * 0.8
@@ -455,24 +470,41 @@ Scope {
                                     pixel: Math.max(1, Theme.u)
                                     fill: "#fff3b0"
                                     fill3: "#ffe07a"
-                                    x: rise.cx + Math.cos(a) * sprite.width * 0.75 - width / 2
+                                    x: rise.cx + Math.cos(a) * sprite.body.width * 0.85 - width / 2
                                     y: rise.cy + Math.sin(a) * sprite.height * 0.55 - height / 2
                                     visible: (win.tick + index) % 3 !== 0
                                 }
                             }
                         }
 
-                        PxIcon {
+                        // her pictures in parts: wings (and the demon's tail) swing,
+                        // she blinks and talks (sprites/, SpriteRig)
+                        SpriteRig {
                             id: sprite
                             x: stage.width - width + win.offX
                             y: stage.height - angel.height + Theme.u * 2 + (stage.moving ? 0 : win.bob * Math.max(1, Theme.u / 2)) + win.offY
-                            bitmap: win.frame
-                            // 30×40 art pixels: 3 screen pixels each at the default size
-                            pixel: Math.max(2, Math.round(Theme.u * 1.5))
-                            // her own colours; the angel's pink follows the accent
-                            palette: win.demonArt ? DemonArt.palette : Object.assign({}, AngelArt.palette, {
-                                "o": Theme.hex(Theme.accent)
-                            })
+                            width: ready ? implicitWidth : pixelArt.width
+                            height: ready ? implicitHeight : pixelArt.height
+                            who: win.demonArt ? "demon" : "angel"
+                            tick: win.tick
+                            blink: win.blinking
+                            talk: win.mouthOpen
+                            flutter: grab.held
+                            // one screen pixel per art pixel at the default size (~120 px tall)
+                            px: Math.max(1, Theme.u / 2)
+
+                            // without the pictures: the 30×40 pixel sprite, 3 screen
+                            // pixels each at the default size
+                            PxIcon {
+                                id: pixelArt
+                                visible: !sprite.ready
+                                bitmap: sprite.ready ? null : win.frame
+                                pixel: Math.max(2, Math.round(Theme.u * 1.5))
+                                // her own colours; the angel's pink follows the accent
+                                palette: win.demonArt ? DemonArt.palette : Object.assign({}, AngelArt.palette, {
+                                    "o": Theme.hex(Theme.accent)
+                                })
+                            }
                         }
                         // hellfire at the floor under her while they swap, or as she is
                         // pushed down
@@ -480,7 +512,7 @@ Scope {
                             visible: win.flames > 0
                             opacity: win.flames
                             anchors.bottom: parent.bottom
-                            x: sprite.x + (sprite.width - width) / 2
+                            x: sprite.x + sprite.body.x + (sprite.body.width - width) / 2
                             spacing: 0
                             Repeater {
                                 model: 4

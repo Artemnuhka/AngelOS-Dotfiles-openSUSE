@@ -164,6 +164,46 @@ IpcHandler {
             return "no widget " + uid + "; have: " + Object.keys(DesktopWidgets.faces).join(", ");
         return f.grabToImage(r => r.saveToFile(path)) ? "ok (saving " + path + ")" : "grab failed";
     }
+    // a desktop widget's two copies (DesktopWidgetHost face/input), for diagnostics
+    function widgetState(uid: string): string {
+        const h = DesktopWidgets.hosts[uid], f = DesktopWidgets.faces[uid];
+        if (!h && !f)
+            return "no widget " + uid + "; have: " + Object.keys(DesktopWidgets.hosts).join(", ");
+        const scr = h ? h.screenName : f.screenName;
+        return JSON.stringify({
+            "screen": scr,
+            "interactive": h ? h.interactive : null,
+            "hovered": h ? h.engaged && !h.dragging && !DesktopWidgets.editMode : null,
+            "dragging": h ? h.dragging : null,
+            "inputShown": h ? h.shown : null,
+            "inputOpacity": h ? h.opacity : null,
+            "faceOpacity": f ? f.opacity : null,
+            "steppedAside": DesktopWidgets.steppedAside(scr),
+            "overview": Niri.overviewOpen,
+            "asideLeftMs": Math.max(0, (DesktopWidgets.asideUntil[scr] || 0) - Date.now()),
+            "at": h ? [Math.round(h.x), Math.round(h.y)] : null
+        });
+    }
+    // dev: where the shell last saw the pointer (Pointer: desk and taskbar report it)
+    function pointer(): string {
+        return JSON.stringify({
+            "screen": Pointer.screen,
+            "x": Math.round(Pointer.x),
+            "y": Math.round(Pointer.y),
+            "over": Pointer.over,
+            "source": Pointer.source
+        });
+    }
+    // dev: drags a desktop widget by its title bar by dx, dy over ms
+    function widgetDrag(uid: string, dx: int, dy: int, ms: int): string {
+        if (!Shell.dev)
+            return "dev only";
+        const h = DesktopWidgets.hosts[uid];
+        if (!h)
+            return "no widget " + uid;
+        h.devDrag(dx, dy, ms || 600);
+        return "ok";
+    }
     // replays a left click at (x, y) of a desktop widget
     function widgetClick(uid: string, x: int, y: int): string {
         const h = DesktopWidgets.hosts[uid];

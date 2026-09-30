@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # angelOS UI self-test, offscreen (no compositor, no windows on screen; runs in CI):
 #   every settings page in the simple view and in Expert, every preview scene,
-#   settings search speed, a right click into a window's corner pixel (the Qt
-#   crash RightClickGuard works around), plus static checks: every window has a
-#   RightClickGuard, no "X is not a type", binding loops or JS errors in the log.
+#   settings search speed, the helper's sprite rig, a right click into a window's
+#   corner pixel (the Qt crash RightClickGuard works around), plus static checks:
+#   every window has a RightClickGuard, no "X is not a type", binding loops, JS
+#   errors or missing images in the log.
 #
 #   scripts/test-ui.sh [angelOS dir]      exit 0 = all good
 #   ANGELOS_TEST_LOG=file keeps the full log
@@ -76,12 +77,12 @@ grep -q 'TEST DONE' "$log" || bad "the self-test did not finish (crash or hang, 
 
 # errors in the log, with the page that was loading
 errs=$(awk '/TEST-PAGE /{sub(/.*TEST-PAGE /,""); page=$0; next}
-  /is not a type|Binding loop detected|TypeError|ReferenceError|Cannot assign|Unable to assign|is not defined|Cannot read property|Cannot call method|failed to load component|Error loading/ {
+  /is not a type|Binding loop detected|TypeError|ReferenceError|Cannot assign|Unable to assign|is not defined|Cannot read property|Cannot call method|failed to load component|Error loading|Cannot open: file/ {
     line=$0; gsub(/\033\[[0-9;]*m/,"",line); print "[" (page==""?"startup":page) "] " substr(line,1,220) }' "$log" | sort -u)
 if [[ -n "$errs" ]]; then
   bad "errors in the log:"; printf '%s\n' "$errs" | head -30 | sed 's/^/      /'
 else
-  ok "no QML errors, binding loops or JS exceptions"
+  ok "no QML errors, binding loops, JS exceptions or missing images"
 fi
 
 if ((fail)); then echo "» UI SELF-TEST FAILED"; exit 1; fi
