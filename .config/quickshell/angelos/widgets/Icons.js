@@ -716,7 +716,10 @@ const _cache = new Map();
 const CACHE_LIMIT = 4000;
 
 function svg(name, colors, hollow) {
-    const key = (Array.isArray(name) ? name.join("/") : name) + "|" + (hollow ? 1 : 0) + "|" + colors["#"] + colors.o + colors.x + colors.y + colors.w + colors.f + colors.r;
+    let tint = "";
+    for (const k of Object.keys(colors).sort())
+        tint += k + colors[k];
+    const key = (Array.isArray(name) ? name.join("/") : name) + "|" + (hollow ? 1 : 0) + "|" + tint;
     const hit = _cache.get(key);
     if (hit)
         return hit;

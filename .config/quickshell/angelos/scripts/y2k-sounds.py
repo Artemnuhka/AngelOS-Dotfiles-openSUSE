@@ -3,8 +3,9 @@
 
   y2k-sounds.py <dir> [name…]  writes startup notify error click shutdown angel
                                wallpaper open toggle screenshot volume windowClose
-                               demon crack choir rocks shatter as .ogg (.wav without
-                               ffmpeg), prints JSON
+                               demon crack choir rocks shatter voice as .ogg (.wav
+                               without ffmpeg) and the pips voiceAngel voiceDemon
+                               as .wav, prints JSON
 
 Chimes are FM bells and detuned triangle pads with a small echo, levelled to
 about -6 dBFS so they sit under music and voice.
@@ -323,10 +324,40 @@ def shatter():
     return crunch8(buf)
 
 
+def pip(freq, duty, sec, drop, grit=0.0, seed=1):
+    t = t_axis(sec)
+    x = pulse(freq, freq * drop, sec, duty)
+    if grit:
+        x = x * (1 - grit) + lfsr(sec, 4, seed=seed) * grit
+    return crunch8(x * np.exp(-t * 18) * env(len(t), 0.002, 0.012))
+
+
+def voice_angel():
+    # Undertale-style pip for the angel: a bright, short 1/4-duty square
+    return pip(880, 0.25, 0.045, 0.97)
+
+
+def voice_demon():
+    # the demon's: lower, half-duty, dropping, with a little noise in it
+    return pip(300, 0.5, 0.055, 0.85, grit=0.18, seed=5)
+
+
+def voice():
+    # the preview in Settings: "pip pip pip" of each
+    buf = np.zeros(int(1.0 * RATE))
+    for i in range(4):
+        place(buf, voice_angel(), 0.04 + i * 0.07)
+    for i in range(4):
+        place(buf, voice_demon(), 0.52 + i * 0.08)
+    return buf
+
+
 SOUNDS = {"startup": startup, "notify": notify, "error": error, "click": click, "shutdown": shutdown, "angel": angel,
           "wallpaper": wallpaper, "open": open_, "toggle": toggle, "screenshot": screenshot, "volume": volume,
           "windowClose": window_close, "demon": demon, "crack": crack, "choir": choir, "rocks": rocks,
-          "shatter": shatter}
+          "shatter": shatter, "voice": voice, "voiceAngel": voice_angel, "voiceDemon": voice_demon}
+# played by QtMultimedia's SoundEffect, which only takes .wav
+WAV_ONLY = {"voiceAngel", "voiceDemon"}
 
 
 def write_wav(path, x):
@@ -351,7 +382,7 @@ def main():
         x = level(fn())
         wav = out / (name + ".wav")
         write_wav(wav, x)
-        if ffmpeg:
+        if ffmpeg and name not in WAV_ONLY:
             ogg = out / (name + ".ogg")
             r = subprocess.run([ffmpeg, "-y", "-loglevel", "error", "-i", str(wav), "-c:a", "libvorbis", "-q:a", "5", str(ogg)])
             if r.returncode == 0:

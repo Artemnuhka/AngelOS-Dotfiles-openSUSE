@@ -58,7 +58,7 @@ IpcHandler {
             "obs": StreamMode.obsUp ? (StreamMode.obsLive ? "live" : "up") : (StreamMode.obsAuth ? "password" : "down")
         });
     }
-    // the corner helper: `angelos helper "tip | joke | ask <text> | plea | status"`
+    // the corner helper: `angelos helper "tip | joke | hint | ask <text> | plea | status"`
     // (owner: angel — the demon leaves at once; dev or owner: prank, ascend, fx,
     // hell, throw; dev only: drag)
     function helper(line: string): string {
@@ -71,6 +71,8 @@ IpcHandler {
             Angel.tip();
         else if (cmd === "joke")
             Angel.joke();
+        else if (cmd === "hint")
+            Angel.hint();
         else if (cmd === "ask")
             Angel.answer(arg);
         else if (cmd === "plea")
@@ -93,8 +95,10 @@ IpcHandler {
         }
         else if (debug && cmd === "fx")
             Angel.effect();
+        else if (debug && cmd === "hellwall")
+            return Angel.newHell() ? "ok" : "not now (angel, off, or your own picture)";
         else if (cmd !== "status")
-            return "tip | joke | ask <text> | plea | menu [main|ask] | status" + (Owner.enabled ? " | angel" : "");
+            return "tip | joke | hint | ask <text> | plea | menu [main|ask] | status" + (Owner.enabled ? " | angel" : "");
         return JSON.stringify({
             "character": Config.y2k.character,
             "shown": Angel.shown,

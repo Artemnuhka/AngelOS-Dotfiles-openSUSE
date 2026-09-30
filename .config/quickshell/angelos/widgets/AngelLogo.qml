@@ -1,9 +1,11 @@
 import QtQuick
 import qs.config
+import qs.services
 
 // angelOS logo: a pixel angel-heart (halo + wings) and a wordmark.
 //   classic — "angel" + a Win98 "OS" plate
 //   angel   — pink "angel" + cyan "OS" with sparkles
+// While the demon rules (services/Angel) the heart wears horns instead of the halo.
 Item {
     id: root
 
@@ -12,13 +14,21 @@ Item {
     property string variant: Config.bar.logoStyle === "angel" ? "angel" : "classic"
     property int fontSize: Theme.sizeTitle
     readonly property bool angel: variant === "angel"
+    property bool horns: Angel.demon
 
-    // 19×12 art pixels: '#' outline, 'o' heart, 'w' wings/shine, 'y' halo
-    readonly property var emblemRows: [
-        "......yyyyyyy......",
-        ".....y.......y.....",
-        "......yyyyyyy......",
-        "...................",
+    // 19×12 art pixels: '#' outline, 'o' heart, 'w' wings/shine, 'y' halo, 'r' horns
+    readonly property var emblemRows: (horns ? [
+            "...r...........r...",
+            "...rr.........rr...",
+            "....rr.......rr....",
+            ".....rr.....rr....."
+        ] : [
+            "......yyyyyyy......",
+            ".....y.......y.....",
+            "......yyyyyyy......",
+            "..................."
+        ]).concat(heartRows)
+    readonly property var heartRows: [
         "#.....##...##.....#",
         "#w#..#wo#.#oo#..#w#",
         "#ww###ooo#ooo###ww#",
@@ -46,6 +56,7 @@ Item {
             fill: Theme.accent
             light: "#ffffff"
             fill3: Theme.mix(Theme.accent3, Qt.color("#ffd84a"), 0.6)
+            bad: "#e0203a"
         }
 
         Row {

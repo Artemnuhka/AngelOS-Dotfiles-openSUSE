@@ -122,6 +122,26 @@ PxPage {
             }
         }
         SettingRow {
+            label: I18n.t("Какой ад на обоях", "Which hell on the wallpaper")
+            hint: I18n.t("картины — пиксельный ад из Мартина, Доре и Босха (пак Hell, скачается сам, если его нет); нарисованный — пиксельная лава с луной-сердцем", "Paintings: pixel hell from Martin, Doré and Bosch (the Hell pack, fetched if it's missing); drawn: pixel lava under a heart moon")
+            enabled: Config.y2k.hellWallpaper
+            opacity: enabled ? 1 : 0.5
+            PxSegmented {
+                model: [
+                    {
+                        "label": I18n.t("Картины", "Paintings"),
+                        "value": "pack"
+                    },
+                    {
+                        "label": I18n.t("Нарисованный", "Drawn"),
+                        "value": "drawn"
+                    }
+                ]
+                currentValue: Config.y2k.hellStyle
+                onActivated: v => Config.y2k.hellStyle = v
+            }
+        }
+        SettingRow {
             label: I18n.t("Трещины на экране", "Screen cracks")
             hint: I18n.t("она бьёт по стеклу слева снизу; чем ближе курсор, тем прозрачнее стекло, клики проходят насквозь. Вернётся ангел — осколки осыплются", "She punches the glass bottom left; the nearer the pointer, the clearer the glass, and clicks go through. When the angel is back the shards fall out")
             PxSegmented {
@@ -372,7 +392,7 @@ PxPage {
                 },
                 {
                     "id": "open",
-                    "label": I18n.t("«Пуск» и окна angelOS", "Start and angelOS windows"),
+                    "label": I18n.t("Окна angelOS", "angelOS windows"),
                     "hint": I18n.t("милая мелочь", "A cute one")
                 },
                 {
@@ -404,6 +424,11 @@ PxPage {
                     "id": "crack",
                     "label": I18n.t("Удар по стеклу", "The glass punch"),
                     "hint": ""
+                },
+                {
+                    "id": "voice",
+                    "label": I18n.t("Голоса (пип-пип)", "Voices (pip-pip)"),
+                    "hint": I18n.t("как в Undertale: писк на каждую букву, у ангела и демоницы свой", "Like Undertale: a pip for every letter, the angel's and the demon's own")
                 },
                 {
                     "id": "rocks",

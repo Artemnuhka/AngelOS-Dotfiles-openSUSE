@@ -123,12 +123,26 @@ Singleton {
             "run": () => root.joke()
         });
     }
-    // the timer: a tip, or now and then a joke
+    // the timer: a tip, or now and then a joke; the demon drops hints how to get rid of her
     function chatter() {
-        if (Config.y2k.jokes && Math.random() < 0.4)
+        if (demon && Math.random() < 0.45)
+            hint();
+        else if (Config.y2k.jokes && Math.random() < 0.4)
             joke();
         else
             tip();
+    }
+    // the demon hints how the angel comes back, with the button right there
+    property double lastHint: 0
+    function hint() {
+        if (!demon)
+            return;
+        lastHint = Date.now();
+        say(tr(pick(Lines.demon.hints, "hint")).replace("%1", pleasCounted).replace("%2", pleasNeeded), {
+            "label": I18n.t("Верни ангела", "Bring the angel back"),
+            "icon": "heart",
+            "run": () => root.plea()
+        });
     }
 
     // "Ask": a few words she understands, then the settings search
@@ -465,19 +479,7 @@ Singleton {
                 "mode": Config.appearance.mode
             };
             Config.appearance.mode = "dark";
-            Sounds.quietWallpaper(4000);
-            if (Config.y2k.hellPicture) {
-                Wallpapers.setEverywhere(Config.y2k.hellPicture);
-            } else {
-                const sizes = [];
-                for (const s of Shell.screens) {
-                    const k = Math.round(s.width * (s.devicePixelRatio || 1)) + "x" + Math.round(s.height * (s.devicePixelRatio || 1));
-                    if (!sizes.includes(k))
-                        sizes.push(k);
-                }
-                hellGen.command = ["python3", Quickshell.shellDir + "/scripts/hell-wallpaper.py", Config.home + "/.local/share/angelos/hell"].concat(sizes);
-                hellGen.running = true;
-            }
+            putHell();
             return;
         }
         const s = Config.y2k.angelSaved;
@@ -490,6 +492,23 @@ Singleton {
         if (s.mode)
             Config.appearance.mode = s.mode;
         Config.y2k.angelSaved = null;
+    }
+    // the hell picture itself: your own (Y2K → hell picture), or a painting from the
+    // Hell pack / the drawn hell (scripts/hell-wallpaper.py) sized for every screen
+    function putHell() {
+        Sounds.quietWallpaper(4000);
+        if (Config.y2k.hellPicture) {
+            Wallpapers.setEverywhere(Config.y2k.hellPicture);
+            return;
+        }
+        const sizes = [];
+        for (const s of Shell.screens) {
+            const k = Math.round(s.width * (s.devicePixelRatio || 1)) + "x" + Math.round(s.height * (s.devicePixelRatio || 1));
+            if (!sizes.includes(k))
+                sizes.push(k);
+        }
+        hellGen.command = ["python3", Quickshell.shellDir + "/scripts/hell-wallpaper.py", Config.home + "/.local/share/angelos/hell", "--pack", Config.home + "/Pictures/Hell", "--cache", Config.home + "/.local/share/angelos/hell-pack"].concat(Config.y2k.hellStyle === "drawn" ? ["--drawn"] : []).concat(sizes);
+        hellGen.running = true;
     }
     Process {
         id: hellGen
@@ -526,6 +545,17 @@ Singleton {
             if (root.demon && !root.transition)
                 root.hellLook(Config.y2k.hellWallpaper);
         }
+        // paintings ↔ drawn hell: a new picture right away
+        function onHellStyleChanged() {
+            root.newHell();
+        }
+    }
+    // another hell picture now (the style changed; `angelos helper hellwall`)
+    function newHell() {
+        if (!demon || transition || !Config.y2k.hellWallpaper || !Config.y2k.angelSaved)
+            return false;
+        putHell();
+        return true;
     }
 
     // ---- pranks: a real setting flips, the bubble says what it is ----
@@ -753,6 +783,9 @@ Singleton {
             root.now = Date.now();
             if (root.demon && root.now > (Config.y2k.nextPrank || 0))
                 root.prank();
+            // and every twelve minutes or so she hints how to get the angel back
+            else if (root.demon && root.present && !root.talking && !root.menuOpen && !root.transition && Config.y2k.helperTips !== "off" && !StreamMode.active && !Shell.hiddenScreen(root.screenName) && root.now - (Config.y2k.demonSince || 0) > 120000 && root.now - root.lastHint > 12 * 60000)
+                root.hint();
             const h = new Date().getHours();
             if (!root.demon && h >= 1 && h < 5 && root.nightSaid !== new Date().toDateString() && !Shell.fullscreenOn(root.screenName)) {
                 root.nightSaid = new Date().toDateString();

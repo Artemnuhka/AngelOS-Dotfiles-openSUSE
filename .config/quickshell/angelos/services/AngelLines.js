@@ -173,6 +173,14 @@ const demon = {
     "expired": ["Прошлые просьбы протухли — прошло два часа. Начинай заново ♥", "Your old pleas went stale — two hours passed. Start over ♥"],
     "leave": ["Ладно-ладно! Ухожу. Но я вернусь, когда захочешь острых ощущений ♥", "Fine, fine! I'm off. I'll be back when you want some thrills ♥"],
     "undo": ["Скучный ты. Вернула.", "You're no fun. Put it back."],
+    // how to get the angel back, dropped now and then (%1 pleas counted, %2 needed)
+    "hints": [["Скучаешь по своей святоше? Попроси меня вернуть её. Может, сжалюсь.", "Missing your little saint? Ask me to bring her back. I might take pity."],
+              ["Три удачные просьбы за два часа — и я исчезну. Сейчас у тебя %1 из %2. Считай это подсказкой.", "Three lucky pleas within two hours and I'm gone. You're at %1 of %2. Consider that a hint."],
+              ["Хочешь нимб обратно? Кликни меня → «Спросить…» → «Верни ангела». И попроси красиво.", "Want the halo back? Click me → “Ask…” → “Bring the angel back”. And ask beautifully."],
+              ["На твоём месте я бы уже умоляла. Кнопка не кусается. Я — возможно.", "If I were you, I'd be begging by now. The button doesn't bite. I might."],
+              ["Она не вернётся от того, что ты на меня пялишься. Попроси. Только не чаще раза в десять минут.", "She won't come back just because you stare at me. Ask. Just not more than once every ten minutes."],
+              ["Подсказка для непонятливых: я уйду, если вежливо попросить. Трижды. Не подряд.", "A hint for the slow ones: I leave if you ask nicely. Three times. Not in a row."],
+              ["Нравлюсь? А ведь мог бы уже звать свою святошу обратно. Одна просьба в десять минут — не забывай.", "Like what you see? You could be calling your saint back by now. One plea every ten minutes, don't forget."]],
     // grabbed with the mouse: she can't be thrown anywhere
     "grab": [["Руки убрал.", "Hands off."], ["О, любишь пожёстче?", "Oh, you like it rough?"], ["Куда тащишь? Я оттуда и пришла.", "Where to? That's where I came from."]],
     "drop": ["Я и так из ада, глупенький. Проси по-хорошему.", "I'm from hell already, silly. Ask nicely instead."],

@@ -17,8 +17,10 @@ Image {
     property color light: "#ffffff"
     property color body: Theme.dark ? Theme.faceAlt : Theme.sunken
     property color bad: Theme.danger
+    // more colours for detailed art: {"char": "#rrggbb"}, also overriding the ones above
+    property var palette: ({})
 
-    readonly property var _svg: Icons.svg(bitmap && bitmap.length ? bitmap : name, {
+    readonly property var _svg: Icons.svg(bitmap && bitmap.length ? bitmap : name, Object.assign({
         "#": Theme.hex(ink),
         "o": Theme.hex(fill),
         "x": Theme.hex(fill2),
@@ -26,7 +28,7 @@ Image {
         "w": Theme.hex(light),
         "f": Theme.hex(body),
         "r": Theme.hex(bad)
-    }, hollow)
+    }, palette || {}), hollow)
 
     source: _svg.url
     width: _svg.width * pixel

@@ -165,7 +165,7 @@ JsonAdapter {
     }
 
     property JsonObject dotfiles: JsonObject {
-        property string repo: "~/PixelStreetArt_Dotfiles_Niri"
+        property string repo: "~/AngelOS-Dotfiles"
         property string command: "./install.sh"
         property string env: "DOTFILES_MODE=full SKIP_PACKAGES=1 INSTALL_VOXTYPE=0 DOWNLOAD_VOXTYPE_MODEL=0 ENABLE_SERVICES=0"
         property bool reloadNiri: true
@@ -192,7 +192,7 @@ JsonAdapter {
     }
 
     property JsonObject updates: JsonObject {
-        property string repo: ""            // "" = found automatically (installer marker, ~/PixelStreetArt_Dotfiles_Niri)
+        property string repo: ""            // "" = found automatically (installer marker, ~/AngelOS-Dotfiles)
         property bool autoCheck: true       // look for updates once a day, never installs by itself
         property string lastCheck: ""
         property int available: 0
@@ -227,6 +227,7 @@ JsonAdapter {
         property double nextPrank: 0        // ms; not before
         property string cracks: "full"      // the demon's broken screen corner: full | weak | off
         property bool heavenFx: true        // sun rays and a choir when the angel comes back
+        property string hellStyle: "pack"   // the demon's wallpaper: pack (pixel paintings, Hell pack) | drawn
         property bool shake: true           // the angel ↔ demon swap shakes the screen (the demon brings 8-bit rocks)
         property bool hellWallpaper: true   // the demon brings dark wallpaper, the angel gives yours back
         property string hellPicture: ""     // "" = generated pixel hell (scripts/hell-wallpaper.py)

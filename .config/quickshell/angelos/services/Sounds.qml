@@ -17,9 +17,12 @@ import qs.config
 Singleton {
     id: root
 
-    readonly property var events: ["startup", "notify", "error", "click", "shutdown", "angel", "wallpaper", "open", "toggle", "screenshot", "volume", "windowClose", "demon", "crack", "choir", "rocks", "shatter"]
+    readonly property var events: ["startup", "notify", "error", "click", "shutdown", "angel", "wallpaper", "open", "toggle", "screenshot", "volume", "windowClose", "demon", "crack", "choir", "rocks", "shatter", "voice"]
+    // the helper's Undertale "pips", one per letter (AngelHelper plays them as
+    // SoundEffect, so they stay .wav); "voice" above is their switch and preview
+    readonly property var extra: ["voiceAngel", "voiceDemon"]
     readonly property var cute: ["open", "toggle", "screenshot", "volume", "windowClose"]
-    readonly property var effects: ["crack", "choir", "rocks", "shatter"]
+    readonly property var effects: ["crack", "choir", "rocks", "shatter", "voice"]
     readonly property string base: Config.home + "/.local/share/angelos/sounds"
     readonly property string dir: base + "/y2k"
     readonly property string pack: Config.y2k.soundPack === "overdose" ? "overdose" : "y2k"
@@ -65,17 +68,20 @@ Singleton {
         Quickshell.execDetached(["sh", "-c", 'f="$1/$3.ogg"; [ -f "$f" ] || f="$2/$3.ogg"; [ -f "$f" ] || f="$2/$3.wav"; exec pw-play --volume "$4" "$f"', "sh", first, dir, name, String(Math.max(0, Math.min(1, Config.y2k.soundVolume)))]);
     }
 
+    // the pack must be there before something plays it without _play() (the pips)
+    function ensure() {
+        if (!ready && !make.running)
+            make.running = true;
+    }
+
     // ---- the shell's own moments ----
     readonly property double startedAt: Date.now()
     function settled() {
         return Config.ready && Date.now() - startedAt > 5000;
     }
+    // (Start opens silently)
     Connections {
         target: Shell
-        function onStartScreenChanged() {
-            if (Shell.startScreen !== "")
-                root.play("open");
-        }
         function onLauncherOpenChanged() {
             if (Shell.launcherOpen)
                 root.play("open");
@@ -116,7 +122,7 @@ Singleton {
     Process {
         id: check
         running: true
-        command: ["sh", "-c", 'd="$1"; shift; for n in "$@"; do [ -f "$d/$n.ogg" ] || [ -f "$d/$n.wav" ] || exit 1; done', "sh", root.dir].concat(root.events)
+        command: ["sh", "-c", 'd="$1"; shift; for n in "$@"; do [ -f "$d/$n.ogg" ] || [ -f "$d/$n.wav" ] || exit 1; done', "sh", root.dir].concat(root.events).concat(root.extra)
         onExited: code => {
             if (code === 0)
                 root.ready = true;

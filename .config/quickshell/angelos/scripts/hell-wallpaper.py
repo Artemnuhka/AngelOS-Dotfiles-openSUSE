@@ -1,13 +1,20 @@
 #!/usr/bin/env python3
-"""Pixel-art hell for the demon's wallpaper (Settings → Y2K → Angel or demon).
+"""The demon's wallpaper (Settings → Y2K → Angel or demon).
 
-  hell-wallpaper.py <dir> [WxH …]   writes hell-<W>x<H>.png for every size
-                                    (default 1920x1080 and 1080x1920), prints JSON
+  hell-wallpaper.py <dir> [WxH …] [--pack DIR …] [--cache DIR] [--repo OWNER/NAME] [--drawn]
+      prints JSON {"ok", "files": {"WxH": path}, "source": "pack" | "drawn"}
 
-Drawn at 1/6 of the size and scaled up without smoothing: a dithered night
-sky, a cracked broken-heart moon, bats, two ridges of mountains with glowing
-seams and a lava lake with flames and embers. Deterministic (same picture
-every time), dark enough to sit behind the dark theme.
+Paintings first: the Hell pack of the wallpapers repo — pixel hell made from
+public-domain paintings (Martin, Doré, Bosch). It is looked for in every --pack
+dir (the installer puts it into ~/Pictures/Hell), then in --cache; if neither has
+it, the Hell folder of --repo is downloaded into --cache once. Every screen size
+gets a random picture of its own orientation (portrait screens: the tall ones).
+
+Drawn, with --drawn or when there is no pack and no network: drawn at 1/6 of the
+size and scaled up without smoothing — a dithered night sky, a cracked
+broken-heart moon, bats, two ridges of mountains with glowing seams and a lava
+lake with flames and embers, written to <dir>/hell-<W>x<H>.png. Deterministic,
+dark enough to sit behind the dark theme.
 """
 import json
 import math
@@ -147,12 +154,87 @@ def draw(w, h, seed=666):
     return img
 
 
+PICTURE = (".png", ".jpg", ".jpeg", ".webp")
+
+
+def pack_pictures(dirs):
+    """(path, portrait) for every picture in the pack folders"""
+    found = []
+    for d in dirs:
+        d = Path(d).expanduser()
+        if not d.is_dir():
+            continue
+        for f in sorted(d.iterdir()):
+            if f.suffix.lower() in PICTURE:
+                try:
+                    with Image.open(f) as im:
+                        found.append((str(f), im.height > im.width))
+                except OSError:
+                    pass
+        if found:
+            return found
+    return found
+
+
+def fetch_pack(repo, cache):
+    """the Hell folder of the wallpapers repo → cache (a few hundred KB)"""
+    import urllib.request
+    cache = Path(cache).expanduser()
+    cache.mkdir(parents=True, exist_ok=True)
+    head = {"User-Agent": "angelOS", "Accept": "application/vnd.github+json"}
+    req = urllib.request.Request(f"https://api.github.com/repos/{repo}/contents/Hell", headers=head)
+    with urllib.request.urlopen(req, timeout=15) as r:
+        items = json.load(r)
+    for it in items:
+        if it.get("type") == "file" and Path(it["name"]).suffix.lower() in PICTURE and it.get("download_url"):
+            dst = cache / it["name"]
+            if dst.exists() and dst.stat().st_size == it.get("size"):
+                continue
+            with urllib.request.urlopen(urllib.request.Request(it["download_url"], headers={"User-Agent": "angelOS"}), timeout=30) as r:
+                tmp = dst.with_suffix(dst.suffix + ".part")
+                tmp.write_bytes(r.read())
+                tmp.replace(dst)
+
+
 def main():
-    if len(sys.argv) < 2:
+    args = sys.argv[1:]
+    if not args:
         sys.exit(__doc__)
-    out = Path(sys.argv[1])
+    out = Path(args.pop(0))
+    packs, cache, repo, drawn, sizes = [], None, "MixaDoDs/PixelStreetArt_Wallpapers", False, []
+    while args:
+        a = args.pop(0)
+        if a == "--pack":
+            packs.append(args.pop(0))
+        elif a == "--cache":
+            cache = args.pop(0)
+        elif a == "--repo":
+            repo = args.pop(0)
+        elif a == "--drawn":
+            drawn = True
+        else:
+            sizes.append(a)
+    sizes = sizes or ["1920x1080", "1080x1920"]
+
+    if not drawn:
+        dirs = packs + ([cache] if cache else [])
+        pics = pack_pictures(dirs)
+        if not pics and cache:
+            try:
+                fetch_pack(repo, cache)
+            except Exception:
+                pass
+            pics = pack_pictures(dirs)
+        if pics:
+            made = {}
+            for s in sizes:
+                W, H = (int(v) for v in s.lower().split("x"))
+                fit = [p for p, portrait in pics if portrait == (H > W)] or [p for p, _ in pics]
+                made[s] = random.choice(fit)
+            print(json.dumps({"ok": True, "files": made, "source": "pack"}))
+            return
+
     out.mkdir(parents=True, exist_ok=True)
-    sizes = sys.argv[2:] or ["1920x1080", "1080x1920"]
     made = {}
     for s in sizes:
         W, H = (int(v) for v in s.lower().split("x"))
@@ -161,7 +243,7 @@ def main():
         path = out / f"hell-{W}x{H}.png"
         small.resize((W, H), Image.NEAREST).save(path)
         made[s] = str(path)
-    print(json.dumps({"ok": True, "files": made}))
+    print(json.dumps({"ok": True, "files": made, "source": "drawn"}))
 
 
 if __name__ == "__main__":

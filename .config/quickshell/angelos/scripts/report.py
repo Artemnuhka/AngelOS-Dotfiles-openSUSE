@@ -30,7 +30,7 @@ USER = getpass.getuser()
 CONF = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
 CACHE = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
 SHELL_DIR = CONF / "quickshell/angelos"
-DEFAULT_REPO = "https://github.com/MixaDoDs/PixelStreetArt_Dotfiles_Niri"
+DEFAULT_REPO = "https://github.com/MixaDoDs/AngelOS-Dotfiles"
 
 
 def run(cmd, timeout=15, env=None):
@@ -59,7 +59,7 @@ def source_repo():
                 info[k.strip()] = v.strip()
     except OSError:
         pass
-    repo = info.get("repo") or str(Path.home() / "PixelStreetArt_Dotfiles_Niri")
+    repo = info.get("repo") or next((str(p) for p in (Path.home() / "AngelOS-Dotfiles", Path.home() / "PixelStreetArt_Dotfiles_Niri") if p.exists()), str(Path.home() / "AngelOS-Dotfiles"))
     remote = info.get("remote") or DEFAULT_REPO
     return repo, remote
 

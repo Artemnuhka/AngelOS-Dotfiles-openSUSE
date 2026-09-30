@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtMultimedia
 import Quickshell
 import Quickshell.Wayland
 import QtTest
@@ -92,6 +93,25 @@ Scope {
             // where the sprite is: held by the pointer, springing back, or falling from the throw
             readonly property real offX: Angel.transition ? (Angel.thrown && Angel.swap < 0.5 ? Angel.throwX : 0) : grab.dx
             readonly property real offY: Angel.transition ? swapY : grab.dy
+            // the angel coming back: from halfway through the swap, and a moment after
+            property bool afterglow: false
+            property string lastTransition: ""
+            readonly property bool resurrecting: (Angel.transition === "ascend" && Angel.swap >= 0.5) || afterglow
+            Connections {
+                target: Angel
+                function onTransitionChanged() {
+                    if (!Angel.transition && win.lastTransition === "ascend") {
+                        win.afterglow = true;
+                        afterglowEnd.restart();
+                    }
+                    win.lastTransition = Angel.transition;
+                }
+            }
+            Timer {
+                id: afterglowEnd
+                interval: 1200
+                onTriggered: win.afterglow = false
+            }
             // hellfire under her: while the swap runs, and as she is pushed into the floor
             readonly property real flames: Angel.transition ? Math.max(0, 1 - Math.abs(Angel.swap - 0.5) * 2.4) : (!demonArt && grab.dy > 0 ? Math.min(1, grab.dy / (sprite.height * 0.55)) : 0)
 
@@ -123,9 +143,18 @@ Scope {
                         Row {
                             width: parent.width
                             spacing: Theme.u * 2
-                            PxText {
+                            // what she says: Undertale letters, typed out and trembling
+                            ShakyText {
+                                visible: !Angel.menuOpen
                                 width: parent.width - closeBtn.width - Theme.u * 2
-                                text: !Angel.menuOpen ? Angel.text.slice(0, typer.shown) : Angel.menuMode === "ask" ? (Angel.demon ? I18n.t("Спрашивай. Может, отвечу.", "Go on, ask. Maybe I'll answer.") : I18n.t("Спроси что угодно — и про настройки тоже ♡", "Ask me anything, settings included ♡")) : (Angel.demon ? I18n.t("Ну? Чего тебе?", "Well? What do you want?") : I18n.t("Чем помочь? ♡", "How can I help? ♡"))
+                                text: Angel.text
+                                shown: typer.shown
+                                shake: Angel.demon ? Math.max(1, Theme.u) : Math.max(1, Theme.u / 2)
+                            }
+                            PxText {
+                                visible: Angel.menuOpen
+                                width: parent.width - closeBtn.width - Theme.u * 2
+                                text: !Angel.menuOpen ? "" : Angel.menuMode === "ask" ? (Angel.demon ? I18n.t("Спрашивай. Может, отвечу.", "Go on, ask. Maybe I'll answer.") : I18n.t("Спроси что угодно — и про настройки тоже ♡", "Ask me anything, settings included ♡")) : (Angel.demon ? I18n.t("Ну? Чего тебе? Ангела хочешь — «Спросить…», и проси красиво.", "Well? What do you want? Want your angel — “Ask…”, and beg nicely.") : I18n.t("Чем помочь? ♡", "How can I help? ♡"))
                                 wrapMode: Text.Wrap
                             }
                             PxButton {
@@ -295,21 +324,57 @@ Scope {
                     }
                 }
 
-                // typewriter for the bubble text
+                // typewriter for the bubble text: a letter at a time, each with a
+                // "pip" of her voice like in Undertale (Y2K → Sounds → Voices)
                 QtObject {
                     id: typer
                     property int shown: 0
                 }
                 Timer {
-                    interval: 30
+                    interval: 32
                     running: Angel.talking && typer.shown < Angel.text.length
                     repeat: true
-                    onTriggered: typer.shown = Math.min(Angel.text.length, typer.shown + 2)
+                    onTriggered: {
+                        typer.shown = Math.min(Angel.text.length, typer.shown + 1);
+                        if (/[0-9A-Za-zÀ-ɏЀ-ӿ]/.test(Angel.text.charAt(typer.shown - 1)))
+                            voice.pip();
+                    }
                 }
                 Connections {
                     target: Angel
                     function onTextChanged() {
                         typer.shown = 0;
+                        if (voice.on)
+                            Sounds.ensure();
+                    }
+                }
+                // a few players take turns: a pip is shorter than a letter
+                Item {
+                    id: voice
+                    readonly property bool on: Sounds.enabled("voice") && !StreamMode.quiet && Sounds.ready
+                    readonly property url clip: "file://" + Sounds.dir + "/" + (Angel.demon ? "voiceDemon" : "voiceAngel") + ".wav"
+                    property int next: 0
+                    function pip() {
+                        if (!on)
+                            return;
+                        const s = [v0, v1, v2][next];
+                        next = (next + 1) % 3;
+                        s.play();
+                    }
+                    SoundEffect {
+                        id: v0
+                        source: voice.clip
+                        volume: Config.y2k.soundVolume
+                    }
+                    SoundEffect {
+                        id: v1
+                        source: voice.clip
+                        volume: Config.y2k.soundVolume
+                    }
+                    SoundEffect {
+                        id: v2
+                        source: voice.clip
+                        volume: Config.y2k.soundVolume
                     }
                 }
 
@@ -333,19 +398,81 @@ Scope {
                         height: parent.height + win.headroom
                         clip: moving
 
+                        // the angel is back from the dead: she floats down a column of
+                        // light in a glow, and it lingers a moment after she lands
+                        Item {
+                            id: rise
+                            anchors.fill: parent
+                            opacity: win.resurrecting ? 1 : 0
+                            visible: opacity > 0
+                            Behavior on opacity {
+                                NumberAnimation {
+                                    duration: 450
+                                }
+                            }
+                            readonly property real cx: sprite.x + sprite.width / 2
+                            readonly property real cy: sprite.y + sprite.height / 2
+                            Rectangle {
+                                x: rise.cx - width / 2
+                                width: sprite.width * 0.8
+                                height: sprite.y + sprite.height * 0.85
+                                gradient: Gradient {
+                                    GradientStop {
+                                        position: 0
+                                        color: Qt.rgba(1, 0.95, 0.72, 0)
+                                    }
+                                    GradientStop {
+                                        position: 0.55
+                                        color: Qt.rgba(1, 0.95, 0.72, 0.28)
+                                    }
+                                    GradientStop {
+                                        position: 1
+                                        color: Qt.rgba(1, 0.98, 0.86, 0.5)
+                                    }
+                                }
+                            }
+                            // the glow in stepped pixel rings, breathing with the 8 fps clock
+                            Repeater {
+                                model: 3
+                                Rectangle {
+                                    required property int index
+                                    readonly property real pad: Theme.u * (3 + index * 5 + (win.tick + index) % 2)
+                                    x: sprite.x - pad
+                                    y: sprite.y - pad
+                                    width: sprite.width + pad * 2
+                                    height: sprite.height + pad * 2
+                                    radius: Theme.u * (6 + index * 3)
+                                    color: Qt.rgba(1, 0.92, 0.6, 0.2 - index * 0.055)
+                                }
+                            }
+                            // sparkles around her, twinkling in turns
+                            Repeater {
+                                model: 6
+                                PxIcon {
+                                    required property int index
+                                    readonly property real a: index / 6 * Math.PI * 2 + win.tick * 0.35
+                                    name: "sparkle"
+                                    pixel: Math.max(1, Theme.u)
+                                    fill: "#fff3b0"
+                                    fill3: "#ffe07a"
+                                    x: rise.cx + Math.cos(a) * sprite.width * 0.75 - width / 2
+                                    y: rise.cy + Math.sin(a) * sprite.height * 0.55 - height / 2
+                                    visible: (win.tick + index) % 3 !== 0
+                                }
+                            }
+                        }
+
                         PxIcon {
                             id: sprite
                             x: stage.width - width + win.offX
                             y: stage.height - angel.height + Theme.u * 2 + (stage.moving ? 0 : win.bob * Math.max(1, Theme.u / 2)) + win.offY
                             bitmap: win.frame
-                            pixel: Theme.u * 2
-                            ink: win.demonArt ? "#1a0a14" : (Theme.dark ? Theme.text : Theme.edge)
-                            body: win.demonArt ? "#f7d9e3" : "#ffd9c7"
-                            fill: win.demonArt ? "#ff3b6b" : Theme.accent
-                            fill2: "#3a1a46"
-                            fill3: Theme.dark ? "#ffe07a" : "#f5c542"
-                            light: win.demonArt ? "#7a1e46" : "#ffffff"
-                            bad: "#d8203a"
+                            // 30×40 art pixels: 3 screen pixels each at the default size
+                            pixel: Math.max(2, Math.round(Theme.u * 1.5))
+                            // her own colours; the angel's pink follows the accent
+                            palette: win.demonArt ? DemonArt.palette : Object.assign({}, AngelArt.palette, {
+                                "o": Theme.hex(Theme.accent)
+                            })
                         }
                         // hellfire at the floor under her while they swap, or as she is
                         // pushed down

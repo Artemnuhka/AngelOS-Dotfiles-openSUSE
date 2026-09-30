@@ -10,7 +10,9 @@
 # *.bak.<date>; the current keyboard layouts are passed through so they survive.
 set -Eeuo pipefail
 say() { printf '» %s\n' "$*"; }
-OFFICIAL="https://github.com/MixaDoDs/PixelStreetArt_Dotfiles_Niri"
+OFFICIAL="https://github.com/MixaDoDs/AngelOS-Dotfiles"
+# the name before 2026-09-30: installs cloned from it keep it as their origin (GitHub redirects)
+LEGACY="https://github.com/MixaDoDs/PixelStreetArt_Dotfiles_Niri"
 STATE="${XDG_STATE_HOME:-$HOME/.local/state}/angelos"
 CONF="${XDG_CONFIG_HOME:-$HOME/.config}"
 
@@ -24,7 +26,7 @@ trusted_remote() {
   url="$(git remote get-url origin 2>/dev/null || true)"
   [[ -f "$CONF/angelos/dotfiles-source" ]] && rec="$(sed -n 's/^remote=//p' "$CONF/angelos/dotfiles-source" | head -1)"
   [[ -n "$url" ]] || return 1
-  [[ "$(norm_url "$url")" == "$(norm_url "$OFFICIAL")" ]] && return 0
+  [[ "$(norm_url "$url")" == "$(norm_url "$OFFICIAL")" || "$(norm_url "$url")" == "$(norm_url "$LEGACY")" ]] && return 0
   [[ -n "$rec" && "$(norm_url "$url")" == "$(norm_url "$rec")" ]]
 }
 
@@ -34,8 +36,8 @@ find_repo() {
     r="$(sed -n 's/^repo=//p' "$marker" | head -1)"
     is_repo "$r" && { printf '%s\n' "$r"; return 0; }
   fi
-  for r in "$HOME/PixelStreetArt_Dotfiles_Niri" "${XDG_DATA_HOME:-$HOME/.local/share}/angelos/dotfiles" \
-           "$HOME/Projects/PixelStreetArt_Dotfiles_Niri" "$HOME/.dotfiles/PixelStreetArt_Dotfiles_Niri"; do
+  for r in "$HOME/AngelOS-Dotfiles" "$HOME/PixelStreetArt_Dotfiles_Niri" "${XDG_DATA_HOME:-$HOME/.local/share}/angelos/dotfiles" \
+           "$HOME/Projects/AngelOS-Dotfiles" "$HOME/Projects/PixelStreetArt_Dotfiles_Niri" "$HOME/.dotfiles/PixelStreetArt_Dotfiles_Niri"; do
     is_repo "$r" && { printf '%s\n' "$r"; return 0; }
   done
   return 1
