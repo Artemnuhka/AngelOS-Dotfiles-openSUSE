@@ -62,6 +62,42 @@ PxPage {
         }
     ]
 
+    readonly property var fallbackFrequent: [
+        {
+            "id": "sound",
+            "icon": "speaker",
+            "label": I18n.t("Громкость", "Volume")
+        },
+        {
+            "id": "shortcuts",
+            "icon": "keyboard",
+            "label": I18n.t("Горячие клавиши", "Shortcuts")
+        },
+        {
+            "id": "widgets",
+            "icon": "layers",
+            "label": I18n.t("Виджеты на столе", "Desktop widgets")
+        }
+    ]
+    // four most visited pages (not wallpaper: it has its own button); the
+    // defaults fill up while there is no history yet
+    readonly property var frequent: {
+        const usage = Config.settingsUi.usage || {};
+        const all = Shell.settingsView ? Shell.settingsView.allPages : [];
+        const top = Object.keys(usage).filter(id => id !== "wallpaper" && usage[id] >= 2 && all.some(p => p.id === id)).sort((a, b) => usage[b] - usage[a]).slice(0, 4).map(id => {
+            const p = all.find(x => x.id === id);
+            return {
+                "id": id,
+                "icon": p.icon,
+                "label": p.label
+            };
+        });
+        for (const f of fallbackFrequent)
+            if (top.length < 3 && !top.some(t => t.id === f.id))
+                top.push(f);
+        return top;
+    }
+
     PxGroup {
         width: parent.width
         title: I18n.t("Частое", "Everyday")
@@ -91,20 +127,16 @@ PxPage {
                 text: I18n.t("Мельче", "Smaller")
                 onClicked: Config.appearance.px = Math.max(1, Config.appearance.px - 1)
             }
-            PxButton {
-                icon: "speaker"
-                text: I18n.t("Громкость", "Volume")
-                onClicked: Shell.settingsPage = "sound"
-            }
-            PxButton {
-                icon: "keyboard"
-                text: I18n.t("Горячие клавиши", "Shortcuts")
-                onClicked: Shell.settingsPage = "shortcuts"
-            }
-            PxButton {
-                icon: "layers"
-                text: I18n.t("Виджеты на столе", "Desktop widgets")
-                onClicked: Shell.settingsPage = "widgets"
+            // the pages you open most (Config.settingsUi.usage); until there is a
+            // history: sound, shortcuts, widgets
+            Repeater {
+                model: page.frequent
+                PxButton {
+                    required property var modelData
+                    icon: modelData.icon
+                    text: modelData.label
+                    onClicked: Shell.settingsPage = modelData.id
+                }
             }
         }
     }

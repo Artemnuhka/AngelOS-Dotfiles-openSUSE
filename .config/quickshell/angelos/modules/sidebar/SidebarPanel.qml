@@ -28,6 +28,14 @@ PxWindow {
             "act": () => Config.notifications.dnd = !Config.notifications.dnd
         },
         {
+            // stream mode (services/StreamMode): on by hand; OBS switches it by itself
+            "id": "stream",
+            "icon": "monitor",
+            "label": StreamMode.active ? I18n.t("В эфире", "Live") : I18n.t("Стрим", "Stream"),
+            "on": StreamMode.active,
+            "act": () => StreamMode.set("toggle")
+        },
+        {
             "id": "theme",
             "icon": Theme.dark ? "moon" : "sun",
             "label": Theme.dark ? I18n.t("Тёмная", "Dark") : I18n.t("Светлая", "Light"),

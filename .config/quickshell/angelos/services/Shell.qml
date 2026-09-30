@@ -98,6 +98,21 @@ Singleton {
     function screenByName(name) {
         return screens.find(s => s.name === name) || null;
     }
+    // a window covers the whole screen on its active workspace (a game, a video)
+    function fullscreenOn(name) {
+        const s = screenByName(name);
+        const ws = Niri.activeWorkspace(name);
+        if (!s || !ws || ws.active_window_id === null || ws.active_window_id === undefined)
+            return false;
+        const w = Niri.windows.find(x => x.id === ws.active_window_id);
+        const size = w && w.layout ? w.layout.window_size : null;
+        return !!size && size[0] >= s.width && size[1] >= s.height;
+    }
+    // nobody looks at this screen: locked, or a fullscreen window on top.
+    // Timers that only animate things (angel, cava, clocks) pause then.
+    function hiddenScreen(name) {
+        return locked || fullscreenOn(name);
+    }
 
     function openSettings(page) {
         if (page)
@@ -127,15 +142,36 @@ Singleton {
             e.QSG_RHI_BACKEND = _pre("QSG_RHI_BACKEND");
         e.ANGELOS_PRE_QT_PLUGIN_PATH = null;
         e.ANGELOS_PRE_QSG_RHI_BACKEND = null;
+        // the systemd service's own variables are not the apps' business
+        if (service) {
+            for (const k of ["ANGELOS_SERVICE", "INVOCATION_ID", "JOURNAL_STREAM", "SYSTEMD_EXEC_PID", "MANAGERPID", "MANAGERPIDFDID", "MEMORY_PRESSURE_WATCH", "MEMORY_PRESSURE_WRITE"])
+                e[k] = null;
+        }
         if (Cursors.theme) {
             e.XCURSOR_THEME = Cursors.theme;
             e.XCURSOR_SIZE = String(Cursors.size);
         }
         return e;
     }
+    // Running as the systemd user service (bin/angelos start): every app goes into
+    // its own scope, so a shell restart (KillMode=process) or systemd-oomd acting on
+    // the shell never takes the user's programs along.
+    readonly property bool service: Quickshell.env("ANGELOS_SERVICE") === "1"
+    property bool scopes: false
+    property Process scopeProbe: Process {
+        running: root.service
+        command: ["systemd-run", "--user", "--scope", "--quiet", "--collect", "true"]
+        onExited: code => root.scopes = code === 0
+    }
+    function scoped(cmd) {
+        if (!scopes || !cmd || !cmd.length)
+            return cmd;
+        const name = String(cmd[0]).split("/").pop().replace(/[^A-Za-z0-9_.]/g, "_").slice(0, 40) || "app";
+        return ["systemd-run", "--user", "--scope", "--quiet", "--collect", "--slice=app.slice", "--unit=app-angelos-" + name + "-" + Date.now().toString(36) + Math.floor(Math.random() * 1296).toString(36), "--"].concat(cmd);
+    }
     function exec(cmd, workingDirectory) {
         const ctx = {
-            "command": cmd,
+            "command": scoped(cmd),
             "environment": childEnv
         };
         if (workingDirectory)

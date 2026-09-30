@@ -10,11 +10,117 @@ Singleton {
 
     property bool editMode: false
 
-    // Widgets are drawn inside the wallpaper surface, which niri keeps in the
-    // backdrop: pinned while workspaces slide, a single copy in the overview.
-    // The backdrop gets no input, so invisible proxies on the angelos-desktop
-    // surface take the pointer and forward it (modules/desktop/WidgetProxy.qml).
-    property var hosts: ({})                 // uid -> DesktopWidgetHost (the visible copy)
+    // Every widget lives twice (DesktopWidgetHost): its face in the backdrop,
+    // which niri never slides — so it stays put however a workspace switch
+    // starts, and shows in the overview — and an input copy at opacity 0 on
+    // angelos-desktop, which slides with the workspaces. The input copy only
+    // shows over the face while a button in it is hovered or pressed, or in a
+    // drag / edit mode; then it steps aside for a switch:
+    //   a switch the shell starts (workspace keys via `angelos ws`, the bar):
+    //   prepareSwitch() hides it and waits for that frame before niri moves;
+    //   a switch niri starts by itself: onWorkspaceActivated, a few frames late —
+    //   only ever with the pointer on a widget's button.
+    property var asideUntil: ({})            // screen -> ms: input copies hidden until
+    property double asideClock: 0
+    function steppedAside(screen) {
+        return Niri.overviewOpen || (asideUntil[screen] || 0) > asideClock;
+    }
+    // how long niri's slide takes (cfg/animation.kdl: preset × slowdown) and a margin
+    readonly property int switchMs: Math.round(WorkspaceAnim.slideMs * WorkspaceAnim.slowdown) + 80
+    function stepAside(screen, ms) {
+        const now = Date.now();
+        const u = Object.assign({}, asideUntil);
+        u[screen] = Math.max(u[screen] || 0, now + (ms || switchMs));
+        asideUntil = u;
+        asideClock = now;
+        settle.interval = Math.max(1, u[screen] - now + 20);
+        settle.restart();
+    }
+    Timer {
+        id: settle
+        onTriggered: root.asideClock = Date.now()
+    }
+    Connections {
+        target: Niri
+        function onWorkspaceActivated(ws, focused) {
+            if (ws && !Niri.overviewOpen && !WorkspaceAnim.captured && WorkspaceAnim.current.id !== "instant")
+                root.stepAside(ws.output);
+        }
+    }
+
+    // ---- a switch the shell starts: an input copy on show hides first ----
+    property var job: null                   // {screen, go, frames}
+    readonly property bool preparing: job !== null
+    function shownOn(screen) {
+        for (const uid of uidsFor(screen)) {
+            const h = hosts[uid];
+            if (h && h.visible && h.shown)
+                return true;
+        }
+        return false;
+    }
+    function prepareSwitch(screen, go) {
+        if (job)
+            advance();                       // another key before the last one got through
+        if (!screen || !shownOn(screen)) {
+            go();
+            return;
+        }
+        stepAside(screen, switchMs + 200);   // niri's own event makes it exact
+        job = {
+            "screen": screen,
+            "go": go,
+            "frames": 0
+        };
+        jobGuard.restart();
+    }
+    // Background: a frame of the desktop surface reached the screen. Two frames
+    // after the change, or one and then quiet, and the copy is gone from it.
+    function framePresented(screen) {
+        const j = job;
+        if (!j || j.screen !== screen)
+            return;
+        j.frames++;
+        if (j.frames >= 2)
+            advance();
+        else
+            jobQuiet.restart();
+    }
+    function advance() {
+        const j = job;
+        if (!j)
+            return;
+        job = null;
+        jobQuiet.stop();
+        jobGuard.stop();
+        j.go();
+    }
+    Timer {
+        id: jobQuiet
+        interval: 14
+        onTriggered: root.advance()
+    }
+    // no frame at all (a stalled window): go on anyway
+    Timer {
+        id: jobGuard
+        interval: 70
+        onTriggered: root.advance()
+    }
+
+    property var hosts: ({})                 // uid -> DesktopWidgetHost, the input copy
+    property var faces: ({})                 // uid -> DesktopWidgetHost, the face
+    function registerFace(uid, item) {
+        const m = Object.assign({}, faces);
+        m[uid] = item;
+        faces = m;
+    }
+    function unregisterFace(uid, item) {
+        if (faces[uid] !== item)
+            return;
+        const m = Object.assign({}, faces);
+        delete m[uid];
+        faces = m;
+    }
     property var drag: ({
             "uid": "",
             "x": 0,

@@ -102,6 +102,15 @@ PxPage {
                 }
             }
         }
+        // the picked skin in motion
+        PxPreview {
+            width: Math.min(parent.width, Theme.u * 200)
+            scene: "CaptureSkin"
+            variant: Config.capture.skin || "ropes"
+            caption: (page.skins.find(s => s.id === (Config.capture.skin || "ropes")) || {}).label || ""
+            closable: false
+            sceneHeight: Theme.u * 62
+        }
         SettingRow {
             visible: Config.capture.skin !== "ropes"
             label: I18n.t("Цвета темы", "Theme colours")

@@ -48,6 +48,9 @@ ShellRoot {
     TourOverlay {}
     PluginHost {}
     AngelHelper {}
+    HeavenRays {}
+    ScreenCracks {}
+    ScreenQuake {}
     BootScreen {}
     Ipc {}
 
@@ -87,5 +90,7 @@ ShellRoot {
         Updates.state; // daily update check (Settings → Updates)
         WorkspaceAnim.current; // control socket for `angelos ws`
         Sounds.ready; // Y2K sound pack (generated on first use)
+        StreamMode.active; // OBS watcher: stream mode while live
+        Angel.demon; // the corner helper's schedule (tips, the demon's pranks)
     }
 }

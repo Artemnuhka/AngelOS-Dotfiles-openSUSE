@@ -10,8 +10,10 @@ import qs.config
 //   dissolve/heart/ender — angelOS: the old screen is captured, niri switches
 //                        instantly underneath, and the frozen frame is taken away
 //                        by shaders/ws_transition.frag (modules/workspace/SwitchFx).
-// For the captured styles the workspace keys (Mod+1…9, Mod+wheel, Mod+O) go
-// through `angelos ws …` → the control socket here; scripts/workspace-anim.py
+// For every animated style the workspace keys (Mod+1…9, Mod+wheel, Mod+O) go
+// through `angelos ws …` → the control socket here (captured styles grab the
+// screen first; niri's own slides first swap the desktop widgets for their
+// pinned pictures, DesktopWidgets.prepareSwitch); scripts/workspace-anim.py
 // rewrites those binds and back, and niri falls back to itself if the shell is
 // not running.
 Singleton {
@@ -71,7 +73,15 @@ Singleton {
         })
     readonly property var current: styles.find(s => s.id === (legacy[Config.workspaces.switchFx] || Config.workspaces.switchFx)) || styles[0]
     readonly property bool captured: current.fx !== undefined
+    // the workspace keys go through `angelos ws` for every animated style: the
+    // captured ones grab the screen first, niri's own slides first put the
+    // desktop widgets' pictures up (DesktopWidgets.prepareSwitch)
+    function wantsRoute(s) {
+        return s.id !== "instant";
+    }
     property string niriPreset: ""       // what cfg/animation.kdl has now
+    property real slowdown: 1            // animations { slowdown } in cfg/animation.kdl
+    readonly property int slideMs: niriPreset === "dash" ? 460 : 380
     property bool routed: false          // workspace keys go through `angelos ws`
     property string log: ""
     readonly property bool busy: writer.running
@@ -83,7 +93,7 @@ Singleton {
         if (!s)
             return;
         Config.workspaces.switchFx = id;
-        const route = s.fx !== undefined;
+        const route = wantsRoute(s);
         if (s.niri === niriPreset && route === routed)
             return;
         if (Shell.dev) {
@@ -93,6 +103,23 @@ Singleton {
         writer.command = ["python3", Quickshell.shellDir + "/scripts/workspace-anim.py", s.niri, route ? "--route" : "--native"];
         writer.running = true;
     }
+    // the keys of earlier versions went straight to niri for its own slides
+    property bool readDone: false
+    property bool routeSynced: false     // once per start: a failed write must not loop
+    function syncRoute() {
+        readDone = true;
+        if (Config.ready && !routeSynced && routed !== wantsRoute(current) && current.niri === niriPreset) {
+            routeSynced = true;
+            reapply();
+        }
+    }
+    Connections {
+        target: Config
+        function onReadyChanged() {
+            if (Config.ready && root.readDone)
+                root.syncRoute();
+        }
+    }
     function refresh() {
         if (!reader.running)
             reader.running = true;
@@ -101,7 +128,7 @@ Singleton {
     function reapply() {
         if (Shell.dev || writer.running)
             return;
-        writer.command = ["python3", Quickshell.shellDir + "/scripts/workspace-anim.py", current.niri, captured ? "--route" : "--native"];
+        writer.command = ["python3", Quickshell.shellDir + "/scripts/workspace-anim.py", current.niri, wantsRoute(current) ? "--route" : "--native"];
         writer.running = true;
     }
 
@@ -119,7 +146,16 @@ Singleton {
         // nothing would change: no transition
         const same = /^[0-9]+$/.test(target) ? parseInt(target) === idx : target === "up" ? idx <= (list[0] ? list[0].idx : 1) : target === "down" ? idx >= (list.length ? list[list.length - 1].idx : 1) : false;
         // leaving a fullscreen game or video: switch plainly, no grab of the game
-        if (!captured || !screen || same || Idle.active || Shell.locked || MetaTap.coversOutput(Niri.focusedWindow)) {
+        const plain = !screen || same || Idle.active || Shell.locked || MetaTap.coversOutput(Niri.focusedWindow);
+        if (!captured) {
+            // niri slides: the desktop widgets' pictures go up before it moves
+            if (plain || current.id === "instant" || Shell.fullscreenOn(out))
+                niriAct(target);
+            else
+                DesktopWidgets.prepareSwitch(out, () => root.niriAct(target));
+            return;
+        }
+        if (plain) {
             niriAct(target);
             return;
         }
@@ -183,9 +219,12 @@ Singleton {
                     const r = JSON.parse(text);
                     root.niriPreset = r.preset || "";
                     root.routed = !!r.routed;
+                    root.slowdown = r.slowdown > 0 ? r.slowdown : 1;
                     // one-time move from the old style names
                     if (root.legacy[Config.workspaces.switchFx])
                         Qt.callLater(() => root.pick(root.legacy[Config.workspaces.switchFx]));
+                    else
+                        root.syncRoute();
                 } catch (e) {}
             }
         }

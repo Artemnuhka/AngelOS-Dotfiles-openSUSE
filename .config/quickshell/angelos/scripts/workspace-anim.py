@@ -2,7 +2,7 @@
 """Read or set niri's workspace-switch animation (cfg/animation.kdl) and whether
 the workspace keys go through angelOS (cfg/keybinds.kdl).
 
-  workspace-anim.py                          -> {"preset": "soft|dash|instant|custom", "routed": bool}
+  workspace-anim.py                          -> {"preset": "soft|dash|instant|custom", "routed": bool, "slowdown": float}
   workspace-anim.py <preset> [--route|--native]
       write it: a staged copy is validated with `niri validate`, the old files are
       backed up under ~/.local/state/angelos/backups/anim-*, and restored if the
@@ -67,6 +67,12 @@ def update(text, preset):
     if match:
         return text[:match.start()] + block + text[match.end():]
     return text[:opening.end()] + "\n" + block + text[opening.end():]
+
+
+def slowdown(text):
+    """animations { slowdown N }: niri stretches every animation by it"""
+    match = re.search(r"(?m)^[ \t]*slowdown\s+([0-9]*\.?[0-9]+)", text)
+    return float(match.group(1)) if match else 1.0
 
 
 def routed(text):
@@ -153,7 +159,8 @@ def save(preset, route_mode):
 def main():
     try:
         if len(sys.argv) == 1:
-            print(json.dumps({"preset": current(ANIMATIONS.read_text()), "routed": routed(KEYBINDS.read_text())}))
+            text = ANIMATIONS.read_text()
+            print(json.dumps({"preset": current(text), "routed": routed(KEYBINDS.read_text()), "slowdown": slowdown(text)}))
         else:
             mode = True if "--route" in sys.argv else False if "--native" in sys.argv else None
             print(json.dumps({"ok": save(sys.argv[1], mode)}))

@@ -255,12 +255,13 @@ Item {
                 columnSpacing: Theme.u * 4
                 rowSpacing: Theme.u * 6
                 Repeater {
-                    model: root.list.slice(pg.index * root.perPage, (pg.index + 1) * root.perPage)
+                    // pg is gone for a moment while the pages are rebuilt (the list changed)
+                    model: pg ? root.list.slice(pg.index * root.perPage, (pg.index + 1) * root.perPage) : []
                     AppTile {
                         required property var modelData
                         required property int index
                         app: modelData
-                        gindex: pg.index * root.perPage + index
+                        gindex: (pg ? pg.index * root.perPage : 0) + index
                         // cascade outwards from the centre of the page
                         delay: Math.min(1, Math.hypot((index % root.columns - (root.columns - 1) / 2) / root.columns, (Math.floor(index / root.columns) - (root.rows - 1) / 2) / root.rows) * 1.4)
                     }

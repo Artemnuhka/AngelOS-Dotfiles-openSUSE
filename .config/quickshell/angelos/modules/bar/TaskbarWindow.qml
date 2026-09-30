@@ -30,6 +30,15 @@ PanelWindow {
         item: box
     }
 
+    // the pointer over the taskbar, in screen coordinates (Pointer: the demon's
+    // glass over the Start button clears up as it comes near)
+    HoverHandler {
+        onPointChanged: if (hovered)
+            Pointer.report("bar", win.modelData.name, point.position.x, win.modelData.height - win.height + point.position.y)
+        onHoveredChanged: if (!hovered)
+            Pointer.left("bar", win.modelData.name)
+    }
+
     PxBox {
         id: box
         anchors.fill: parent

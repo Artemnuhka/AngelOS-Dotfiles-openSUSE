@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """The angelOS Y2K sound pack, synthesised on the spot (no samples, no licences).
 
-  y2k-sounds.py <dir>        writes startup/notify/error/click/shutdown/angel .ogg
-                             (or .wav when ffmpeg is missing) and prints JSON
+  y2k-sounds.py <dir> [name…]  writes startup notify error click shutdown angel
+                               wallpaper open toggle screenshot volume windowClose
+                               demon crack choir rocks shatter as .ogg (.wav without
+                               ffmpeg), prints JSON
 
 Chimes are FM bells and detuned triangle pads with a small echo, levelled to
 about -6 dBFS so they sit under music and voice.
@@ -132,7 +134,199 @@ def angel():
     return echo(buf, 0.09, 0.3, 3)
 
 
-SOUNDS = {"startup": startup, "notify": notify, "error": error, "click": click, "shutdown": shutdown, "angel": angel}
+def noise(sec, seed=1):
+    return np.random.default_rng(seed).uniform(-1, 1, int(sec * RATE))
+
+
+def lowpass(x, cutoff):
+    # one-pole, enough to take the fizz off noise
+    a = np.exp(-2 * np.pi * cutoff / RATE)
+    y = np.empty_like(x)
+    acc = 0.0
+    for i, v in enumerate(x):
+        acc = (1 - a) * v + a * acc
+        y[i] = acc
+    return y
+
+
+def wallpaper():
+    # a shimmer: rising bell arpeggio with glitter on top
+    sec = 1.2
+    buf = np.zeros(int(sec * RATE))
+    for i, n in enumerate((79, 84, 88, 91, 96)):
+        place(buf, bell(note(n), 0.8, index=1.0, decay=5.5) * 0.5, i * 0.07)
+    rng = np.random.default_rng(7)
+    for k in range(9):
+        place(buf, bell(note(98 + rng.integers(0, 10)), 0.25, index=0.5, decay=14) * 0.18, 0.3 + k * 0.05)
+    return echo(buf, 0.11, 0.3, 3)
+
+
+def open_():
+    sec = 0.32
+    buf = np.zeros(int(sec * RATE))
+    place(buf, bell(note(79), 0.25, index=0.6, decay=12) * 0.6, 0.0)
+    place(buf, bell(note(86), 0.28, index=0.6, decay=11) * 0.6, 0.05)
+    return buf
+
+
+def toggle():
+    sec = 0.07
+    t = t_axis(sec)
+    f = 1900 * np.exp(-t * 9)
+    return np.sin(2 * np.pi * np.cumsum(f) / RATE) * np.exp(-t * 60)
+
+
+def screenshot():
+    # a little shutter: two filtered clicks
+    sec = 0.3
+    buf = np.zeros(int(sec * RATE))
+    for at, seed in ((0.0, 3), (0.085, 4)):
+        n = noise(0.05, seed) * np.exp(-t_axis(0.05) * 90)
+        place(buf, lowpass(n, 3500) * 0.9, at)
+    place(buf, bell(note(96), 0.2, index=0.4, decay=16) * 0.25, 0.12)
+    return buf
+
+
+def volume():
+    sec = 0.05
+    t = t_axis(sec)
+    return np.sin(2 * np.pi * 1320 * t) * np.exp(-t * 90)
+
+
+def window_close():
+    sec = 0.4
+    buf = np.zeros(int(sec * RATE))
+    place(buf, bell(note(84), 0.3, index=0.7, decay=10) * 0.55, 0.0)
+    place(buf, bell(note(77), 0.35, index=0.7, decay=9) * 0.55, 0.08)
+    return buf
+
+
+def demon():
+    # the demon's "heh": two wobbly low squares, a minor second apart
+    sec = 0.55
+    buf = np.zeros(int(sec * RATE))
+    for i, n in enumerate((50, 49)):
+        t = t_axis(0.2)
+        f = note(n) * (1 + 0.03 * np.sin(2 * np.pi * 18 * t))
+        x = np.sign(np.sin(2 * np.pi * np.cumsum(f) / RATE)) * 0.5 + np.sin(2 * np.pi * np.cumsum(f * 2) / RATE) * 0.3
+        place(buf, x * env(len(t), 0.005, 0.12), i * 0.2)
+    return echo(buf, 0.13, 0.25, 2)
+
+
+def crack():
+    # a punch into the screen, then glass giving way: a thump, a crunch of
+    # noise and a scatter of tiny high "tinks"
+    sec = 1.1
+    buf = np.zeros(int(sec * RATE))
+    t = t_axis(0.35)
+    thump = np.sin(2 * np.pi * np.cumsum(90 * np.exp(-t * 7) + 38) / RATE) * np.exp(-t * 11)
+    place(buf, thump * 1.0, 0.0)
+    crunch = noise(0.45, 11) * np.exp(-t_axis(0.45) * 9)
+    place(buf, (crunch - lowpass(crunch, 1800)) * 0.9, 0.012)
+    rng = np.random.default_rng(5)
+    for k in range(26):
+        f = rng.uniform(2600, 7800)
+        at = 0.02 + rng.exponential(0.12)
+        if at < sec - 0.15:
+            place(buf, bell(f, 0.12, index=0.3, ratio=2.7, decay=40) * rng.uniform(0.12, 0.35), at)
+    return echo(buf, 0.07, 0.18, 2)
+
+
+def choir():
+    # a short heavenly "aaah" (think of the item room in Isaac): a D major chord
+    # of formant-shaped voices with vibrato, slow in, soft out, in a big room
+    sec = 1.7
+    n = int(sec * RATE)
+    t = np.arange(n) / RATE
+    formants = ((800, 110, 1.0), (1150, 130, 0.6), (2900, 220, 0.25))  # the vowel "a"
+    out = np.zeros(n)
+    rng = np.random.default_rng(3)
+    for midi in (62, 66, 69, 74, 78):
+        for voice in range(3):
+            f0 = note(midi) * (1 + rng.uniform(-0.004, 0.004))
+            vib = 1 + 0.006 * np.sin(2 * np.pi * rng.uniform(4.8, 6.0) * t + rng.uniform(0, 6.28))
+            phase = 2 * np.pi * np.cumsum(f0 * vib) / RATE
+            for k in range(1, 40):
+                fk = f0 * k
+                if fk > 7000:
+                    break
+                amp = sum(g / (1 + ((fk - fc) / bw) ** 2) for fc, bw, g in formants) / k ** 0.3
+                out += np.sin(k * phase) * amp
+    out *= env(n, attack=0.28, release=0.8)
+    return echo(out, 0.19, 0.42, 5)
+
+
+def lfsr(sec, period, short=False, seed=1):
+    """the NES noise channel: a 15-bit LFSR clocked every `period` samples
+    (bigger = lower); short mode loops after 93 steps and rings metallic"""
+    n = int(sec * RATE)
+    steps = n // max(1, period) + 1
+    reg, tap = seed or 1, 6 if short else 1
+    bits = np.empty(steps)
+    for i in range(steps):
+        fb = (reg ^ (reg >> tap)) & 1
+        reg = (reg >> 1) | (fb << 14)
+        bits[i] = 1.0 if reg & 1 else -1.0
+    return np.repeat(bits, max(1, period))[:n]
+
+
+def pulse(freq_start, freq_end, sec, duty=0.25):
+    t = t_axis(sec)
+    f = freq_start * (freq_end / freq_start) ** (t / sec)
+    ph = np.cumsum(f) / RATE % 1.0
+    return np.where(ph < duty, 1.0, -1.0)
+
+
+def crunch8(x, levels=16, hold=4):
+    """8-bit grit: 4-bit amplitude steps and ~11 kHz sample-and-hold"""
+    x = np.repeat(x[::hold], hold)[:len(x)]
+    return np.round(x * levels / 2) / (levels / 2)
+
+
+def rocks():
+    # the ground shakes and stones tumble down: a low noise-channel rumble that
+    # rolls off, low pulse thuds and a clatter of rocks hitting each other
+    sec = 1.25
+    buf = np.zeros(int(sec * RATE))
+    rumble = lfsr(1.1, 90, seed=3) * np.exp(-t_axis(1.1) * 2.6) * env(int(1.1 * RATE), 0.01, 0.25)
+    place(buf, rumble * 0.55, 0.0)
+    place(buf, pulse(70, 38, 0.5, 0.5) * np.exp(-t_axis(0.5) * 5) * 0.5, 0.0)
+    rng = np.random.default_rng(12)
+    at = 0.04
+    for k in range(14):
+        size = rng.uniform(0.3, 1.0)                     # big stones: lower, longer
+        hit = 0.05 + 0.07 * size
+        clack = lfsr(hit, int(6 + 20 * size), short=rng.random() < 0.35, seed=int(rng.integers(1, 30000)))
+        clack *= np.exp(-t_axis(hit) * (70 - 35 * size))
+        thud = pulse(260 - 120 * size, 90 - 30 * size, hit, 0.5) * np.exp(-t_axis(hit) * 45)
+        place(buf, (clack * 0.7 + thud * 0.45) * (1 - k / 22), at)
+        at += rng.uniform(0.035, 0.09)
+        if at > sec - 0.15:
+            break
+    return crunch8(buf)
+
+
+def shatter():
+    # the screen breaks, 8-bit: a white-noise crash, a pulse "kssh" falling down
+    # two octaves and glass bits ringing in short-mode noise
+    sec = 1.05
+    buf = np.zeros(int(sec * RATE))
+    crash = lfsr(0.5, 1, seed=9) * np.exp(-t_axis(0.5) * 9)
+    place(buf, crash * 0.8, 0.0)
+    place(buf, lfsr(0.3, 3, short=True, seed=77) * np.exp(-t_axis(0.3) * 16) * 0.5, 0.01)
+    for i, n in enumerate((96, 91, 88, 84, 79, 76, 72, 67)):
+        place(buf, pulse(note(n), note(n) * 0.97, 0.06, 0.125) * np.exp(-t_axis(0.06) * 30) * 0.32, 0.06 + i * 0.045)
+    rng = np.random.default_rng(21)
+    for k in range(12):
+        f = rng.uniform(2200, 5200)
+        place(buf, pulse(f, f, 0.04, 0.5) * np.exp(-t_axis(0.04) * 90) * rng.uniform(0.12, 0.28), 0.12 + rng.exponential(0.16))
+    return crunch8(buf)
+
+
+SOUNDS = {"startup": startup, "notify": notify, "error": error, "click": click, "shutdown": shutdown, "angel": angel,
+          "wallpaper": wallpaper, "open": open_, "toggle": toggle, "screenshot": screenshot, "volume": volume,
+          "windowClose": window_close, "demon": demon, "crack": crack, "choir": choir, "rocks": rocks,
+          "shatter": shatter}
 
 
 def write_wav(path, x):
@@ -150,7 +344,10 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     ffmpeg = shutil.which("ffmpeg")
     made = {}
+    only = set(sys.argv[2:])
     for name, fn in SOUNDS.items():
+        if only and name not in only:
+            continue
         x = level(fn())
         wav = out / (name + ".wav")
         write_wav(wav, x)

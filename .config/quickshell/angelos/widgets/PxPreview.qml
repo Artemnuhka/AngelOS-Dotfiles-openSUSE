@@ -19,6 +19,8 @@ PxWindow {
     readonly property int frames: Math.max(1, Math.round(duration / 1000 * fps))
     readonly property real t: Math.min(1, frame / frames)
     property int sceneHeight: Theme.u * 78
+    readonly property int stageStatus: stage.status     // the UI self-test checks every scene loads
+    readonly property var sceneNames: Object.keys(scenes)
 
     function restart() {
         frame = 0;
@@ -53,8 +55,23 @@ PxWindow {
             "CloseFx": closeFx,
             "WallpaperFx": wallpaperFx,
             "StartMenu": startMenu,
-            "BarStyle": barStyle
+            "BarStyle": barStyle,
+            "DeskSwitch": deskSwitch,
+            "LockScreen": lockScreen,
+            "CaptureSkin": captureSkin
         })
+    Component {
+        id: deskSwitch
+        DeskSwitch {}
+    }
+    Component {
+        id: lockScreen
+        LockScreen {}
+    }
+    Component {
+        id: captureSkin
+        CaptureSkin {}
+    }
     Component {
         id: taskClose
         TaskClose {}

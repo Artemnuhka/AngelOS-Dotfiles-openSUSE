@@ -146,8 +146,9 @@ def to_angelos(restart=True):
     subprocess.run([sys.executable, str(SHELL / "scripts/render-templates.py"), str(SHELL / "templates/palette-default.json")], check=False)
     if not (NIRI / "angelos.kdl").exists():
         sys.exit("angelos.kdl не создан — отмена")
-    # `angelos run` sets the renderer environment (bin/angelos) before starting qs
-    edit(NIRI / "cfg/autostart.kdl", lambda t: re.sub(r'spawn-at-startup\s+(?:"noctalia"|"qs"\s+"-c"\s+"angelos"\s+"-n")', 'spawn-at-startup "angelos" "run"', t))
+    # `angelos start` runs the shell as a systemd user service (restarted when it dies);
+    # `angelos run` inside it sets the renderer environment (bin/angelos) before qs
+    edit(NIRI / "cfg/autostart.kdl", lambda t: re.sub(r'spawn-at-startup\s+(?:"noctalia"|"qs"\s+"-c"\s+"angelos"\s+"-n"|"angelos"\s+"run")', 'spawn-at-startup "angelos" "start"', t))
     edit(NIRI / "config.kdl", lambda t: t.replace('include "noctalia.kdl"', 'include "angelos.kdl"'))
     edit(NIRI / "cfg/keybinds.kdl", patch_keys)
     edit(NIRI / "cfg/rules.kdl", patch_rules)
@@ -189,7 +190,7 @@ def unpatch_rules(t):
 def to_noctalia_forward():
     """No switch backup (e.g. a fresh install from the repo): rewrite the wiring in place."""
     backup("switch-back")
-    edit(NIRI / "cfg/autostart.kdl", lambda t: re.sub(r'spawn-at-startup\s+(?:"qs"\s+"-c"\s+"angelos"\s+"-n"|"angelos"\s+"run")', 'spawn-at-startup "noctalia"', t))
+    edit(NIRI / "cfg/autostart.kdl", lambda t: re.sub(r'spawn-at-startup\s+(?:"qs"\s+"-c"\s+"angelos"\s+"-n"|"angelos"\s+"(?:run|start)")', 'spawn-at-startup "noctalia"', t))
     edit(NIRI / "config.kdl", lambda t: t.replace('include "angelos.kdl"', 'include "noctalia.kdl"'))
     edit(NIRI / "cfg/keybinds.kdl", unpatch_keys)
     edit(NIRI / "cfg/rules.kdl", unpatch_rules)
@@ -213,7 +214,8 @@ def to_noctalia(restart=True):
         log("бэкапа с Noctalia нет — переписываю обвязку на месте")
         to_noctalia_forward()
         if restart:
-            subprocess.run(["qs", "-c", "angelos", "kill"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            # through bin/angelos: the systemd service would bring a plain `qs kill` back
+            subprocess.run([str(SHELL / "bin/angelos"), "stop"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             subprocess.Popen(["setsid", "-f", "noctalia"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return
     backup("switch-back")
@@ -222,7 +224,7 @@ def to_noctalia(restart=True):
         log("восстановлен", rel)
     MARK.unlink(missing_ok=True)
     if restart:
-        subprocess.run(["qs", "-c", "angelos", "kill"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run([str(SHELL / "bin/angelos"), "stop"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         time.sleep(0.5)
         subprocess.Popen(["setsid", "-f", "noctalia"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         log("Noctalia запущена")

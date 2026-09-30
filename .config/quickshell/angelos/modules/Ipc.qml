@@ -45,6 +45,73 @@ IpcHandler {
         Niri.workspaceActivated(Niri.workspaces.find(w => w.id === 9000 + idx), false);
         return "ok";
     }
+    // stream mode: on | off | auto (follow OBS) | toggle | status
+    function stream(mode: string): string {
+        if (["on", "off", "auto", "toggle"].includes(mode))
+            StreamMode.set(mode);
+        else if (mode !== "status" && mode !== "")
+            return "on | off | auto | toggle | status";
+        return JSON.stringify({
+            "active": StreamMode.active,
+            "manual": Config.stream.manual,
+            "auto": Config.stream.auto,
+            "obs": StreamMode.obsUp ? (StreamMode.obsLive ? "live" : "up") : (StreamMode.obsAuth ? "password" : "down")
+        });
+    }
+    // the corner helper: `angelos helper "tip | joke | ask <text> | plea | status"`
+    // (owner: angel — the demon leaves at once; dev or owner: prank, ascend, fx,
+    // hell, throw; dev only: drag)
+    function helper(line: string): string {
+        const cmd = String(line).trim().split(/\s+/)[0];
+        const arg = String(line).trim().slice(cmd.length).trim();
+        const debug = Shell.dev || Owner.enabled;
+        if (cmd === "angel")
+            return Angel.ownerAngel() ? "ok" : !Owner.enabled ? "owner only" : Angel.demon ? "not now" : "she is an angel already";
+        if (cmd === "tip")
+            Angel.tip();
+        else if (cmd === "joke")
+            Angel.joke();
+        else if (cmd === "ask")
+            Angel.answer(arg);
+        else if (cmd === "plea")
+            Angel.plea();
+        else if (cmd === "menu")
+            Angel.openMenu(arg || "main");
+        else if (debug && cmd === "prank")
+            return Angel.prank() ? "ok" : "not now";
+        else if (debug && cmd === "ascend")
+            Angel.ascend();
+        // the angel goes to hell only by being thrown down (AngelHelper); dev: pretend
+        else if (debug && cmd === "hell")
+            Angel.toHell();
+        else if (debug && cmd === "throw")
+            Angel.released(true, -40, 30);
+        // dev: a real drag on her by dx, dy pixels over ms (TestEvent): "drag 0 90 300"
+        else if (Shell.dev && cmd === "drag") {
+            const a = arg.split(/\s+/).map(Number);
+            Angel.devDrag(a[0] || 0, a[1] || 0, a[2] || 300);
+        }
+        else if (debug && cmd === "fx")
+            Angel.effect();
+        else if (cmd !== "status")
+            return "tip | joke | ask <text> | plea | menu [main|ask] | status" + (Owner.enabled ? " | angel" : "");
+        return JSON.stringify({
+            "character": Config.y2k.character,
+            "shown": Angel.shown,
+            "screen": Angel.screenName,
+            "transition": Angel.transition,
+            "pleas": Angel.pleasCounted + "/" + Angel.pleasNeeded,
+            "pranks": (Config.y2k.pranks || []).map(p => p.id + (p.undone ? " (undone)" : "")),
+            "text": Angel.talking ? Angel.text : ""
+        });
+    }
+    // dev only: run a shell command the way the shell starts apps (Shell.sh)
+    function devExec(cmd: string): string {
+        if (!Shell.dev)
+            return "dev only";
+        Shell.sh(cmd);
+        return Shell.scopes ? "ok (own scope)" : "ok";
+    }
     // the heart animation on every bar, without switching workspaces (0-based cells)
     function heartDemo(from: int, to: int): void {
         Shell.heartDemo(from, to);
@@ -86,7 +153,14 @@ IpcHandler {
     function widgetEdit(): void {
         DesktopWidgets.editMode = !DesktopWidgets.editMode;
     }
-    // replays a left click at (x, y) of a desktop widget, as its proxy would
+    // a desktop widget as it is seen (its face in the backdrop), saved to a file
+    function widgetShot(uid: string, path: string): string {
+        const f = DesktopWidgets.faces[uid];
+        if (!f)
+            return "no widget " + uid + "; have: " + Object.keys(DesktopWidgets.faces).join(", ");
+        return f.grabToImage(r => r.saveToFile(path)) ? "ok (saving " + path + ")" : "grab failed";
+    }
+    // replays a left click at (x, y) of a desktop widget
     function widgetClick(uid: string, x: int, y: int): string {
         const h = DesktopWidgets.hosts[uid];
         if (!h)

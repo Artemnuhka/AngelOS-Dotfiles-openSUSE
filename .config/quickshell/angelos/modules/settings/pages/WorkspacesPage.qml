@@ -250,6 +250,15 @@ PxPage {
                 }
             }
         }
+        // how the picked style looks, as a looping gif
+        PxPreview {
+            width: Math.min(parent.width, Theme.u * 200)
+            scene: "DeskSwitch"
+            variant: WorkspaceAnim.current.id
+            caption: WorkspaceAnim.current.label
+            closable: false
+            sceneHeight: Theme.u * 62
+        }
         Row {
             spacing: Theme.u * 4
             PxButton {

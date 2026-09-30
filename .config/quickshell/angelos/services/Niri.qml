@@ -31,6 +31,7 @@ Singleton {
     signal workspaceActivated(var ws, bool focused)
     signal layoutSwitched(string name)
     signal configLoaded(bool failed)
+    signal windowClosed(int id)
 
     function shortLayout(name) {
         if (!name)
@@ -295,6 +296,8 @@ Singleton {
             }
         case "WindowClosed":
             windows = windows.filter(w => w.id !== d.id);
+            if (ready)
+                windowClosed(d.id);
             if (focusedWindowId === d.id)
                 focusedWindowId = -1;
             break;

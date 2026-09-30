@@ -1,5 +1,6 @@
 import QtQuick
 import qs.config
+import qs.services
 
 // Pixel switch with a heart knob.
 Item {
@@ -59,6 +60,7 @@ Item {
         onClicked: {
             root.checked = !root.checked;
             root.toggled(root.checked);
+            Sounds.play("toggle");
         }
     }
 }

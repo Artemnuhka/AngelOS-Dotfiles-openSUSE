@@ -13,6 +13,7 @@ Item {
     Component.onCompleted: {
         Shell.settingsView = win;
         SettingsSearch.load();
+        SettingsKeys.load();
     }
     Component.onDestruction: if (Shell.settingsView === win)
         Shell.settingsView = null
@@ -199,6 +200,42 @@ Item {
             Shell.settingsPage = "appearance";
         else if (!on)
             Shell.settingsPage = "home";
+        history = [];
+    }
+
+    // "Back" in the simple view goes where the page was opened from — the home
+    // tiles, "All sections", a page a search result led away from — not
+    // always to the home screen
+    property var history: []
+    property string lastPage: Shell.settingsPage
+    property bool goingBack: false
+    Connections {
+        target: Shell
+        function onSettingsPageChanged() {
+            if (!win.goingBack && win.lastPage && win.lastPage !== Shell.settingsPage)
+                win.history = win.history.filter(p => p !== Shell.settingsPage).concat([win.lastPage]).slice(-20);
+            win.goingBack = false;
+            win.lastPage = Shell.settingsPage;
+            // how often each page is opened: "Everyday" on the home page follows it
+            if (Config.ready && Shell.settingsOpen && Shell.settingsPage !== "home" && Shell.settingsPage !== "more") {
+                const u = Object.assign({}, Config.settingsUi.usage || {});
+                u[Shell.settingsPage] = (u[Shell.settingsPage] || 0) + 1;
+                Config.settingsUi.usage = u;
+            }
+        }
+        function onSettingsOpenChanged() {
+            if (!Shell.settingsOpen)
+                win.history = [];
+        }
+    }
+    readonly property string backTarget: history.length ? history[history.length - 1] : "home"
+    readonly property string backLabel: backTarget === "home" ? I18n.t("Главная", "Home") : backTarget === "more" ? I18n.t("Все разделы", "All sections") : ((allPages.find(p => p.id === backTarget) || {}).label || I18n.t("Назад", "Back"))
+    function back() {
+        const h = history.slice();
+        const target = h.length ? h.pop() : "home";
+        history = h;
+        goingBack = true;
+        Shell.settingsPage = target;
     }
 
     // ---- search (services/SettingsSearch) ----
@@ -347,6 +384,12 @@ Item {
         sequence: "Ctrl+F"
         onActivated: search.focusField()
     }
+    // Ctrl+Z: the last change of a setting goes back (Config.undo)
+    Shortcut {
+        sequence: "Ctrl+Z"
+        enabled: Config.canUndo
+        onActivated: Config.undo()
+    }
 
     PxWindow {
         id: frame
@@ -385,7 +428,7 @@ Item {
                 id: search
                 x: win.expert ? Theme.u * 2 : homeBtn.x + (homeBtn.visible ? homeBtn.width + Theme.u * 3 : 0)
                 y: Theme.u * 2
-                width: win.expert ? parent.width - Theme.u * 4 : expertBtn.x - x - Theme.u * 3
+                width: win.expert ? parent.width - Theme.u * 4 : (undoBtn.visible ? undoBtn.x : expertBtn.x) - x - Theme.u * 3
                 icon: "search"
                 placeholder: I18n.t("Поиск настроек…", "Search settings…")
                 onEdited: {
@@ -630,8 +673,22 @@ Item {
                 height: search.height
                 compact: true
                 icon: "arrowLeft"
-                text: I18n.t("Главная", "Home")
-                onClicked: Shell.settingsPage = "home"
+                text: win.backLabel
+                onClicked: win.back()
+            }
+            // "Undo": the last change of a setting (Config.undo); in Expert it sits
+            // in the page's top-right corner
+            PxButton {
+                id: undoBtn
+                visible: Config.canUndo
+                z: 6
+                x: win.expert ? parent.width - width - Theme.u * 3 : expertBtn.x - width - Theme.u * 3
+                y: Theme.u * 2
+                height: search.height
+                compact: true
+                icon: "refresh"
+                text: I18n.t("Отменить", "Undo") + (win.width > Theme.u * 420 && SettingsKeys.loaded ? " " + SettingsKeys.stepLabel(Config.lastStep) : "")
+                onClicked: Config.undo()
             }
             PxButton {
                 id: expertBtn

@@ -4,14 +4,17 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import qs.config
+import qs.services
 import qs.widgets
 
-// CPU / GPU / RAM / temperatures / network in pixel meters.
+// CPU / GPU / RAM / temperatures / network in pixel meters (paused while the
+// desk is out of sight: locked or under a fullscreen window).
 Item {
     id: root
 
     property string screenName
     property var widget
+    readonly property bool passive: true     // nothing to click: no input copy needed
 
     property real cpu: 0
     property real cpuTemp: -1
@@ -36,7 +39,7 @@ Item {
 
     Timer {
         interval: 2000
-        running: root.visible
+        running: root.visible && !Shell.hiddenScreen(root.screenName)
         repeat: true
         triggeredOnStart: true
         onTriggered: {

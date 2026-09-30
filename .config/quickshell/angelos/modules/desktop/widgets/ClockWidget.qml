@@ -1,14 +1,16 @@
 import QtQuick
 import Quickshell
 import qs.config
+import qs.services
 import qs.widgets
 
-// Big pixel clock + date.
+// Big pixel clock + date. Stands still while nobody can see the desk.
 Item {
     id: root
 
     property string screenName
     property var widget
+    readonly property bool passive: true     // nothing to click: no input copy needed
     readonly property bool seconds: widget && widget.settings ? !!widget.settings.seconds : false
 
     implicitWidth: col.implicitWidth + Theme.u * 8
@@ -16,6 +18,7 @@ Item {
 
     SystemClock {
         id: clock
+        enabled: !Shell.hiddenScreen(root.screenName)
         precision: root.seconds ? SystemClock.Seconds : SystemClock.Minutes
     }
 

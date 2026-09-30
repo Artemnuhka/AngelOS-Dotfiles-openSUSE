@@ -44,6 +44,7 @@ Singleton {
     property string _pendingKey: ""
 
     onTrackKeyChanged: fetchTimer.restart()
+    readonly property bool unseen: Shell.locked || (Shell.screens.length > 0 && Shell.screens.every(s => Shell.fullscreenOn(s.name)))
 
     // track metadata often arrives in pieces; wait for it to settle
     Timer {
@@ -57,7 +58,10 @@ Singleton {
     Timer {
         interval: 80
         repeat: true
-        running: root.playing && root.status === "ok" && root.lines.length > 0
+        // nobody reads the bar while the screen is locked or every screen shows a
+        // fullscreen game or video: the position is picked up again afterwards
+        running: root.playing && root.status === "ok" && root.lines.length > 0 && !root.unseen
+
         onTriggered: {
             root.player.positionChanged();
             root.updateIndex();

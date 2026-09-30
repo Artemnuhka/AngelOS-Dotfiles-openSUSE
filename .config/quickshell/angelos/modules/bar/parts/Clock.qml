@@ -15,8 +15,10 @@ Item {
     implicitWidth: col.implicitWidth + Theme.u * 8
     implicitHeight: col.implicitHeight
 
+    // stands still under a fullscreen game or the lock screen
     SystemClock {
         id: clock
+        enabled: !Shell.hiddenScreen(root.screenName)
         precision: Config.bar.showSeconds ? SystemClock.Seconds : SystemClock.Minutes
     }
 

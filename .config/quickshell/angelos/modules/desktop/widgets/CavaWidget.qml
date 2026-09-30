@@ -4,17 +4,33 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import qs.config
+import qs.services
 import qs.widgets
 
 // Pixel spectrum from cava (raw ASCII output). Sound comes through
 // scripts/audio-tap.py: pw-record of an output's monitor, a whole multichannel
 // interface or one channel pair → FIFO → cava. cava's own `source = <sink>`
 // silently fell back to the default *input*, i.e. the microphone.
+// cava and the tap stop while nobody can see the desk (locked, fullscreen game),
+// and run only in a copy that is shown: the widget's face (DesktopWidgetHost) —
+// its hidden input copy would share the FIFO and the config.
 Item {
     id: root
 
     property string screenName
     property var widget
+    readonly property bool passive: true     // nothing to click: no input copy needed
+    readonly property bool paused: Shell.hiddenScreen(screenName)
+    readonly property bool live: visible && !paused
+    onLiveChanged: {
+        if (!live) {
+            restart.stop();
+            proc.running = false;
+            levels = [];
+        } else {
+            writeConf();
+        }
+    }
     readonly property int bars: widget && widget.settings && widget.settings.bars ? widget.settings.bars : 32
     // "" = everything the computer plays (see audio-tap.py for the other specs)
     readonly property string source: widget && widget.settings && widget.settings.source ? widget.settings.source : ""
@@ -31,11 +47,11 @@ Item {
         path: root.conf
         preload: false
         atomicWrites: true
-        onSaved: proc.running = true
+        onSaved: proc.running = root.live
     }
     property bool ready: false
     function writeConf() {
-        if (!ready)
+        if (!ready || !live)
             return;
         proc.running = false;
         confFile.setText(["[general]", "bars = " + bars, "framerate = 30", "sensitivity = 70", "autosens = 1", "[input]", "method = fifo", "source = " + root.fifo, "sample_rate = 22050", "sample_bits = 16", "[output]", "method = raw", "raw_target = /dev/stdout", "data_format = ascii", "ascii_max_range = 100", "bar_delimiter = 59", "frame_delimiter = 10", "channels = mono", "[smoothing]", "noise_reduction = 60", ""].join("\n"));
@@ -56,7 +72,7 @@ Item {
         onExited: code => {
             if (code === 127)
                 root.missing = true;
-            else if (root.visible)
+            else if (root.live)
                 restart.start();
         }
     }

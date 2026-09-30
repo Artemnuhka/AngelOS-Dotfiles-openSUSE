@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import qs.config
 import qs.services
 import qs.widgets
@@ -362,6 +363,57 @@ PxPage {
                 icon: "package"
                 onClicked: Shell.openPath(Config.stateDir + "/backups")
             }
+        }
+    }
+
+    PxGroup {
+        id: reportGroup
+        title: I18n.t("Сообщить о проблеме", "Report a problem")
+        icon: "warn"
+        width: parent.width
+        property var result: null
+        property bool busy: false
+        SettingRow {
+            label: I18n.t("Отчёт для issue", "A report for an issue")
+            hint: reportGroup.result ? I18n.t("готово: ", "done: ") + reportGroup.result.archive.replace(Config.home, "~") + I18n.t(" — прикрепи его к issue на GitHub", " — attach it to a GitHub issue") : I18n.t("версии, лог оболочки, краш-отчёты и настройки в одном архиве; путь к дому и имя заменены, личное (история запусков, имена столов, данные плагинов) не попадает. То же в терминале: angelos report", "Versions, the shell log, crash reports and settings in one archive; your home path and name are replaced, personal bits (launch history, workspace names, plugin data) stay out. Same in a terminal: angelos report")
+            PxButton {
+                enabled: !reportGroup.busy
+                icon: "package"
+                text: reportGroup.busy ? I18n.t("Собираю…", "Packing…") : I18n.t("Собрать отчёт", "Make a report")
+                onClicked: {
+                    reportGroup.busy = true;
+                    reportProc.running = true;
+                }
+            }
+        }
+        Row {
+            visible: !!reportGroup.result
+            spacing: Theme.u * 4
+            PxButton {
+                icon: "folder"
+                text: I18n.t("Показать архив", "Show the archive")
+                onClicked: Shell.openPath(reportGroup.result.archive.replace(/\/[^\/]*$/, ""))
+            }
+            PxButton {
+                accent: true
+                icon: "bell"
+                text: I18n.t("Открыть форму issue", "Open the issue form")
+                onClicked: Shell.exec(["xdg-open", reportGroup.result.issue])
+            }
+        }
+        Process {
+            id: reportProc
+            command: ["python3", Quickshell.shellDir + "/scripts/report.py", "--json"]
+            stdout: StdioCollector {
+                onStreamFinished: {
+                    try {
+                        reportGroup.result = JSON.parse(text);
+                    } catch (e) {
+                        reportGroup.result = null;
+                    }
+                }
+            }
+            onExited: reportGroup.busy = false
         }
     }
 }

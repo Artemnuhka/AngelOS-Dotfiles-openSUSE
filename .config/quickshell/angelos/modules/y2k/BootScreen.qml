@@ -63,7 +63,8 @@ Scope {
     }
 
     Variants {
-        model: Shell.bootOpen ? Shell.screens.filter(s => !(Config.y2k.bootScreens || []).length || Config.y2k.bootScreens.includes(s.name)) : []
+        // streamed screens are skipped while stream mode is on
+        model: Shell.bootOpen ? Shell.screens.filter(s => (!(Config.y2k.bootScreens || []).length || Config.y2k.bootScreens.includes(s.name)) && StreamMode.effectsOn(s.name)) : []
 
         PanelWindow {
             id: win
@@ -227,6 +228,7 @@ Scope {
                 anchors.fill: parent
                 onClicked: root.finish()
             }
+            RightClickGuard {}
         }
     }
 }

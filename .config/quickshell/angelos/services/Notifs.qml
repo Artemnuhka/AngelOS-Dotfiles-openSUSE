@@ -19,6 +19,10 @@ Singleton {
     readonly property int unread: history.filter(h => !h.read).length
     readonly property string historyFile: Config.stateDir + "/notifications.json"
 
+    function isScreenshot(info) {
+        const shot = /screenshot|скриншот/i.test(info.appName || "") || (info.appName === "niri" && /screenshot|скриншот/i.test(info.summary || ""));
+        return shot && !/ошибк|error|fail/i.test(info.summary || "");
+    }
     function same(a, b) {
         return a === b || (!!a && !!b && a.id !== undefined && a.id === b.id);
     }
@@ -115,7 +119,7 @@ Singleton {
                 "quiet": dnd
             });
             if (!dnd)
-                Sounds.play(n.urgency === NotificationUrgency.Critical ? "error" : "notify");
+                Sounds.play(n.urgency === NotificationUrgency.Critical ? "error" : root.isScreenshot(entry) ? "screenshot" : "notify");
         }
     }
 
@@ -130,7 +134,11 @@ Singleton {
         printErrors: false
         onLoaded: {
             try {
-                root.history = JSON.parse(text()) || [];
+                // images handed over by the notifying app (image://qsimage/…) live only
+                // as long as the shell that got them: after a restart they point nowhere
+                root.history = (JSON.parse(text()) || []).map(h => String(h.icon || "").startsWith("image://qsimage/") ? Object.assign({}, h, {
+                        "icon": ""
+                    }) : h);
             } catch (e) {}
         }
     }

@@ -35,42 +35,73 @@ PxPage {
                 onToggled: c => Config.lock.onSleep = c
             }
         }
+        // each look below plays as a small gif when it is switched on
         SettingRow {
+            id: pixelRow
             label: I18n.t("Пикселизовать обои", "Pixelate the wallpaper")
+            preview: "LockScreen"
             PxToggle {
                 checked: Config.lock.pixelate
-                onToggled: c => Config.lock.pixelate = c
+                onToggled: c => {
+                    Config.lock.pixelate = c;
+                    if (c)
+                        pixelRow.show("pixelate", I18n.t("пиксели", "pixels"));
+                }
             }
         }
         SettingRow {
+            id: heartsRow
             label: I18n.t("Летающие сердечки", "Floating hearts")
+            preview: "LockScreen"
             PxToggle {
                 checked: Config.lock.hearts
-                onToggled: c => Config.lock.hearts = c
+                onToggled: c => {
+                    Config.lock.hearts = c;
+                    if (c)
+                        heartsRow.show("hearts", I18n.t("сердечки", "hearts"));
+                }
             }
         }
         SettingRow {
+            id: reactRow
             label: I18n.t("Реакции на ввод", "Typing reactions")
             hint: I18n.t("сердечко на каждый символ, разбитое сердце при ошибке, фейерверк при входе", "A heart per character, a broken heart on a mistake, a burst on unlock")
+            preview: "LockScreen"
             PxToggle {
                 checked: Config.lock.reactions
-                onToggled: c => Config.lock.reactions = c
+                onToggled: c => {
+                    Config.lock.reactions = c;
+                    if (c)
+                        reactRow.show("reactions", I18n.t("реакции", "reactions"));
+                }
             }
         }
         SettingRow {
+            id: indRow
             label: I18n.t("Индикаторы", "Indicators")
             hint: I18n.t("Caps Lock, раскладка, заряд, сколько заблокировано, новые уведомления (только число)", "Caps Lock, layout, battery, time locked, new notifications (count only)")
+            preview: "LockScreen"
             PxToggle {
                 checked: Config.lock.indicators
-                onToggled: c => Config.lock.indicators = c
+                onToggled: c => {
+                    Config.lock.indicators = c;
+                    if (c)
+                        indRow.show("indicators", I18n.t("индикаторы", "indicators"));
+                }
             }
         }
         SettingRow {
+            id: streamRow
             label: I18n.t("NGO-стрим", "NGO stream")
             hint: I18n.t("LIVE, «зрители» и милый чат, который реагирует на ввод. Всё выдумано локально.", "LIVE badge, “viewers” and a cute chat reacting to typing. All made up locally.")
+            preview: "LockScreen"
             PxToggle {
                 checked: Config.lock.stream
-                onToggled: c => Config.lock.stream = c
+                onToggled: c => {
+                    Config.lock.stream = c;
+                    if (c)
+                        streamRow.show("stream", "LIVE");
+                }
             }
         }
         SettingRow {
