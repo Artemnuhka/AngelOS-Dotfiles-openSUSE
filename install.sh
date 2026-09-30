@@ -23,7 +23,8 @@
 #   DOWNLOAD_VOXTYPE_MODEL=0|1     Whisper large-v3-turbo model (~1.6 GB)
 #   WALLPAPER_PACKS=all|none|Lain,Pixel,…
 #                                  wallpaper packs to download (full mode, default all):
-#                                  Lain (~410 MB), Pixel (~187 MB), pixel-art-green-wallpapers (~275 MB).
+#                                  Lain (~410 MB), Pixel (~187 MB), pixel-art-green-wallpapers (~275 MB),
+#                                  Hell (~0.4 MB, the angelOS demon's wallpapers).
 #                                  They live in WALLPAPERS_REPO; only the chosen folders are fetched.
 #   WALLPAPERS_REPO=<git url>      default https://github.com/MixaDoDs/PixelStreetArt_Wallpapers
 #   INSTALL_WALLPAPERS=0|1         older switch: 0 = no packs, 1 = all packs
@@ -71,6 +72,7 @@ WALLPAPER_LIST=(
   "Lain|136|410|Serial Experiments Lain|Serial Experiments Lain"
   "Pixel|100|187|pixel street art, games, cities|пиксельный стрит-арт, игры, города"
   "pixel-art-green-wallpapers|200|275|green pixel art|зелёный пиксель-арт"
+  "Hell|7|1|pixel hell for the angelOS demon (public-domain paintings)|пиксельный ад для демоницы angelOS (картины в общественном достоянии)"
 )
 if ! is_set WALLPAPER_PACKS; then
   [[ "$INSTALL_WALLPAPERS" == 0 ]] && WALLPAPER_PACKS=none || WALLPAPER_PACKS=all

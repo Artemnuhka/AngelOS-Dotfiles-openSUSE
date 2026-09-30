@@ -247,8 +247,8 @@ The helper scripts use `grim` and `slurp` (screenshots), `wf-recorder` (recordin
 ## ✧ Installation
 
 ```bash
-git clone https://github.com/MixaDoDs/PixelStreetArt_Dotfiles_Niri.git
-cd PixelStreetArt_Dotfiles_Niri
+git clone https://github.com/MixaDoDs/AngelOS-Dotfiles.git
+cd AngelOS-Dotfiles
 ./.install
 ```
 
@@ -256,7 +256,7 @@ cd PixelStreetArt_Dotfiles_Niri
 
 1. **Profile**: `full` (styling, a desktop shell, pixel fonts and icons, wallpapers) or `tech` (Niri config and helper tools only).
 2. **Shell**: **angelOS** (default), Noctalia, or none.
-3. **Wallpapers**: which packs to download from [PixelStreetArt_Wallpapers](https://github.com/MixaDoDs/PixelStreetArt_Wallpapers) — Lain (~410 MB), Pixel (~187 MB), green pixel art (~275 MB), all or none. Only the chosen folders are fetched.
+3. **Wallpapers**: which packs to download from [PixelStreetArt_Wallpapers](https://github.com/MixaDoDs/PixelStreetArt_Wallpapers) — Lain (~410 MB), Pixel (~187 MB), green pixel art (~275 MB), Hell (pixel hell for the demon, ~0.4 MB), all or none. Only the chosen folders are fetched.
 4. **Voice input**: whether to install Voxtype and its ~1.6 GB Whisper model.
 5. **Login screen**: whether to install SDDM with the `pixel-cyberpunk` theme and make it the login manager.
 6. **Keyboard layouts**: pick from a list or type any XKB code.
@@ -311,7 +311,7 @@ With angelOS: **Settings → Updates** checks the repository you installed from,
 Installs made before this page existed need one manual update to get it:
 
 ```bash
-cd PixelStreetArt_Dotfiles_Niri
+cd AngelOS-Dotfiles
 git pull
 ./install.sh
 ```
