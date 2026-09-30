@@ -21,7 +21,12 @@
 #   SKIP_PACKAGES=0|1              skip `pacman -Syu`
 #   INSTALL_VOXTYPE=0|1            voice input binary (checksum-verified download)
 #   DOWNLOAD_VOXTYPE_MODEL=0|1     Whisper large-v3-turbo model (~1.6 GB)
-#   INSTALL_WALLPAPERS=0|1         copy the wallpaper collection (~880 MB, full mode)
+#   WALLPAPER_PACKS=all|none|Lain,Pixel,…
+#                                  wallpaper packs to download (full mode, default all):
+#                                  Lain (~410 MB), Pixel (~187 MB), pixel-art-green-wallpapers (~275 MB).
+#                                  They live in WALLPAPERS_REPO; only the chosen folders are fetched.
+#   WALLPAPERS_REPO=<git url>      default https://github.com/MixaDoDs/PixelStreetArt_Wallpapers
+#   INSTALL_WALLPAPERS=0|1         older switch: 0 = no packs, 1 = all packs
 #   ENABLE_SERVICES=0|1            enable the systemd user services
 #   INSTALL_FLATPAK=0|1            install packages/flatpak-apps.txt
 #
@@ -39,7 +44,7 @@ VOXTYPE_FORCE="${VOXTYPE_FORCE:-0}"
 # asks about the rest.
 is_set() { [[ -n "${!1+x}" ]]; }
 for v in DOTFILES_MODE DESKTOP_SHELL NOCTALIA KB_LAYOUTS KB_TOGGLE INSTALL_VOXTYPE DOWNLOAD_VOXTYPE_MODEL \
-         INSTALL_WALLPAPERS INSTALL_SDDM NOCTALIA_RESET_SETTINGS; do
+         INSTALL_WALLPAPERS WALLPAPER_PACKS INSTALL_SDDM NOCTALIA_RESET_SETTINGS; do
   is_set "$v" && declare -r "GIVEN_$v=1"
 done
 given() { local n="GIVEN_$1"; [[ -n "${!n:-}" ]]; }
@@ -60,6 +65,16 @@ SKIP_PACKAGES="${SKIP_PACKAGES:-0}"
 INSTALL_VOXTYPE="${INSTALL_VOXTYPE:-1}"
 DOWNLOAD_VOXTYPE_MODEL="${DOWNLOAD_VOXTYPE_MODEL:-1}"
 INSTALL_WALLPAPERS="${INSTALL_WALLPAPERS:-1}"
+WALLPAPERS_REPO="${WALLPAPERS_REPO:-https://github.com/MixaDoDs/PixelStreetArt_Wallpapers}"
+# folder|pictures|MB|English|Russian — folders of WALLPAPERS_REPO, copied to ~/Pictures/<folder>
+WALLPAPER_LIST=(
+  "Lain|136|410|Serial Experiments Lain|Serial Experiments Lain"
+  "Pixel|100|187|pixel street art, games, cities|пиксельный стрит-арт, игры, города"
+  "pixel-art-green-wallpapers|200|275|green pixel art|зелёный пиксель-арт"
+)
+if ! is_set WALLPAPER_PACKS; then
+  [[ "$INSTALL_WALLPAPERS" == 0 ]] && WALLPAPER_PACKS=none || WALLPAPER_PACKS=all
+fi
 ENABLE_SERVICES="${ENABLE_SERVICES:-1}"
 INSTALL_FLATPAK="${INSTALL_FLATPAK:-0}"
 INSTALL_SDDM="${INSTALL_SDDM:-1}"
@@ -274,10 +289,8 @@ ask_profile() {
       *) DESKTOP_SHELL=angelos ;;
     esac
   fi
-  if [[ "$MODE" == 1 || "$MODE" == full ]] && ! given INSTALL_WALLPAPERS; then
-    confirm "$(_ 'Copy the wallpaper collection to ~/Pictures (~880 MB)?' \
-                 'Скопировать коллекцию обоев в ~/Pictures (~880 МБ)?')" y \
-      && INSTALL_WALLPAPERS=1 || INSTALL_WALLPAPERS=0
+  if [[ "$MODE" == 1 || "$MODE" == full ]] && ! given INSTALL_WALLPAPERS && ! given WALLPAPER_PACKS; then
+    choose_wallpapers
   fi
   if ! given INSTALL_VOXTYPE; then
     confirm "$(_ 'Install offline voice input (Voxtype + ~1.6 GB Whisper model)?' \
@@ -289,6 +302,78 @@ ask_profile() {
                  'Поставить экран входа SDDM с темой pixel-cyberpunk?')" "$( ((INSTALL_SDDM)) && echo y || echo n)" \
       && INSTALL_SDDM=1 || INSTALL_SDDM=0
   fi
+}
+
+# ── Wallpaper packs ──────────────────────────────────────────────────────────
+
+choose_wallpapers() {
+  local i entry id count mb en ru answer total=0 picked=()
+  _ "Wallpaper packs (downloaded from $WALLPAPERS_REPO)" "Паки обоев (скачиваются из $WALLPAPERS_REPO)"; echo
+  for i in "${!WALLPAPER_LIST[@]}"; do
+    IFS='|' read -r id count mb en ru <<<"${WALLPAPER_LIST[i]}"
+    total=$((total + mb))
+    printf '  %d) %-28s %s\n' "$((i + 1))" "$id" "$(_ "$count pictures, ~$mb MB — $en" "$count картинок, ~$mb МБ — $ru")"
+  done
+  _ "  a) all (~$total MB)    n) none (only the 3 default pictures)" \
+    "  a) все (~$total МБ)    n) никаких (только 3 картинки по умолчанию)"; echo
+  read -r -p "$(_ 'Packs, e.g. 1 3' 'Паки, например 1 3') [a]: " answer || true
+  case "${answer:-a}" in
+    a|A|all|все|а|А) WALLPAPER_PACKS=all ;;
+    n|N|none|0|нет|н|Н) WALLPAPER_PACKS=none ;;
+    *)
+      for i in ${answer//,/ }; do
+        [[ "$i" =~ ^[0-9]+$ ]] && ((i >= 1 && i <= ${#WALLPAPER_LIST[@]})) || continue
+        picked+=("${WALLPAPER_LIST[i-1]%%|*}")
+      done
+      if ((${#picked[@]})); then WALLPAPER_PACKS="$(IFS=,; echo "${picked[*]}")"; else WALLPAPER_PACKS=none; fi
+      ;;
+  esac
+}
+
+# WALLPAPER_PACKS → folder names, one per line: exact names (any case) or a part of
+# one name ("lain", "green"); unknown or ambiguous ones are skipped with a warning
+wallpaper_folders() {
+  local want entry name id hits
+  case "${WALLPAPER_PACKS,,}" in
+    ""|none|0|no) return 0 ;;
+    all|1|yes) for entry in "${WALLPAPER_LIST[@]}"; do echo "${entry%%|*}"; done; return 0 ;;
+  esac
+  for want in ${WALLPAPER_PACKS//,/ }; do
+    id="" hits=0
+    for entry in "${WALLPAPER_LIST[@]}"; do
+      name="${entry%%|*}"
+      [[ "${name,,}" == "${want,,}" ]] && { id="$name"; hits=1; break; }
+      [[ "${name,,}" == *"${want,,}"* ]] && { id="$name"; hits=$((hits + 1)); }
+    done
+    if ((hits == 1)); then echo "$id"
+    else warn "$(_ "Unknown wallpaper pack: $want" "Неизвестный пак обоев: $want")"; fi
+  done | awk '!seen[$0]++'
+}
+
+# Only the chosen folders are fetched (partial clone + sparse checkout).
+install_wallpaper_packs() {
+  local folders tmp
+  mapfile -t folders < <(wallpaper_folders)
+  ((${#folders[@]})) || return 0
+  if ! command -v git >/dev/null 2>&1; then
+    warn "$(_ 'git is missing: wallpaper packs skipped' 'Нет git: паки обоев пропущены')"
+    return 0
+  fi
+  say "$(_ "Downloading wallpapers: ${folders[*]}…" "Скачиваю обои: ${folders[*]}…")"
+  tmp="$(mktemp -d)"
+  if git clone --quiet --depth 1 --filter=blob:none --sparse -- "$WALLPAPERS_REPO" "$tmp/w" &&
+     git -C "$tmp/w" sparse-checkout set -- "${folders[@]}"; then
+    mkdir -p -- "$HOME_DIR/Pictures"
+    for f in "${folders[@]}"; do
+      [[ -d "$tmp/w/$f" ]] && cp -au -- "$tmp/w/$f" "$HOME_DIR/Pictures/"
+    done
+    say "$(_ 'Wallpapers are in ~/Pictures' 'Обои лежат в ~/Pictures')"
+  else
+    warn "$(_ "Could not download wallpapers from $WALLPAPERS_REPO; run the installer again later" \
+               "Не удалось скачать обои из $WALLPAPERS_REPO; запустите установщик позже ещё раз")"
+  fi
+  rm -rf -- "$tmp"
+  return 0
 }
 
 normalize_mode() {
@@ -504,11 +589,12 @@ install_assets() {
     mkdir -p -- "$HOME_DIR/.local/share"
     cp -au -- "$ROOT/.local/share/." "$HOME_DIR/.local/share/"
   fi
-  if [[ "$INSTALL_WALLPAPERS" == 1 && -d "$ROOT/Pictures" ]]; then
-    say "$(_ 'Copying wallpapers…' 'Копирование обоев…')"
+  # the few default pictures ship with the dotfiles; the packs come from WALLPAPERS_REPO
+  if [[ -d "$ROOT/Pictures" ]]; then
     mkdir -p -- "$HOME_DIR/Pictures"
     cp -au -- "$ROOT/Pictures/." "$HOME_DIR/Pictures/"
   fi
+  install_wallpaper_packs
   command -v fc-cache >/dev/null 2>&1 && { fc-cache -f "$HOME_DIR/.local/share/fonts" >/dev/null 2>&1 || true; }
   command -v xdg-user-dirs-update >/dev/null 2>&1 && { xdg-user-dirs-update || true; }
   return 0

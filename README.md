@@ -229,7 +229,7 @@ The `tech` install profile installs the lighter `niri-screenshot-region-simple` 
 - Noctalia as an alternative shell, and a shell-free fallback config.
 - An SDDM login screen: the animated [`pixel-cyberpunk`](#-login-screen-sddm) theme, installed and enabled for you.
 - Kitty, Alacritty, Foot, GTK, Fastfetch and fontconfig setups, themed to match.
-- The `pixora` pixel icon theme, Cozette / Pixeloid pixel fonts and a set of wallpapers.
+- The `pixora` pixel icon theme, Cozette / Pixeloid pixel fonts and the wallpaper packs you pick.
 - Package lists for Arch-based systems.
 - An installer that asks which shell and keyboard layouts you want, backs up anything it replaces, and is safe to re-run.
 
@@ -256,7 +256,7 @@ cd PixelStreetArt_Dotfiles_Niri
 
 1. **Profile**: `full` (styling, a desktop shell, pixel fonts and icons, wallpapers) or `tech` (Niri config and helper tools only).
 2. **Shell**: **angelOS** (default), Noctalia, or none.
-3. **Wallpapers**: whether to copy the ~880 MB collection.
+3. **Wallpapers**: which packs to download from [PixelStreetArt_Wallpapers](https://github.com/MixaDoDs/PixelStreetArt_Wallpapers) — Lain (~410 MB), Pixel (~187 MB), green pixel art (~275 MB), all or none. Only the chosen folders are fetched.
 4. **Voice input**: whether to install Voxtype and its ~1.6 GB Whisper model.
 5. **Login screen**: whether to install SDDM with the `pixel-cyberpunk` theme and make it the login manager.
 6. **Keyboard layouts**: pick from a list or type any XKB code.
@@ -269,7 +269,7 @@ Everything can also be given up front, which makes the installer fully unattende
 ```bash
 DOTFILES_MODE=full DESKTOP_SHELL=angelos \
 KB_LAYOUTS="us ru" KB_TOGGLE=alt_shift \
-INSTALL_WALLPAPERS=1 INSTALL_VOXTYPE=1 DOWNLOAD_VOXTYPE_MODEL=1 \
+WALLPAPER_PACKS=Lain,Pixel INSTALL_VOXTYPE=1 DOWNLOAD_VOXTYPE_MODEL=1 \
 ./install.sh
 ```
 
@@ -282,6 +282,7 @@ DESKTOP_SHELL=none ./install.sh                               # plain Niri, no s
 INSTALL_SDDM=0 ./install.sh                                   # keep your current login manager
 INSTALL_VOXTYPE=0 DOWNLOAD_VOXTYPE_MODEL=0 ./install.sh       # no voice input
 ENABLE_SERVICES=0 ./install.sh                                # do not enable user services
+WALLPAPER_PACKS=none ./install.sh                             # no wallpaper packs (all | none | Lain,Pixel,…)
 ```
 
 `NOCTALIA=1` / `NOCTALIA=0` from earlier versions still work and mean `DESKTOP_SHELL=noctalia` / `none`.
@@ -405,7 +406,7 @@ Review and adjust for your system:
 .config/                     Niri, Noctalia, Voxtype, terminal, GTK and fastfetch configuration
 .local/bin/                  Wayland helper scripts
 .local/share/                Optional icon theme and pixel fonts
-Pictures/                    Optional wallpapers
+Pictures/                    The three default wallpapers (the packs live in PixelStreetArt_Wallpapers)
 packages/                    Arch, AUR and Flatpak package lists (angelos.txt, sddm.txt)
 sddm/                        SDDM pixel-cyberpunk theme and its config drop-in
 scripts/check.sh             Repository check, including end-to-end installer tests
@@ -417,7 +418,7 @@ install.sh                   Installer with backups, profiles and a shell choice
 ## ✧ Notes
 
 - No credentials, browser profiles, cookies, history, caches, keyrings or local runtime state are included. angelOS settings (`~/.config/angelos`) are yours and are not part of the repository.
-- Wallpapers are optional and can be removed without affecting the configuration.
+- Wallpaper packs are a separate repository, [PixelStreetArt_Wallpapers](https://github.com/MixaDoDs/PixelStreetArt_Wallpapers); they are optional and can be removed without affecting the configuration.
 - The `pixora` icon theme and pixel fonts are optional visual assets.
 - angelOS draws only its own pixel decorations; no game art is included.
 - Niri configuration syntax changes between releases; check the current Niri documentation if an option is rejected.
