@@ -21,6 +21,8 @@ python-evdev
 socat
 bubblewrap
 python-pillow
+# Y2K sounds are synthesised with numpy (ffmpeg turns them into .ogg when present)
+python-numpy
 # desktop widgets and plugins
 cava
 wlsunset

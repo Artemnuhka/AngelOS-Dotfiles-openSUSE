@@ -1,0 +1,35 @@
+# angelOS checks on every push and pull request that touches the shell or niri:
+# the offscreen UI self-test (every settings page, preview scene, search speed,
+# the right-click crash guard) and `niri validate` of the shipped config.
+name: angelOS
+
+on:
+  push:
+    paths:
+      - ".config/quickshell/angelos/**"
+      - ".config/niri/**"
+      - ".github/workflows/angelos.yml"
+  pull_request:
+    paths:
+      - ".config/quickshell/angelos/**"
+      - ".config/niri/**"
+      - ".github/workflows/angelos.yml"
+  workflow_dispatch:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Packages
+        run: |
+          pacman -Syu --noconfirm --needed git dbus python python-pillow python-numpy \
+            quickshell qt6-declarative qt6-5compat qt6-imageformats qt6-svg niri
+      - uses: actions/checkout@v4
+      - name: UI self-test (offscreen)
+        run: bash .config/quickshell/angelos/scripts/test-ui.sh .config/quickshell/angelos
+      - name: niri validate
+        run: |
+          T="$(mktemp -d)"; mkdir -p "$T/.config"; cp -r .config/niri "$T/.config/"
+          grep -rlF '@HOME@' "$T/.config/niri" | xargs -r sed -i "s#@HOME@#$T#g"
+          HOME="$T" XDG_CONFIG_HOME="$T/.config" niri validate -c "$T/.config/niri/config.kdl"
