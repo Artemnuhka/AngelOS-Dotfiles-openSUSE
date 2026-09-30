@@ -417,6 +417,8 @@ pacman_install() {
   say "$(_ 'Updating the system and installing packages (pacman -Syu)…' \
            'Обновление системы и установка пакетов (pacman -Syu)…')"
   sudo pacman -Syu --needed "${packages[@]}"
+  # angelOS Meta tap reads the keyboards via evdev (issue #6); the group applies after re-login
+  [[ "$DESKTOP_SHELL" == angelos ]] && ! id -nG "$USER" | grep -qw input && sudo usermod -aG input "$USER" || true
 }
 
 install_noctalia() {
