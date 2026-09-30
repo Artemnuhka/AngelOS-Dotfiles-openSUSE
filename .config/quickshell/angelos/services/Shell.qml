@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import qs.config
 
 // UI state shared by modules + small helpers.
@@ -18,6 +19,16 @@ Singleton {
     property string launcherPrefill: ""
     property bool sessionOpen: false
     property bool bootOpen: false            // Y2K loading screen (modules/y2k/BootScreen)
+    // the shell's own pid: its windows (settings, osu!mini…) share it, so
+    // "End task" on them would kill angelOS itself
+    property int pid: 0
+    property Process pidProbe: Process {
+        running: true
+        command: ["sh", "-c", "echo $PPID"]
+        stdout: StdioCollector {
+            onStreamFinished: root.pid = parseInt(text) || 0
+        }
+    }
     property bool clipboardOpen: false
     property bool gameOpen: false            // osu!mini window (plugin osu-mini)
     property bool locked: false

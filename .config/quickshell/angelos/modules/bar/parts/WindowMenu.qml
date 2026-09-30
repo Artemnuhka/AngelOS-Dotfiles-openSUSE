@@ -185,8 +185,9 @@ PopupWindow {
                 icon: "close"
                 onTriggered: root.run(() => root.siblings.forEach(w => Niri.closeWindow(w.id)))
             }
+            // not for angelOS's own windows: their pid is the shell itself
             PxMenuItem {
-                visible: !!root.win && !!root.win.pid
+                visible: !!root.win && !!root.win.pid && root.win.pid !== Shell.pid && Shell.pid > 0
                 height: visible ? implicitHeight : 0
                 text: I18n.t("Завершить процесс", "End task")
                 hint: root.win && root.win.pid ? "pid " + root.win.pid : ""
