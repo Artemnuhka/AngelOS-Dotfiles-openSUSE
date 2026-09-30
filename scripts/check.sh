@@ -235,6 +235,28 @@ else
     else
       fail "installer: existing angelOS settings and owner marker survive an update"
     fi
+    # An update keeps what the user (or angelOS's settings) changed, and still
+    # brings new versions of the files nobody touched (issue #23).
+    d="$WORK/default"
+    echo '// my own binds' >>"$d/.config/niri/cfg/keybinds.kdl"
+    printf '[Default Applications]\nx-scheme-handler/http=firefox.desktop\n' >"$d/.config/mimeapps.list"
+    ff=".config/fastfetch/config.jsonc"
+    echo '{ "old": true }' >"$d/$ff"
+    manifest="$d/.local/state/angelos/installed-files.sha256"
+    sed -i "s|^[0-9a-f]*  $ff\$|$(sha256sum "$d/$ff" | cut -d' ' -f1)  $ff|" "$manifest"
+    install_case default
+    if grep -q '// my own binds' "$d/.config/niri/cfg/keybinds.kdl" &&
+       grep -q 'firefox.desktop' "$d/.config/mimeapps.list" &&
+       [[ -f "$d/.local/state/angelos/kept-updates/.config/niri/cfg/keybinds.kdl" ]]; then
+      pass "installer: an update keeps changed configs (new versions parked)"
+    else
+      fail "installer: an update keeps changed configs (new versions parked)"
+    fi
+    if cmp -s "$ROOT/$ff" "$d/$ff"; then
+      pass "installer: an update refreshes configs the user did not change"
+    else
+      fail "installer: an update refreshes configs the user did not change"
+    fi
     echo 'output "X" { scale 2 }' >"$WORK/default/.config/niri/monitor.kdl"
     install_case default
     if grep -q 'scale 2' "$WORK/default/.config/niri/monitor.kdl"; then

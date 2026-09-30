@@ -30,9 +30,17 @@
 #   INSTALL_WALLPAPERS=0|1         older switch: 0 = no packs, 1 = all packs
 #   ENABLE_SERVICES=0|1            enable the systemd user services
 #   INSTALL_FLATPAK=0|1            install packages/flatpak-apps.txt
+#   OVERWRITE_CONFIGS=0|1          1 = replace config files you changed too (backed up);
+#                                  default 0 keeps them (see below)
 #
 # Every file that gets replaced is first moved to  name.bak.YYYYMMDD-HHMMSS.
 # Re-running the installer is safe: unchanged files are left alone.
+# Updating keeps your settings: a config file you (or angelOS's settings) changed
+# since the installer wrote it stays as it is, and its new version is parked in
+# ~/.local/state/angelos/kept-updates/ to compare. The installer remembers what it
+# wrote in ~/.local/state/angelos/installed-files.sha256; for older installs the
+# file is compared with the earlier versions in the repository's history.
+# The shell's own code (.config/quickshell/angelos, .local/bin) is always updated.
 set -Eeuo pipefail
 
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
@@ -482,7 +490,12 @@ install_voxtype_model() {
 
 # ── Config files ─────────────────────────────────────────────────────────────
 
-N_INSTALLED=0 N_UNCHANGED=0 N_KEPT=0
+N_INSTALLED=0 N_UNCHANGED=0 N_KEPT=0 N_PARKED=0
+OVERWRITE_CONFIGS="${OVERWRITE_CONFIGS:-0}"
+STATE_DIR="${XDG_STATE_HOME:-$HOME_DIR/.local/state}/angelos"
+MANIFEST="$STATE_DIR/installed-files.sha256"
+PARKED_DIR="$STATE_DIR/kept-updates"
+declare -A PREV_SUM=() NEW_SUM=()
 
 sed_escape() { printf '%s' "$1" | sed -e 's/[\/&|\\]/\\&/g'; }
 
@@ -513,28 +526,96 @@ backup() {
 }
 
 # Files that belong to the user (or are rewritten by the system itself): seeded
-# on the first install, never overwritten afterwards.
+# on the first install, never overwritten afterwards. mimeapps.list holds the
+# default apps (browser, file manager…) that apps and angelOS's settings set.
 keep_existing() {
   case "$1" in
-    .config/niri/monitor.kdl|.config/user-dirs.dirs|.config/user-dirs.locale) return 0 ;;
+    .config/niri/monitor.kdl|.config/user-dirs.dirs|.config/user-dirs.locale|.config/mimeapps.list) return 0 ;;
   esac
   return 1
 }
 
+sum_of() { sha256sum -- "$1" | cut -d' ' -f1; }
+
+load_manifest() {
+  local sum rel
+  [[ -f "$MANIFEST" ]] || return 0
+  while read -r sum rel; do
+    [[ -n "$rel" ]] && PREV_SUM["$rel"]="$sum"
+  done <"$MANIFEST"
+}
+
+save_manifest() {
+  local rel
+  mkdir -p -- "$STATE_DIR"
+  for rel in "${!NEW_SUM[@]}"; do
+    printf '%s  %s\n' "${NEW_SUM[$rel]}" "$rel"
+  done | sort -k2 >"$MANIFEST.tmp" && mv -f -- "$MANIFEST.tmp" "$MANIFEST"
+}
+
+# Files the installer itself changed after installing them (rewiring): record
+# them as they are now, so the next update does not take them for the user's.
+remember() {
+  local rel
+  for rel in "$@"; do
+    [[ -f "$HOME_DIR/$rel" ]] && NEW_SUM["$rel"]="$(sum_of "$HOME_DIR/$rel")"
+  done
+  save_manifest
+}
+
+# The shell's own code: always brought up to date (the old copy is backed up).
+is_program() {
+  case "$1" in
+    .config/quickshell/angelos/*|.local/bin/*) return 0 ;;
+  esac
+  return 1
+}
+
+# Is the file at $2 still what the installer put there? The manifest says so for
+# installs that have one; before it existed, any earlier version of the repo
+# file $3 (rendered like now) counts as untouched.
+untouched() {
+  local rel="$1" dst="$2" srel="$3" cur h raw tmp
+  cur="$(sum_of "$dst")"
+  if [[ -n "${PREV_SUM[$rel]:-}" ]]; then
+    [[ "$cur" == "${PREV_SUM[$rel]}" ]]
+    return
+  fi
+  git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1 || return 1
+  raw="$(mktemp)" tmp="$(mktemp)"; TMP_FILES+=("$raw" "$tmp")
+  while read -r h; do
+    git -C "$ROOT" show "$h:$srel" >"$raw" 2>/dev/null || continue
+    render "$raw" "$tmp"
+    [[ "$(sum_of "$tmp")" == "$cur" ]] && return 0
+  done < <(git -C "$ROOT" log --format=%H -n 80 -- "$srel" 2>/dev/null)
+  return 1
+}
+
 install_file() {
-  local src="$1" rel="$2" dst="$HOME_DIR/$2" tmp
+  local src="$1" rel="$2" dst="$HOME_DIR/$2" tmp srel="${1#"$ROOT/"}"
   if keep_existing "$rel" && [[ -e "$dst" ]]; then
     N_KEPT=$((N_KEPT + 1)); return 0
   fi
   tmp="$(mktemp)"; TMP_FILES+=("$tmp")
   render "$src" "$tmp"
   if [[ -e "$dst" ]] && cmp -s -- "$tmp" "$dst"; then
+    NEW_SUM["$rel"]="$(sum_of "$tmp")"
     N_UNCHANGED=$((N_UNCHANGED + 1)); return 0
+  fi
+  # changed since the installer wrote it (by hand, or by angelOS's settings:
+  # hotkeys, animations, the default browser…): the user's version stays
+  if [[ -e "$dst" && "$OVERWRITE_CONFIGS" != 1 ]] && ! is_program "$rel" && ! untouched "$rel" "$dst" "$srel"; then
+    mkdir -p -- "$(dirname -- "$PARKED_DIR/$rel")"
+    cp -p -- "$tmp" "$PARKED_DIR/$rel"
+    chmod --reference="$src" "$PARKED_DIR/$rel"
+    [[ -n "${PREV_SUM[$rel]:-}" ]] && NEW_SUM["$rel"]="${PREV_SUM[$rel]}"
+    N_PARKED=$((N_PARKED + 1)); return 0
   fi
   mkdir -p -- "$(dirname -- "$dst")"
   backup "$dst"
   cp -p -- "$tmp" "$dst"
   chmod --reference="$src" "$dst"
+  NEW_SUM["$rel"]="$(sum_of "$dst")"
   N_INSTALLED=$((N_INSTALLED + 1))
 }
 
@@ -572,6 +653,8 @@ install_configs() {
   local src rel dest
   mkdir -p -- "$HOME_DIR/.config" "$HOME_DIR/.local/bin"
   say "$(_ 'Installing configuration…' 'Установка конфигурации…')"
+  load_manifest
+  rm -rf -- "$PARKED_DIR"
 
   while IFS= read -r -d '' src; do
     rel="${src#"$ROOT/"}"
@@ -584,6 +667,7 @@ install_configs() {
     install_file "$ROOT/.local/bin/niri-screenshot-region-simple" ".local/bin/niri-screenshot-region"
     install_file "$ROOT/.local/bin/niri-record-region-simple" ".local/bin/niri-record-region"
   fi
+  save_manifest
 }
 
 install_assets() {
@@ -792,6 +876,8 @@ install_shell() {
     # Noctalia: the repo ships angelOS wiring; rewrite it for Noctalia in place
     python3 "$shell_dir/scripts/switch.py" noctalia-forward >/dev/null 2>&1 \
       || warn "$(_ 'Could not wire niri for Noctalia' 'Не удалось переключить niri на Noctalia')"
+    # the rewired files are the installer's own work, not the user's changes
+    remember .config/niri/config.kdl .config/niri/cfg/autostart.kdl .config/niri/cfg/keybinds.kdl
   fi
 }
 
@@ -816,6 +902,10 @@ summary() {
   fi
   say "$(_ "Files: $N_INSTALLED installed, $N_UNCHANGED unchanged, $N_KEPT kept" \
            "Файлы: $N_INSTALLED установлено, $N_UNCHANGED без изменений, $N_KEPT сохранено")"
+  if ((N_PARKED)); then
+    say "$(_ "Your changes kept in $N_PARKED config file(s); their new versions: ${PARKED_DIR/#$HOME_DIR/\~}/ (OVERWRITE_CONFIGS=1 replaces them, with a backup)" \
+             "Твои изменения сохранены в $N_PARKED файл(ах) конфигов; их новые версии: ${PARKED_DIR/#$HOME_DIR/\~}/ (OVERWRITE_CONFIGS=1 заменит их, с бэкапом)")"
+  fi
   say "$(_ 'Keyboard' 'Клавиатура'): ${KB_LAYOUTS}${KB_OPTIONS:+  ($KB_OPTIONS)}"
   say "$(_ '  change later in' '  изменить позже в') ~/.config/niri/cfg/input.kdl"
   say "$(_ 'Monitors: run nwg-displays, or edit ~/.config/niri/monitor.kdl' \
