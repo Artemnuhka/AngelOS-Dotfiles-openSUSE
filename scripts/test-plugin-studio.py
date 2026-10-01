@@ -312,5 +312,126 @@ class ProviderTest(unittest.TestCase):
             None, None, 307, "", {}, "https://other.example/"))
 
 
+class EditTest(StudioTest):
+    """Improving an installed plugin: edit, diff, the built-in editor, update, rollback, reload."""
+    def install_counter(self):
+        draft = self.generate()
+        self.request("install", digest=draft["digest"])
+        pid = PLAN["spec"]["id"]
+        # a picture Studio cannot edit rides along
+        (self.worker.plugins / pid / "cat.png").write_bytes(b"\x89PNG\r\n\x1a\n\x00\x01binary")
+        return pid
+
+    def edited_bundle(self, text="Taps: "):
+        bundle = copy.deepcopy(BUNDLE)
+        for row in bundle["files"]:
+            if row["path"] == "DesktopWidget.qml":
+                row["content"] = row["content"].replace("Clicks: ", text)
+            if row["path"] == "manifest.json":
+                m = json.loads(row["content"]); m["version"] = "1.1.0"; row["content"] = json.dumps(m)
+        bundle["summary"] = "Renamed the label."
+        return bundle
+
+    def test_edit_update_rollback(self):
+        pid = self.install_counter()
+        target = self.worker.plugins / pid
+        s = self.request("edit_start", id=pid)["session"]
+        self.assertEqual(s["mode"], "edit")
+        self.assertEqual(s["kept"], ["cat.png"])
+        self.assertEqual(s["draft"]["errors"], [])
+        self.assertFalse(s["draft"]["changed"])
+        with self.assertRaises(studio.StudioError):
+            self.request("update", digest=s["draft"]["digest"])   # nothing changed
+        # direct change request
+        self.reply = self.edited_bundle()
+        s = self.request("generate", prompt="Call them taps")["session"]
+        d = s["draft"]
+        self.assertTrue(d["changed"])
+        self.assertEqual({c["path"] for c in d["changes"]}, {"DesktopWidget.qml", "manifest.json"})
+        self.assertIn("+", d["changes"][0]["diff"])
+        # kept picture exists in the draft dir, not in the bundle
+        self.assertTrue((Path(d["directory"]) / "cat.png").exists())
+        self.assertNotIn("cat.png", [f["path"] for f in d["files"]])
+        # the instruction carried the current files
+        wire = json.loads(self.calls[-1][0].data)
+        self.assertIn("CURRENT FILES", json.dumps(wire["input"]))
+        r = self.request("update", digest=d["digest"])
+        self.assertIn("Taps: ", (target / "DesktopWidget.qml").read_text())
+        self.assertEqual((target / "cat.png").read_bytes()[:4], b"\x89PNG")
+        link = Path(r["reloaded"]["loadDir"])
+        self.assertTrue(link.is_symlink() and link.resolve() == target.resolve())
+        self.assertEqual(r["backups"][pid], 1)
+        self.assertFalse(r["session"]["draft"]["changed"])       # new base
+        self.assertEqual(len(r["session"]["messages"]), 2)
+        # manual editor
+        s = self.request("save_file", path="DesktopWidget.qml",
+                         content=(target / "DesktopWidget.qml").read_text().replace("Taps: ", "Boops: "))["session"]
+        self.assertTrue(s["draft"]["changed"])
+        s = self.request("save_file", path="extra.txt", content="hi")["session"]
+        self.assertIn("extra.txt", [c["path"] for c in s["draft"]["changes"]])
+        s = self.request("delete_file", path="extra.txt")["session"]
+        with self.assertRaises(studio.StudioError):
+            self.request("delete_file", path="manifest.json")
+        with self.assertRaises(studio.StudioError):
+            self.request("save_file", path="../evil.qml", content="x")
+        with self.assertRaises(studio.StudioError):
+            self.request("save_file", path="cat.png", content="x")
+        self.request("update", digest=s["draft"]["digest"])
+        self.assertIn("Boops: ", (target / "DesktopWidget.qml").read_text())
+        # rollback → Taps, again → Boops (redo)
+        r = self.request("rollback", id=pid)
+        self.assertIn("Taps: ", (target / "DesktopWidget.qml").read_text())
+        self.assertEqual(r["session"]["mode"], "edit")
+        self.request("rollback", id=pid)
+        self.assertIn("Boops: ", (target / "DesktopWidget.qml").read_text())
+        self.assertEqual((target / "cat.png").read_bytes()[:4], b"\x89PNG")
+
+    def test_disk_change_blocks_update(self):
+        pid = self.install_counter()
+        self.request("edit_start", id=pid)
+        self.reply = self.edited_bundle()
+        d = self.request("generate", prompt="x")["session"]["draft"]
+        (self.worker.plugins / pid / "Settings.qml").write_text("// changed elsewhere\n")
+        with self.assertRaises(studio.StudioError):
+            self.request("update", digest=d["digest"])
+
+    def test_edit_cannot_change_id_and_plan_flow(self):
+        pid = self.install_counter()
+        self.request("edit_start", id=pid)
+        self.reply = copy.deepcopy(PLAN)
+        s = self.request("plan", prompt="add a reset button")["session"]
+        self.assertTrue(s["draft"])                       # the working copy stays
+        self.assertIn("EDIT MODE", self.calls[-1][0].data.decode())
+        bad = copy.deepcopy(PLAN); bad["spec"]["id"] = "other-id"
+        self.reply = bad
+        with self.assertRaises(studio.StudioError):
+            self.request("plan", prompt="rename it")
+        bundle = self.edited_bundle()
+        for row in bundle["files"]:
+            if row["path"] == "manifest.json":
+                m = json.loads(row["content"]); m["id"] = "other-id"; row["content"] = json.dumps(m)
+        self.reply = bundle
+        d = self.request("generate")["session"]["draft"]
+        self.assertTrue(any("must stay" in e for e in d["errors"]))
+
+    def test_bundled_or_missing_not_editable(self):
+        with self.assertRaises(studio.StudioError):
+            self.request("edit_start", id="cat")
+        with self.assertRaises(studio.StudioError):
+            self.request("edit_start", id="../x")
+
+    def test_reload_without_developer_mode(self):
+        pid = self.install_counter()
+        self.settings.write_text('{"developer":{"enabled":false}}')
+        r = self.request("reload", id=pid)
+        self.assertTrue(Path(r["reloaded"]["loadDir"]).is_symlink())
+        with self.assertRaises(studio.StudioError):
+            self.request("edit_start", id=pid)
+
+
+# the inherited StudioTest cases run once, in StudioTest
+for _name in [n for n in vars(StudioTest) if n.startswith("test_")]:
+    setattr(EditTest, _name, None)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
