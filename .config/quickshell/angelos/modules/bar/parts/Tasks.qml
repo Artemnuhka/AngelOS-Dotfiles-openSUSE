@@ -122,7 +122,7 @@ Item {
                         anchors.rightMargin: closeX.visible ? closeX.width + Theme.u * 4 : Theme.u * 4
                         anchors.verticalCenter: parent.verticalCenter
                         anchors.verticalCenterOffset: btn.down ? Theme.u : 0
-                        text: btn.modelData.title || btn.modelData.app_id || "?"
+                        text: Niri.titleOf(btn.modelData) || btn.modelData.app_id || "?"
                         elide: Text.ElideRight
                         font.bold: btn.modelData.is_focused
                         color: btn.modelData.is_urgent ? Theme.danger : Theme.text

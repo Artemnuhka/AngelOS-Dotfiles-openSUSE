@@ -12,7 +12,10 @@ Item {
 
     Component.onCompleted: {
         Shell.settingsView = win;
-        SettingsSearch.load();
+        if (typeof SettingsSearch.reload === "function")
+            SettingsSearch.reload();
+        else
+            SettingsSearch.load();
         SettingsKeys.load();
     }
     Component.onDestruction: if (Shell.settingsView === win)
@@ -22,6 +25,8 @@ Item {
             page: Shell.settingsPage,
             source: String(page.source),
             status: page.status,
+            sidebarVisible: sidebar.visible,
+            settingsSkin: page.item && page.item.settingsSkin !== undefined ? page.item.settingsSkin : "",
             plugin: page.item && page.item.loadedPlugin !== undefined ? page.item.loadedPlugin : ""
         };
     }
@@ -29,6 +34,9 @@ Item {
     readonly property alias frame: frame
     // while the demon rules (Y2K → Angel or demon → Settings in hell): a grimoire (GrimoireBook)
     readonly property bool grimoire: Angel.demon && Config.y2k.hellSettings === "grimoire"
+    // Classic stays the default; Windose and Stream are optional settings layouts.
+    readonly property string skin: ["classic", "windose", "stream"].includes(Config.settingsUi.skin) ? Config.settingsUi.skin : "classic"
+    readonly property string settingsSkin: grimoire ? "classic" : skin
     readonly property var groups: [
         {
             "title": I18n.t("Вид", "Appearance"),
@@ -428,7 +436,8 @@ Item {
         anchors.fill: parent
         anchors.rightMargin: Config.appearance.shadows ? Theme.u * 2 : 0
         anchors.bottomMargin: Config.appearance.shadows ? Theme.u * 2 : 0
-        title: "angelOS · " + (win.currentPage ? win.currentPage.label : Shell.settingsPage === "more" ? I18n.t("Все разделы", "All sections") : I18n.t("Настройки", "Settings"))
+        skin: win.skin
+        title: (win.skin === "windose" ? "settings.exe ♡ " : "angelOS · ") + (win.currentPage ? win.currentPage.label : Shell.settingsPage === "more" ? I18n.t("Все разделы", "All sections") : I18n.t("Настройки", "Settings"))
         icon: win.currentPage ? win.currentPage.icon : "gear"
         minimizable: false
         maximizable: true
@@ -439,14 +448,43 @@ Item {
             win.hostWindow.startSystemMove()
         bodyPadding: Theme.u * 4
 
-        // sidebar (expert view)
+        // Windose keeps its folder tree on the left; Stream uses a channel rail
+        // on the right. The same page and search model powers both layouts.
         PxBox {
             id: sidebar
-            visible: win.expert
-            width: Theme.u * 95
+            visible: win.skin !== "classic" || win.expert
+            x: win.skin === "stream" ? parent.width - width : 0
+            width: Theme.u * (win.skin === "stream" ? 92 : 95)
             height: parent.height
             sunken: true
-            color: Qt.alpha(Theme.sunken, 0.55)
+            color: win.skin === "classic" ? Qt.alpha(Theme.sunken, 0.55) : win.skin === "stream" ? Theme.streamPanel : Theme.mix(Theme.windosePaper, Theme.windoseLavender, 0.1)
+        }
+
+        Rectangle {
+            parent: sidebar
+            visible: win.skin !== "classic" && !win.expert
+            x: Theme.u * 3
+            y: Theme.u * 3
+            width: sidebar.width - Theme.u * 6
+            height: Theme.u * 21
+            radius: win.skin === "stream" ? Theme.u * 3 : 0
+            color: win.skin === "stream" ? Theme.mix(Theme.streamPanel, Theme.streamLive, 0.16) : Theme.windoseSticker
+            border.width: Math.max(1, Theme.u / 2)
+            border.color: win.skin === "stream" ? Theme.streamLive : Theme.windoseLine
+            Column {
+                anchors.centerIn: parent
+                spacing: Theme.u
+                PxText {
+                    text: win.skin === "stream" ? "● LIVE" : "♡ p-chan.exe"
+                    color: win.skin === "stream" ? Theme.streamLive : Theme.windoseInk
+                    font.bold: true
+                }
+                PxText {
+                    text: win.skin === "stream" ? I18n.t("Каналы настроек", "Settings channels") : I18n.t("Папки и стикеры", "Folders and stickers")
+                    kind: "tiny"
+                    dim: true
+                }
+            }
         }
 
         // search box and results: in the sidebar (expert) or above the page (simple)
@@ -590,13 +628,13 @@ Item {
             }
         }
 
-        // expert sidebar: every page
+        // Section navigation is available on every page in both themes.
         PxScroll {
             parent: sidebar
             visible: win.query.trim() === ""
             anchors.fill: parent
             anchors.margins: Theme.u * 2
-            anchors.topMargin: search.height + Theme.u * 4
+            anchors.topMargin: win.skin === "classic" || win.expert ? search.height + Theme.u * 4 : Theme.u * 28
             contentHeight: side.implicitHeight
 
             Column {
@@ -606,8 +644,9 @@ Item {
 
                 // back to the simple view
                 Rectangle {
+                    visible: win.expert
                     width: side.width
-                    height: Theme.u * 15
+                    height: visible ? Theme.u * 15 : 0
                     color: sm.containsMouse ? Theme.mix(Theme.face, Theme.accent, 0.15) : "transparent"
                     Row {
                         anchors.left: parent.left
@@ -640,7 +679,7 @@ Item {
                         width: side.width
                         spacing: Theme.u
                         PxText {
-                            text: "✧ " + grp.modelData.title
+                            text: (win.skin === "classic" ? "✧ " : win.skin === "windose" ? "▸ " : "# ") + grp.modelData.title
                             kind: "tiny"
                             dim: true
                             topPadding: Theme.u * 4
@@ -654,8 +693,11 @@ Item {
                                 required property var modelData
                                 readonly property bool sel: Shell.settingsPage === modelData.id
                                 width: grp.width
-                                height: Theme.u * 15
-                                color: sel ? Theme.select : em.containsMouse ? Theme.mix(Theme.face, Theme.accent, 0.15) : "transparent"
+                                height: Theme.u * (win.skin === "stream" ? 18 : 15)
+                                radius: win.skin === "stream" ? Theme.u * 2 : 0
+                                color: win.skin === "classic" ? sel ? Theme.select : em.containsMouse ? Theme.mix(Theme.face, Theme.accent, 0.15) : "transparent" : sel ? Theme.mix(Theme.face, Theme.accent, win.skin === "stream" ? 0.26 : 0.18) : em.containsMouse ? Theme.mix(Theme.face, Theme.accent, 0.12) : "transparent"
+                                border.width: win.skin !== "classic" && sel ? Math.max(1, Theme.u / 2) : 0
+                                border.color: Theme.accent
                                 Row {
                                     anchors.left: parent.left
                                     anchors.leftMargin: Theme.u * 4
@@ -664,14 +706,14 @@ Item {
                                     PxIcon {
                                         name: entry.modelData.icon
                                         anchors.verticalCenter: parent.verticalCenter
-                                        ink: entry.sel ? Theme.selectText : (Theme.dark ? Theme.text : Theme.edge)
+                                        ink: win.skin === "classic" ? entry.sel ? Theme.selectText : (Theme.dark ? Theme.text : Theme.edge) : entry.sel ? Theme.accent : Theme.text
                                     }
                                     PxText {
                                         width: entry.width - Theme.u * 24
                                         elide: Text.ElideRight
                                         text: entry.modelData.label
                                         anchors.verticalCenter: parent.verticalCenter
-                                        color: entry.sel ? Theme.selectText : Theme.text
+                                        color: win.skin === "classic" && entry.sel ? Theme.selectText : Theme.text
                                         font.bold: entry.sel
                                     }
                                 }
@@ -692,12 +734,24 @@ Item {
         // page
         PxBox {
             id: pageBox
-            anchors.left: win.expert ? sidebar.right : parent.left
-            anchors.leftMargin: win.expert ? Theme.u * 4 : 0
-            anchors.right: parent.right
+            anchors.left: win.skin === "stream" || win.skin === "classic" && !win.expert ? parent.left : sidebar.right
+            anchors.leftMargin: win.skin === "stream" || win.skin === "classic" && !win.expert ? 0 : Theme.u * (win.skin === "classic" ? 4 : 3)
+            anchors.right: win.skin === "stream" ? sidebar.left : parent.right
+            anchors.rightMargin: win.skin === "stream" ? Theme.u * 3 : 0
             height: parent.height
             sunken: true
-            color: Qt.alpha(Theme.face, Config.appearance.blur ? 0.55 : 1)
+            color: win.skin === "windose" ? Theme.windosePaper : win.skin === "stream" ? Theme.streamBg : Qt.alpha(Theme.face, Config.appearance.blur ? 0.55 : 1)
+            edgeColor: win.skin === "windose" ? Theme.windoseLine : Theme.edge
+
+            // Windose: the home and "All sections" lie on lilac checks, like Ame's desktop
+            Image {
+                visible: win.skin === "windose" && win.atHome
+                anchors.fill: parent
+                fillMode: Image.Tile
+                smooth: false
+                sourceSize: Qt.size(Theme.u * 16, Theme.u * 16)
+                source: "data:image/svg+xml;utf8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" shape-rendering="crispEdges"><rect width="16" height="16" fill="' + Theme.hex(Theme.mix(Theme.windosePaper, Theme.windoseLavender, 0.045)) + '"/><rect width="8" height="8" fill="' + Theme.hex(Theme.mix(Theme.windosePaper, Theme.windoseLavender, 0.018)) + '"/><rect x="8" y="8" width="8" height="8" fill="' + Theme.hex(Theme.mix(Theme.windosePaper, Theme.windoseLavender, 0.018)) + '"/></svg>')
+            }
 
             // simple view header: home, (search), expert
             PxButton {

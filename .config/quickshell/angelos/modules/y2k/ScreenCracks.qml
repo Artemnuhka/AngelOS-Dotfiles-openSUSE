@@ -49,6 +49,18 @@ Scope {
             if (!Angel.demon && !Angel.transition)
                 root.on = false;
         }
+        // the angel is back but the glass could not fall out where she is (stream mode, a
+        // fullscreen game): it must not stay in heaven
+        function onTransitionChanged() {
+            if (!Angel.transition && !Angel.demon)
+                leftover.restart();
+        }
+    }
+    Timer {
+        id: leftover
+        interval: 1600
+        onTriggered: if (root.on && !root.falling && !Angel.demon)
+            root.on = false
     }
     function shatter() {
         if (!on || falling)

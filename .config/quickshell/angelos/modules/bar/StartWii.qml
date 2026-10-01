@@ -19,15 +19,20 @@ Item {
     property int current: -1
     property string query: ""
     property int page: 0
-    readonly property int columns: 4
-    readonly property int rows: 3
+    // Settings → Bar → Start → Fine-tune (services/StartPrefs)
+    readonly property var prefs: StartPrefs.of("wii")
+    readonly property int columns: prefs.columns > 0 ? Math.max(2, Math.min(8, prefs.columns)) : 4
+    readonly property int rows: prefs.rows > 0 ? Math.max(1, Math.min(5, prefs.rows)) : 3
     readonly property int perPage: columns * rows
     readonly property bool searching: query.trim() !== ""
     readonly property var list: {
         if (searching)
             return StartApps.search(query);
+        const all = StartPrefs.sorted("wii", StartApps.apps);
+        if (!prefs.pinned)
+            return all;
         const pinned = StartApps.pinned;
-        return pinned.concat(StartApps.apps.filter(a => !pinned.includes(a)));
+        return pinned.concat(all.filter(a => !pinned.includes(a)));
     }
     readonly property int pageCount: Math.max(1, Math.ceil(list.length / perPage))
     readonly property var pageApps: list.slice(page * perPage, (page + 1) * perPage)
@@ -38,7 +43,7 @@ Item {
     readonly property color tileColor: Theme.dark ? "#2d2f38" : "#ffffff"
     readonly property color tileEdge: Theme.dark ? "#3c3f4a" : "#cfd4dc"
     readonly property color ink: Theme.dark ? "#e8e9ee" : "#5a5f6b"
-    readonly property color glow: Theme.accent
+    readonly property color glow: prefs.accentColor
 
     function setQuery(t) {
         query = t;
@@ -106,7 +111,7 @@ Item {
         else if (e.key === Qt.Key_Backspace) {
             if (searching)
                 setQuery(query.slice(0, -1));
-        } else if (e.text && e.text.trim() !== "" && !(e.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier)))
+        } else if (prefs.search && e.text && e.text.trim() !== "" && !(e.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier)))
             setQuery(query + e.text);
         else
             return;
@@ -117,7 +122,8 @@ Item {
     Rectangle {
         anchors.fill: parent
         color: root.base
-        opacity: root.reveal
+        // Fine-tune → Opacity: the desktop through the stripes
+        opacity: root.reveal * (root.prefs.opacity > 0 ? root.prefs.opacity / 100 : 1)
         Column {
             anchors.fill: parent
             Repeater {
@@ -227,10 +233,10 @@ Item {
                         y: Math.round(tile.height * 0.14)
                         iconName: ch.app ? ch.app.icon || "" : ""
                         appId: ch.app ? ch.app.id || "" : ""
-                        size: Math.round(tile.height * 0.5)
+                        size: Math.round(tile.height * 0.5 * Math.min(1.3, root.prefs.icons))
                     }
                     PxText {
-                        visible: !!ch.app
+                        visible: !!ch.app && root.prefs.labels
                         anchors.horizontalCenter: parent.horizontalCenter
                         anchors.bottom: parent.bottom
                         anchors.bottomMargin: Math.round(tile.height * 0.07)
@@ -376,6 +382,7 @@ Item {
             border.color: Qt.alpha(root.glow, 0.7)
         }
         Column {
+            visible: root.prefs.clock
             anchors.horizontalCenter: parent.horizontalCenter
             y: Math.round(root.bandH * 0.3)
             PxText {
@@ -383,12 +390,12 @@ Item {
                 kind: "big"
                 font.pixelSize: Theme.sizeBig * 1.6
                 color: root.ink
-                text: Qt.formatTime(now.date, "HH:mm")
+                text: I18n.time(now.date, false)
             }
             PxText {
                 anchors.horizontalCenter: parent.horizontalCenter
                 color: Qt.alpha(root.ink, 0.75)
-                text: now.date.toLocaleDateString(Qt.locale(I18n.t("ru_RU", "en_US")), "ddd d/M")
+                text: now.date.toLocaleDateString(I18n.locale, "ddd d/M")
             }
         }
         RoundButton {
@@ -398,6 +405,7 @@ Item {
             onHit: root.act(() => Shell.openSettings(""))
         }
         RoundButton {
+            visible: root.prefs.power
             x: root.width - width - Theme.u * 30
             icon: "power"
             label: I18n.t("Питание", "Power")
@@ -420,6 +428,18 @@ Item {
                 }
             }
         }
+    }
+    // the user, top left over the channels
+    StartUser {
+        visible: root.prefs.user
+        x: Theme.u * 16
+        y: Theme.u * 12
+        opacity: root.reveal
+        size: Theme.u * 16
+        frameColor: root.glow
+        textColor: root.ink
+        kind: "title"
+        onOpened: root.closeRequested()
     }
     SystemClock {
         id: now

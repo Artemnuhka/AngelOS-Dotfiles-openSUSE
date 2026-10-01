@@ -10,6 +10,7 @@ Item {
     property bool password: false
     property string icon: ""
     property string kind: "body"
+    readonly property string settingsSkin: Theme.settingsSkinFor(root.parent)
     // Enter applies and leaves the field, Esc just leaves it (issue #9) — unless
     // the field is the whole point of its window (launcher, search, passwords)
     property bool keepFocus: false
@@ -26,9 +27,18 @@ Item {
 
     PxBox {
         anchors.fill: parent
+        visible: root.settingsSkin === "classic"
         sunken: true
         color: Theme.sunken
         edgeColor: input.activeFocus ? Theme.accent : Theme.edge
+    }
+    Rectangle {
+        visible: root.settingsSkin !== "classic"
+        anchors.fill: parent
+        radius: root.settingsSkin === "stream" ? Theme.u * 2 : 0
+        color: root.settingsSkin === "stream" ? Theme.streamPanel : Theme.windoseSticker
+        border.width: Math.max(1, Theme.u / 2)
+        border.color: input.activeFocus ? Theme.accent : root.settingsSkin === "stream" ? Theme.mix(Theme.streamLive, Theme.streamPanel, 0.4) : Theme.windoseLine
     }
 
     PxIcon {
@@ -37,6 +47,7 @@ Item {
         name: root.icon || "search"
         x: Theme.u * 5
         anchors.verticalCenter: parent.verticalCenter
+        ink: root.settingsSkin === "stream" ? Theme.streamLive : root.settingsSkin === "windose" ? Theme.windoseRose : Theme.dark ? Theme.text : Theme.edge
     }
 
     TextInput {

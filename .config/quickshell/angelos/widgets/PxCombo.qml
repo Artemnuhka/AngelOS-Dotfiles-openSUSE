@@ -9,6 +9,7 @@ Item {
     property var model: []
     property var currentValue
     property string placeholder: "—"
+    readonly property string settingsSkin: Theme.settingsSkinFor(root.parent)
     signal activated(var value)
 
     readonly property var items: (model || []).map(m => typeof m === "object" ? m : {
@@ -23,8 +24,17 @@ Item {
 
     PxBox {
         anchors.fill: parent
+        visible: root.settingsSkin === "classic"
         sunken: true
         color: Theme.sunken
+    }
+    Rectangle {
+        visible: root.settingsSkin !== "classic"
+        anchors.fill: parent
+        radius: root.settingsSkin === "stream" ? Theme.u * 2 : 0
+        color: root.settingsSkin === "stream" ? Theme.streamPanel : Theme.windoseSticker
+        border.width: Math.max(1, Theme.u / 2)
+        border.color: root.settingsSkin === "stream" ? Theme.streamLive : Theme.windoseLine
     }
     PxText {
         anchors.left: parent.left
@@ -42,11 +52,18 @@ Item {
         anchors.margins: Theme.u * 2
         width: height
         sunken: mouse.pressed
+        visible: root.settingsSkin === "classic"
         PxIcon {
             anchors.centerIn: parent
             name: "arrowDown"
             pixel: Math.max(1, Theme.u - 1)
         }
+    }
+    PxIcon {
+        visible: root.settingsSkin !== "classic"
+        anchors.centerIn: arrow
+        name: "arrowDown"
+        ink: root.settingsSkin === "stream" ? Theme.streamLive : Theme.windoseInk
     }
     MouseArea {
         id: mouse

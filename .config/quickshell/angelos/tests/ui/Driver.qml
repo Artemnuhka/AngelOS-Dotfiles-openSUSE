@@ -52,6 +52,29 @@ Scope {
             anchors.fill: parent
             hostWindow: win
         }
+        // A built-in app window without a skin override follows the selected Windose look.
+        PxWindow {
+            id: appWindow
+            visible: false
+            width: Theme.u * 180
+            height: Theme.u * 120
+            title: "angelOS app"
+            Column {
+                spacing: Theme.u * 6
+                PxText {
+                    text: "angelOS app"
+                    kind: "big"
+                }
+                PxField {
+                    placeholder: "Search…"
+                    width: Theme.u * 115
+                }
+                PxButton {
+                    id: appAction
+                    text: "Action"
+                }
+            }
+        }
         PxPreview {
             id: preview
             visible: false
@@ -292,6 +315,11 @@ Scope {
     property int index: -1
     property double started: 0
     property bool expertPass: false
+    property var settingsSkins: ["classic", "windose", "stream"]
+    property int settingsSkinIndex: 0
+    property bool settingsShotPending: false
+    property string settingsShotFlavor: ""
+    property string settingsShotMode: ""
     property bool undoFrom: false
     property var altTabStyles: []
     property var startStyles: []
@@ -332,6 +360,7 @@ Scope {
 
     function startPages(expert) {
         expertPass = expert;
+        Config.settingsUi.skin = settingsSkins[settingsSkinIndex];
         Config.settingsUi.expert = expert;
         const ids = view.allPages.map(p => p.id);
         list = expert ? ids : ["home", "more"].concat(ids);
@@ -344,12 +373,64 @@ Scope {
         if (index >= list.length) {
             if (!expertPass)
                 startPages(true);
+            else if (settingsSkinIndex + 1 < settingsSkins.length) {
+                settingsSkinIndex++;
+                startPages(false);
+            }
+            else if (shots)
+                startSettingsShots();
             else
                 startPreviews();
             return;
         }
         console.log("TEST-PAGE " + list[index]);
         Shell.settingsPage = list[index];
+        started = Date.now();
+    }
+    function startSettingsShots() {
+        settingsShotFlavor = Config.appearance.flavor;
+        settingsShotMode = Config.appearance.mode;
+        Config.settingsUi.expert = false;
+        list = [];
+        for (const skin of settingsSkins)
+            for (const page of ["home", "appearance", "updates"])
+                list.push([skin, page]);
+        list.push(["windose", "home", "chosen"]);
+        list.push(["stream", "home", "narrow"]);
+        index = -1;
+        phase = "settings-shots";
+        nextSettingsShot();
+    }
+    function nextSettingsShot() {
+        index++;
+        settingsShotPending = false;
+        if (index >= list.length) {
+            win.implicitWidth = 1100;
+            win.implicitHeight = 780;
+            win.width = 1100;
+            win.height = 780;
+            Config.appearance.flavor = settingsShotFlavor;
+            Config.appearance.mode = settingsShotMode;
+            Config.settingsUi.skin = "windose";
+            settingsShotPending = true;
+            appWindow.visible = true;
+            appWindow.grabToImage(r => {
+                r.saveToFile(shots + "/windose-app-window.png");
+                appWindow.visible = false;
+                startPreviews();
+            });
+            return;
+        }
+        const [skin, page, size] = list[index];
+        Config.settingsUi.skinChosen = size === "chosen";
+        win.implicitWidth = size === "narrow" ? 720 : 1100;
+        win.implicitHeight = size === "narrow" ? 480 : 780;
+        win.width = size === "narrow" ? 720 : 1100;
+        win.height = size === "narrow" ? 480 : 780;
+        Config.settingsUi.skin = skin;
+        Config.appearance.flavor = page === "appearance" ? "nord" : page === "updates" ? "gruvbox" : "overdose";
+        Config.appearance.mode = page === "appearance" ? "light" : "dark";
+        Shell.settingsPage = page;
         started = Date.now();
     }
     function startPreviews() {
@@ -380,8 +461,27 @@ Scope {
 
     function step() {
         if (phase === "wait") {
-            if (Config.ready && view.allPages.length > 0)
+            if (Config.ready && view.allPages.length > 0) {
+                report("settings-default-classic", Config.settingsUi.skin === "classic" && view.skin === "classic",
+                       "saved default " + Config.settingsUi.skin + ", view " + view.skin);
+                Config.settingsUi.skin = "windose";
+                report("windose-app-windows", appWindow.skin === "windose" && appWindow.windose && appWindow.settingsSkin === "windose" && appAction.settingsSkin === "windose",
+                       "unconfigured app skin " + appWindow.skin);
+                Config.settingsUi.skin = "classic";
+                report("classic-app-windows", appWindow.skin === "" && !appWindow.windose && appWindow.settingsSkin === "classic" && appAction.settingsSkin === "classic",
+                       "unconfigured app skin " + appWindow.skin);
+                const oldFlavor = Config.appearance.flavor;
+                Config.appearance.flavor = "gruvbox";
+                const windoseA = String(Theme.windoseRose);
+                const streamA = String(Theme.streamBg);
+                Config.appearance.flavor = "nord";
+                const windoseB = String(Theme.windoseRose);
+                const streamB = String(Theme.streamBg);
+                Config.appearance.flavor = oldFlavor;
+                report("settings-palette", windoseA !== windoseB && streamA !== streamB,
+                       "Windose " + windoseA + " → " + windoseB + ", Stream " + streamA + " → " + streamB);
                 startPages(false);
+            }
             return;
         }
         if (phase === "pages") {
@@ -389,9 +489,28 @@ Scope {
             const ms = Date.now() - started;
             if (d.status === Loader.Loading && ms < 8000)
                 return;
-            const name = (expertPass ? "page-expert:" : "page:") + list[index];
-            report(name, d.status === Loader.Ready, d.status === Loader.Ready ? ms + " ms" : "status " + d.status + " " + d.source);
+            const name = (expertPass ? "page-expert:" : "page:") + settingsSkins[settingsSkinIndex] + ":" + list[index];
+            report(name, d.status === Loader.Ready && view.frame.skin === settingsSkins[settingsSkinIndex] && d.settingsSkin === settingsSkins[settingsSkinIndex],
+                   d.status === Loader.Ready ? ms + " ms, page skin " + d.settingsSkin : "status " + d.status + " " + d.source);
+            if (list[index] === "home" || list[index] === "appearance")
+                report("sidebar:" + settingsSkins[settingsSkinIndex] + ":" + (expertPass ? "expert" : "simple") + ":" + list[index],
+                       d.sidebarVisible === (expertPass || settingsSkins[settingsSkinIndex] !== "classic"));
             nextPage();
+            return;
+        }
+        if (phase === "settings-shots") {
+            if (settingsShotPending)
+                return;
+            const d = view.diagnostics();
+            if (d.status !== Loader.Ready || d.page !== list[index][1] || Date.now() - started < 120)
+                return;
+            const [skin, page, size] = list[index];
+            const file = shots + "/settings-" + skin + "-" + page + (size ? "-" + size : "") + ".png";
+            settingsShotPending = true;
+            view.grabToImage(r => {
+                r.saveToFile(file);
+                nextSettingsShot();
+            });
             return;
         }
         if (phase === "previews") {

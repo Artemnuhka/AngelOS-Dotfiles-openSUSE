@@ -19,11 +19,14 @@ Rectangle {
     property int current: -1
     property string query: ""
     readonly property bool searching: query.trim() !== ""
-    readonly property real sizeFactor: Math.max(0.7, Math.min(1.8, (Config.bar.startWidth || 100) / 100))
-    readonly property var pins: StartApps.pinned.slice(0, 8)
+    // Settings → Bar → Start → Fine-tune (services/StartPrefs)
+    readonly property var prefs: StartPrefs.of("windose")
+    readonly property real sizeFactor: prefs.size
+    readonly property int stickerColumns: prefs.columns > 0 ? Math.max(3, Math.min(6, prefs.columns)) : 4
+    readonly property var pins: prefs.pinned ? StartApps.pinned.slice(0, stickerColumns * 2) : []
     readonly property var rows: {
         if (!searching)
-            return StartApps.apps.map(a => ({
+            return StartPrefs.sorted("windose", StartApps.apps).map(a => ({
                         "label": a.name,
                         "app": a,
                         "run": () => StartApps.launch(a)
@@ -44,7 +47,7 @@ Rectangle {
     }
 
     // NGO candy colours, leaning on the theme's accents
-    readonly property color pink: Theme.mix(Theme.accent, "#ffb3d9", 0.5)
+    readonly property color pink: Theme.mix(prefs.accentColor, "#ffb3d9", 0.5)
     readonly property color lilac: Theme.mix(Theme.accent2, "#c7b5ff", 0.5)
     readonly property color mint: Theme.mix(Theme.accent3, "#9fe8ff", 0.5)
     readonly property color ink: "#4a2a5e"
@@ -61,7 +64,8 @@ Rectangle {
         field.text = "";
         current = -1;
         list.positionViewAtBeginning();
-        Qt.callLater(() => field.focusField());
+        if (prefs.typeSearch && prefs.search)
+            Qt.callLater(() => field.focusField());
     }
     function runRow(r) {
         if (!r)
@@ -111,8 +115,10 @@ Rectangle {
     }
 
     width: Math.round(Theme.u * 170 * sizeFactor)
-    height: Theme.u * 230
+    height: Math.round(Theme.u * 230 * prefs.tall)
     color: ink
+    // Fine-tune → Opacity: the paper shows the desktop through
+    opacity: prefs.opacity > 0 ? Math.max(0.4, prefs.opacity / 100) : 1
     // the window: an ink frame, a pink rim, the paper inside
     Rectangle {
         anchors.fill: parent
@@ -244,8 +250,9 @@ Rectangle {
 
         Rectangle {
             id: searchPill
+            visible: root.prefs.search
             width: parent.width
-            height: Theme.u * 15
+            height: visible ? Theme.u * 15 : 0
             radius: height / 2
             color: "#ffffff"
             border.width: Math.max(1, Theme.u / 2)
@@ -280,10 +287,10 @@ Rectangle {
         Grid {
             id: stickers
             visible: !root.searching && root.pins.length > 0
-            y: searchPill.height + Theme.u * 5
+            y: searchPill.height + (root.prefs.search ? Theme.u * 5 : 0)
             width: parent.width
-            columns: 4
-            readonly property real cell: Math.floor((width - columnSpacing * 3) / 4)
+            columns: root.stickerColumns
+            readonly property real cell: Math.floor((width - columnSpacing * (columns - 1)) / columns)
             columnSpacing: Theme.u * 2
             rowSpacing: Theme.u * 3
             Repeater {
@@ -292,7 +299,7 @@ Rectangle {
                     id: st
                     required property var modelData
                     width: stickers.cell
-                    height: plate.height + bubble.height + Theme.u * 2
+                    height: plate.height + (bubble.visible ? bubble.height + Theme.u * 2 : Theme.u)
                     // the hard sticker shadow
                     Rectangle {
                         x: plate.x + Theme.u
@@ -305,7 +312,7 @@ Rectangle {
                     Rectangle {
                         id: plate
                         anchors.horizontalCenter: parent.horizontalCenter
-                        width: Math.min(st.width, Theme.u * 24)
+                        width: Math.min(st.width, Math.round(Theme.u * 24 * root.prefs.icons))
                         height: width
                         radius: Theme.u * 4
                         color: "#ffffff"
@@ -332,6 +339,7 @@ Rectangle {
                     }
                     Rectangle {
                         id: bubble
+                        visible: root.prefs.labels
                         anchors.horizontalCenter: parent.horizontalCenter
                         anchors.top: plate.bottom
                         anchors.topMargin: Theme.u * 2
@@ -385,7 +393,7 @@ Rectangle {
                 required property int index
                 readonly property bool sel: index === root.current || rm.containsMouse
                 width: list.width
-                height: Theme.u * 13
+                height: Math.round(Theme.u * 13 * Math.max(1, root.prefs.icons))
                 radius: height / 2
                 color: sel ? Qt.alpha(root.pink, 0.75) : "transparent"
                 PxIcon {
@@ -405,7 +413,7 @@ Rectangle {
                     anchors.verticalCenter: parent.verticalCenter
                     iconName: row.modelData.app ? row.modelData.app.icon || "" : ""
                     appId: row.modelData.app ? row.modelData.app.id || "" : ""
-                    size: Theme.u * 9
+                    size: Math.round(Theme.u * 9 * root.prefs.icons)
                 }
                 PxIcon {
                     id: pxGlyph
@@ -479,31 +487,14 @@ Rectangle {
         color: Theme.mix(root.paper, root.pink, 0.35)
         border.width: Math.max(1, Theme.u / 2)
         border.color: root.ink
-        Row {
+        StartUser {
+            visible: root.prefs.user
             x: Theme.u * 4
             anchors.verticalCenter: parent.verticalCenter
-            spacing: Theme.u * 3
-            Rectangle {
-                width: Theme.u * 12
-                height: width
-                radius: width / 2
-                color: "#ffffff"
-                border.width: Math.max(1, Theme.u / 2)
-                border.color: root.ink
-                PxIcon {
-                    anchors.centerIn: parent
-                    name: "heart"
-                    pixel: Math.max(1, Theme.u / 2)
-                    fill: root.pink
-                    ink: root.ink
-                }
-            }
-            PxText {
-                anchors.verticalCenter: parent.verticalCenter
-                font.bold: true
-                color: root.paperText
-                text: StartApps.userName
-            }
+            size: Theme.u * 13
+            frameColor: root.pink
+            textColor: root.paperText
+            onOpened: root.closeRequested()
         }
         Row {
             anchors.right: parent.right
@@ -519,16 +510,17 @@ Rectangle {
                     {
                         "icon": "download",
                         "run": () => Shell.openSettings("updates")
-                    },
-                    {
-                        "icon": "lock",
-                        "run": () => Shell.lock()
-                    },
-                    {
-                        "icon": "power",
-                        "run": () => Shell.sessionOpen = true
                     }
-                ]
+                ].concat(root.prefs.power ? [
+                        {
+                            "icon": "lock",
+                            "run": () => Shell.lock()
+                        },
+                        {
+                            "icon": "power",
+                            "run": () => Shell.sessionOpen = true
+                        }
+                    ] : [])
                 Rectangle {
                     id: fb
                     required property var modelData

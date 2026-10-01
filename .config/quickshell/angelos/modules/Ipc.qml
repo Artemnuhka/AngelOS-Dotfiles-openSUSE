@@ -94,6 +94,9 @@ IpcHandler {
             return Angel.ownerAngel() ? "ok" : !Owner.enabled ? "owner only" : Angel.demon ? "not now" : "she is an angel already";
         if (cmd === "summon")
             return Angel.summon();
+        // heaven ↔ hell at once, once the angel has come back three times (or for the owner)
+        if (cmd === "portal")
+            return Angel.portal() ? "ok" : Angel.transition ? "busy" : "closed: " + Angel.returns + "/" + Angel.returnsNeeded + " returns";
         if (cmd === "tip")
             Angel.tip();
         else if (cmd === "joke")
@@ -128,7 +131,7 @@ IpcHandler {
         else if (debug && cmd === "realm")
             return "burning to " + DesktopWidgets.burnPreview(arg);
         else if (cmd !== "status")
-            return "summon | tip | joke | hint | ask <text> | plea | menu [main|ask] | status" + (Owner.enabled ? " | angel" : "");
+            return "summon | portal | tip | joke | hint | ask <text> | plea | menu [main|ask] | status" + (Owner.enabled ? " | angel" : "");
         return JSON.stringify({
             "character": Config.y2k.character,
             "shown": Angel.shown,
@@ -137,9 +140,25 @@ IpcHandler {
             "realm": Theme.realm + (DesktopWidgets.burning ? " → " + DesktopWidgets.burnTo : ""),
             "cursor": Cursors.active,
             "pleas": Angel.pleasCounted + "/" + Angel.pleasNeeded,
+            "returns": Angel.returns + "/" + Angel.returnsNeeded + (Angel.portalOpen ? " (portal open)" : ""),
             "pranks": (Config.y2k.pranks || []).map(p => p.id + (p.undone ? " (undone)" : "")),
             "text": Angel.talking ? Angel.text : ""
         });
+    }
+    // the angelOS title bars over floating windows, per screen (modules/decor)
+    function decor(): string {
+        return JSON.stringify({
+            "titlebars": Config.decor.titlebars,
+            "bars": Shell.decor
+        });
+    }
+    // dev/owner: drag the angelOS title bar of window ID by DX, DY pixels over MS ms (a real
+    // press-move-release on the bar, replayed inside the shell)
+    function decorDrag(id: int, dx: int, dy: int, ms: int): string {
+        if (!Shell.dev && !Owner.enabled)
+            return "dev or owner only";
+        Shell.decorDrag(id, dx, dy, ms || 400);
+        return "ok";
     }
     // dev only: run a shell command the way the shell starts apps (Shell.sh)
     function devExec(cmd: string): string {
@@ -415,6 +434,14 @@ IpcHandler {
     function dotfiles(action: string): string {
         if (!Owner.enabled || !Owner.jobs)
             return "owner features are not available";
+        // status: what the Dotfiles tab shows — job state, the GitHub check, the log's tail
+        if (action === "status")
+            return JSON.stringify({
+                "state": Owner.jobs.state,
+                "checking": Owner.jobs.checking,
+                "ci": [Owner.jobs.ciStatus, Owner.jobs.ciConclusion, Owner.jobs.ciSha, Owner.jobs.ciUrl].join(" ").trim(),
+                "log": Owner.jobs.log.slice(-40)
+            });
         Shell.openSettings("dotfiles");
         if (action === "pull")
             Owner.jobs.update();

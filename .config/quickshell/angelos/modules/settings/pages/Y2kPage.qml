@@ -59,6 +59,19 @@ PxPage {
             }
         }
         SettingRow {
+            label: I18n.t("Размер", "Size")
+            hint: I18n.t("или Ctrl + колёсико мыши над ней — по 5 %, до +15 %", "Or Ctrl + mouse wheel over her: 5 % a notch, up to +15 %")
+            PxSlider {
+                width: Math.min(parent.width, Theme.u * 120)
+                from: 100
+                to: 115
+                stepSize: 5
+                value: Math.round((Config.y2k.helperScale || 1) * 100)
+                suffix: "%"
+                onMoved: v => Config.y2k.helperScale = Math.round(v) / 100
+            }
+        }
+        SettingRow {
             label: I18n.t("Советы сами по себе", "Tips on her own")
             PxSegmented {
                 model: [
@@ -195,7 +208,7 @@ PxPage {
             width: parent.width
             wrapMode: Text.Wrap
             dim: true
-            text: I18n.t("Нынешние глитч-девочки (ангел с треснувшим нимбом и неоновая демоница), прошлые чиби, взрослые пиксельные 30×40 или самые первые малышки 20×21. Ангел и демоница выбираются отдельно.", "Today's glitch girls (the cracked-halo angel and the neon demon), the earlier chibi, the adult 30×40 pixel ones or the very first 20×21 minis. The angel and the demon are picked apart.")
+            text: Angel.hellShown ? I18n.t("Нынешние глитч-девочки (ангел с треснувшим нимбом и неоновая демоница), прошлые чиби, взрослые пиксельные 30×40 или самые первые малышки 20×21. Ангел и демоница выбираются отдельно.", "Today's glitch girls (the cracked-halo angel and the neon demon), the earlier chibi, the adult 30×40 pixel ones or the very first 20×21 minis. The angel and the demon are picked apart.") : I18n.t("Нынешняя глитч-девочка (ангел с треснувшим нимбом), прошлая чиби, взрослая пиксельная 30×40 или самая первая малышка 20×21.", "Today's glitch girl (the cracked-halo angel), the earlier chibi, the adult 30×40 pixel one or the very first 20×21 mini.")
         }
         SettingRow {
             label: I18n.t("Ангел", "Angel")
@@ -227,7 +240,9 @@ PxPage {
                 }
             }
         }
+        // hell's own rows below show only while the demon rules (Angel.hellShown)
         SettingRow {
+            visible: Angel.hellShown
             label: I18n.t("Демоница", "Demon")
             Flow {
                 width: parent.width
@@ -261,8 +276,8 @@ PxPage {
 
     PxGroup {
         width: parent.width
-        title: I18n.t("Ангел или демон", "Angel or demon")
-        icon: "fire"
+        title: Angel.hellShown ? I18n.t("Ангел или демон", "Angel or demon") : I18n.t("Ангел и портал", "Angel and the portal")
+        icon: Angel.hellShown ? "fire" : "heart"
         SettingRow {
             label: I18n.t("Кто живёт в углу", "Who lives in the corner")
             hint: Angel.demon ? I18n.t("Демоница. Вернуть ангела можно только уговорами: её меню → «Спросить…» → «Верни ангела». Нужно 3 удачные просьбы за 2 часа, считается одна в 10 минут. Сейчас: ", "The demon. Only begging brings the angel back: her menu → “Ask…” → “Bring the angel back”. Three lucky pleas within 2 hours, one counts every 10 minutes. Now: ") + Angel.pleasCounted + "/" + Angel.pleasNeeded : I18n.t("Ангелочек. Схвати её мышкой и скинь вниз — провалится в ад, и придёт демоница: тёмные обои, пошлые шутки и пакости, которые показывают фишки angelOS.", "Angel. Grab her with the mouse and throw her down: she drops into hell and the demon comes — dark wallpaper, cheeky jokes and pranks that show off angelOS features.")
@@ -272,6 +287,18 @@ PxPage {
             }
         }
         SettingRow {
+            label: I18n.t("Портал", "Portal")
+            hint: Angel.portalOpen ? I18n.t("открыт: в ад и обратно — когда захочешь, без мольб и бросков (ещё — в её меню и `angelos helper portal`); адские настройки — в аду", "Open: to hell and back whenever you like, no begging and no throwing (also in her menu and `angelos helper portal`); hell's settings are in hell") : I18n.t("откроется, когда ангел трижды вернётся из ада. Возвращений: ", "Opens once the angel has come back from hell three times. Comebacks: ") + Math.min(Angel.returns, Angel.returnsNeeded) + "/" + Angel.returnsNeeded
+            PxButton {
+                enabled: Angel.portalOpen && !Angel.transition
+                icon: Angel.portalOpen ? "sparkle" : "lock"
+                accent: Angel.portalOpen
+                text: !Angel.portalOpen ? I18n.t("Закрыт", "Closed") : Angel.demon ? I18n.t("В рай", "To heaven") : I18n.t("В ад", "To hell")
+                onClicked: Angel.portal()
+            }
+        }
+        SettingRow {
+            visible: Angel.hellShown
             label: I18n.t("ПКМ в аду", "Right-click menu in hell")
             hint: I18n.t("пока правит демоница; вернётся ангел — снова твоё меню", "while the demon rules; the angel brings your own menu back")
             PxCombo {
@@ -303,6 +330,7 @@ PxPage {
             }
         }
         SettingRow {
+            visible: Angel.hellShown
             label: I18n.t("Настройки в аду", "Settings in hell")
             hint: I18n.t("гримуар: окно настроек становится старой книгой — оглавление слева, страницы перелистываются", "grimoire: Settings turn into an old book — contents on the left, pages that turn")
             PxSegmented {
@@ -321,6 +349,7 @@ PxPage {
             }
         }
         SettingRow {
+            visible: Angel.hellShown
             label: I18n.t("Виджеты в аду", "Widgets in hell")
             hint: I18n.t("когда бьётся стекло, виджеты сгорают и встают адскими: обсидиан, пламя, римские часы, огненные столбы; с ангелом пепел сдувает ветром. Свои плагины без адской версии перекрашиваются", "When the glass breaks the widgets burn and rise from hell: obsidian, flames, a Roman clock, columns of fire; with the angel the wind blows the ash away. Plugins without a hell look of their own are re-inked")
             PxToggle {
@@ -329,6 +358,7 @@ PxPage {
             }
         }
         SettingRow {
+            visible: Angel.hellShown
             label: I18n.t("Курсор в аду", "Cursor in hell")
             hint: Config.cursor.hell ? I18n.t("пока правит демоница, курсор — ", "While the demon rules the pointer is ") + ((Cursors.entryOf(Config.cursor.hell) || {}).name || Config.cursor.hell) + I18n.t("; шесть адских тем — на странице «Курсор»", "; six hell themes are on the Cursor page") : I18n.t("демоница не трогает курсор", "The demon leaves the cursor alone")
             PxButton {
@@ -361,18 +391,9 @@ PxPage {
             }
         }
         SettingRow {
-            label: I18n.t("Тёмные обои демоницы", "The demon's dark wallpaper")
-            hint: I18n.t("пиксельный ад на всех экранах, пока она тут; ангел вернёт твои обои. Выключишь — твои обои вернутся сразу", "Pixel hell on every screen while she's here; the angel gives yours back. Switching it off brings yours back at once")
-            PxToggle {
-                checked: Config.y2k.hellWallpaper
-                onToggled: c => Config.y2k.hellWallpaper = c
-            }
-        }
-        SettingRow {
+            visible: Angel.hellShown
             label: I18n.t("Какой ад на обоях", "Which hell on the wallpaper")
-            hint: I18n.t("картины — пиксельный ад из Мартина, Доре и Босха (пак Hell, скачается сам, если его нет); нарисованный — пиксельная лава с луной-сердцем", "Paintings: pixel hell from Martin, Doré and Bosch (the Hell pack, fetched if it's missing); drawn: pixel lava under a heart moon")
-            enabled: Config.y2k.hellWallpaper
-            opacity: enabled ? 1 : 0.5
+            hint: I18n.t("пока правит демоница, на всех экранах всегда ад — любые другие обои она тут же снимает (они дождутся ангела). Картины — пиксельный ад из Мартина, Доре и Босха (пак Hell, скачается сам); нарисованный — пиксельная лава с луной-сердцем", "While the demon rules every screen always shows hell — any other wallpaper she takes down at once (it waits for the angel). Paintings: pixel hell from Martin, Doré and Bosch (the Hell pack, fetched if missing); drawn: pixel lava under a heart moon")
             PxSegmented {
                 model: [
                     {
@@ -389,6 +410,7 @@ PxPage {
             }
         }
         SettingRow {
+            visible: Angel.hellShown
             label: I18n.t("Трещины на экране", "Screen cracks")
             hint: I18n.t("она бьёт по стеклу слева снизу; чем ближе курсор, тем прозрачнее стекло, клики проходят насквозь. Вернётся ангел — осколки осыплются", "She punches the glass bottom left; the nearer the pointer, the clearer the glass, and clicks go through. When the angel is back the shards fall out")
             PxSegmented {
@@ -412,7 +434,7 @@ PxPage {
         }
         SettingRow {
             label: I18n.t("Тряска экрана", "Screen shake")
-            hint: I18n.t("когда ангел и демоница меняются, экран трясётся и бьётся стекло; с демоницей ещё сыплются 8-битные камни", "When the angel and the demon swap the screen shakes and the glass breaks; with the demon 8-bit rocks tumble down too")
+            hint: Angel.hellShown ? I18n.t("когда ангел и демоница меняются, экран трясётся и бьётся стекло; с демоницей ещё сыплются 8-битные камни", "When the angel and the demon swap the screen shakes and the glass breaks; with the demon 8-bit rocks tumble down too") : I18n.t("когда ангел уходит через портал или возвращается, экран трясётся и бьётся стекло", "When the angel leaves through the portal or comes back the screen shakes and the glass breaks")
             PxToggle {
                 checked: Config.y2k.shake
                 onToggled: c => Config.y2k.shake = c
@@ -496,7 +518,7 @@ PxPage {
         }
         SettingRow {
             label: I18n.t("Без эффектов", "No effects")
-            hint: I18n.t("ни блёсток, ни загрузочного экрана, ни лучей и трещин на экранах в эфире", "No sparkles, loading screen, rays or cracks on streamed screens")
+            hint: Angel.hellShown ? I18n.t("ни блёсток, ни загрузочного экрана, ни лучей и трещин на экранах в эфире", "No sparkles, loading screen, rays or cracks on streamed screens") : I18n.t("ни блёсток, ни загрузочного экрана, ни лучей на экранах в эфире", "No sparkles, loading screen or rays on streamed screens")
             PxToggle {
                 checked: Config.stream.effects
                 onToggled: c => Config.stream.effects = c
@@ -606,8 +628,8 @@ PxPage {
             }
         }
         SettingRow {
-            label: I18n.t("Голос ангела и демоницы", "The angel's and the demon's voice")
-            hint: I18n.t("её «пип» на каждую букву, «хех», хор, трещины и камни — доля от общей громкости", "Her pip on every letter, the “heh”, the choir, cracks and rocks — a share of the volume above")
+            label: Angel.hellShown ? I18n.t("Голос ангела и демоницы", "The angel's and the demon's voice") : I18n.t("Голос ангела", "The angel's voice")
+            hint: Angel.hellShown ? I18n.t("её «пип» на каждую букву, «хех», хор, трещины и камни — доля от общей громкости", "Her pip on every letter, the “heh”, the choir, cracks and rocks — a share of the volume above") : I18n.t("её «пип» на каждую букву, «хех» и хор — доля от общей громкости", "Her pip on every letter, the “heh” and the choir — a share of the volume above")
             PxSlider {
                 width: parent.width
                 from: 0

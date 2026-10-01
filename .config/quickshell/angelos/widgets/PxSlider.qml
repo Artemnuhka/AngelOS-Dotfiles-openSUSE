@@ -13,6 +13,7 @@ Item {
     property string suffix: ""
     property int decimals: 0
     property bool showValue: true
+    readonly property string settingsSkin: Theme.settingsSkinFor(root.parent)
     property real valueScale: 1
     readonly property bool dragging: mouse.pressed
     signal moved(real value)
@@ -34,6 +35,7 @@ Item {
 
     PxBox {
         id: track
+        visible: root.settingsSkin === "classic"
         anchors.left: parent.left
         anchors.right: valueLabel.visible ? valueLabel.left : parent.right
         anchors.rightMargin: valueLabel.visible ? Theme.u * 4 : 0
@@ -51,8 +53,29 @@ Item {
         }
     }
 
+    Rectangle {
+        visible: root.settingsSkin !== "classic"
+        x: track.x
+        y: track.y
+        width: track.width
+        height: track.height
+        radius: root.settingsSkin === "stream" ? Theme.u * 2 : height / 2
+        color: root.settingsSkin === "stream" ? Theme.streamPanel : Theme.windoseSticker
+        border.width: Math.max(1, Theme.u / 2)
+        border.color: root.settingsSkin === "stream" ? Theme.streamLive : Theme.windoseLine
+        Rectangle {
+            x: Theme.u
+            anchors.verticalCenter: parent.verticalCenter
+            width: Math.max(0, (parent.width - Theme.u * 2) * root.frac)
+            height: parent.height - Theme.u * 2
+            radius: parent.radius
+            color: root.settingsSkin === "stream" ? Theme.streamLive : Theme.windoseRose
+        }
+    }
+
     PxBox {
         id: thumb
+        visible: root.settingsSkin === "classic"
         width: Theme.u * 9
         height: Theme.u * 12
         anchors.verticalCenter: track.verticalCenter
@@ -63,6 +86,17 @@ Item {
             name: "heartSmall"
             pixel: Math.max(1, Theme.u - 1)
         }
+    }
+    Rectangle {
+        visible: root.settingsSkin !== "classic"
+        width: thumb.width
+        height: thumb.height
+        anchors.verticalCenter: track.verticalCenter
+        x: thumb.x
+        radius: root.settingsSkin === "windose" ? width / 2 : Theme.u * 2
+        color: root.settingsSkin === "stream" ? Theme.ngoSticker : Theme.windoseSticker
+        border.width: Math.max(1, Theme.u / 2)
+        border.color: root.settingsSkin === "stream" ? Theme.streamLive : Theme.windoseLine
     }
 
     PxText {

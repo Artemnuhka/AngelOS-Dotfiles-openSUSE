@@ -17,7 +17,8 @@ Singleton {
     // glossy chrome bubble) · tiles (a Control Center grid) · pentagram (hell's own). While the
     // demon rules, Y2K → Hell → "Right-click menu" takes over (pentagram unless turned off).
     readonly property var styles: ["list", "radial", "y2k", "tiles", "pentagram"]
-    readonly property string chosen: styles.includes(Config.desktop.menuStyle) ? Config.desktop.menuStyle : "list"
+    // the pentagram is hell's own: in heaven only once the portal is open (Angel.hellAllowed)
+    readonly property string chosen: !styles.includes(Config.desktop.menuStyle) || (Config.desktop.menuStyle === "pentagram" && !Angel.hellAllowed) ? "list" : Config.desktop.menuStyle
     readonly property bool hellish: Angel.demon && styles.includes(Config.y2k.hellMenu)
     readonly property string style: hellish ? Config.y2k.hellMenu : chosen
     // the ring, the tiles and the pentagram share one full-screen popup (RadialMenu)

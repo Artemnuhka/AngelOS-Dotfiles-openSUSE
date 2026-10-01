@@ -15,11 +15,16 @@ Item {
     property real reveal: 1            // 0 → 1 while opening (driven by StartOverlay)
     property int current: -1
     property string query: ""
-    readonly property int tile: Theme.u * 46
-    readonly property int columns: Math.max(3, Math.min(8, Math.floor((width - Theme.u * 40) / tile)))
-    readonly property int rows: Math.max(2, Math.min(5, Math.floor((height - Theme.u * 150) / (tile + Theme.u * 8))))
+    // Settings → Bar → Start → Fine-tune (services/StartPrefs)
+    readonly property var prefs: StartPrefs.of("fullscreen")
+    readonly property color accentColor: prefs.accentColor
+    readonly property int tile: Math.round(Theme.u * 46 * prefs.icons)
+    readonly property int autoColumns: Math.max(3, Math.min(8, Math.floor((width - Theme.u * 40) / tile)))
+    readonly property int autoRows: Math.max(2, Math.min(5, Math.floor((height - Theme.u * 150) / (tile + Theme.u * 8))))
+    readonly property int columns: prefs.columns > 0 ? Math.min(prefs.columns, Math.max(2, Math.floor((width - Theme.u * 20) / (tile + Theme.u * 4)))) : autoColumns
+    readonly property int rows: prefs.rows > 0 ? Math.min(prefs.rows, Math.max(1, Math.floor((height - Theme.u * 120) / (tile + Theme.u * 16)))) : autoRows
     readonly property int perPage: columns * rows
-    readonly property var list: query.trim() !== "" ? StartApps.search(query).slice(0, perPage) : StartApps.apps
+    readonly property var list: query.trim() !== "" ? StartApps.search(query).slice(0, perPage) : StartPrefs.sorted("fullscreen", StartApps.apps)
     // like Spotlight: the sum and matching settings above the apps; Enter opens the best match
     readonly property var hits: query.trim() !== "" ? StartApps.searchAll(query, 30) : []
     readonly property var extras: hits.filter(r => r.kind !== "app").slice(0, 4)
@@ -38,7 +43,7 @@ Item {
         }
     }
     readonly property int pageCount: Math.max(1, Math.ceil(list.length / perPage))
-    readonly property var dock: StartApps.pinned.slice(0, Math.min(7, columns))
+    readonly property var dock: prefs.pinned ? StartApps.pinned.slice(0, Math.min(7, columns)) : []
     readonly property int page: pages.currentIndex
 
     function setQuery(t) {
@@ -127,7 +132,8 @@ Item {
     // dim + tint over the blurred desktop
     Rectangle {
         anchors.fill: parent
-        color: Qt.alpha(Theme.dark ? "#05060a" : Theme.desk, Theme.dark ? 0.55 : 0.45)
+        // Fine-tune → Opacity: how much of the desktop shows through
+        color: Qt.alpha(Theme.dark ? "#05060a" : Theme.desk, root.prefs.opacity > 0 ? root.prefs.opacity / 100 : Theme.dark ? 0.55 : 0.45)
         opacity: root.reveal
     }
     MouseArea {
@@ -164,7 +170,7 @@ Item {
             radius: width * 0.26
             color: Qt.alpha(Theme.face, Theme.dark ? 0.82 : 0.9)
             border.width: t.sel ? Theme.u : Math.max(1, Theme.u / 2)
-            border.color: t.sel ? Theme.accent : Qt.alpha(Theme.edge, 0.35)
+            border.color: t.sel ? root.accentColor : Qt.alpha(Theme.edge, 0.35)
             AppIcon {
                 anchors.centerIn: parent
                 iconName: t.app ? t.app.icon || "" : ""
@@ -179,11 +185,11 @@ Item {
                 width: Theme.u * 5
                 height: width
                 radius: width / 2
-                color: Theme.accent
+                color: root.accentColor
             }
         }
         PxText {
-            visible: !t.dockTile
+            visible: !t.dockTile && root.prefs.labels
             anchors.top: plate.bottom
             anchors.topMargin: Theme.u * 2
             anchors.horizontalCenter: parent.horizontalCenter
@@ -217,18 +223,20 @@ Item {
         spacing: Theme.u * 3
         PxText {
             id: clock
+            visible: root.prefs.clock
             anchors.horizontalCenter: parent.horizontalCenter
             kind: "big"
             font.pixelSize: Theme.sizeBig * 2
             color: "#ffffff"
             style: Text.Outline
             styleColor: Qt.alpha("#000000", 0.35)
-            text: Qt.formatTime(now.date, "HH:mm")
+            text: I18n.time(now.date, false)
         }
         PxText {
+            visible: root.prefs.clock
             anchors.horizontalCenter: parent.horizontalCenter
             color: "#ffffff"
-            text: now.date.toLocaleDateString(Qt.locale(I18n.t("ru_RU", "en_US")), "dddd, d MMMM")
+            text: now.date.toLocaleDateString(I18n.locale, "dddd, d MMMM")
         }
         Item {
             width: 1
@@ -236,6 +244,7 @@ Item {
         }
         PxField {
             id: field
+            visible: root.prefs.search
             keepFocus: true
             anchors.horizontalCenter: parent.horizontalCenter
             width: Math.min(root.width - Theme.u * 40, Theme.u * 170)
@@ -388,9 +397,48 @@ Item {
         }
     }
 
+    // the user and power, top left (Fine-tune → Sections)
+    Row {
+        x: Theme.u * 12
+        y: Theme.u * 12 - (1 - root.reveal) * Theme.u * 16
+        opacity: root.reveal
+        spacing: Theme.u * 6
+        StartUser {
+            visible: root.prefs.user
+            anchors.verticalCenter: parent.verticalCenter
+            size: Theme.u * 18
+            frameColor: root.accentColor
+            textColor: "#ffffff"
+            kind: "title"
+            onOpened: root.closeRequested()
+        }
+        Row {
+            visible: root.prefs.power
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: Theme.u * 3
+            PxButton {
+                compact: true
+                icon: "lock"
+                onClicked: {
+                    root.closeRequested();
+                    Qt.callLater(() => Shell.lock());
+                }
+            }
+            PxButton {
+                compact: true
+                icon: "power"
+                onClicked: {
+                    root.closeRequested();
+                    Qt.callLater(() => Shell.sessionOpen = true);
+                }
+            }
+        }
+    }
+
     // ---- dock ----
     Rectangle {
         id: dockBar
+        visible: root.dock.length > 0
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
         anchors.bottomMargin: Theme.u * 10 - (1 - root.reveal) * Theme.u * 30

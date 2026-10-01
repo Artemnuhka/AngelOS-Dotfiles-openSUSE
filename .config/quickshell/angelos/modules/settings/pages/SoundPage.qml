@@ -118,16 +118,16 @@ PxPage {
         icon: "music"
         width: parent.width
         PxText {
-            visible: Audio.streams.length === 0
+            visible: Audio.appStreams.length === 0
             text: I18n.t("сейчас ничего не звучит", "No audio is playing")
             dim: true
         }
         Repeater {
-            model: Audio.streams
+            model: Audio.appStreams
             SettingRow {
                 id: r
                 required property var modelData
-                label: modelData.properties["application.name"] || Audio.nodeName(modelData)
+                label: Audio.streamName(modelData)
                 hint: modelData.properties["media.name"] || ""
                 PxSlider {
                     width: parent.width

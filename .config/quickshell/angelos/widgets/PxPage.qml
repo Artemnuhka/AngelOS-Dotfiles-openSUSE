@@ -11,6 +11,9 @@ PxScroll {
 
     property string heading: ""
     property string subtitle: ""
+    readonly property string settingsSkin: Theme.settingsSkinFor(root.parent)
+    property color headingColor: settingsSkin === "windose" ? Theme.windoseTitle : settingsSkin === "stream" ? Theme.streamLive : Theme.dark ? Theme.accent : Theme.edge
+    property color subtitleColor: Theme.textDim
     default property alias items: col.data
     readonly property int innerWidth: col.width
     // the settings page this is (plugin pages and the home tiles have nothing to reset)
@@ -26,22 +29,35 @@ PxScroll {
         x: Theme.u * 4
         y: Theme.u * 4
         width: parent.width - Theme.u * 8
-        spacing: Theme.u * 8
+        spacing: Theme.u * (root.settingsSkin === "stream" ? 6 : 8)
 
         Column {
             visible: root.heading !== ""
             width: parent.width
-            spacing: Theme.u
+            spacing: Theme.u * (root.settingsSkin === "classic" ? 1 : 2)
+            PxText {
+                visible: root.settingsSkin !== "classic"
+                text: root.settingsSkin === "stream" ? "● LIVE  /  angelOS" : "▸ settings.exe / angelOS"
+                kind: "tiny"
+                color: root.settingsSkin === "stream" ? Theme.streamLive : Theme.windoseLavender
+                font.bold: true
+            }
             PxText {
                 text: root.heading
                 kind: "big"
-                color: Theme.dark ? Theme.accent : Theme.edge
+                color: root.headingColor
+            }
+            Rectangle {
+                visible: root.settingsSkin !== "classic"
+                width: parent.width
+                height: Theme.u * (root.settingsSkin === "stream" ? 2 : 1)
+                color: root.settingsSkin === "stream" ? Theme.streamLive : Theme.windoseRose
             }
             PxText {
                 visible: root.subtitle !== ""
                 width: parent.width
                 text: root.subtitle
-                dim: true
+                color: root.subtitleColor
                 wrapMode: Text.Wrap
             }
         }

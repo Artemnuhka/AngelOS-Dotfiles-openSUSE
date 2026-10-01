@@ -10,6 +10,8 @@ Column {
     id: root
 
     property bool compact: false
+    // hell's look (the desktop orb while the demon rules): fire meters, bone text
+    property bool hell: false
     spacing: Theme.u * (compact ? 2 : 4)
 
     readonly property var rows: [
@@ -51,7 +53,7 @@ Column {
         Column {
             id: r
             required property var modelData
-            readonly property color c: Usage.colorFor(modelData.w.left, Theme)
+            readonly property color c: root.hell ? (modelData.w.left <= 15 ? Theme.hellBlood : modelData.w.left <= 40 ? Theme.hellEmber : Theme.hellFlame) : Usage.colorFor(modelData.w.left, Theme)
             width: root.width
             spacing: Theme.u
             Row {
@@ -59,12 +61,13 @@ Column {
                 PxText {
                     width: parent.width / 2
                     text: r.modelData.label
-                    dim: true
+                    dim: !root.hell
+                    color: root.hell ? Theme.hellTextDim : Theme.textDim
                 }
                 PxText {
                     width: parent.width / 2
                     horizontalAlignment: Text.AlignRight
-                    text: I18n.t("осталось ", "Remaining ") + r.modelData.w.left + "%"
+                    text: (root.hell ? I18n.t("душ осталось ", "Souls left ") : I18n.t("осталось ", "Remaining ")) + r.modelData.w.left + "%"
                     color: r.c
                     font.bold: true
                 }
@@ -74,7 +77,8 @@ Column {
                 width: parent.width
                 height: Theme.u * (root.compact ? 6 : 8)
                 sunken: true
-                color: Theme.sunken
+                hell: root.hell
+                color: root.hell ? Theme.hellSunken : Theme.sunken
                 Row {
                     anchors.fill: parent
                     spacing: Math.max(1, Theme.u / 2)
@@ -91,7 +95,7 @@ Column {
             }
             PxText {
                 visible: !root.compact && !!r.modelData.w.resetsAt
-                text: r.modelData.w.resetsAt ? I18n.t("сброс через ", "Resets in ") + Usage.untilText(r.modelData.w.resetsAt) + "  (" + Qt.locale(Config.appearance.language === "en" ? "en_US" : "ru_RU").toString(r.modelData.w.resetsAt, "ddd HH:mm") + ")" : ""
+                text: r.modelData.w.resetsAt ? I18n.t("сброс через ", "Resets in ") + Usage.untilText(r.modelData.w.resetsAt) + "  (" + I18n.locale.toString(r.modelData.w.resetsAt, I18n.clock12 ? "ddd h:mm AP" : "ddd HH:mm") + ")" : ""
                 kind: "tiny"
                 dim: true
             }

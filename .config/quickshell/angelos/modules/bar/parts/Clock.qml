@@ -27,13 +27,13 @@ Item {
         anchors.centerIn: parent
         PxText {
             anchors.horizontalCenter: parent.horizontalCenter
-            text: Qt.formatTime(clock.date, Config.bar.showSeconds ? "HH:mm:ss" : "HH:mm")
+            text: I18n.time(clock.date, Config.bar.showSeconds)
             kind: root.showDate ? "body" : "title"
         }
         PxText {
             visible: root.showDate
             anchors.horizontalCenter: parent.horizontalCenter
-            text: Qt.locale("ru_RU").toString(clock.date, "ddd d MMM")
+            text: I18n.locale.toString(clock.date, I18n.english ? "ddd, MMM d" : "ddd d MMM")
             kind: "tiny"
             dim: true
         }

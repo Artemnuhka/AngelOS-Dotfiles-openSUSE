@@ -29,6 +29,32 @@ Singleton {
 
     // ---- who and where ----
     readonly property bool demon: Config.y2k.character === "demon"
+
+    // ---- heaven and hell kept apart ----
+    // Hell's own things — the pentagram right-click menu, the Hell wordmark, a hell
+    // cursor as the everyday one — live in hell only: in heaven they are locked. Once
+    // the angel has come back from hell three times the portal opens: heaven ↔ hell at
+    // will, like the owner (no begging, no throwing), and hell's things are allowed in
+    // heaven too. Config.y2k.returns counts the comebacks.
+    readonly property int returnsNeeded: 3
+    readonly property int returns: Config.y2k.returns || 0
+    readonly property bool portalOpen: Owner.enabled || returns >= returnsNeeded
+    readonly property bool hellAllowed: demon || portalOpen
+    // Settings (and the setup wizard, Studio, the search) show hell's own things — the
+    // demon's looks and sounds, the "… in hell" options, the pentagram, the Hell
+    // wordmark, hell cursors, hell versions of plugins — only while the demon rules.
+    // In heaven they are gone, not locked; the portal stays, it is the door.
+    readonly property bool hellShown: demon
+    // the portal: to hell or back at once, the swap's effects as usual
+    function portal() {
+        if (!portalOpen || transition)
+            return false;
+        hush();
+        _portal = true;
+        startSwap(demon ? "ascend" : "toHell");
+        return true;
+    }
+    property bool _portal: false
     // the main screen, her own one (Y2K → Screen; unplugged → the main one), or where the focus is
     readonly property var screen: StreamMode.angelScreen(Config.y2k.helperScreen === "focus" ? Shell.focusedScreen : Shell.screenByName(Config.y2k.helperScreen) || Shell.primaryScreen)
     readonly property string screenName: screen ? screen.name : ""
@@ -373,11 +399,16 @@ Singleton {
         }
     }
     property int _undone: 0
+    property bool _unlockedNow: false
     function becomeAngel() {
         _undone = undoAllPranks();
         Config.y2k.character = "angel";
         Config.y2k.pleas = [];
         Config.y2k.pranks = [];
+        // every comeback from hell counts; the third one opens the portal
+        const before = Config.y2k.returns || 0;
+        Config.y2k.returns = before + 1;
+        _unlockedNow = before < returnsNeeded && before + 1 >= returnsNeeded && !Owner.enabled;
         hellLook(false);
     }
 
@@ -407,7 +438,18 @@ Singleton {
                 root.transition = "";
                 root.thrown = false;
                 // the new one has arrived: the screen shakes, then it breaks
-                if (kind === "toHell") {
+                if (kind === "toHell" && root._portal) {
+                    root._portal = false;
+                    root.shake("hell", () => {
+                        root.breakScreen();
+                        root.say(I18n.t("Сам(а) пришёл(ла) через портал? Смело. Добро пожаловать домой 😈 Обратно — тем же порталом, в моём меню.", "Walked in through the portal yourself? Brave. Welcome home 😈 The way back is the same portal, in my menu."), {
+                            "label": I18n.t("Портал", "Portal"),
+                            "icon": "sparkle",
+                            "run": () => root.portal()
+                        }, 12000);
+                        hellNews.restart();
+                    });
+                } else if (kind === "toHell") {
                     root.shake("hell", () => {
                         root.breakScreen();
                         root.say(root.tr(Lines.demon.intro), {
@@ -519,6 +561,16 @@ Singleton {
         interval: 480
         onTriggered: root.shake("heaven", () => {
             heavenSoon.restart();
+            root._portal = false;
+            if (root._unlockedNow) {
+                root._unlockedNow = false;
+                root.say(I18n.t("Я вернулась уже в третий раз — и теперь между раем и адом открыт портал! Ходи туда и обратно когда захочешь (моё меню → «Портал»), а адские штучки — пентаграмма, надпись Hell, адские курсоры — теперь можно и в раю.", "That's my third comeback — and now there's a portal between heaven and hell! Go back and forth whenever you like (my menu → “Portal”), and hell's things — the pentagram, the Hell wordmark, hell cursors — are allowed in heaven now."), {
+                    "label": I18n.t("Где портал?", "Where's the portal?"),
+                    "icon": "sparkle",
+                    "run": () => Shell.openSettings("y2k")
+                }, 16000);
+                return;
+            }
             root.say(root.tr(root._undone ? Lines.angel.back : Lines.angel.backClean));
         })
     }
@@ -541,24 +593,49 @@ Singleton {
         onTriggered: root.effect(true)
     }
 
-    // ---- the demon's wallpaper: dark while she rules, yours with the angel ----
+    // ---- the demon's wallpaper: hell while she rules — always; yours with the angel ----
+    // Whatever wallpaper is picked while she rules (Settings, the right-click menu,
+    // `angelos wallpaper`, a hotkey), hell goes back up at once; the pick is kept in
+    // Config.y2k.angelSaved and the angel puts it up when she comes back.
+    readonly property string wallKey: JSON.stringify([Config.wallpaper.fallback, Config.wallpaper.outputs, Config.wallpaper.workspaces])
+    property string hellKey: ""              // the wallpaper hell put up last
+    property var hellState: null             // …the same as an object, to put it back
+    property bool _wallBusy: false           // hell is being put up right now: not the user's doing
+    property bool _hellPending: false        // scripts/hell-wallpaper.py is still painting
+    function wallState() {
+        return {
+            "fallback": Config.wallpaper.fallback,
+            "outputs": JSON.parse(JSON.stringify(Config.wallpaper.outputs || {})),
+            "workspaces": JSON.parse(JSON.stringify(Config.wallpaper.workspaces || {}))
+        };
+    }
+    function applyWall(st) {
+        _wallBusy = true;
+        Sounds.quietWallpaper(4000);
+        Config.wallpaper.fallback = st.fallback || "";
+        Config.wallpaper.outputs = st.outputs || ({});
+        Config.wallpaper.workspaces = st.workspaces || ({});
+        hellKey = wallKey;
+        hellState = st;
+        _wallBusy = false;
+    }
     function hellLook(on) {
         if (on) {
-            if (!Config.y2k.hellWallpaper || Config.y2k.angelSaved)
-                return;
-            Config.y2k.angelSaved = {
-                "fallback": Config.wallpaper.fallback,
-                "outputs": Config.wallpaper.outputs,
-                "workspaces": Config.wallpaper.workspaces,
-                "mode": Config.appearance.mode
-            };
-            Config.appearance.mode = "dark";
+            if (!Config.y2k.angelSaved) {
+                Config.y2k.angelSaved = Object.assign(wallState(), {
+                    "mode": Config.appearance.mode
+                });
+                Config.appearance.mode = "dark";
+            }
             putHell();
             return;
         }
         const s = Config.y2k.angelSaved;
+        hellKey = "";
+        hellState = null;
         if (!s)
             return;
+        _wallBusy = true;
         Sounds.quietWallpaper(4000);
         Config.wallpaper.fallback = s.fallback || "";
         Config.wallpaper.outputs = s.outputs || ({});
@@ -566,13 +643,36 @@ Singleton {
         if (s.mode)
             Config.appearance.mode = s.mode;
         Config.y2k.angelSaved = null;
+        _wallBusy = false;
+    }
+    // the user picked a wallpaper while she rules: it waits for the angel, hell stays
+    onWallKeyChanged: {
+        if (!demon || transition || _wallBusy || !Config.ready || !Config.y2k.angelSaved || (!hellKey && !_hellPending) || wallKey === hellKey)
+            return;
+        Config.y2k.angelSaved = Object.assign({}, Config.y2k.angelSaved, wallState());
+        Qt.callLater(rehell);
+    }
+    function rehell() {
+        // still painting: its result goes up when it is ready
+        if (!demon || !hellState || wallKey === hellKey || _hellPending)
+            return;
+        applyWall(hellState);
+        say(tr(pick(Lines.demonWallpaper, "dwall")), {
+            "label": I18n.t("Когда вернётся моё?", "When do I get mine back?"),
+            "icon": "chat",
+            "run": () => root.say(I18n.t("Когда вернётся ангел. Твоя картинка у неё — она её и повесит. Проси красиво: моё меню → «Спросить…».", "When the angel's back. She's got your picture and she'll put it up. Beg nicely: my menu → “Ask…”."))
+        }, 9000);
     }
     // the hell picture itself: your own (Y2K → hell picture), or a painting from the
     // Hell pack / the drawn hell (scripts/hell-wallpaper.py) sized for every screen
     function putHell() {
         Sounds.quietWallpaper(4000);
         if (Config.y2k.hellPicture) {
-            Wallpapers.setEverywhere(Config.y2k.hellPicture);
+            applyWall({
+                "fallback": Config.y2k.hellPicture,
+                "outputs": ({}),
+                "workspaces": ({})
+            });
             return;
         }
         const sizes = [];
@@ -581,13 +681,16 @@ Singleton {
             if (!sizes.includes(k))
                 sizes.push(k);
         }
+        _hellPending = true;
         hellGen.command = ["python3", Quickshell.shellDir + "/scripts/hell-wallpaper.py", Config.home + "/.local/share/angelos/hell", "--pack", Config.home + "/Pictures/Hell", "--cache", Config.home + "/.local/share/angelos/hell-pack"].concat(Config.y2k.hellStyle === "drawn" ? ["--drawn"] : []).concat(sizes);
         hellGen.running = true;
     }
     Process {
         id: hellGen
+        onExited: root._hellPending = false
         stdout: StdioCollector {
             onStreamFinished: {
+                root._hellPending = false;
                 let files = {};
                 try {
                     files = JSON.parse(text).files || {};
@@ -605,28 +708,52 @@ Singleton {
                 }
                 if (!first || !root.demon)
                     return;
-                Sounds.quietWallpaper(4000);
-                Config.wallpaper.workspaces = ({});
-                Config.wallpaper.outputs = outputs;
-                Config.wallpaper.fallback = first;
+                root.applyWall({
+                    "fallback": first,
+                    "outputs": outputs,
+                    "workspaces": ({})
+                });
             }
         }
     }
-    // switching the dark wallpaper off gives yours back right away
     Connections {
         target: Config.y2k
-        function onHellWallpaperChanged() {
-            if (root.demon && !root.transition)
-                root.hellLook(Config.y2k.hellWallpaper);
-        }
-        // paintings ↔ drawn hell: a new picture right away
+        // paintings ↔ drawn hell, or her own picture: a new hell right away
         function onHellStyleChanged() {
             root.newHell();
         }
+        function onHellPictureChanged() {
+            root.newHell();
+        }
     }
+    // the shell starts while she rules: hell must be up (an older angelOS could leave
+    // the user's wallpaper under her), and what is up now is hers
+    Connections {
+        target: Config
+        function onReadyChanged() {
+            if (Config.ready)
+                wakeHell.restart();
+        }
+    }
+    Timer {
+        id: wakeHell
+        interval: 1500
+        onTriggered: {
+            if (!root.demon || root.transition)
+                return;
+            if (!Config.y2k.angelSaved)
+                root.hellLook(true);
+            else if (!root.hellState) {
+                root.hellState = root.wallState();
+                root.hellKey = root.wallKey;
+            }
+        }
+    }
+    Component.onCompleted: if (Config.ready)
+        wakeHell.restart()
     // another hell picture now (the style changed; `angelos helper hellwall`)
     function newHell() {
-        if (!demon || transition || !Config.y2k.hellWallpaper || !Config.y2k.angelSaved)
+        if (!demon || transition || !Config.y2k.angelSaved)
             return false;
         putHell();
         return true;
@@ -917,7 +1044,7 @@ Singleton {
         }
     }
     readonly property string wallpaperKey: JSON.stringify([Config.wallpaper.fallback, Config.wallpaper.outputs])
-    onWallpaperKeyChanged: if (Config.ready && Date.now() - startedAt > 10000 && !transition && Date.now() > Sounds.wallpaperQuietUntil)
-        react(demon ? I18n.t("Опять светленькое? Фу.", "Something bright again? Ew.") : I18n.t("Новые обои? Мне очень нравится!", "New wallpaper? I love it!"), null, true)
+    onWallpaperKeyChanged: if (Config.ready && !demon && Date.now() - startedAt > 10000 && !transition && Date.now() > Sounds.wallpaperQuietUntil)
+        react(I18n.t("Новые обои? Мне очень нравится!", "New wallpaper? I love it!"), null, true)
     readonly property double startedAt: Date.now()
 }

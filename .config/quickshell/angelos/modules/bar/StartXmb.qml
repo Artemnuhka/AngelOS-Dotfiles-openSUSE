@@ -21,6 +21,9 @@ Item {
     property int cat: 1                     // the selected category
     property var itemOf: ({})               // category id -> selected item
     readonly property bool searching: query.trim() !== ""
+    // Settings → Bar → Start → Fine-tune (services/StartPrefs)
+    readonly property var prefs: StartPrefs.of("xmb")
+    readonly property color accentColor: prefs.accentColor
 
     function appRow(a) {
         return {
@@ -61,7 +64,7 @@ Item {
                 "id": "pinned",
                 "label": I18n.t("Закреплённые", "Pinned"),
                 "icon": "heart",
-                "rows": StartApps.pinned.map(appRow)
+                "rows": prefs.pinned ? StartApps.pinned.map(appRow) : []
             },
             {
                 "id": "games",
@@ -91,7 +94,7 @@ Item {
                 "id": "all",
                 "label": I18n.t("Все приложения", "All apps"),
                 "icon": "grid",
-                "rows": StartApps.apps.map(appRow)
+                "rows": StartPrefs.sorted("xmb", StartApps.apps).map(appRow)
             },
             {
                 "id": "places",
@@ -103,10 +106,10 @@ Item {
                 "id": "power",
                 "label": I18n.t("Питание", "Power"),
                 "icon": "power",
-                "rows": plain(StartItems.power)
+                "rows": prefs.power ? plain(StartItems.power) : []
             }
         ].filter(c => c.rows.length > 0);
-        return searching ? [
+        return searching && prefs.search ? [
             {
                 "id": "search",
                 "label": I18n.t("Поиск", "Search"),
@@ -169,7 +172,7 @@ Item {
         else if (e.key === Qt.Key_Backspace) {
             if (searching)
                 setQuery(query.slice(0, -1));
-        } else if (e.text && e.text.trim() !== "" && !(e.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier)))
+        } else if (prefs.search && e.text && e.text.trim() !== "" && !(e.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier)))
             setQuery(query + e.text);
         else if (e.text === " " && searching)
             setQuery(query + " ");
@@ -182,10 +185,11 @@ Item {
     ShaderEffect {
         id: wave
         anchors.fill: parent
-        opacity: root.reveal
+        // Fine-tune → Opacity: the desktop through the wave
+        opacity: root.reveal * (root.prefs.opacity > 0 ? root.prefs.opacity / 100 : 1)
         property real time: 0
         property real aspect: width / Math.max(1, height)
-        property color skyTop: Theme.mix(Theme.dark ? "#08060c" : "#2a1630", Theme.accent, 0.18)
+        property color skyTop: Theme.mix(Theme.dark ? "#08060c" : "#2a1630", root.accentColor, 0.18)
         property color skyBottom: Theme.mix(Theme.dark ? "#14081a" : "#3a1a40", Theme.accent2, 0.3)
         property color wave: Qt.rgba(1, 1, 1, 0.85)
         fragmentShader: Qt.resolvedUrl("../../shaders/xmb_wave.frag.qsb")
@@ -205,17 +209,32 @@ Item {
         }
     }
 
+    // ---- the user, top left ----
+    StartUser {
+        visible: root.prefs.user
+        x: Theme.u * 20
+        y: Theme.u * 12
+        opacity: root.reveal
+        size: Theme.u * 16
+        frameColor: root.accentColor
+        textColor: "#ffffff"
+        kind: "title"
+        onOpened: root.closeRequested()
+    }
+
     // ---- clock, top right (the PSP's corner) ----
     Column {
+        visible: root.prefs.clock || root.searching
         anchors.right: parent.right
         anchors.rightMargin: Theme.u * 20
         y: Theme.u * 14
         opacity: root.reveal
         PxText {
+            visible: root.prefs.clock
             anchors.right: parent.right
             kind: "title"
             color: "#ffffff"
-            text: now.date.toLocaleDateString(Qt.locale(I18n.t("ru_RU", "en_US")), "d.M") + "  " + Qt.formatTime(now.date, "HH:mm")
+            text: now.date.toLocaleDateString(I18n.locale, "d.M") + "  " + I18n.time(now.date, false)
         }
         PxText {
             anchors.right: parent.right
@@ -234,7 +253,7 @@ Item {
     readonly property real rowY: Math.round(height * 0.28)
     readonly property real step: Theme.u * 58
     readonly property real catX: Math.round(width * 0.24)
-    readonly property real iconBox: Theme.u * 30
+    readonly property real iconBox: Math.round(Theme.u * 30 * prefs.icons)
     Repeater {
         model: root.categories
         Item {
@@ -258,7 +277,7 @@ Item {
                 name: catItem.modelData.icon
                 pixel: catItem.sel ? Theme.u * 3 : Theme.u * 2
                 ink: "#ffffff"
-                fill: catItem.sel ? Theme.mix(Theme.accent, "#ffffff", 0.3) : Qt.alpha("#ffffff", 0.75)
+                fill: catItem.sel ? Theme.mix(root.accentColor, "#ffffff", 0.3) : Qt.alpha("#ffffff", 0.75)
                 fill2: Theme.accent2
                 light: "#ffffff"
                 Behavior on pixel {
@@ -268,7 +287,7 @@ Item {
                 }
             }
             PxText {
-                visible: catItem.sel
+                visible: catItem.sel && root.prefs.labels
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.bottom: parent.bottom
                 kind: "body"
@@ -287,7 +306,7 @@ Item {
     }
 
     // ---- the chosen column: the selected item under the row, earlier ones above ----
-    readonly property real itemH: Theme.u * 22
+    readonly property real itemH: Math.round(Theme.u * 22 * Math.max(0.8, prefs.icons))
     readonly property real below: rowY + iconBox / 2 + Theme.u * 18
     Repeater {
         model: root.column.rows
@@ -318,7 +337,7 @@ Item {
                     anchors.centerIn: parent
                     iconName: it.modelData.app ? it.modelData.app.icon || "" : ""
                     appId: it.modelData.app ? it.modelData.app.id || "" : ""
-                    size: it.sel ? Theme.u * 18 : Theme.u * 12
+                    size: Math.round((it.sel ? Theme.u * 18 : Theme.u * 12) * root.prefs.icons)
                 }
                 PxIcon {
                     visible: !it.modelData.app
@@ -326,7 +345,7 @@ Item {
                     name: it.modelData.icon || "heart"
                     pixel: it.sel ? Theme.u * 2 : Math.max(1, Math.round(Theme.u * 1.5))
                     ink: "#ffffff"
-                    fill: Theme.mix(Theme.accent, "#ffffff", 0.35)
+                    fill: Theme.mix(root.accentColor, "#ffffff", 0.35)
                     light: "#ffffff"
                 }
             }
@@ -341,11 +360,11 @@ Item {
                     kind: it.sel ? "title" : "body"
                     color: "#ffffff"
                     style: it.sel ? Text.Outline : Text.Normal
-                    styleColor: Qt.alpha(Theme.accent, 0.6)
+                    styleColor: Qt.alpha(root.accentColor, 0.6)
                     text: it.modelData.label
                 }
                 PxText {
-                    visible: it.sel && text !== ""
+                    visible: it.sel && text !== "" && root.prefs.labels
                     width: parent.width
                     elide: Text.ElideRight
                     kind: "tiny"

@@ -1,5 +1,6 @@
 import QtQuick
 import qs.config
+import qs.services
 import qs.widgets
 
 // Terminal bubble with a ">_" face; bobs gently (stepped) while Codex works.
@@ -8,7 +9,25 @@ Item {
 
     property int pixel: Theme.u
     property string state: CodexState.state
-    readonly property var rows: [
+    // the demon rules: two little horns on the bubble (on the bar too); on the desktop
+    // in hell (Theme.hell) obsidian and embers
+    property bool horns: Angel.demon || Theme.hell
+    property bool hellLook: Theme.hell
+    readonly property var rows: horns ? hornRows : haloRows
+    readonly property var hornRows: [
+        ".r.......r.",
+        ".rr#####rr.",
+        "..#wwwww#..",
+        ".#wxxxxxw#.",
+        "#wxx#xxxxw#",
+        "#wxxx#xxxw#",
+        "#wxx#x###w#",
+        "#wxxxxxxxw#",
+        ".#wwwwwww#.",
+        "..#######..",
+        "...#...#..."
+    ]
+    readonly property var haloRows: [
         "...#####...",
         "..#wwwww#..",
         ".#wxxxxxw#.",
@@ -38,8 +57,10 @@ Item {
         y: root.bob * root.pixel
         bitmap: root.rows
         pixel: root.pixel
-        fill2: root.state === "none" ? Theme.textDim : CodexState.stateColor(root.state, Theme)
-        light: Theme.dark ? Theme.face : "#ffffff"
+        ink: root.hellLook ? Theme.hellGold : (Theme.dark ? Theme.text : Theme.edge)
+        fill2: root.hellLook ? CodexState.hellStateColor(root.state, Theme) : root.state === "none" ? Theme.textDim : CodexState.stateColor(root.state, Theme)
+        light: root.hellLook ? Theme.hellFaceAlt : Theme.dark ? Theme.face : "#ffffff"
+        bad: root.hellLook ? Theme.hellEmber : "#e0203a"
         opacity: root.state === "none" ? 0.7 : 1
     }
 }

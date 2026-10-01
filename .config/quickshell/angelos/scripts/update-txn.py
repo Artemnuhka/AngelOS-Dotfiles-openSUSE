@@ -27,6 +27,7 @@ import fcntl
 import hashlib
 import json
 import os
+import re
 import shutil
 import stat
 import subprocess
@@ -122,16 +123,30 @@ def destinations(rel):
     return out
 
 
+def braces(s):
+    """a{b,c}d → abd, acd (not nested): how an entry's "writes" lists many files"""
+    m = re.search(r"\{([^{}]*)\}", s)
+    if not m:
+        return [s]
+    return [x for alt in m.group(1).split(",") for x in braces(s[: m.start()] + alt + s[m.end():])]
+
+
 def template_targets(text, home):
+    """what a templates.json renders: each entry's "target", and the files its
+    "command" writes, declared in "writes" (gtk-live's themes, Helium's theme) —
+    a file the snapshot doesn't know survives a restore"""
     try:
         data = json.loads(text)
     except ValueError:
         return []
     found = []
     for e in data if isinstance(data, list) else [data]:
-        t = isinstance(e, dict) and e.get("target")
-        if isinstance(t, str) and t.startswith("~/"):
-            found.append(os.path.join(home, t[2:]))
+        if not isinstance(e, dict):
+            continue
+        writes = e.get("writes") if isinstance(e.get("writes"), list) else []
+        for t in [e.get("target")] + writes:
+            if isinstance(t, str) and t.startswith("~/"):
+                found.extend(os.path.join(home, x[2:]) for x in braces(t))
     return found
 
 

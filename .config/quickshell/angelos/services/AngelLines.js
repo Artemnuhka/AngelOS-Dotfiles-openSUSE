@@ -6,6 +6,12 @@
 // their own thing. The demon jokes are cheeky, never explicit.
 
 const tips = [
+    // 2026-10-01, evening
+    ["Меня можно сделать чуть больше: Ctrl + колёсико мыши прямо надо мной ♡", "You can make me a little bigger: Ctrl + mouse wheel right over me ♡", "y2k"],
+    ["В «Пуск» можно поставить свою аватарку — Панель → «Пуск»: аватарка и тонкая настройка.", "You can put your own avatar in Start — Bar → Start: avatar and fine-tuning.", "bar"],
+    ["Если трижды вернуть меня из ада, откроется портал — ходи туда-обратно когда хочешь.", "Bring me back from hell three times and a portal opens — go back and forth whenever you like.", "y2k"],
+    ["У настроек три вида: классика, Windose и стрим. «Внешний вид» → «Вид настроек».", "Settings have three looks: classic, Windose and stream. Appearance → Settings look.", "appearance"],
+    ["Яркость строки лирики может идти за громкостью — или за фейдером RØDECaster. Загляни в «Лирику».", "The lyric line's brightness can follow the volume — or a RØDECaster fader. Have a look in Lyrics.", "lyrics"],
     ["В настройках можно искать своими словами: «сделать крупнее», «звук потише»… Попробуй!", "You can search settings in your own words: “bigger”, “quieter”… Try it!", "home"],
     ["ПКМ по рабочему столу → Вид — там живут виджеты: часы, музыка, cava ♡", "Right-click the desktop → View: that's where widgets live ♡", "widgets"],
     ["Виджеты можно увеличить: зажми Ctrl и покрути колёсико над ними.", "Widgets grow: hold Ctrl and scroll over one.", "widgets"],
@@ -211,7 +217,7 @@ const demonTips = [
     ["Mod+Shift+S — скриншот. Для компромата — самое то.", "Mod+Shift+S takes a screenshot. Perfect for blackmail material.", "capture"],
     ["Хочешь меня прогнать? Меню → «Спросить» → «Верни ангела». Проси хорошо и не часто — спам не работает.", "Want me gone? Menu → “Ask” → “Bring the angel back”. Ask nicely and not too often — spamming won't work.", ""],
     ["Панель можно сделать островом. Маленькая, парит и никому ничего не должна. Как я.", "The bar can be an island: small, floating and owing nobody anything. Like me.", "bar"],
-    ["Обои я тебе поменяла. Свои вернёшь, когда вернётся ангел. Или поставь сам — Обои.", "I changed your wallpaper. You get yours back with the angel. Or set it yourself — Wallpaper.", "wallpaper"],
+    ["Обои я тебе поменяла. И не пытайся — любую твою картинку я сниму. Вернётся ангел — повесит твои.", "I changed your wallpaper. Don't bother — I take down any picture you put up. The angel will hang yours when she's back.", "wallpaper"],
     ["Трещины на экране можно ослабить — Y2K → Ангел или демон. Слабак.", "The screen cracks can be toned down — Y2K → Angel or demon. Weakling.", "y2k"],
     ["Mod+Tab — обзор столов. Посмотри, где ты прячешь окна.", "Mod+Tab shows all workspaces. Let's see where you hide your windows.", ""],
     // the newer things, her way
@@ -228,6 +234,14 @@ const demonTips = [
     ["«Пуск» в стиле Wii? Каналы, музыка, детство… Как мило. Тошнит.", "A Wii-style Start? Channels, music, childhood… how cute. I feel sick.", "bar"],
     ["Значок стола можно сделать CD-диском. Поставь — и представь, что на нём мой альбом.", "The desk sprite can be a CD. Pick it and pretend it's my album.", "workspaces"],
     ["Окна теперь умеют красиво умирать — анимации закрытия на странице «Поведение окон».", "Windows can die beautifully now: close animations are on the Window behavior page.", "windows"]
+];
+
+// the user put up a wallpaper while she rules: hell goes back up (Angel.rehell)
+const demonWallpaper = [
+    ["Не-а. Тут мои обои. Твою картинку я отложила — повесит ангел, если вернётся.", "Nope. My wallpaper here. I put your picture aside — the angel can hang it, if she comes back."],
+    ["Мило. Но нет. В аду висит ад.", "Cute. But no. In hell, hell hangs on the wall."],
+    ["Сменил обои? Я сменила обратно. Можем так весь день.", "Changed the wallpaper? I changed it back. We can do this all day."],
+    ["Светленькое? В моём доме? Унесла к ангелу, пусть она любуется.", "Something bright? In my house? Took it to the angel, let her admire it."]
 ];
 
 const demon = {

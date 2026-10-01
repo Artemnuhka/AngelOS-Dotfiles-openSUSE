@@ -377,6 +377,37 @@ Singleton {
     readonly property color panel: Qt.alpha(face, panelAlpha)
     readonly property color panelAlt: Qt.alpha(faceAlt, panelAlpha)
 
+    // Settings skins take their colours from the active palette, including wallpaper colours.
+    readonly property color ngoPink: accent
+    readonly property color ngoLilac: accent2
+    readonly property color ngoMint: mix(accent2, face, dark ? 0.38 : 0.2)
+    readonly property color ngoInk: text
+    readonly property color ngoPaper: face
+    readonly property color ngoPaperText: text
+    readonly property color ngoSticker: dark ? faceAlt : face
+    // Windose uses the same palette with quieter surfaces and restrained accents.
+    // Stream keeps the saturated ngo tokens above.
+    readonly property color windoseRose: mix(accent, face, dark ? 0.5 : 0.36)
+    readonly property color windoseLavender: mix(accent2, face, dark ? 0.55 : 0.42)
+    readonly property color windosePaper: mix(face, accent2, dark ? 0.09 : 0.035)
+    readonly property color windoseSticker: mix(faceAlt, face, dark ? 0.22 : 0.35)
+    readonly property color windoseInk: mix(text, face, dark ? 0.22 : 0.28)
+    readonly property color windoseLine: mix(accent2, face, dark ? 0.65 : 0.62)
+    readonly property color windoseTitle: mix(accent, text, dark ? 0.38 : 0.52)
+    readonly property color streamBg: desk
+    readonly property color streamPanel: face
+    readonly property color streamText: text
+    readonly property color streamDim: textDim
+    readonly property color streamLive: accent
+
+    // Only controls inside SettingsView inherit its skin.
+    function settingsSkinFor(item) {
+        for (let p = item; p; p = p.parent)
+            if (p.settingsSkin !== undefined)
+                return p.settingsSkin;
+        return "classic";
+    }
+
     // ---- the two dimensions: heaven and hell ----
     // The desktop widgets live in one of them: heaven (the usual look) or hell while
     // the demon rules (Y2K → Angel or demon → Widgets in hell). DesktopWidgets sets

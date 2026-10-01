@@ -5,6 +5,15 @@ import qs.config
 
 Singleton {
     readonly property bool english: Config.appearance.language === "en"
+    // dates and times in the interface language (the bar clock, the calendar…)
+    readonly property var locale: Qt.locale(english ? "en_US" : "ru_RU")
+    // Bar → Clock format: "24" | "12" (AM/PM) | "auto" (12 h in English, 24 h in Russian)
+    readonly property bool clock12: Config.bar.clockFormat === "12" || (Config.bar.clockFormat === "auto" && english)
+    function time(date, seconds) {
+        if (!clock12)
+            return Qt.formatTime(date, seconds ? "HH:mm:ss" : "HH:mm");
+        return locale.toString(date, seconds ? "h:mm:ss AP" : "h:mm AP");
+    }
     readonly property var labels: {
         "Вид": "Appearance",
         "Внешний вид": "Appearance",

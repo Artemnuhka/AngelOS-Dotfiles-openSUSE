@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import qs.config
 import qs.services
 import qs.widgets
@@ -17,6 +18,157 @@ PxPage {
 
     heading: I18n.t("Поведение окон", "Window behavior")
     subtitle: I18n.t("niri располагает окна в прокручиваемых колонках. Изменения сохраняются с бэкапом и проверкой.", "niri arranges windows in scrolling columns. Changes are backed up and validated.")
+    // window decorations: angelOS title bars (modules/decor), GTK's buttons (scripts/gtk-live.py), Helium
+    PxGroup {
+        id: decorGroup
+        width: parent.width
+        title: I18n.t("Декорации окон", "Window decorations")
+        icon: "window"
+        readonly property var floatingApps: {
+            const seen = {};
+            for (const w of Niri.windows)
+                if (w.is_floating && w.app_id && !seen[w.app_id])
+                    seen[w.app_id] = w;
+            return Object.keys(seen).sort();
+        }
+        function skipped(id) {
+            const low = String(id).toLowerCase();
+            return (Config.decor.skip || []).some(k => {
+                const s = String(k).toLowerCase();
+                return s.endsWith("*") ? low.startsWith(s.slice(0, -1)) : low === s;
+            });
+        }
+        SettingRow {
+            label: I18n.t("Заголовки angelOS", "angelOS title bars")
+            hint: I18n.t("над плавающими окнами без своей рамки (niri её не рисует): значок, название, «развернуть» и «закрыть», как у настроек. Тяни — окно едет, двойной клик — развернуть, средняя кнопка — закрыть. В аду — обсидиан и пламя", "Over floating windows without a frame of their own (niri draws none): icon, title, maximize and close, like Settings. Drag to move, double-click to maximize, middle-click to close. In hell: obsidian and flames")
+            PxToggle {
+                checked: Config.decor.titlebars
+                onToggled: c => Config.decor.titlebars = c
+            }
+        }
+        SettingRow {
+            visible: Config.decor.titlebars
+            label: I18n.t("Плавающие окна сейчас", "Floating windows now")
+            hint: I18n.t("галочка — заголовок angelOS; сними у программ, что рисуют свой (браузеры, GTK4, Steam уже сняты)", "Checked: an angelOS title bar; uncheck apps that draw their own (browsers, GTK4, Steam already are)")
+            Column {
+                width: parent.width
+                spacing: Theme.u * 2
+                PxText {
+                    visible: decorGroup.floatingApps.length === 0
+                    text: I18n.t("нет плавающих окон", "no floating windows")
+                    dim: true
+                }
+                Flow {
+                    width: parent.width
+                    spacing: Theme.u * 4
+                    Repeater {
+                        model: decorGroup.floatingApps
+                        PxCheck {
+                            required property string modelData
+                            text: modelData
+                            checked: !decorGroup.skipped(modelData)
+                            onToggled: c => {
+                                const low = modelData.toLowerCase();
+                                const list = (Config.decor.skip || []).filter(k => String(k).toLowerCase() !== low);
+                                if (!c)
+                                    list.push(modelData);
+                                Config.decor.skip = list;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        SettingRow {
+            label: I18n.t("Кнопки GTK-окон как в angelOS", "GTK window buttons like angelOS's")
+            hint: (Angel.hellShown ? I18n.t("пиксельные «развернуть» и «закрыть», шапка цвета меню; в аду — обсидиан и кровь. ", "Pixel maximize and close, the header in the menu colour; obsidian and blood in hell. ") : I18n.t("пиксельные «развернуть» и «закрыть», шапка цвета меню. ", "Pixel maximize and close, the header in the menu colour. ")) + I18n.t("GTK 3 и Helium в режиме «GTK» меняются сразу (своя тема angelOS поверх adw-gtk3), GTK 4 — при следующем запуске программы", "GTK 3 and Helium in its GTK mode change at once (angelOS's own theme over adw-gtk3), GTK 4 the next time an app starts")
+            PxToggle {
+                checked: Config.decor.gtkButtons
+                onToggled: c => Config.decor.gtkButtons = c
+            }
+        }
+        SettingRow {
+            visible: Config.decor.gtkButtons
+            label: I18n.t("Кнопки в заголовке", "Title bar buttons")
+            PxSegmented {
+                model: [
+                    {
+                        "label": I18n.t("Развернуть, закрыть", "Maximize, close"),
+                        "value": "maximize,close"
+                    },
+                    {
+                        "label": I18n.t("+ свернуть", "+ minimize"),
+                        "value": "minimize,maximize,close"
+                    },
+                    {
+                        "label": I18n.t("Только закрыть", "Close only"),
+                        "value": "close"
+                    }
+                ]
+                currentValue: Config.decor.gtkLayout
+                onActivated: v => Config.decor.gtkLayout = v
+            }
+        }
+        // Helium (scripts/helium-theme.py): live through GTK, or a theme extension read at start
+        SettingRow {
+            id: heliumRow
+            visible: heliumStatus.info.installed === true
+            label: "Helium"
+            property bool copied: false
+            hint: heliumStatus.info.gtkMode ? (Angel.hellShown ? I18n.t("в режиме «GTK»: цвета и кнопки окна angelOS, рай и ад — сразу", "In GTK mode: angelOS colours and window buttons, heaven and hell at once") : I18n.t("в режиме «GTK»: цвета и кнопки окна angelOS — сразу", "In GTK mode: angelOS colours and window buttons at once")) : heliumStatus.info.themeLoaded ? (Angel.hellShown ? I18n.t("тема-расширение angelOS загружена: цвета рая или ада подхватываются при каждом запуске Helium. Для смены на лету — Настройки Helium → Внешний вид → Тема → GTK", "The angelOS theme extension is loaded: heaven's or hell's colours apply each time Helium starts. To switch live: Helium settings → Appearance → Theme → GTK") : I18n.t("тема-расширение angelOS загружена: её цвета подхватываются при каждом запуске Helium. Для смены на лету — Настройки Helium → Внешний вид → Тема → GTK", "The angelOS theme extension is loaded: its colours apply each time Helium starts. To switch live: Helium settings → Appearance → Theme → GTK")) : I18n.t("на лету: в Helium Настройки → Внешний вид → Тема → «GTK». Или тема-расширение: helium://extensions → Режим разработчика → «Загрузить распакованное» → папка ниже (цвета обновляются при запуске)", "Live: in Helium Settings → Appearance → Theme → “GTK”. Or the theme extension: helium://extensions → Developer mode → “Load unpacked” → the folder below (colours refresh at start)")
+            Column {
+                width: parent.width
+                spacing: Theme.u * 2
+                PxText {
+                    width: parent.width
+                    elide: Text.ElideMiddle
+                    text: heliumStatus.info.theme || ""
+                    kind: "tiny"
+                    dim: true
+                }
+                Flow {
+                    width: parent.width
+                    spacing: Theme.u * 2
+                    PxButton {
+                        compact: true
+                        icon: "folder"
+                        text: I18n.t("Папка темы", "Theme folder")
+                        onClicked: Quickshell.execDetached(["xdg-open", heliumStatus.info.theme || ""])
+                    }
+                    PxButton {
+                        compact: true
+                        icon: "document"
+                        text: heliumRow.copied ? I18n.t("Скопировано ♡", "Copied ♡") : I18n.t("Копировать путь", "Copy path")
+                        onClicked: {
+                            Quickshell.execDetached(["wl-copy", heliumStatus.info.theme || ""]);
+                            heliumRow.copied = true;
+                        }
+                    }
+                    PxButton {
+                        compact: true
+                        flat: true
+                        icon: "refresh"
+                        text: I18n.t("Проверить", "Check")
+                        onClicked: heliumStatus.running = true
+                    }
+                }
+            }
+            Process {
+                id: heliumStatus
+                property var info: ({})
+                running: true
+                command: ["python3", Quickshell.shellDir + "/scripts/helium-theme.py", "status"]
+                stdout: StdioCollector {
+                    onStreamFinished: {
+                        try {
+                            heliumStatus.info = JSON.parse(text);
+                        } catch (e) {}
+                    }
+                }
+            }
+        }
+    }
+
     PxGroup {
         width: parent.width
         title: I18n.t("Закрытие окон", "Closing windows")
@@ -450,6 +602,21 @@ PxPage {
                             WindowConfig.setAppWidth(appRow.appId, "fixed " + parseInt(text))
                     }
                 }
+            }
+        }
+    }
+
+    PxGroup {
+        title: I18n.t("Меню окна (эксперимент)", "Window menu (experimental)")
+        advanced: true
+        icon: "layers"
+        width: parent.width
+        SettingRow {
+            label: I18n.t("Кнопки плавающего/развёртывания", "Float and maximize buttons")
+            hint: I18n.t("в правом клике по окну в трее добавить «Сделать плавающим / Вернуть в сетку» и «Развернуть до краёв». По умолчанию выключено — большинству хватает полноэкранного режима и перетаскивания в плавающее из тайла", "Add “Make floating / Back to tiling” and “Maximize to edges” to the right-click window menu in the tray. Off by default — most people only need fullscreen and dragging a tile into floating mode")
+            PxToggle {
+                checked: Config.windows && Config.windows.floatButtons === true
+                onToggled: c => Config.windows.floatButtons = c
             }
         }
     }

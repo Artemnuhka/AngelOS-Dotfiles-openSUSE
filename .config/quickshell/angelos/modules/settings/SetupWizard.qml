@@ -219,6 +219,23 @@ FloatingWindow {
                 wrapMode: Text.Wrap
                 text: I18n.t("Панель и рабочий стол запускаются на всех подключённых экранах. Параметры мониторов и ввода меняются только по твоему действию.", "The bar and desktop run on every connected display. Monitor and input settings change only when you edit them.")
             }
+            // the settings window's look, right at the start (Config.settingsUi.skin)
+            PxText {
+                text: I18n.t("Как будут выглядеть настройки?", "How should Settings look?")
+                kind: "title"
+            }
+            Flow {
+                width: parent.width
+                spacing: Theme.u * 4
+                Repeater {
+                    model: ["classic", "windose", "stream"]
+                    SettingsSkinCard {
+                        required property string modelData
+                        skin: modelData
+                        width: Math.min(Theme.u * 100, (parent.width - Theme.u * 12) / 3)
+                    }
+                }
+            }
         }
     }
     Component {
@@ -430,7 +447,7 @@ FloatingWindow {
                     width: parent.width
                     spacing: Theme.u * 6
                     Repeater {
-                        model: ["classic", "angel", "windose", "hell", "chrome"]
+                        model: ["classic", "angel", "windose", "hell", "chrome"].filter(v => v !== "hell" || Angel.hellShown || (Config.bar.logoStyle === "hell" && Angel.hellAllowed))
                         PxButton {
                             required property string modelData
                             width: logoPreview.implicitWidth + Theme.u * 12

@@ -16,7 +16,8 @@ Item {
     property int pixel: Theme.u
     readonly property var variants: ["classic", "angel", "windose", "hell", "chrome"]
     readonly property var emblemNames: ["heart", "pill", "star", "cd", "kitty"]
-    property string variant: variants.includes(Config.bar.logoStyle) ? Config.bar.logoStyle : "classic"
+    // the Hell wordmark is hell's own: in heaven only once the portal is open (Angel.hellAllowed)
+    property string variant: !variants.includes(Config.bar.logoStyle) || (Config.bar.logoStyle === "hell" && !Angel.hellAllowed) ? "classic" : Config.bar.logoStyle
     property string emblemName: emblemNames.includes(Config.bar.logoEmblem) ? Config.bar.logoEmblem : "heart"
     property int fontSize: Theme.sizeTitle
     // one art pixel of a pixel wordmark: the pixel of the 9 px title font at this size,

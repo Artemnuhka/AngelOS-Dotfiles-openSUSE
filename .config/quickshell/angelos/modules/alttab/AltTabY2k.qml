@@ -287,7 +287,7 @@ Item {
             anchors.centerIn: parent
             width: Math.min(implicitWidth, parent.width - root.s * 12)
             elide: Text.ElideMiddle
-            text: (AltTab.current ? (AltTab.current.title || root.host.appName(AltTab.current)) : "") + (root.host.place(AltTab.current) ? "  ·  " + root.host.place(AltTab.current) : "")
+            text: (AltTab.current ? (Niri.titleOf(AltTab.current) || root.host.appName(AltTab.current)) : "") + (root.host.place(AltTab.current) ? "  ·  " + root.host.place(AltTab.current) : "")
             font.family: root.font
             font.pixelSize: Theme.sizeBody
             color: root.steel

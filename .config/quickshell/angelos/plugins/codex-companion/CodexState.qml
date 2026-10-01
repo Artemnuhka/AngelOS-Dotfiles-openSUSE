@@ -84,6 +84,15 @@ Singleton {
             "done": I18n.t("готово ♡", "Ready ♡"),
             "none": I18n.t("нет сессий", "No sessions")
         })
+    // hell (Theme.hell): the demon's words and fire colours
+    readonly property var hellWords: ({
+            "working": I18n.t("варит зелье", "Brewing"),
+            "done": I18n.t("сделка заключена", "Deal sealed"),
+            "none": I18n.t("ни души", "No souls")
+        })
+    function hellStateColor(s, theme) {
+        return s === "working" ? theme.hellEmber : s === "done" ? theme.hellFlame : theme.hellTextDim;
+    }
 
     function refresh() {
         now = Date.now();

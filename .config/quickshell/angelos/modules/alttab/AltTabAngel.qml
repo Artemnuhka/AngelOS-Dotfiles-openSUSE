@@ -100,7 +100,7 @@ Item {
                     width: parent.width
                     horizontalAlignment: Text.AlignHCenter
                     elide: Text.ElideMiddle
-                    text: "♡ " + (AltTab.current ? (AltTab.current.title || root.host.appName(AltTab.current)) : "")
+                    text: "♡ " + (AltTab.current ? (Niri.titleOf(AltTab.current) || root.host.appName(AltTab.current)) : "")
                     font.bold: true
                 }
                 PxText {

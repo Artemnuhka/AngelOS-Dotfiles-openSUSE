@@ -14,6 +14,7 @@ Item {
     property bool checkable: false
     property bool highlighted: false        // keyboard selection
     property string skin: ""                // "" | y2k (glossy pill highlight, rainbow lines)
+    property real iconScale: 1              // bigger or smaller icons (Start → Fine-tune → Icons)
     readonly property bool hovered: mouse.containsMouse
     readonly property bool lit: (mouse.containsMouse || highlighted) && enabled
     signal triggered
@@ -117,11 +118,12 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         spacing: Theme.u * 4
         Item {
-            width: Theme.u * 12
-            height: Theme.u * 11
+            width: Math.round(Theme.u * 12 * root.iconScale)
+            height: Math.round(Theme.u * 11 * root.iconScale)
             anchors.verticalCenter: parent.verticalCenter
             PxIcon {
                 anchors.centerIn: parent
+                exactPixel: root.iconScale !== 1 ? Theme.u * root.iconScale : 0
                 visible: root.icon !== "" || (root.checkable && root.checked)
                 name: root.checkable ? (root.checked ? "check" : "heart") : (root.icon || "heart")
                 ink: root.lit ? Theme.selectText : (Theme.dark ? Theme.text : Theme.edge)

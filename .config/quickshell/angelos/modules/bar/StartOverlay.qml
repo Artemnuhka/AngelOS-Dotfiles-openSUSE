@@ -28,6 +28,8 @@ Variants {
         readonly property bool spot: style === "spotlight"
         property bool shown: false
         property real reveal: 0
+        // this look's deep settings (services/StartPrefs: Settings → Bar → Start → Fine-tune)
+        readonly property var prefs: StartPrefs.of(style)
 
         screen: modelData
         visible: shown
@@ -52,13 +54,15 @@ Variants {
                     body.item.current = -1;
                 win.takePrefill();
                 revealAnim.to = 1;
-                revealAnim.duration = win.full ? 340 : 230;
+                revealAnim.duration = !win.prefs.anim ? 1 : Math.round((win.full ? 340 : 230) / win.prefs.speed);
+                if (win.prefs.sound)
+                    Sounds.play("open");
                 revealAnim.easing.type = win.full ? Easing.OutQuint : Easing.OutCubic;
                 revealAnim.restart();
                 Qt.callLater(() => keys.forceActiveFocus());
             } else if (shown) {
                 revealAnim.to = 0;
-                revealAnim.duration = win.full ? 200 : 140;
+                revealAnim.duration = !win.prefs.anim ? 1 : Math.round((win.full ? 200 : 140) / win.prefs.speed);
                 revealAnim.easing.type = Easing.InCubic;
                 revealAnim.restart();
             }
@@ -80,8 +84,13 @@ Variants {
             id: revealAnim
             target: win
             property: "reveal"
-            onFinished: if (!win.open)
-                win.shown = false
+            // closed: the typed text goes too, so the results bindings (apps,
+            // settings, the calculator) don't keep re-running behind a hidden menu
+            onFinished: if (!win.open) {
+                win.shown = false;
+                if (body.item && body.item.setQuery)
+                    body.item.setQuery("");
+            }
         }
 
         // where the Start button of this screen sits (layer shell does not tell
@@ -99,8 +108,10 @@ Variants {
         }
         readonly property bool above: button.y > height / 2
 
+        // "close on a click outside" off: only the menu takes the pointer, the rest of the
+        // screen keeps working under it (Esc or Start close it)
         mask: Region {
-            item: win.open ? catcher : null
+            item: !win.open ? null : win.full || win.prefs.clickOutside ? catcher : body
         }
         // (Spotlight's pill and list are near opaque; its box is mostly air)
         BackgroundEffect.blurRegion: Config.appearance.blur && win.shown && !win.spot ? blurRegion : null
@@ -120,6 +131,11 @@ Variants {
             id: keys
             focus: true
             Keys.onPressed: e => {
+                // "typing searches" off: letters do nothing, the keys still walk the menu
+                if (!win.prefs.typeSearch && e.text && e.text.trim() !== "" && !(e.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))) {
+                    e.accepted = true;
+                    return;
+                }
                 if (body.item)
                     body.item.key(e);
             }
@@ -133,13 +149,17 @@ Variants {
             readonly property string align: win.spot ? "center" : Config.bar.startAlign && Config.bar.startAlign !== "auto" ? Config.bar.startAlign : win.style === "win11" ? "center" : "button"
             readonly property real edge: Theme.u * 4
             x: win.full ? 0 : align === "center" ? Math.round((win.width - width) / 2) : align === "left" ? edge : align === "right" ? win.width - width - edge : Math.max(Theme.u * 2, Math.min(win.width - width - Theme.u * 2, win.button.x))
-            // win11 (and anything over a centred taskbar) slides up like Windows 11
-            readonly property bool slides: win.style === "win11" || Config.bar.taskbarAlign === "center"
+            // win11 (and anything over a centred taskbar) slides up like Windows 11;
+            // Fine-tune → Animation can make any of them fade, slide or zoom instead
+            readonly property string kind: win.prefs.animKind || "auto"
+            readonly property bool slides: kind === "slide" || (kind === "auto" && (win.style === "win11" || Config.bar.taskbarAlign === "center"))
+            readonly property bool zooms: kind === "zoom" || (kind === "auto" && (win.style === "classic" || win.style === "windose") && !slides)
             // Spotlight: a fifth down the screen, dropping in a little
-            y: win.full ? 0 : win.spot ? Math.round(win.height * 0.2) - (1 - win.reveal) * Theme.u * 10 : restY + (slides ? (win.above ? 1 : -1) * (1 - win.reveal) * Theme.u * 24 : 0)
+            y: win.full ? 0 : win.spot ? Math.round(win.height * 0.2) - (kind === "auto" || kind === "slide" ? (1 - win.reveal) * Theme.u * 10 : 0) : restY + (slides ? (win.above ? 1 : -1) * (1 - win.reveal) * Theme.u * 24 : 0)
             opacity: win.full ? 1 : win.reveal
-            // classic and Windose pop out of their corner, win11 slides, Spotlight swells
-            scale: win.spot ? 0.96 + 0.04 * win.reveal : (win.style === "classic" || win.style === "windose") && !slides ? 0.9 + 0.1 * win.reveal : 1
+            // classic and Windose pop out of their corner, win11 slides, Spotlight swells;
+            // the look's own size (Fine-tune → Scale) on top
+            scale: (win.full ? 1 : win.prefs.zoom) * (win.spot && kind === "auto" ? 0.96 + 0.04 * win.reveal : zooms ? (kind === "zoom" ? 0.85 + 0.15 * win.reveal : 0.9 + 0.1 * win.reveal) : 1)
             transformOrigin: align === "right" ? (win.above ? Item.BottomRight : Item.TopRight) : align === "center" ? (win.above ? Item.Bottom : Item.Top) : (win.above ? Item.BottomLeft : Item.TopLeft)
             sourceComponent: ({
                     "fullscreen": fullComp,

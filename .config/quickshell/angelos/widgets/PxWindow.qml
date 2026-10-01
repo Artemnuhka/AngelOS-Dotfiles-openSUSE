@@ -8,6 +8,12 @@ Item {
     id: root
 
     property bool hell: false
+    // the settings skins (Config.settingsUi.skin): "" / classic, windose (a candy NGO window:
+    // pink rim, ink outline, white buttons) or stream (a broadcast panel with a LIVE pill)
+    property string skin: Config.settingsUi.skin === "windose" ? "windose" : ""
+    readonly property bool windose: skin === "windose" && !hell
+    readonly property bool streamSkin: skin === "stream" && !hell
+    readonly property string settingsSkin: windose ? "windose" : streamSkin ? "stream" : "classic"
     property bool flamesLive: true         // the flames move (off while nobody sees them)
     property bool trim: true               // flames and drips (a copy drawn over its twin leaves them to it)
 
@@ -38,7 +44,10 @@ Item {
         id: frame
         anchors.fill: parent
         hell: root.hell
-        color: root.hell && root.bodyColor.a > 0 ? Theme.hellPanel : root.bodyColor
+        color: root.windose ? Theme.windosePaper : root.streamSkin ? Theme.streamBg : root.hell && root.bodyColor.a > 0 ? Theme.hellPanel : root.bodyColor
+        edgeColor: root.windose ? Theme.windoseLine : root.hell ? Theme.hellEdge : Theme.edge
+        hiColor: root.windose ? Theme.mix(Theme.windosePaper, Theme.text, 0.15) : root.hell ? Theme.hellHi : Theme.hi
+        loColor: root.windose ? Theme.windoseLine : root.hell ? Theme.hellLo : Theme.lo
         shadow: root.shadow
     }
 
@@ -97,7 +106,21 @@ Item {
         y: frame.inset + Theme.u
         width: root.width - 2 * x
         height: root.titleHeight
-        color: root.hell ? (root.active ? Theme.mix(Theme.hellFaceAlt, Theme.hellBlood, 0.35) : Theme.hellFace) : root.active ? Theme.menuHeader : Theme.faceAlt
+        color: root.windose ? Theme.windoseRose : root.streamSkin ? Theme.streamPanel : root.hell ? (root.active ? Theme.mix(Theme.hellFaceAlt, Theme.hellBlood, 0.35) : Theme.hellFace) : root.active ? Theme.menuHeader : Theme.faceAlt
+        // Windose: the candy gradient from pink to lilac
+        gradient: root.windose ? candy : null
+        Gradient {
+            id: candy
+            orientation: Gradient.Horizontal
+            GradientStop {
+                position: 0
+                color: Theme.windoseRose
+            }
+            GradientStop {
+                position: 1
+                color: Theme.windoseLavender
+            }
+        }
 
         MouseArea {
             id: titleMouse
@@ -114,12 +137,29 @@ Item {
             PxIcon {
                 name: root.icon
                 anchors.verticalCenter: parent.verticalCenter
-                ink: root.hell ? Theme.hellEdge : Theme.edge
-                fill: root.hell ? Theme.hellFlame : "#ffffff"
-                light: root.hell ? Theme.hellText : Theme.accent3
-                fill2: root.hell ? Theme.hellEmber : "#ffffff"
-                body: root.hell ? Theme.hellFace : "#ffffff"
+                ink: root.hell ? Theme.hellEdge : root.windose ? Theme.windoseInk : Theme.edge
+                fill: root.hell ? Theme.hellFlame : root.windose ? Theme.windoseSticker : "#ffffff"
+                light: root.hell ? Theme.hellText : root.windose ? Theme.windoseLavender : Theme.accent3
+                fill2: root.hell ? Theme.hellEmber : root.windose ? Theme.windoseRose : "#ffffff"
+                body: root.hell ? Theme.hellFace : root.windose ? Theme.windoseSticker : "#ffffff"
                 bad: root.hell ? Theme.hellEmber : Theme.danger
+            }
+            // stream: the red LIVE pill before the title
+            Rectangle {
+                visible: root.streamSkin
+                anchors.verticalCenter: parent.verticalCenter
+                width: liveLabel.implicitWidth + Theme.u * 6
+                height: liveLabel.implicitHeight + Theme.u
+                radius: height / 2
+                color: Theme.streamLive
+                PxText {
+                    id: liveLabel
+                    anchors.centerIn: parent
+                    text: "● LIVE"
+                    kind: "tiny"
+                    font.bold: true
+                    color: Theme.selectText
+                }
             }
             PxText {
                 text: root.title
@@ -127,7 +167,8 @@ Item {
                 readonly property bool gothic: root.hell && Theme.latin(root.title)
                 font.family: gothic ? Theme.fontHell : root.compact ? Theme.fontBody : Theme.fontTitle
                 font.pixelSize: gothic ? Theme.hellPx(Theme.fs) : root.compact ? Theme.sizeBody : Theme.sizeTitle
-                color: root.hell ? Theme.hellFlame : Theme.text
+                font.bold: root.windose
+                color: root.windose ? Theme.text : root.streamSkin ? Theme.streamText : root.hell ? Theme.hellFlame : Theme.text
                 style: Text.Normal
                 styleColor: Qt.alpha(Theme.edge, 0.55)
                 anchors.verticalCenter: parent.verticalCenter
@@ -192,14 +233,15 @@ Item {
                         anchors.fill: parent
                         sunken: tbMouse.pressed
                         hell: root.hell
-                        color: tbMouse.containsMouse && tb.modelData.id === "close" ? (root.hell ? Theme.hellBlood : Theme.danger) : root.hell ? Theme.hellFace : Theme.face
+                        edgeColor: root.windose ? Theme.windoseLine : root.hell ? Theme.hellEdge : Theme.edge
+                        color: tbMouse.containsMouse && tb.modelData.id === "close" ? (root.hell ? Theme.hellBlood : Theme.danger) : root.windose ? Theme.windoseSticker : root.streamSkin ? Theme.streamBg : root.hell ? Theme.hellFace : Theme.face
                     }
                     PxIcon {
                         anchors.centerIn: parent
                         anchors.horizontalCenterOffset: tbMouse.pressed ? Theme.u : 0
                         name: tb.modelData.icon
                         pixel: Math.max(1, Math.floor(Theme.u * (root.compact ? 0.5 : 1)))
-                        ink: tbMouse.containsMouse && tb.modelData.id === "close" ? "#ffffff" : root.hell ? Theme.hellText : (Theme.dark ? Theme.text : Theme.edge)
+                        ink: tbMouse.containsMouse && tb.modelData.id === "close" ? "#ffffff" : root.windose ? Theme.windoseInk : root.streamSkin ? Theme.streamText : root.hell ? Theme.hellText : (Theme.dark ? Theme.text : Theme.edge)
                     }
                     MouseArea {
                         id: tbMouse
@@ -232,5 +274,14 @@ Item {
             rightMargin: frame.inset + root.bodyPadding
             bottomMargin: frame.inset + root.bodyPadding
         }
+    }
+
+    WindoseDecor {
+        visible: root.windose && !root.compact && root.width >= Theme.u * 180 && root.height >= Theme.u * 110
+        x: bar.x + Theme.u
+        y: bar.y + bar.height + Theme.u
+        width: bar.width - Theme.u * 2
+        height: root.height - y - frame.inset - Theme.u
+        z: 2
     }
 }

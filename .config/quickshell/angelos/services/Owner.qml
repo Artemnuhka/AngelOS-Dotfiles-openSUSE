@@ -86,6 +86,10 @@ Singleton {
     LazyLoader {
         id: jobsLoader
         active: root.enabled
-        source: "file://" + root.dir + "/DotfilesJobs.qml"
+        // no source without owner/: Qt would look for the file anyway and warn in
+        // every public install's log (seen in an issue's angelos report). hasDir, not
+        // enabled: the source has to be there before active turns on, a later source
+        // is not picked up
+        source: root.hasDir ? "file://" + root.dir + "/DotfilesJobs.qml" : ""
     }
 }

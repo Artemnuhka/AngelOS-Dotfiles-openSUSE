@@ -139,9 +139,9 @@ PxPage {
                                     Shell.openSettings("studio");
                                 }
                             }
-                            // its desktop widget only knows heaven: Studio draws its hell
+                            // its desktop widget only knows heaven: Studio draws its hell (offered while the demon rules)
                             PxButton {
-                                visible: Config.developer.enabled && PluginStudio.needsHell(card.modelData)
+                                visible: Angel.hellShown && Config.developer.enabled && PluginStudio.needsHell(card.modelData)
                                 compact: true
                                 icon: "fire"
                                 text: I18n.t("Адская версия", "Hell version")

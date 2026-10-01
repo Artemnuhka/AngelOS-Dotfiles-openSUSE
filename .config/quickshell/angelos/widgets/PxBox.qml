@@ -7,16 +7,17 @@ Item {
     id: root
 
     property bool hell: false
+    readonly property string settingsSkin: hell ? "classic" : Theme.settingsSkinFor(root.parent)
     property color color: hell ? Theme.hellFace : Theme.face
-    property int bevel: Theme.u
+    property int bevel: settingsSkin === "windose" ? Math.max(1, Math.floor(Theme.u / 2)) : Theme.u
     property bool sunken: false
     property bool outline: true
-    property bool flat: false
+    property bool flat: settingsSkin === "windose"
     property bool shadow: false
     property int shadowSize: Theme.u * 2
-    property color hiColor: hell ? Theme.hellHi : Theme.hi
-    property color loColor: hell ? Theme.hellLo : Theme.lo
-    property color edgeColor: hell ? Theme.hellEdge : Theme.edge
+    property color hiColor: hell ? Theme.hellHi : settingsSkin === "windose" ? Theme.windoseLine : Theme.hi
+    property color loColor: hell ? Theme.hellLo : settingsSkin === "windose" ? Theme.windoseLine : Theme.lo
+    property color edgeColor: hell ? Theme.hellEdge : settingsSkin === "windose" ? Theme.windoseLine : Theme.edge
     readonly property int ob: outline ? bevel : 0
     readonly property int inset: ob + (flat ? 0 : bevel)
     default property alias content: inner.data

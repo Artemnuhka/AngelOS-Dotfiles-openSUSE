@@ -17,7 +17,10 @@ Item {
     property int current: 0
     property string query: ""
     readonly property bool searching: query.trim() !== ""
-    readonly property real sizeFactor: Math.max(0.7, Math.min(1.8, (Config.bar.startWidth || 100) / 100))
+    // Settings → Bar → Start → Fine-tune (services/StartPrefs)
+    readonly property var prefs: StartPrefs.of("spotlight")
+    readonly property color accentColor: prefs.accentColor
+    readonly property real sizeFactor: prefs.size
     readonly property int maxRows: 9
 
     function matches(label, q) {
@@ -41,10 +44,10 @@ Item {
             "run": () => StartApps.launch(a)
         };
     }
-    readonly property var actions: plain(StartItems.power.concat(StartItems.settings.slice(0, 3)), I18n.t("Действия", "Actions"))
+    readonly property var actions: plain((prefs.power ? StartItems.power : []).concat(StartItems.settings.slice(0, 3)), I18n.t("Действия", "Actions"))
     readonly property var rows: {
         if (!searching)
-            return StartApps.pinned.slice(0, 6).map(a => appRow(a, I18n.t("Закреплённые", "Pinned"))).concat(actions.slice(0, 3));
+            return (prefs.pinned ? StartApps.pinned.slice(0, 6).map(a => appRow(a, I18n.t("Закреплённые", "Pinned"))) : []).concat(actions.slice(0, 3));
         const q = query.trim().toLowerCase();
         const out = [];
         for (const r of StartApps.searchAll(query, 24)) {
@@ -140,23 +143,23 @@ Item {
         width: parent.width
         height: Theme.u * 30
         radius: height / 2
-        color: Qt.alpha(Theme.panel, Math.max(0.88, Theme.panelAlpha))
+        color: Qt.alpha(Theme.panel, root.prefs.opacity > 0 ? root.prefs.alpha : Math.max(0.88, Theme.panelAlpha))
         border.width: Math.max(1, Theme.u / 2)
-        border.color: Qt.alpha(Theme.accent, 0.6)
+        border.color: Qt.alpha(root.accentColor, 0.6)
         PxIcon {
             id: lens
             x: Theme.u * 10
             anchors.verticalCenter: parent.verticalCenter
             name: "search"
             pixel: Math.max(1, Math.round(Theme.u * 1.5))
-            fill: Theme.accent
+            fill: root.accentColor
         }
         PxField {
             id: field
             keepFocus: true
             anchors.left: lens.right
             anchors.leftMargin: Theme.u * 4
-            anchors.right: parent.right
+            anchors.right: pillUser.visible ? pillUser.left : parent.right
             anchors.rightMargin: Theme.u * 12
             anchors.verticalCenter: parent.verticalCenter
             kind: "title"
@@ -167,6 +170,18 @@ Item {
             }
             onAccepted: root.runRow(root.rows[root.current])
             onKeyPressed: e => root.nav(e)
+        }
+        // the user at the pill's end (Fine-tune → Sections → User): just the avatar
+        StartUser {
+            id: pillUser
+            visible: root.prefs.user
+            anchors.right: parent.right
+            anchors.rightMargin: Theme.u * 8
+            anchors.verticalCenter: parent.verticalCenter
+            size: Theme.u * 18
+            showName: false
+            frameColor: root.accentColor
+            onOpened: root.closeRequested()
         }
     }
 
@@ -215,7 +230,7 @@ Item {
                     y: Theme.u * 2
                     kind: "tiny"
                     font.bold: true
-                    color: Theme.accent
+                    color: root.accentColor
                     text: cell.modelData.section
                 }
                 Rectangle {
@@ -227,7 +242,7 @@ Item {
                     width: list.width
                     height: Theme.u * 22
                     radius: Theme.u * 6
-                    color: sel ? Qt.alpha(Theme.accent, Theme.dark ? 0.3 : 0.22) : rm.containsMouse ? Qt.alpha(Theme.accent, 0.1) : "transparent"
+                    color: sel ? Qt.alpha(root.accentColor, Theme.dark ? 0.3 : 0.22) : rm.containsMouse ? Qt.alpha(root.accentColor, 0.1) : "transparent"
                     Item {
                         id: glyph
                         x: Theme.u * 5
@@ -238,7 +253,7 @@ Item {
                             anchors.centerIn: parent
                             iconName: row.modelData.app ? row.modelData.app.icon || "" : ""
                             appId: row.modelData.app ? row.modelData.app.id || "" : ""
-                            size: Theme.u * 12
+                            size: Math.round(Theme.u * 12 * root.prefs.icons)
                         }
                         PxIcon {
                             visible: !row.modelData.app

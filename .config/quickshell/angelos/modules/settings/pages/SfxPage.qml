@@ -330,7 +330,7 @@ PxPage {
 
     PxGroup {
         width: parent.width
-        title: I18n.t("Ангел и демоница", "Angel and demon")
+        title: Angel.hellShown ? I18n.t("Ангел и демоница", "Angel and demon") : I18n.t("Ангелочек", "The angel")
         icon: "heart"
         SettingRow {
             label: I18n.t("Её голос", "Her voice")
@@ -350,7 +350,8 @@ PxPage {
             }
         }
         Repeater {
-            model: ["angel", "demon", "voice", "choir", "crack", "rocks", "shatter"]
+            // the demon's own sounds (her lines, the glass, the rocks) only while she rules
+            model: Angel.hellShown ? ["angel", "demon", "voice", "choir", "crack", "rocks", "shatter"] : ["angel", "voice", "choir"]
             delegate: eventRow
         }
     }

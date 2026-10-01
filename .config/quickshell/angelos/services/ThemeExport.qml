@@ -10,7 +10,9 @@ Singleton {
     id: root
 
     readonly property string paletteFile: Config.cacheDir + "/palette.json"
-    readonly property string signature: Config.appearance.customAccent + "|" + Theme.dark + "|" + Config.appearance.flavor + "|" + Config.appearance.themeApps + "|" + (Config.appearance.disabledTemplates || []).join(",")
+    // the realm (the demon rules: hell's decorations for GTK and Helium) and the window
+    // decoration settings re-render too
+    readonly property string signature: Config.appearance.customAccent + "|" + Theme.dark + "|" + Config.appearance.flavor + "|" + Config.appearance.themeApps + "|" + (Config.appearance.disabledTemplates || []).join(",") + "|" + Angel.demon + "|" + Config.decor.gtkButtons + "|" + Config.decor.gtkLayout
     property string lastLog: ""
     property var entries: []
 
@@ -28,7 +30,30 @@ Singleton {
     function apply() {
         if (!Config.appearance.themeApps || Shell.dev)
             return;
-        paletteWriter.setText(JSON.stringify(Theme.exportPalette(), null, 2));
+        paletteWriter.setText(JSON.stringify(Object.assign(Theme.exportPalette(), decorPalette()), null, 2));
+    }
+
+    // window decorations (templates gtk3-decor/gtk4-decor, scripts/gtk-live.py, Helium):
+    // heaven's title bars like angelOS's own windows, hell's in obsidian and blood
+    function decorPalette() {
+        const hell = Angel.demon;
+        const h = c => Theme.hex(c);
+        return {
+            "realm": hell ? "hell" : "heaven",
+            "decorGtk": Config.decor.gtkButtons ? "1" : "",
+            "decorButtons": /^[a-z,]*$/.test(Config.decor.gtkLayout || "") ? Config.decor.gtkLayout : "maximize,close",
+            "decorHeader": h(hell ? Theme.mix(Theme.hellFaceAlt, Theme.hellBlood, 0.35) : Theme.menuHeader),
+            "decorFace": h(hell ? Theme.hellFace : Theme.face),
+            "decorFaceAlt": h(hell ? Theme.hellFace : Theme.faceAlt),
+            "decorHover": h(hell ? Theme.hellFaceAlt : Theme.mix(Theme.face, Theme.accent, 0.25)),
+            "decorHi": h(hell ? Theme.hellHi : Theme.hi),
+            "decorLo": h(hell ? Theme.hellLo : Theme.lo),
+            "decorEdge": h(hell ? Theme.hellEdge : Theme.edge),
+            "decorText": h(hell ? Theme.hellText : (Theme.dark ? Theme.text : Theme.edge)),
+            "decorTextDim": h(hell ? Theme.hellTextDim : Theme.textDim),
+            "decorTitle": h(hell ? Theme.hellFlame : Theme.text),
+            "decorDanger": h(hell ? Theme.hellBlood : Theme.danger)
+        };
     }
 
     Timer {

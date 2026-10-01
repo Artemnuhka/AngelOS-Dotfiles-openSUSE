@@ -28,6 +28,8 @@ JsonAdapter {
 
     property JsonObject bar: JsonObject {
         property string style: "taskbar"    // taskbar | top | island
+        property bool autoHide: false       // taskbar: slides away below the screen edge, back on the pointer at the edge
+        property int autoHideMs: 700        // how long it waits after the pointer leaves
         property var screens: []            // empty = every screen
         property bool compactOnVertical: true
         property bool showWindows: true
@@ -40,6 +42,7 @@ JsonAdapter {
         property bool allWindows: false     // taskbar: every window, not only current workspace
         property bool showMedia: true
         property bool showSeconds: false
+        property string clockFormat: "auto" // auto (12 h in English, 24 h in Russian) | 24 | 12
         property string startLabel: "angelOS"
         property string startStyle: "classic" // classic (Win98 list) | win11 (centred, pinned grid) | fullscreen (iPhone-like app grid) | xmb (PSP) | windose (NGO window) | wii (channels) | spotlight (a search pill)
         property var startPinned: []        // desktop entry ids pinned in Start
@@ -47,6 +50,10 @@ JsonAdapter {
         property string taskbarAlign: "left" // left | center — Start and the window buttons in the middle, like Windows 11
         property int startWidth: 100        // Start menu width, % of the default
         property int startRows: 3           // win11: rows of pinned apps
+        property var startPrefs: ({})       // deep settings per Start look: {"win11": {"columns": 8, …}} (services/StartPrefs)
+        property string avatar: ""          // the user's picture in Start (a copy in ~/.local/share/angelos); "" = the system's (AccountsService, ~/.face)
+        property bool avatarPixel: false    // the avatar drawn in big pixels, like the rest of angelOS
+        property string userName: ""        // the name under / next to it; "" = the login name
         property string logoStyle: "classic" // wordmark: classic | angel | windose (NGO, pill O) | hell (gothic, drips) | chrome (Y2K)
         property string logoEmblem: "heart" // emblem: heart (winged, halo) | pill | star | cd | kitty
         property bool logoFastfetch: true   // fastfetch draws the chosen emblem (~/.config/fastfetch/logo.txt)
@@ -89,6 +96,23 @@ JsonAdapter {
         property var names: ({})            // "DP-1:1" -> "работа"
     }
 
+    // window decorations (modules/decor, Settings → Windows → Decorations): niri draws no
+    // title bars (prefer-no-csd), so apps without their own get angelOS's
+    property JsonObject decor: JsonObject {
+        property bool titlebars: true       // angelOS title bars over floating windows without a frame of their own
+        property var skip: ["helium", "chromium", "google-chrome", "brave-browser", "firefox", "zen", "librewolf", "org.gnome.*", "org.quickshell", "quickshell", "steam", "discord", "vesktop", "spotify", "code", "code-oss", "cursor", "obsidian", "org.telegram.desktop", "com.mitchellh.ghostty"] // app ids that draw their own (a * at the end: a prefix)
+        property bool gtkButtons: true      // GTK 3/4 window buttons drawn like angelOS's (templates gtk3/gtk4)
+        property string gtkLayout: "maximize,close" // GTK title bar buttons, in order (gsettings button-layout, right side)
+    }
+
+    // window menu (modules/bar/parts/WindowMenu.qml): "Make floating / Back to tiling" and
+    // "Maximize to edges" are off by default — they sit behind an experimental toggle that only
+    // shows in expert settings. Right-click on a window button without expert mode only gets you
+    // Fullscreen, Move to desk / monitor, Close, End task.
+    property JsonObject windows: JsonObject {
+        property bool floatButtons: false   // experimental: floating + maximize buttons in the window menu
+    }
+
     property JsonObject alttab: JsonObject {
         property string style: "angelos"    // angelos | ngo | y2k — angelOS's own switcher; niri = niri's with live previews
         property string scope: "all"        // all | output (this monitor) | workspace (this desk)
@@ -105,6 +129,15 @@ JsonAdapter {
         property string preferPlayer: "spotify"
         property var sources: ["local", "player", "lrclib", "netease", "kugou", "qq", "ovh"] // tried in this order
         property int sourcesVersion: 0      // 2 = the list knows kugou/qq/local/player (older lists get them once)
+        // the line's brightness follows the volume (services/LyricsGlow): off | auto (a
+        // RØDECaster's fader when one is plugged in, else the real level) | rode | level
+        property string glow: "auto"
+        property int glowFloor: 30          // % the line never goes below (30–100)
+        property string glowTap: "main"     // RØDECaster: where the fader is read — main (the mix after the faders) | aux01 … aux89 (multitrack pairs)
+        property real glowRodeMin: -40      // dB of the fader that is "all the way down" (calibrated in Lyrics)
+        property real glowRodeMax: 0        // dB of the fader at the top
+        property real glowLevelMin: -48     // dBFS of the music that dims the line to the floor
+        property real glowLevelMax: -14     // dBFS that lights it fully
     }
 
     property JsonObject setup: JsonObject {
@@ -277,7 +310,8 @@ JsonAdapter {
         property string textShake: "light"  // the helper's letters twitch now and then: off | light | strong
         property string hellStyle: "pack"   // the demon's wallpaper: pack (pixel paintings, Hell pack) | drawn
         property bool shake: true           // the angel ↔ demon swap shakes the screen (the demon brings 8-bit rocks)
-        property bool hellWallpaper: true   // the demon brings dark wallpaper, the angel gives yours back
+        property bool hellWallpaper: true   // (no longer read: the demon always brings hell's wallpaper, the angel gives yours back)
+        property int returns: 0             // times the angel came back from hell; 3 open the portal (Angel.portalOpen)
         property string hellPicture: ""     // "" = generated pixel hell (scripts/hell-wallpaper.py)
         property var angelSaved: null       // wallpaper + theme mode kept while the demon rules
         property bool jokes: true           // she jokes now and then, not only tips
@@ -286,6 +320,7 @@ JsonAdapter {
         property bool hellWidgets: true     // desktop widgets burn over to their hell look while the demon rules
         property string angelLook: "glitch" // glitch (cracked halo, pictures) | chibi (the first pictures) | adult (30×40 pixels) | mini (the first 20×21)
         property string demonLook: "glitch" // the same for the demon (glitch: the sleepless neon one)
+        property real helperScale: 1.0      // 1.00–1.15: Ctrl + mouse wheel over her, 5 % a notch (Y2K → Helper → Size)
     }
 
     // the lens at the pointer (services/Lens, Settings → Keyboard and mouse → Lens)
@@ -313,6 +348,8 @@ JsonAdapter {
 
     property JsonObject settingsUi: JsonObject {
         property bool expert: false         // false: home tiles, main settings only; true: every page in a sidebar
+        property string skin: "classic"     // classic angelOS | Windose desktop | stream studio
+        property bool skinChosen: false     // the look was picked (the wizard, or the banner on the settings home)
         property var usage: ({})            // page id -> visits; "Everyday" on the home page follows it
     }
 

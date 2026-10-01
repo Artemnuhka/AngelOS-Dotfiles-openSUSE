@@ -4,6 +4,12 @@
   { "id": "alacritty", "name": "Alacritty",   "template": "alacritty.toml","target": "~/.config/alacritty/themes/angelos.toml" },
   { "id": "gtk3",      "name": "GTK 3",       "template": "gtk3.css",      "target": "~/.config/gtk-3.0/angelos.css" },
   { "id": "gtk4",      "name": "GTK 4 / libadwaita", "template": "gtk4.css", "target": "~/.config/gtk-4.0/angelos.css" },
-  { "id": "gtk-scheme","name": "GTK color-scheme", "command": "gsettings set org.gnome.desktop.interface color-scheme prefer-{{mode}}; gsettings set org.gnome.desktop.interface gtk-theme adw-gtk3{{gtkSuffix}}" },
+  { "id": "gtk-scheme","name": "GTK color-scheme", "command": "gsettings set org.gnome.desktop.interface color-scheme prefer-{{mode}}; [ -n \"{{decorGtk}}\" ] || gsettings set org.gnome.desktop.interface gtk-theme adw-gtk3{{gtkSuffix}}" },
+  { "id": "gtk-live",  "name": "GTK: окна angelOS (рай/ад, кнопки)", "command": "python3 {{shellDir}}/scripts/gtk-live.py {{paletteFile}}",
+    "writes": ["~/.config/gtk-4.0/angelos-decor.css", "~/.config/gtk-4.0/assets/{close,maximize,minimize,close-hover}.svg",
+               "~/.local/share/themes/angelOS-{a,b}/{index.theme,gtk-3.0/gtk.css,gtk-4.0/gtk.css}",
+               "~/.local/share/themes/angelOS-{a,b}/gtk-{3,4}.0/assets/{close,maximize,minimize,close-hover}.svg"] },
+  { "id": "helium",    "name": "Helium: тема рай/ад", "command": "python3 {{shellDir}}/scripts/helium-theme.py build {{paletteFile}}",
+    "writes": ["~/.local/share/angelos/helium/theme/manifest.json"] },
   { "id": "niri",      "name": "niri (рамки окон)", "template": "niri.kdl", "target": "~/.config/niri/angelos.kdl" }
 ]

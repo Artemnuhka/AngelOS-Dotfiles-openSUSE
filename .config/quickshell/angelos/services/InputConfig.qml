@@ -113,6 +113,18 @@ Singleton {
         }
         return re.test(src) ? src.replace(re, (m, indent) => indent + line) : src;
     }
+    // `name { }` inside `parent { … }` when it isn't there yet: the shipped input.kdl
+    // has no mouse block (only a commented example), and a setting can't be put into
+    // a block that doesn't exist (issue #27: acceleration and speed did nothing)
+    function ensureBlock(src, name, parent) {
+        if (blockRange(name, src))
+            return src;
+        const r = blockRange(parent, src);
+        if (!r)
+            return src;
+        const inner = src.slice(r[0], r[1]).replace(/\s*$/, "\n\n    " + name + " {\n    }\n");
+        return src.slice(0, r[0]) + inner + src.slice(r[1]);
+    }
     function removeLine(src, re) {
         return src.replace(re, "");
     }
@@ -142,6 +154,8 @@ Singleton {
             else if (!ch.numlock && has)
                 t = t.replace(/^\s*numlock\b.*\n/m, "");
         }
+        if (ch.accelProfile !== undefined || ch.accelSpeed !== undefined)
+            t = ensureBlock(t, "mouse", "input");
         if (ch.accelProfile !== undefined)
             t = setLine(t, /^(\s*)accel-profile\s+"[^"]*"/m, 'accel-profile "' + ch.accelProfile + '"', "mouse");
         if (ch.accelSpeed !== undefined)

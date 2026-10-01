@@ -1,1 +1,8 @@
-// privacy block-out off (Mod+Shift+X)
+// privacy block-out on (Mod+Shift+X)
+window-rule {
+    match app-id=r#"^org\.telegram\.desktop$"#
+    match app-id=r#"^Bitwarden$"#
+    match app-id=r#"^helium$"#
+    match app-id=r#"^discord$"#
+    block-out-from "screencast"
+}

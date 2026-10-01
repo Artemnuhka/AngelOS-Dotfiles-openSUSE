@@ -106,7 +106,7 @@ PopupWindow {
                 PxText {
                     anchors.verticalCenter: parent.verticalCenter
                     width: column.width - Theme.u * 24
-                    text: root.win ? root.win.title || root.win.app_id || "?" : ""
+                    text: root.win ? Niri.titleOf(root.win) || root.win.app_id || "?" : ""
                     elide: Text.ElideRight
                     font.bold: true
                 }
@@ -122,11 +122,15 @@ PopupWindow {
             PxMenuItem {
                 text: I18n.t("Развернуть до краёв", "Maximize to edges")
                 icon: "width"
+                visible: Config.windows && Config.windows.floatButtons === true
+                height: visible ? implicitHeight : 0
                 onTriggered: root.run(w => Niri.maximizeWindow(w.id))
             }
             PxMenuItem {
                 text: root.win && root.win.is_floating ? I18n.t("Вернуть в сетку", "Back to tiling") : I18n.t("Сделать плавающим", "Make floating")
                 icon: "layers"
+                visible: Config.windows && Config.windows.floatButtons === true
+                height: visible ? implicitHeight : 0
                 onTriggered: root.run(w => Niri.toggleFloating(w.id))
             }
             // move to workspace N of the same output

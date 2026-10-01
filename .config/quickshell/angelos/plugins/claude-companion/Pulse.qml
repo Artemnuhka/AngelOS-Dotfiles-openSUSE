@@ -31,6 +31,17 @@ Singleton {
             "idle": I18n.t("отдыхает", "Resting"),
             "none": I18n.t("нет сессий", "No sessions")
         })
+    // hell (Theme.hell, the demon's realm): the same states, her words
+    readonly property var hellWords: ({
+            "needs_attention": I18n.t("призывает тебя!", "Summons you!"),
+            "error": I18n.t("проклятие", "Cursed"),
+            "tool_start": I18n.t("колдует", "Conjuring"),
+            "turn_start": I18n.t("замышляет", "Scheming"),
+            "text": I18n.t("пишет кровью", "Writing in blood"),
+            "turn_end": I18n.t("готово 😈", "Done 😈"),
+            "idle": I18n.t("тлеет", "Smouldering"),
+            "none": I18n.t("ни души", "No souls")
+        })
     readonly property var resting: ["idle", "turn_end", "error"]
 
     property var sessions: ({})     // from hooks: sid -> {state, model, in, out, cc, cr, at}
@@ -85,6 +96,12 @@ Singleton {
     property bool asking: false
     readonly property string runtimeDir: (Quickshell.env("XDG_RUNTIME_DIR") || Quickshell.env("HOME") + "/.cache/angelos") + "/claude-companion"
 
+    function wordFor(hell) {
+        return (hell ? hellWords[state] : words[state]) || state;
+    }
+    function hellColorFor(s, theme) {
+        return s === "needs_attention" ? theme.hellFlame : s === "error" ? theme.hellBlood : s === "tool_start" ? theme.hellGold : s === "turn_start" || s === "text" ? theme.hellEmber : s === "turn_end" ? "#ffe98c" : theme.hellTextDim;
+    }
     function colorFor(s, theme) {
         return s === "needs_attention" || s === "error" ? theme.danger : s === "tool_start" ? theme.accent3 : s === "turn_start" || s === "text" ? theme.accent : s === "turn_end" ? theme.ok : s === "idle" ? theme.accent4 : theme.textDim;
     }

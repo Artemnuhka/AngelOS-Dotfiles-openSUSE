@@ -25,6 +25,7 @@ import qs.modules.y2k
 import qs.modules.alttab
 import qs.modules.cursor
 import qs.modules.lens
+import qs.modules.decor
 import qs.widgets
 
 // angelOS — pixel pink shell for niri.
@@ -59,6 +60,7 @@ ShellRoot {
     AltTabHost {}
     ShakeCursor {}
     LensOverlay {}
+    WindowDecor {}
     Ipc {}
 
     // Keep dynamically loaded settings pages visible to Quickshell's static
@@ -72,6 +74,10 @@ ShellRoot {
     Component {
         id: barLayoutEditorTypeAnchor
         BarLayoutEditor {}
+    }
+    Component {
+        id: startTunerTypeAnchor
+        StartTuner {}
     }
     Component {
         id: textAreaTypeAnchor

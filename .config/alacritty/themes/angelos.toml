@@ -1,35 +1,35 @@
 # angelOS wallpaper / dark
 [colors.primary]
-background = '#1a1a1f'
+background = '#1a181f'
 foreground = '#fafafa'
 
 [colors.cursor]
-text = '#1a1a1f'
-cursor = '#b59a8c'
+text = '#1a181f'
+cursor = '#b38391'
 
 [colors.vi_mode_cursor]
-text = '#1a1a1f'
-cursor = '#cdbbb2'
+text = '#1a181f'
+cursor = '#ccadb6'
 
 [colors.selection]
-text = '#1a1a1f'
-background = '#b59a8c'
+text = '#1a181f'
+background = '#b38391'
 
 [colors.search.matches]
-foreground = '#1a1a1f'
-background = '#cdbbb2'
+foreground = '#1a181f'
+background = '#ccadb6'
 
 [colors.search.focused_match]
-foreground = '#1a1a1f'
-background = '#b59a8c'
+foreground = '#1a181f'
+background = '#b38391'
 
 [colors.normal]
-black   = '#1a1a1f'
+black   = '#1a181f'
 red     = '#e36b78'
 green   = '#8eaf73'
 yellow  = '#d8b56b'
-blue    = '#cdbbb2'
-magenta = '#b59a8c'
+blue    = '#ccadb6'
+magenta = '#b38391'
 cyan    = '#72b7b0'
 white   = '#fafafa'
 
@@ -38,7 +38,7 @@ black   = '#b4b5b7'
 red     = '#f58b98'
 green   = '#aacf93'
 yellow  = '#efd18b'
-blue    = '#cdbbb2'
-magenta = '#b59a8c'
+blue    = '#ccadb6'
+magenta = '#b38391'
 cyan    = '#92d7d0'
 white   = '#fafafa'

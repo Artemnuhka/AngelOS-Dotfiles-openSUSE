@@ -8,6 +8,7 @@ Item {
 
     property bool checked: false
     property string text: ""
+    readonly property string settingsSkin: Theme.settingsSkinFor(root.parent)
     signal toggled(bool checked)
 
     // Long labels wrap instead of running off a narrow page (the grimoire's right
@@ -30,6 +31,7 @@ Item {
 
     PxBox {
         id: track
+        visible: root.settingsSkin === "classic"
         width: Theme.u * 26
         height: Theme.u * 13
         anchors.verticalCenter: parent.verticalCenter
@@ -55,6 +57,35 @@ Item {
                 pixel: Math.max(1, Theme.u - 1)
                 fill: root.checked ? "#ffffff" : Theme.lo
                 ink: root.checked ? Theme.edge : Theme.textDim
+            }
+        }
+    }
+
+    Rectangle {
+        visible: root.settingsSkin !== "classic"
+        width: track.width
+        height: track.height
+        anchors.verticalCenter: parent.verticalCenter
+        radius: root.settingsSkin === "windose" ? height / 2 : Theme.u * 2
+        color: root.checked ? Theme.mix(Theme.face, Theme.accent, 0.36) : Theme.sunken
+        border.width: Math.max(1, Theme.u / 2)
+        border.color: root.settingsSkin === "windose" ? Theme.windoseLine : Theme.streamLive
+        Rectangle {
+            width: parent.height - Theme.u * 2
+            height: width
+            y: Theme.u
+            x: root.checked ? parent.width - width - Theme.u : Theme.u
+            radius: root.settingsSkin === "windose" ? width / 2 : Theme.u * 2
+            color: root.checked ? Theme.accent : Theme.faceAlt
+            border.width: Math.max(1, Theme.u / 2)
+            border.color: root.settingsSkin === "windose" ? Theme.windoseLine : Theme.streamLive
+            Behavior on x { NumberAnimation { duration: Theme.fast } }
+            PxIcon {
+                visible: root.settingsSkin === "windose"
+                anchors.centerIn: parent
+                name: "heartSmall"
+                pixel: Math.max(1, Theme.u - 1)
+                ink: root.checked ? Theme.selectText : Theme.text
             }
         }
     }

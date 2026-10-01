@@ -29,10 +29,15 @@ Item {
     readonly property var rig: file.rig
     readonly property bool ready: use && !!rig
     // where the body is inside the rig (the figure without wings and tail)
-    readonly property rect body: ready ? Qt.rect(rig.body.x * px, rig.body.y * px, rig.body.w * px, rig.body.h * px) : Qt.rect(0, 0, width, height)
+    // px may be fractional (the helper's Ctrl+wheel size): edges are rounded to whole
+    // screen pixels, so the parts still meet without seams
+    function at(v) {
+        return Math.round(v * px);
+    }
+    readonly property rect body: ready ? Qt.rect(at(rig.body.x), at(rig.body.y), at(rig.body.x + rig.body.w) - at(rig.body.x), at(rig.body.y + rig.body.h) - at(rig.body.y)) : Qt.rect(0, 0, width, height)
 
-    implicitWidth: ready ? rig.size[0] * px : 0
-    implicitHeight: ready ? rig.size[1] * px : 0
+    implicitWidth: ready ? at(rig.size[0]) : 0
+    implicitHeight: ready ? at(rig.size[1]) : 0
 
     component RigFile: FileView {
         required property string name
@@ -89,10 +94,10 @@ Item {
             const i = step % period;
             return i < p.frames ? i : period - i;
         }
-        x: p.x * root.px
-        y: p.y * root.px
-        width: p.w * root.px
-        height: p.h * root.px
+        x: root.at(p.x)
+        y: root.at(p.y)
+        width: root.at(p.x + p.w) - x
+        height: root.at(p.y + p.h) - y
         clip: true
         Image {
             x: -part.frame * part.width

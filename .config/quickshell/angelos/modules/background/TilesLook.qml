@@ -143,7 +143,7 @@ Item {
                     readonly property var e: look.flying ? null : DeskMenu.entry(modelData)
                     readonly property var item: look.flying ? modelData : null
                     readonly property bool sel: look.flying ? look.menu.subCurrent === index : look.menu.current === index
-                    readonly property bool on: !!item && item.checkable && (typeof item.checked === "function" ? !!item.checked() : !!item.checked)
+                    readonly property bool on: !!item && !!item.checkable && (typeof item.checked === "function" ? !!item.checked() : !!item.checked)
                     width: look.tile
                     height: look.tile
                     radius: Theme.u * 6

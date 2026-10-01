@@ -10,6 +10,7 @@
   "barWidget": "BarWidget.qml",
   "desktopTitle": "claude.exe",
   "desktopWidget": "Orb.qml",
+  "realms": ["heaven", "hell"],
   "sidebarWidget": "SidebarBlock.qml",
   "launcher": "Launcher.qml",
   "settings": "Settings.qml",

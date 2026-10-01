@@ -1,5 +1,6 @@
 import QtQuick
 import qs.config
+import qs.services
 import qs.widgets
 import "."
 
@@ -40,12 +41,20 @@ Item {
         }
     }
 
+    // the demon rules: horns where the halo was (on the bar too); on the desktop in
+    // hell (Theme.hell) the whole face goes obsidian, gold and ember
+    property bool horns: Angel.demon || Theme.hell
+    property bool hellLook: Theme.hell
+
     PxIcon {
         id: face
-        name: "bot"
+        name: root.horns ? "botHorns" : "bot"
         pixel: root.pixel
-        body: Pulse.colorFor(root.state, Theme)
+        ink: root.hellLook ? Theme.hellGold : (Theme.dark ? Theme.text : Theme.edge)
+        body: root.hellLook ? Theme.mix(Theme.hellFaceAlt, Pulse.hellColorFor(root.state, Theme), 0.45) : Pulse.colorFor(root.state, Theme)
+        fill: root.hellLook ? Theme.hellEmber : Theme.accent
         fill3: root.state === "none" ? Theme.textDim : Theme.accent3
+        bad: root.hellLook ? Theme.hellEmber : "#e0203a"
         opacity: root.state === "none" ? 0.6 : root.glow
     }
 }

@@ -15,14 +15,18 @@ PxBox {
     property int current: -1
     property bool showAll: false
     property string query: ""
-    // Settings → Bar → Start: width in % of the default and rows of pinned apps
-    readonly property real sizeFactor: Math.max(0.7, Math.min(1.8, (Config.bar.startWidth || 100) / 100))
-    readonly property int columns: Math.max(4, Math.min(10, Math.round(6 * sizeFactor)))
-    readonly property int rows: Math.max(2, Math.min(6, Config.bar.startRows || 3))
+    // Settings → Bar → Start → Fine-tune (services/StartPrefs): width, the pinned grid,
+    // icons, sections, colours, order
+    readonly property var prefs: StartPrefs.of("win11")
+    readonly property real sizeFactor: prefs.size
+    readonly property int columns: prefs.columns > 0 ? Math.max(3, Math.min(10, prefs.columns)) : Math.max(4, Math.min(10, Math.round(6 * sizeFactor)))
+    readonly property int rows: Math.max(1, Math.min(6, prefs.rows > 0 ? prefs.rows : 3))
+    readonly property color accentColor: prefs.accentColor
+    readonly property var appList: StartPrefs.sorted("win11", StartApps.apps)
     // typing turns the grid into a Windows 11-like list: the calculator, apps and settings by relevance
     readonly property bool searching: query.trim() !== ""
     readonly property var results: searching ? StartApps.searchAll(query, 40) : []
-    readonly property var shown: searching ? results : showAll ? StartApps.apps : StartApps.pinned.slice(0, columns * rows)
+    readonly property var shown: searching ? results : showAll || !prefs.pinned ? appList : StartApps.pinned.slice(0, columns * rows)
     readonly property var recommended: [
         {
             "text": I18n.t("Настройки", "Settings"),
@@ -57,10 +61,11 @@ PxBox {
     }
     function reset() {
         current = -1;
-        showAll = false;
+        showAll = !prefs.pinned;
         query = "";
         field.text = "";
-        Qt.callLater(() => field.focusField());
+        if (prefs.typeSearch && prefs.search)
+            Qt.callLater(() => field.focusField());
     }
     function run(app) {
         closeRequested();
@@ -134,10 +139,10 @@ PxBox {
 
     width: Math.round(Theme.u * 250 * sizeFactor)
     height: col.implicitHeight + footer.height + Theme.u * 10
-    color: Qt.alpha(Theme.menuSurface, Theme.panelAlpha)
+    color: Qt.alpha(Theme.menuSurface, prefs.alpha)
     edgeColor: Theme.menuBorder
     flat: true
-    shadow: Config.appearance.shadows
+    shadow: Config.appearance.shadows && prefs.shadow
 
     component Tile: Item {
         id: tile
@@ -149,9 +154,9 @@ PxBox {
         Rectangle {
             anchors.fill: parent
             anchors.margins: Theme.u
-            color: tile.sel ? Qt.alpha(Theme.accent, 0.3) : tm.containsMouse ? Qt.alpha(Theme.accent, 0.14) : "transparent"
+            color: tile.sel ? Qt.alpha(root.accentColor, 0.3) : tm.containsMouse ? Qt.alpha(root.accentColor, 0.14) : "transparent"
             border.width: tile.sel ? Math.max(1, Theme.u / 2) : 0
-            border.color: Theme.accent
+            border.color: root.accentColor
         }
         Column {
             anchors.centerIn: parent
@@ -161,7 +166,7 @@ PxBox {
                 anchors.horizontalCenter: parent.horizontalCenter
                 iconName: tile.modelData.icon || ""
                 appId: tile.modelData.id || ""
-                size: Theme.u * 15
+                size: Math.round(Theme.u * 15 * root.prefs.icons)
                 scale: tm.pressed ? 0.88 : 1
                 Behavior on scale {
                     NumberAnimation {
@@ -170,6 +175,7 @@ PxBox {
                 }
             }
             PxText {
+                visible: root.prefs.labels
                 width: parent.width
                 horizontalAlignment: Text.AlignHCenter
                 text: tile.modelData.name
@@ -206,6 +212,7 @@ PxBox {
 
         PxField {
             id: field
+            visible: root.prefs.search
             keepFocus: true
             width: parent.width
             icon: "search"
@@ -229,7 +236,7 @@ PxBox {
                 anchors.verticalCenter: parent.verticalCenter
             }
             PxButton {
-                visible: !root.query
+                visible: !root.query && root.prefs.pinned
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
                 compact: true
@@ -258,9 +265,9 @@ PxBox {
                 readonly property bool isCalc: modelData.kind === "calc"
                 width: resultList.width
                 height: isCalc ? Theme.u * 22 : Theme.u * 16
-                color: sel ? Qt.alpha(Theme.accent, 0.3) : hm.containsMouse ? Qt.alpha(Theme.accent, 0.14) : "transparent"
+                color: sel ? Qt.alpha(root.accentColor, 0.3) : hm.containsMouse ? Qt.alpha(root.accentColor, 0.14) : "transparent"
                 border.width: sel ? Math.max(1, Theme.u / 2) : 0
-                border.color: Theme.accent
+                border.color: root.accentColor
                 Item {
                     id: hitIcon
                     x: Theme.u * 3
@@ -335,7 +342,7 @@ PxBox {
             width: parent.width
             height: cellHeight * Math.max(1, Math.min(root.rows, Math.ceil(count / root.columns)))
             cellWidth: width / root.columns
-            cellHeight: Theme.u * 30
+            cellHeight: Math.round(Theme.u * (root.prefs.labels ? 30 : 22) * Math.max(0.8, root.prefs.icons))
             interactive: count > root.columns * root.rows
             clip: true
             model: grid.visible ? root.shown : []
@@ -364,7 +371,7 @@ PxBox {
                     visible: li.first
                     text: li.letter
                     kind: "title"
-                    color: Theme.accent
+                    color: root.accentColor
                     topPadding: Theme.u * 2
                 }
             Rectangle {
@@ -372,7 +379,7 @@ PxBox {
                 y: li.first ? letterText.implicitHeight + Theme.u * 2 : 0
                 width: allList.width
                 height: Theme.u * 14
-                color: root.current === li.index ? Qt.alpha(Theme.accent, 0.3) : lm.containsMouse ? Qt.alpha(Theme.accent, 0.14) : "transparent"
+                color: root.current === li.index ? Qt.alpha(root.accentColor, 0.3) : lm.containsMouse ? Qt.alpha(root.accentColor, 0.14) : "transparent"
                 Row {
                     x: Theme.u * 3
                     anchors.verticalCenter: parent.verticalCenter
@@ -380,7 +387,7 @@ PxBox {
                     AppIcon {
                         iconName: li.modelData.icon || ""
                         appId: li.modelData.id || ""
-                        size: Theme.u * 10
+                        size: Math.round(Theme.u * 10 * root.prefs.icons)
                         anchors.verticalCenter: parent.verticalCenter
                     }
                     PxText {
@@ -403,13 +410,13 @@ PxBox {
 
         PxText {
             id: recHead
-            visible: !root.showAll && !root.query
+            visible: !root.showAll && !root.query && root.prefs.recommended
             text: I18n.t("Рекомендуем", "Recommended")
             kind: "title"
         }
         Flow {
             id: recFlow
-            visible: !root.showAll && !root.query
+            visible: !root.showAll && !root.query && root.prefs.recommended
             width: parent.width
             spacing: Theme.u * 2
             Repeater {
@@ -419,7 +426,7 @@ PxBox {
                     required property var modelData
                     width: (recFlow.width - recFlow.spacing) / 2
                     height: Theme.u * 17
-                    color: rm.containsMouse ? Qt.alpha(Theme.accent, 0.14) : "transparent"
+                    color: rm.containsMouse ? Qt.alpha(root.accentColor, 0.14) : "transparent"
                     Row {
                         x: Theme.u * 3
                         anchors.verticalCenter: parent.verticalCenter
@@ -460,36 +467,25 @@ PxBox {
     // user + power
     Rectangle {
         id: footer
+        visible: root.prefs.user || root.prefs.power
         anchors.bottom: parent.bottom
         width: parent.width
-        height: Theme.u * 20
+        height: visible ? Theme.u * 20 : 0
         color: Qt.alpha(Theme.menuHeader, 0.55)
         Rectangle {
             width: parent.width
             height: Theme.u
             color: Theme.menuBorder
         }
-        Row {
+        StartUser {
+            visible: root.prefs.user
             x: Theme.u * 8
             anchors.verticalCenter: parent.verticalCenter
-            spacing: Theme.u * 4
-            PxBox {
-                width: Theme.u * 13
-                height: width
-                color: Theme.accent
-                anchors.verticalCenter: parent.verticalCenter
-                PxIcon {
-                    anchors.centerIn: parent
-                    name: "heart"
-                    fill: "#ffffff"
-                }
-            }
-            PxText {
-                text: StartApps.userName
-                anchors.verticalCenter: parent.verticalCenter
-            }
+            frameColor: root.accentColor
+            onOpened: root.closeRequested()
         }
         Row {
+            visible: root.prefs.power
             anchors.right: parent.right
             anchors.rightMargin: Theme.u * 6
             anchors.verticalCenter: parent.verticalCenter

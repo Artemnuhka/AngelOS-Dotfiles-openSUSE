@@ -8,8 +8,33 @@ Item {
     property alias flick: flick
     property alias contentHeight: flick.contentHeight
     property alias contentY: flick.contentY
-    property bool barVisible: flick.contentHeight > flick.height + 1
     default property alias content: flick.flickableData
+
+    // The bar takes width from the content. A page that gets no taller when it is
+    // narrower (a grid that changes its columns, text that rewraps) can fit once the
+    // bar is shown and overflow once it is hidden: show, hide, show… in one layout
+    // pass, a polish loop that froze the whole shell (Settings → Capture, stream
+    // skin, on GitHub's check). So the bar is decided after the pass, and a bar that
+    // has flipped back and forth stays shown until the content settles.
+    readonly property bool overflows: flick.contentHeight > flick.height + 1
+    property bool barVisible: false
+    property int barFlips: 0
+    onOverflowsChanged: Qt.callLater(decideBar)
+    Component.onCompleted: Qt.callLater(decideBar)
+    function decideBar() {
+        if (overflows === barVisible)
+            return;
+        if (!overflows && barFlips >= 2)
+            return;
+        barVisible = overflows;
+        barFlips++;
+        flipsReset.restart();
+    }
+    Timer {
+        id: flipsReset
+        interval: 600
+        onTriggered: root.barFlips = 0
+    }
 
     // Mouse wheel: fixed steps with a short glide. Flickable's own wheel
     // handling is velocity based and crawls on long settings pages.

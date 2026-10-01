@@ -31,7 +31,7 @@ Item {
         spacing: Theme.u * 2
         PxText {
             anchors.horizontalCenter: parent.horizontalCenter
-            text: Qt.formatTime(clock.date, root.seconds ? "HH:mm:ss" : "HH:mm")
+            text: I18n.time(clock.date, root.seconds)
             font.family: Theme.fontTitle
             font.pixelSize: 54 * Theme.fs
             color: Theme.dark ? Theme.text : Theme.edge

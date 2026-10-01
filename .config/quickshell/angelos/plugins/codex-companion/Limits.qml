@@ -10,6 +10,7 @@ Column {
     id: root
 
     property bool compact: false
+    property bool hell: false               // the desktop orb in hell: fire meters
     spacing: Theme.u * (compact ? 2 : 4)
 
     readonly property var rows: [CodexState.five, CodexState.week].filter(w => !!w)
@@ -38,7 +39,7 @@ Column {
         Column {
             id: r
             required property var modelData
-            readonly property color c: CodexState.colorFor(modelData.left, Theme)
+            readonly property color c: root.hell ? (modelData.left <= 15 ? Theme.hellBlood : modelData.left <= 40 ? Theme.hellEmber : Theme.hellFlame) : CodexState.colorFor(modelData.left, Theme)
             width: root.width
             spacing: Theme.u
             Row {
@@ -46,12 +47,13 @@ Column {
                 PxText {
                     width: parent.width / 2
                     text: CodexState.windowLabel(r.modelData.minutes)
-                    dim: true
+                    dim: !root.hell
+                    color: root.hell ? Theme.hellTextDim : Theme.textDim
                 }
                 PxText {
                     width: parent.width / 2
                     horizontalAlignment: Text.AlignRight
-                    text: I18n.t("осталось ", "Remaining ") + r.modelData.left + "%"
+                    text: (root.hell ? I18n.t("душ осталось ", "Souls left ") : I18n.t("осталось ", "Remaining ")) + r.modelData.left + "%"
                     color: r.c
                     font.bold: true
                 }
@@ -60,7 +62,8 @@ Column {
                 width: parent.width
                 height: Theme.u * (root.compact ? 6 : 8)
                 sunken: true
-                color: Theme.sunken
+                hell: root.hell
+                color: root.hell ? Theme.hellSunken : Theme.sunken
                 Row {
                     anchors.fill: parent
                     spacing: Math.max(1, Theme.u / 2)

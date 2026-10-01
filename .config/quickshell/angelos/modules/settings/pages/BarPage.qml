@@ -133,20 +133,6 @@ PxPage {
             }
         }
         SettingRow {
-            visible: !page.startFull
-            label: I18n.t("Размер меню", "Menu size")
-            hint: I18n.t("ширина; у Windows 11 вместе с ней растёт число колонок", "Width; the Windows 11 menu gains columns as it grows")
-            PxSlider {
-                width: parent.width
-                from: 70
-                to: 180
-                stepSize: 10
-                value: Config.bar.startWidth || 100
-                suffix: " %"
-                onReleased: v => Config.bar.startWidth = v
-            }
-        }
-        SettingRow {
             label: I18n.t("Поиск", "Search")
             hint: I18n.t("что ещё находит поиск «Пуска» и Win+Space, кроме приложений", "what Start's search and Win+Space find besides apps")
             Column {
@@ -161,36 +147,6 @@ PxPage {
                     text: I18n.t("Калькулятор: 2+2·3, 15% от 200, 10 км в милях, 100 usd в rub", "Calculator: 2+2·3, 15% of 200, 10 km in mi, 100 usd in rub")
                     checked: Config.launcher.calc !== false
                     onToggled: v => Config.launcher.calc = v
-                }
-            }
-        }
-        SettingRow {
-            visible: Config.bar.startStyle === "win11"
-            label: I18n.t("Рядов закреплённых", "Pinned rows")
-            hint: I18n.t("выше меню — больше приложений без прокрутки", "A taller menu shows more apps without scrolling")
-            PxSpin {
-                from: 2
-                to: 6
-                value: Config.bar.startRows || 3
-                onMoved: v => Config.bar.startRows = v
-            }
-        }
-        Row {
-            visible: !page.startFull
-            spacing: Theme.u * 3
-            PxButton {
-                compact: true
-                icon: "pill"
-                text: I18n.t("Открыть «Пуск»", "Open Start")
-                onClicked: Shell.openStart(Shell.focusedScreen ? Shell.focusedScreen.name : "")
-            }
-            PxButton {
-                compact: true
-                icon: "refresh"
-                text: I18n.t("Размер по умолчанию", "Default size")
-                onClicked: {
-                    Config.bar.startWidth = 100;
-                    Config.bar.startRows = 3;
                 }
             }
         }
@@ -244,6 +200,16 @@ PxPage {
             wrapMode: Text.Wrap
             dim: true
             text: I18n.t("niri не умеет назначать действие на одиночный модификатор, поэтому angelOS слушает клавиатуры сам (только чтение). Запоминается лишь «Meta нажата» и «было что-то ещё» — какие клавиши нажимались, никуда не пишется.", "niri cannot bind a bare modifier, so angelOS reads keyboards itself (read-only). It only tracks “Meta is down” and “something else happened”; which keys you press is never stored.")
+        }
+    }
+
+    // the avatar and the deep settings of every Start look (StartTuner, services/StartPrefs)
+    PxGroup {
+        title: I18n.t("«Пуск»: аватарка и тонкая настройка", "Start: avatar and fine-tuning")
+        icon: "star"
+        width: parent.width
+        StartTuner {
+            width: parent.width
         }
     }
 
@@ -348,6 +314,30 @@ PxPage {
                             "island": I18n.t("остров", "island")
                         })[v]);
                 }
+            }
+        }
+        SettingRow {
+            visible: Config.bar.style === "taskbar"
+            label: I18n.t("Автоскрытие", "Auto-hide")
+            hint: I18n.t("панель уезжает вниз и оставляет тонкую линию; подведи мышь к нижнему краю — вернётся. Окна получают весь экран", "The bar slides down leaving a thin line; move the pointer to the bottom edge to bring it back. Windows get the whole screen")
+            PxToggle {
+                checked: Config.bar.autoHide
+                onToggled: c => Config.bar.autoHide = c
+            }
+        }
+        SettingRow {
+            visible: Config.bar.style === "taskbar" && Config.bar.autoHide
+            label: I18n.t("Прятать через", "Hide after")
+            PxSlider {
+                width: Math.min(parent.width, Theme.u * 120)
+                from: 200
+                to: 3000
+                stepSize: 100
+                value: Config.bar.autoHideMs
+                valueScale: 0.001
+                decimals: 1
+                suffix: I18n.t(" с", " s")
+                onMoved: v => Config.bar.autoHideMs = Math.round(v)
             }
         }
         SettingRow {
@@ -467,6 +457,8 @@ PxPage {
                 width: parent.width
                 spacing: Theme.u * 6
                 Repeater {
+                    // Hell is hell's own: offered only while the demon rules (or while it
+                    // is the wordmark in use — the portal lets it stay in heaven)
                     model: [
                         {
                             "value": "classic",
@@ -488,7 +480,7 @@ PxPage {
                             "value": "chrome",
                             "label": "Y2K Chrome"
                         }
-                    ]
+                    ].filter(v => v.value !== "hell" || Angel.hellShown || (Config.bar.logoStyle === "hell" && Angel.hellAllowed))
                     PxButton {
                         id: logoCard
                         required property var modelData
@@ -517,7 +509,7 @@ PxPage {
         }
         SettingRow {
             label: I18n.t("Значок", "Emblem")
-            hint: I18n.t("пока правит демоница, нимб становится рожками", "while the demon rules, the halo turns into horns")
+            hint: Angel.hellShown ? I18n.t("пока правит демоница, нимб становится рожками", "while the demon rules, the halo turns into horns") : ""
             Flow {
                 width: parent.width
                 spacing: Theme.u * 6
@@ -585,7 +577,7 @@ PxPage {
             width: parent.width
             wrapMode: Text.Wrap
             dim: true
-            text: I18n.t("Classic 95 и Angel + — шрифтом темы, Windose, Hell и Y2K Chrome — пиксельные буквы. Цвета следуют теме (Hell всегда кровавый). Сердце в fastfetch — прежний рисунок с нимбом и таблеткой.", "Classic 95 and Angel + use the theme font; Windose, Hell and Y2K Chrome are pixel letters. Colours follow the theme (Hell is always blood red). The heart in fastfetch keeps the original drawing with the halo and pill.")
+            text: Angel.hellShown ? I18n.t("Classic 95 и Angel + — шрифтом темы, Windose, Hell и Y2K Chrome — пиксельные буквы. Цвета следуют теме (Hell всегда кровавый). Сердце в fastfetch — прежний рисунок с нимбом и таблеткой.", "Classic 95 and Angel + use the theme font; Windose, Hell and Y2K Chrome are pixel letters. Colours follow the theme (Hell is always blood red). The heart in fastfetch keeps the original drawing with the halo and pill.") : I18n.t("Classic 95 и Angel + — шрифтом темы, Windose и Y2K Chrome — пиксельные буквы. Цвета следуют теме. Сердце в fastfetch — прежний рисунок с нимбом и таблеткой.", "Classic 95 and Angel + use the theme font; Windose and Y2K Chrome are pixel letters. Colours follow the theme. The heart in fastfetch keeps the original drawing with the halo and pill.")
         }
     }
 
@@ -749,6 +741,28 @@ PxPage {
             PxToggle {
                 checked: Config.bar.showMedia
                 onToggled: c => Config.bar.showMedia = c
+            }
+        }
+        SettingRow {
+            label: I18n.t("Формат часов", "Clock format")
+            hint: I18n.t("«Авто»: 12 часов (AM/PM) на английском, 24 — на русском", "“Auto”: 12-hour (AM/PM) in English, 24-hour in Russian")
+            PxSegmented {
+                model: [
+                    {
+                        "value": "auto",
+                        "label": I18n.t("Авто", "Auto")
+                    },
+                    {
+                        "value": "24",
+                        "label": I18n.t("24 ч", "24 h")
+                    },
+                    {
+                        "value": "12",
+                        "label": "12 AM/PM"
+                    }
+                ]
+                currentValue: Config.bar.clockFormat
+                onActivated: v => Config.bar.clockFormat = v
             }
         }
         SettingRow {

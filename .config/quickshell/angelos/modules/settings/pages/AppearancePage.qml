@@ -43,6 +43,31 @@ PxPage {
             }
         }
     }
+    // Layout and controls change with the selected settings theme; colours stay independent.
+    PxGroup {
+        id: skinGroup
+        title: I18n.t("Вид настроек", "Settings look")
+        icon: "window"
+        width: parent.width
+        PxText {
+            width: parent.width
+            wrapMode: Text.Wrap
+            dim: true
+            text: I18n.t("Классика angelOS — исходный вид настроек. Дополнительно: Windose с ярлыками рабочего стола и Стрим с панелью эфира. Все три вида подстраиваются под выбранные цвета.", "angelOS classic is the original settings look. Windose adds desktop shortcuts; Stream adds a broadcast panel. All three follow your selected colours.")
+        }
+        Flow {
+            width: parent.width
+            spacing: Theme.u * 4
+            Repeater {
+                model: ["classic", "windose", "stream"]
+                SettingsSkinCard {
+                    required property string modelData
+                    skin: modelData
+                    width: Math.min(Theme.u * 100, (skinGroup.width - Theme.u * 12) / 3)
+                }
+            }
+        }
+    }
     PxGroup {
         title: I18n.t("Тема", "Theme")
         icon: "palette"

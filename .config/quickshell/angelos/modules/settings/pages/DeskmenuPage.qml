@@ -51,7 +51,9 @@ PxPage {
                 width: parent.width
                 spacing: Theme.u * 4
                 Repeater {
-                    model: DeskMenu.styles
+                    // the pentagram is hell's own: offered only while the demon rules
+                    // (or while it is the one in use — the portal lets it stay in heaven)
+                    model: DeskMenu.styles.filter(s => s !== "pentagram" || Angel.hellShown || DeskMenu.chosen === s)
                     PxButton {
                         id: styleCard
                         required property string modelData

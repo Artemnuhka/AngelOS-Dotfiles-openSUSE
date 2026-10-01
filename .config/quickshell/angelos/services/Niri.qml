@@ -15,6 +15,15 @@ Singleton {
     property var workspaces: []       // sorted by output, idx
     property var windows: []
     property int focusedWindowId: -1
+    // A title alone changes many times a second (a terminal's spinner, a player's track):
+    // it is patched into its window in place and announced by this tick only, so the
+    // taskbar, Alt+Tab and the title bars re-read one string instead of rebuilding
+    // their lists. Read titles through titleOf(window).
+    property int titleTick: 0
+    function titleOf(w) {
+        titleTick;
+        return w ? w.title || "" : "";
+    }
     property var keyboardLayouts: []
     property int currentLayout: 0
     property bool overviewOpen: false
@@ -224,6 +233,30 @@ Singleton {
         onTriggered: events.connected = true
     }
 
+    function _sameBesidesTitle(a, b) {
+        const ka = Object.keys(a), kb = Object.keys(b);
+        if (ka.length !== kb.length)
+            return false;
+        for (const k of kb)
+            if (k !== "title" && JSON.stringify(a[k]) !== JSON.stringify(b[k]))
+                return false;
+        return true;
+    }
+
+    // While a window is dragged with Mod + mouse (niri's interactive move) niri reports it on
+    // no workspace (workspace_id null) until it is dropped: the taskbar, Alt+Tab and the
+    // window menu would lose it mid-drag. It keeps its last workspace, marked `moving`.
+    function _keepWorkspace(w, old) {
+        if (w.workspace_id === null || w.workspace_id === undefined) {
+            if (old && old.workspace_id !== null && old.workspace_id !== undefined)
+                return Object.assign({}, w, {
+                    "workspace_id": old.workspace_id,
+                    "moving": true
+                });
+        }
+        return w;
+    }
+
     function _setWorkspaces(list) {
         workspaces = list.slice().sort((a, b) => a.output === b.output ? a.idx - b.idx : (a.output < b.output ? -1 : 1));
     }
@@ -274,7 +307,7 @@ Singleton {
                 }) : w));
             break;
         case "WindowsChanged":
-            windows = d.windows;
+            windows = d.windows.map(w => _keepWorkspace(w, windows.find(o => o.id === w.id)));
             {
                 const f = d.windows.find(w => w.is_focused);
                 focusedWindowId = f ? f.id : -1;
@@ -282,9 +315,18 @@ Singleton {
             break;
         case "WindowOpenedOrChanged":
             {
+                const old = windows.find(w => w.id === d.window.id);
+                const next = _keepWorkspace(d.window, old);
+                if (old && _sameBesidesTitle(old, next)) {
+                    if (old.title !== next.title) {
+                        old.title = next.title;
+                        titleTick++;
+                    }
+                    break;
+                }
                 const list = windows.filter(w => w.id !== d.window.id);
-                const isNew = list.length === windows.length;
-                list.push(d.window);
+                const isNew = !old;
+                list.push(next);
                 if (d.window.is_focused) {
                     focusedWindowId = d.window.id;
                     for (let i = 0; i < list.length; i++)

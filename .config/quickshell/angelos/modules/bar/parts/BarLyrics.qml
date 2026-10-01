@@ -41,6 +41,15 @@ Item {
     }
 
     visible: active && maxWidth >= Theme.u * 50
+    // brightness follows the volume (services/LyricsGlow): a RØDECaster's fader, or how
+    // loud the player really plays; never under 30 %
+    opacity: LyricsGlow.opacity
+    Behavior on opacity {
+        NumberAnimation {
+            duration: 260
+            easing.type: Easing.OutCubic
+        }
+    }
     implicitWidth: Math.min(maxWidth, (fixedWidth ? songText : fullW) + chrome)
     implicitHeight: Theme.u * 13
     clip: true

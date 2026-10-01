@@ -104,6 +104,15 @@ PxPage {
                     accent: true
                     onClicked: card.hell ? Cursors.setHell(card.modelData.theme) : Cursors.apply(card.modelData.theme, page.size)
                 }
+                // the portal is open (the angel came back three times): hell's cursors may be worn in heaven too
+                PxButton {
+                    compact: true
+                    visible: card.hell && Angel.portalOpen && !!card.modelData.installed && Cursors.theme !== card.modelData.theme
+                    enabled: !Cursors.busy
+                    icon: "sparkle"
+                    text: I18n.t("Носить и в раю", "Wear in heaven too")
+                    onClicked: Cursors.apply(card.modelData.theme, page.size)
+                }
                 PxButton {
                     compact: true
                     visible: card.modelData.id === "angelos" && !!card.modelData.installed
@@ -142,6 +151,7 @@ PxPage {
     }
 
     PxGroup {
+        visible: Angel.hellShown
         title: I18n.t("Курсор в аду", "Cursor in hell")
         icon: "fire"
         width: parent.width

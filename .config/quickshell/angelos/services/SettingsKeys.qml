@@ -43,7 +43,8 @@ Singleton {
             "notifications.dnd": ["Не беспокоить", "Do not disturb"],
             "appearance.fontTitle": ["Шрифты", "Fonts"],
             "appearance.fontBody": ["Шрифты", "Fonts"],
-            "appearance.fontMono": ["Шрифты", "Fonts"]
+            "appearance.fontMono": ["Шрифты", "Fonts"],
+            "settingsUi.skin": ["Вид настроек", "Settings look"]
         })
     function labelOf(path) {
         const e = extraLabels[path];

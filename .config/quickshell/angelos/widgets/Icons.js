@@ -636,6 +636,18 @@ const icons = {
         ".#######.",
         "..#...#.."
     ],
+    // the same face while the demon rules: horns where the halo was
+    botHorns: [
+        "r.......r",
+        "rr.....rr",
+        ".#######.",
+        "#fffffff#",
+        "#f#fff#f#",
+        "#fffffff#",
+        "#offfffo#",
+        ".#######.",
+        "..#...#.."
+    ],
     gauge: [
         "...#####...",
         ".##ooyxx##.",

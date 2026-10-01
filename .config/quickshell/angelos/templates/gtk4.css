@@ -1,4 +1,5 @@
 /* angelOS {{flavor}} / {{mode}} (GTK4) — generated */
+@import url("angelos-decor.css");
 @define-color accent_color {{accent}};
 @define-color accent_bg_color {{accent}};
 @define-color accent_fg_color {{selectText}};

@@ -314,7 +314,7 @@ Item {
             x: root.s * 4
             width: parent.width - root.s * 8 - where.width
             elide: Text.ElideMiddle
-            text: "♡ " + (AltTab.current ? (AltTab.current.title || root.host.appName(AltTab.current)) : "")
+            text: "♡ " + (AltTab.current ? (Niri.titleOf(AltTab.current) || root.host.appName(AltTab.current)) : "")
             font.family: Theme.fontBody
             font.pixelSize: Theme.sizeBody
             color: root.ink

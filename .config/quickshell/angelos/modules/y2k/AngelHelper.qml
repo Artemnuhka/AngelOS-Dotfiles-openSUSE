@@ -76,6 +76,8 @@ Scope {
                 return ["glitch", "chibi", "adult", "mini"].includes(l) ? l : "glitch";
             }
             readonly property bool mini: look === "mini"
+            // her size: Ctrl + mouse wheel over her, 100…115 % in 5 % steps (Config.y2k.helperScale)
+            readonly property real zoom: Math.max(1, Math.min(1.15, Config.y2k.helperScale || 1))
             readonly property var art: mini ? (demonArt ? DemonMini : AngelMini) : (demonArt ? DemonArt : AngelArt)
             readonly property var frame: {
                 if (mouthOpen)
@@ -245,13 +247,15 @@ Scope {
                                 text: Angel.demon ? I18n.t("Отстань на час", "Leave me for an hour") : I18n.t("Спрячься на час", "Hide for an hour")
                                 onClicked: Angel.hide(60)
                             }
-                            // the owner debugging the swap: no begging (Owner.enabled — never in the public version)
+                            // the portal: open after the angel's third comeback (or for the owner) —
+                            // heaven ↔ hell at once, no begging and no throwing
                             PxButton {
-                                visible: Angel.demon && Owner.enabled
+                                visible: Angel.portalOpen
                                 compact: true
-                                icon: "terminal"
-                                text: I18n.t("Ангела назад (владелец)", "Angel back (owner)")
-                                onClicked: Angel.ownerAngel()
+                                accent: true
+                                icon: "sparkle"
+                                text: Angel.demon ? I18n.t("Портал в рай", "Portal to heaven") : I18n.t("Портал в ад", "Portal to hell")
+                                onClicked: Angel.portal()
                             }
                             PxButton {
                                 compact: true
@@ -504,7 +508,7 @@ Scope {
                             use: win.look === "chibi" || win.look === "glitch"
                             variant: win.look === "glitch" ? "glitch" : ""
                             // one screen pixel per art pixel at the default size (~120 px tall)
-                            px: Math.max(1, Theme.u / 2)
+                            px: Math.max(1, Theme.u / 2) * win.zoom
 
                             // without the pictures: the 30×40 pixel sprite, 3 screen
                             // pixels each at the default size; the mini ones 4 each
@@ -513,6 +517,7 @@ Scope {
                                 visible: !sprite.ready
                                 bitmap: sprite.ready ? null : win.frame
                                 pixel: win.mini ? Theme.u * 2 : Math.max(2, Math.round(Theme.u * 1.5))
+                                exactPixel: win.zoom > 1 ? pixel * win.zoom : 0
                                 // the mini ones: the colours they had, from the theme
                                 ink: win.demonArt ? "#1a0a14" : (Theme.dark ? Theme.text : Theme.edge)
                                 body: win.demonArt ? "#f7d9e3" : "#ffd9c7"
@@ -617,6 +622,23 @@ Scope {
                             dragging = false;
                             spring.start();
                         }
+                        // Ctrl + wheel: a little bigger or back, 5 % a notch up to +15 %
+                        property real wheelRest: 0
+                        onWheel: w => {
+                            if (!(w.modifiers & Qt.ControlModifier)) {
+                                w.accepted = false;
+                                return;
+                            }
+                            wheelRest += w.angleDelta.y !== 0 ? w.angleDelta.y / 120 : w.pixelDelta.y / 40;
+                            const notches = wheelRest > 0 ? Math.floor(wheelRest) : Math.ceil(wheelRest);
+                            if (!notches)
+                                return;
+                            wheelRest -= notches;
+                            const next = Math.max(1, Math.min(1.15, Math.round((win.zoom + notches * 0.05) * 100) / 100));
+                            if (next !== Config.y2k.helperScale)
+                                Config.y2k.helperScale = next;
+                            sizeNote.show();
+                        }
                         // dev (`angelos helper "drag DX DY MS"`): the same drag, replayed
                         TestEvent {
                             id: sim
@@ -675,6 +697,39 @@ Scope {
                                 easing.type: Easing.OutBack
                             }
                         }
+                    }
+                }
+            }
+
+            // the size, for a moment, as Ctrl + wheel changes it
+            PxBox {
+                id: sizeNote
+                function show() {
+                    opacity = 1;
+                    sizeFade.restart();
+                }
+                opacity: 0
+                visible: opacity > 0
+                anchors.right: parent.right
+                anchors.rightMargin: Theme.u * 2
+                y: parent.height - angel.height + Theme.u * 2
+                width: sizeText.implicitWidth + Theme.u * 6
+                height: sizeText.implicitHeight + Theme.u * 3
+                color: Theme.menuSurface
+                PxText {
+                    id: sizeText
+                    anchors.centerIn: parent
+                    text: Math.round(win.zoom * 100) + "%"
+                    kind: "tiny"
+                }
+                Timer {
+                    id: sizeFade
+                    interval: 900
+                    onTriggered: sizeNote.opacity = 0
+                }
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: 200
                     }
                 }
             }

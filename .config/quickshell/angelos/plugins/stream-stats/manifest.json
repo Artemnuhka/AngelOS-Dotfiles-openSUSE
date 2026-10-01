@@ -9,6 +9,7 @@
   "main": "Main.qml",
   "desktopTitle": "stats.exe",
   "desktopWidget": "DesktopWidget.qml",
+  "realms": ["heaven", "hell"],
   "barWidget": "BarWidget.qml",
   "settings": "Settings.qml"
 }

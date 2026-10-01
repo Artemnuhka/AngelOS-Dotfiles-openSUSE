@@ -21,9 +21,9 @@ LABEL = re.compile(r"^\s*(label|title)\s*:\s*(.*)$")
 # the shell's own bookkeeping
 KEEP = {"appearance.language", "wallpaper.fallback", "wallpaper.outputs", "wallpaper.workspaces", "wallpaper.dir",
         "desktop.widgets", "desktop.initialized", "setup.complete", "launcher.usage",
-        "settingsUi.usage", "settingsUi.expert", "plugins.data", "updates.lastCheck",
+        "settingsUi.usage", "settingsUi.expert", "settingsUi.skinChosen", "plugins.data", "updates.lastCheck",
         "updates.available", "y2k.character", "y2k.pleas", "y2k.lastPlea", "y2k.pranks",
-        "y2k.nextPrank", "y2k.demonSince", "y2k.seenTips", "y2k.angelSaved",
+        "y2k.nextPrank", "y2k.demonSince", "y2k.seenTips", "y2k.angelSaved", "y2k.returns",
         "y2k.helperGreeted", "stream.dndSet", "lyrics.sourcesVersion", "workspaces.names"}
 
 

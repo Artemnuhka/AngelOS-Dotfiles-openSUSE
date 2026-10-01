@@ -14,7 +14,16 @@ Singleton {
 
     property var entries: []
     property bool loaded: false
+    property string _raw: ""
+    // Once. Start's and the launcher's result bindings call this on every keystroke,
+    // and a new index re-runs them: reindexing from there looped forever (python +
+    // JSON ~4 times a second, the shell at 90 % CPU) while a query sat in a closed Start.
     function load() {
+        if (!loaded)
+            reload();
+    }
+    // a fresh index (the settings window, when it opens); the same text changes nothing
+    function reload() {
         if (!indexer.running)
             indexer.running = true;
     }
@@ -23,8 +32,11 @@ Singleton {
         command: ["python3", Quickshell.shellDir + "/scripts/settings-index.py"]
         stdout: StdioCollector {
             onStreamFinished: {
+                if (root.loaded && text === root._raw)
+                    return;
                 try {
                     root.entries = JSON.parse(text);
+                    root._raw = text;
                     root.loaded = true;
                 } catch (e) {}
             }
@@ -236,11 +248,41 @@ Singleton {
 
     // ---- entries with their searchable fields, rebuilt when the index or pages change ----
     property var pageInfo: ({})       // id -> {label, icon} from the settings sidebar
+    // hell's own groups and rows ("page|Russian title"): their pages hide them while the
+    // angel is here (Angel.hellShown), so the search does too …
+    readonly property var hellOnly: ["cursor|Курсор в аду", "y2k|Демоница", "y2k|ПКМ в аду", "y2k|Настройки в аду", "y2k|Виджеты в аду", "y2k|Курсор в аду", "y2k|Какой ад на обоях", "y2k|Трещины на экране"]
+    // … and these groups go by the angel's name there
+    readonly property var heavenGroups: ({
+            "y2k|Ангел или демон": {
+                "ru": "Ангел и портал",
+                "en": "Angel and the portal"
+            },
+            "sfx|Ангел и демоница": {
+                "ru": "Ангелочек",
+                "en": "The angel"
+            }
+        })
+    function _inHeaven(e) {
+        const key = e.page + "|" + e.ru, gkey = e.group ? e.page + "|" + e.group.ru : "";
+        if (hellOnly.includes(key) || (gkey && hellOnly.includes(gkey)))
+            return null;
+        if (e.kind === "group" && heavenGroups[key])
+            return Object.assign({}, e, heavenGroups[key]);
+        if (gkey && heavenGroups[gkey])
+            return Object.assign({}, e, {
+                "group": heavenGroups[gkey]
+            });
+        return e;
+    }
     readonly property var docs: {
         const lang = I18n.english ? "en" : "ru", other = I18n.english ? "ru" : "en";
+        const heaven = !Angel.hellShown;
         const out = [];
         const seenPages = {};
-        for (const e of entries) {
+        for (const raw of entries) {
+            const e = heaven && raw.kind !== "page" ? _inHeaven(raw) : raw;
+            if (!e)
+                continue;
             const info = pageInfo[e.page];
             if (!info)
                 continue;   // hidden (owner/developer) or unknown pages

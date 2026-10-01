@@ -42,6 +42,8 @@ Singleton {
     // demo/recording mode: popups open from IPC without an input grab
     readonly property bool demo: Quickshell.env("ANGELOS_DEMO") === "1"
     property var desktopMenus: ({})   // screen name -> DesktopMenu
+    property var decor: ({})          // screen name -> the angelOS title bars it shows (modules/decor; `angelos decor`)
+    signal decorDrag(int id, real dx, real dy, int ms)   // dev/owner: a drag on a title bar, replayed (tests)
     property string launcherText: ""
     // plays the workspace heart animation on the bars without switching (settings preview, `angelos heartDemo`)
     signal heartDemo(int from, int to)
@@ -101,7 +103,8 @@ Singleton {
         startButtons = m;
     }
     function openStart(screen) {
-        screen = screen || (focusedScreen ? focusedScreen.name : "");
+        // nothing said where (a Meta tap, IPC): the look's "open on" (StartPrefs)
+        screen = screen || StartPrefs.screenFor() || (focusedScreen ? focusedScreen.name : "");
         if (!screen || locked)
             return;
         launcherOpen = false;
@@ -111,7 +114,7 @@ Singleton {
         startScreen = "";
     }
     function toggleStart(screen) {
-        screen = screen || (focusedScreen ? focusedScreen.name : "");
+        screen = screen || StartPrefs.screenFor() || (focusedScreen ? focusedScreen.name : "");
         if (startScreen === screen)
             closeStart();
         else

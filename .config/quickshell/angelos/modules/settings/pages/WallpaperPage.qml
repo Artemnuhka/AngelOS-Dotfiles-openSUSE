@@ -40,6 +40,31 @@ PxPage {
             Wallpapers.setForWorkspace(output, wsIdx, path);
     }
 
+    // hell's wallpaper stays while the demon rules (services/Angel: rehell)
+    PxBox {
+        visible: Angel.demon
+        width: parent.width
+        height: hellNote.implicitHeight + Theme.u * 8
+        color: Theme.mix(Theme.face, Theme.danger, 0.18)
+        Row {
+            x: Theme.u * 4
+            anchors.verticalCenter: parent.verticalCenter
+            width: parent.width - Theme.u * 8
+            spacing: Theme.u * 3
+            PxIcon {
+                name: "fire"
+                pixel: Theme.u * 2
+                anchors.verticalCenter: parent.verticalCenter
+            }
+            PxText {
+                id: hellNote
+                width: parent.width - Theme.u * 20
+                wrapMode: Text.Wrap
+                text: I18n.t("Сейчас правит демоница: на экранах всегда ад. Выбирай — картинка дождётся ангела, она её и повесит.", "The demon rules now: the screens always show hell. Pick anyway — the picture waits for the angel, she'll hang it.")
+            }
+        }
+    }
+
     PxGroup {
         title: I18n.t("Куда", "Destination")
         icon: "monitor"

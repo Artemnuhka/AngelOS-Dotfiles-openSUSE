@@ -1,0 +1,145 @@
+#!/usr/bin/env python3
+"""GTK in angelOS's colours and window decorations — live, heaven and hell.
+
+usage: gtk-live.py PALETTE.json      (run by render-templates.py, entry "gtk-live")
+
+GTK reads the user's gtk.css once per app, but reloads its *theme* whenever the theme
+name changes. So, with Config.decor.gtkButtons on (palette key decorGtk), the palette
+and the window buttons live in a theme of their own: adw-gtk3(-dark) underneath, the
+angelOS colours (~/.config/gtk-3.0/angelos.css, rendered just before) and the
+decorations (templates/gtk3-decor.css: bevelled pixel buttons, the header in the menu
+colour; obsidian and blood in hell) on top. Two copies, angelOS-a and angelOS-b, take
+turns: the new look goes into the one not in use and gtk-theme switches to it, so open
+GTK 3 apps — and Helium/Chromium set to the "GTK" theme, its title bar buttons
+included — change at once. The user's own gtk-3.0/angelos.css becomes a stub then (it
+would outrank the theme with stale colours). GTK 4 / libadwaita ignores themes: it gets
+~/.config/gtk-4.0/angelos-decor.css (templates/gtk4-decor.css), read when an app starts.
+Off: gtk-theme goes back to adw-gtk3(-dark), the stub and the GTK 4 file are emptied.
+Also sets the title bar buttons (org.gnome.desktop.wm.preferences button-layout) to
+decorButtons, e.g. "maximize,close" (niri has no minimizing).
+"""
+import json
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+HOME = Path.home()
+SHELL = Path(__file__).resolve().parent.parent
+THEMES = HOME / ".local/share/themes"
+GTK3 = HOME / ".config/gtk-3.0"
+GTK4 = HOME / ".config/gtk-4.0"
+STUB = "/* angelOS: the colours live in the angelOS-a/b GTK theme now (gtk-live.py) */\n"
+
+ICONS = {
+    "close": ["##...##", "###.###", ".#####.", "..###..", ".#####.", "###.###", "##...##"],
+    "maximize": ["#######", "#######", "#.....#", "#.....#", "#.....#", "#.....#", "#######"],
+    "minimize": [".......", ".......", ".......", ".......", ".......", "######.", "######."],
+}
+
+
+def render(text, pal):
+    return re.sub(r"\{\{\s*([\w.]+)\s*\}\}", lambda m: str(pal.get(m.group(1), m.group(0))), text)
+
+
+def svg(rows, color):
+    body = ""
+    for y, row in enumerate(rows):
+        x = 0
+        while x < len(row):
+            run = 1
+            while x + run < len(row) and row[x + run] == row[x]:
+                run += 1
+            if row[x] == "#":
+                body += '<rect x="%d" y="%d" width="%d" height="1" fill="%s"/>' % (x, y, run, color)
+            x += run
+    w, h = max(len(r) for r in rows), len(rows)
+    return ('<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" viewBox="0 0 %d %d" '
+            'shape-rendering="crispEdges">%s</svg>\n') % (w * 2, h * 2, w, h, body)
+
+
+def write(path, text):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists() and path.read_text() == text:
+        return False
+    tmp = path.with_name(path.name + ".angelos-tmp")
+    tmp.write_text(text)
+    tmp.replace(path)
+    return True
+
+
+def assets(folder, pal):
+    ink = pal.get("decorText", "#000000")
+    for name, rows in ICONS.items():
+        write(folder / "assets" / (name + ".svg"), svg(rows, ink))
+    write(folder / "assets" / "close-hover.svg", svg(ICONS["close"], "#ffffff"))
+
+
+def gsettings(schema, key, value=None):
+    if value is None:
+        r = subprocess.run(["gsettings", "get", schema, key], capture_output=True, text=True)
+        return r.stdout.strip().strip("'")
+    subprocess.run(["gsettings", "set", schema, key, value], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return value
+
+
+def main():
+    pal = json.loads(Path(sys.argv[1]).read_text())
+    suffix = "-dark" if pal.get("mode") == "dark" else ""
+    base = "adw-gtk3" + suffix
+    base_dir = next((d / base for d in (HOME / ".local/share/themes", HOME / ".themes", Path("/usr/share/themes")) if (d / base / "gtk-3.0/gtk.css").exists()), None)
+    current = gsettings("org.gnome.desktop.interface", "gtk-theme")
+    on = bool(pal.get("decorGtk"))
+
+    if not on or base_dir is None:
+        # back to the plain theme; the user's palette CSS comes back with the next render
+        if current.startswith("angelOS-"):
+            gsettings("org.gnome.desktop.interface", "gtk-theme", base)
+        write(GTK4 / "angelos-decor.css", "/* angelOS window buttons: off */\n")
+        if (GTK3 / "angelos.css").exists() and (GTK3 / "angelos.css").read_text() == STUB:
+            print("gtk3 palette stub stays until the next render")
+        print(json.dumps({"live": False, "theme": base if current.startswith("angelOS-") else current}))
+        return
+
+    # GTK 4 / libadwaita: the decorations next to its user CSS
+    write(GTK4 / "angelos-decor.css", render((SHELL / "templates/gtk4-decor.css").read_text(), pal))
+    assets(GTK4, pal)
+
+    # GTK 3 (and Chromium's GTK mode): the live theme
+    palette_css = (GTK3 / "angelos.css").read_text() if (GTK3 / "angelos.css").exists() else ""
+    if palette_css == STUB:
+        palette_css = ""
+    decor3 = render((SHELL / "templates/gtk3-decor.css").read_text(), pal)
+    css3 = '@import url("file://%s/gtk-3.0/gtk.css");\n\n%s\n%s' % (base_dir, palette_css, decor3)
+    # inlined below the theme's own @import: an @import further down would be dropped
+    palette4 = (GTK4 / "angelos.css").read_text() if (GTK4 / "angelos.css").exists() else ""
+    palette4 = "\n".join(l for l in palette4.splitlines() if not l.lstrip().startswith("@import"))
+    css4 = '@import url("file://%s/gtk-4.0/gtk.css");\n\n%s\n%s' % (base_dir, palette4, render((SHELL / "templates/gtk4-decor.css").read_text(), pal))
+    in_use = THEMES / current if current in ("angelOS-a", "angelOS-b") else None
+    if palette_css and in_use and (in_use / "gtk-3.0/gtk.css").exists() and (in_use / "gtk-3.0/gtk.css").read_text() == css3:
+        print(json.dumps({"live": True, "theme": current, "changed": False}))
+    else:
+        name = "angelOS-b" if current == "angelOS-a" else "angelOS-a"
+        d = THEMES / name
+        write(d / "index.theme", "[Desktop Entry]\nType=X-GNOME-Metatheme\nName=%s\nComment=angelOS (generated, %s)\nEncoding=UTF-8\n\n[X-GNOME-Metatheme]\nGtkTheme=%s\n" % (name, pal.get("realm", "heaven"), name))
+        write(d / "gtk-3.0/gtk.css", css3)
+        write(d / "gtk-4.0/gtk.css", css4)
+        assets(d / "gtk-3.0", pal)
+        assets(d / "gtk-4.0", pal)
+        if palette_css:
+            gsettings("org.gnome.desktop.interface", "gtk-theme", name)
+        print(json.dumps({"live": True, "theme": name, "changed": True}))
+    # the palette now comes with the theme: the user CSS would outrank it with stale colours
+    if palette_css:
+        write(GTK3 / "angelos.css", STUB)
+
+    layout = pal.get("decorButtons") or "maximize,close"
+    cur_layout = gsettings("org.gnome.desktop.wm.preferences", "button-layout")
+    left = cur_layout.split(":")[0] if ":" in cur_layout else "icon"
+    want = left + ":" + layout
+    if cur_layout != want:
+        gsettings("org.gnome.desktop.wm.preferences", "button-layout", want)
+
+
+if __name__ == "__main__":
+    main()

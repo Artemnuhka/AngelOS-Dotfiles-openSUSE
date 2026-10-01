@@ -48,7 +48,7 @@ BarPopup {
                 width: parent.width - Theme.u * 30
                 horizontalAlignment: Text.AlignHCenter
                 kind: "title"
-                text: Qt.locale("ru_RU").standaloneMonthName(root.month.getMonth()) + " " + root.month.getFullYear()
+                text: I18n.locale.standaloneMonthName(root.month.getMonth()) + " " + root.month.getFullYear()
             }
             PxButton {
                 compact: true
