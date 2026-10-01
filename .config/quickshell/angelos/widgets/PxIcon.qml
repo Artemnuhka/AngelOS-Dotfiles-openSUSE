@@ -9,6 +9,10 @@ Image {
     property string name: "heart"
     property var bitmap: null   // optional custom rows, overrides `name`
     property int pixel: Theme.u
+    // a fractional art pixel when the size has to match something exactly (AngelLogo's
+    // pixel wordmarks next to text); 0 = `pixel`
+    property real exactPixel: 0
+    readonly property real _px: exactPixel > 0 ? exactPixel : pixel
     property bool hollow: false
     property color ink: Theme.dark ? Theme.text : Theme.edge
     property color fill: Theme.accent
@@ -31,8 +35,8 @@ Image {
     }, palette || {}), hollow)
 
     source: _svg.url
-    width: _svg.width * pixel
-    height: _svg.height * pixel
+    width: Math.round(_svg.width * _px)
+    height: Math.round(_svg.height * _px)
     sourceSize: Qt.size(width, height)
     smooth: false
     mipmap: false

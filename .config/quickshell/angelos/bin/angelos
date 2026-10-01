@@ -3,7 +3,7 @@
 #   angelos launcher | settings [page] | lock | session | clipboard | lyrics
 #   angelos theme light|dark|auto|toggle | wallpaper <path|random> | bar taskbar|top|island
 #   angelos startMenu | sidebar | idle | lockPreview | fontPreset arcade|soft|block|angelos
-#   angelos ws <n|up|down|prev> | alttab next|prev|cancel | start | restart | stop | run | status | log | report | switch angelos|noctalia
+#   angelos ws <n|up|down|prev> | alttab next|prev|cancel | lens in|out|close|toggle | start | restart | stop | run | status | log | report | switch angelos|noctalia
 SHELL_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/angelos"
 CONF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/angelos"
 RUN_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/angelos"
@@ -158,5 +158,13 @@ case "$1" in
     fi
     [ "$dir" = cancel ] || exec niri msg action focus-window-previous
     ;;
+  lens)
+    # the lens at the pointer (niri keys Mod+Alt+= / - / 0): the shell's socket, else qs ipc
+    what="$(printf '%s' "${2:-toggle}" | tr -cd 'a-z')"
+    sock="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/angelos/ctl.sock"
+    if [ -S "$sock" ] && command -v socat >/dev/null 2>&1 && printf 'lens %s\n' "$what" | socat -t1 - "UNIX-CONNECT:$sock" 2>/dev/null | grep -q '^ok'; then
+      exit 0
+    fi
+    exec qs -c angelos ipc call angelos lens "$what" ;;
   *)       exec qs -c angelos ipc call angelos "$@" ;;
 esac

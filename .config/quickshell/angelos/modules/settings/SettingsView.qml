@@ -27,6 +27,8 @@ Item {
     }
     property var hostWindow: null
     readonly property alias frame: frame
+    // while the demon rules (Y2K → Angel or demon → Settings in hell): a grimoire (GrimoireBook)
+    readonly property bool grimoire: Angel.demon && Config.y2k.hellSettings === "grimoire"
     readonly property var groups: [
         {
             "title": I18n.t("Вид", "Appearance"),
@@ -60,6 +62,11 @@ Item {
                     "id": "widgets",
                     "label": I18n.t("Виджеты", "Widgets"),
                     "icon": "layers"
+                },
+                {
+                    "id": "deskmenu",
+                    "label": I18n.t("ПКМ-меню", "Right-click menu"),
+                    "icon": "grid"
                 },
                 {
                     "id": "bar",
@@ -110,6 +117,11 @@ Item {
                     "id": "sound",
                     "label": I18n.t("Звук", "Sound"),
                     "icon": "speaker"
+                },
+                {
+                    "id": "sfx",
+                    "label": I18n.t("Звуки системы", "System sounds"),
+                    "icon": "bell"
                 },
                 {
                     "id": "network",
@@ -391,8 +403,28 @@ Item {
         onActivated: Config.undo()
     }
 
+    // the grimoire: its pages take the search box and the settings page (parent: below)
+    GrimoireBook {
+        id: book
+        anchors.fill: parent
+        view: win
+        visible: win.grimoire
+    }
+    // the grimoire re-inks what it shows on parchment
+    Component {
+        id: inkFx
+        ShaderEffect {
+            fragmentShader: Qt.resolvedUrl("../../shaders/grimoire.frag.qsb")
+            property color paper: book.paper
+            property color ink: book.ink
+            property color redInk: book.redInk
+            property real invert: Theme.dark ? 1 : 0
+        }
+    }
+
     PxWindow {
         id: frame
+        visible: !win.grimoire
         anchors.fill: parent
         anchors.rightMargin: Config.appearance.shadows ? Theme.u * 2 : 0
         anchors.bottomMargin: Config.appearance.shadows ? Theme.u * 2 : 0
@@ -420,16 +452,18 @@ Item {
         // search box and results: in the sidebar (expert) or above the page (simple)
         Item {
             id: searchArea
-            parent: win.expert ? sidebar : pageBox
+            parent: win.grimoire ? book.searchSlot : win.expert ? sidebar : pageBox
             anchors.fill: parent
             z: 5
+            layer.enabled: win.grimoire
+            layer.effect: inkFx
 
             PxField {
                 id: search
                 keepFocus: true
-                x: win.expert ? Theme.u * 2 : homeBtn.x + (homeBtn.visible ? homeBtn.width + Theme.u * 3 : 0)
+                x: win.expert || win.grimoire ? Theme.u * 2 : homeBtn.x + (homeBtn.visible ? homeBtn.width + Theme.u * 3 : 0)
                 y: Theme.u * 2
-                width: win.expert ? parent.width - Theme.u * 4 : (undoBtn.visible ? undoBtn.x : expertBtn.x) - x - Theme.u * 3
+                width: win.expert || win.grimoire ? parent.width - Theme.u * 4 : (undoBtn.visible ? undoBtn.x : expertBtn.x) - x - Theme.u * 3
                 icon: "search"
                 placeholder: I18n.t("Поиск настроек…", "Search settings…")
                 onEdited: {
@@ -479,7 +513,7 @@ Item {
 
             // results
             Rectangle {
-                visible: !win.expert && resultsBox.visible
+                visible: (!win.expert || win.grimoire) && resultsBox.visible
                 anchors.fill: parent
                 anchors.topMargin: search.height + Theme.u * 6
                 color: Theme.face
@@ -705,9 +739,12 @@ Item {
 
             Loader {
                 id: page
+                parent: win.grimoire ? book.pageSlot : pageBox
                 anchors.fill: parent
-                anchors.margins: Theme.u * 3
-                anchors.topMargin: win.expert ? Theme.u * 3 : search.height + Theme.u * 6
+                anchors.margins: win.grimoire ? 0 : Theme.u * 3
+                anchors.topMargin: win.grimoire ? 0 : win.expert ? Theme.u * 3 : search.height + Theme.u * 6
+                layer.enabled: win.grimoire
+                layer.effect: inkFx
                 active: win.hostWindow ? win.hostWindow.visible : true
                 onLoaded: if (win.pendingTarget)
                     targetTimer.restart()

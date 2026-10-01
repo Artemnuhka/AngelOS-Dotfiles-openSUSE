@@ -12,6 +12,10 @@
                 "height": "fixed 760", "place": "center" | "corner"} | null (= no rule)
       alttab: true (Alt+Tab / Alt+Shift+Tab → `angelos alttab next|prev`, niri's own
               recent-windows switcher off) | false (niri's switcher, no block)
+      lens:   true (Mod+Alt+= / Mod+Alt+- / Mod+Alt+0 → `angelos lens in|out|close`,
+              the lens at the pointer) | false (no block)
+
+Writers take a lock (the Alt+Tab and the lens services may write at the same time).
 
 Per-app rules live in cfg/angelos-windows.kdl, included after rules.kdl so they win.
 """
@@ -73,22 +77,38 @@ def read_alttab(text=None):
     return AT_BEGIN in text
 
 
-def render_alttab(on):
-    if not on:
+LS_BEGIN = "// >>> angelOS lens (Настройки → Клавиатура и мышь → Лупа)"
+LS_END = "// <<< angelOS lens"
+LENS = "exec ~/.config/quickshell/angelos/bin/angelos lens "
+
+
+def read_lens(text=None):
+    if text is None:
+        text = apps_path.read_text() if apps_path.exists() else ""
+    return LS_BEGIN in text
+
+
+def render_keys(alttab, lens):
+    """the Alt+Tab block (niri's switcher off) and the lens marker, then one binds node
+    with the keys of both (niri takes a single binds node per file)"""
+    if not alttab and not lens:
         return ""
-    return "\n".join([
-        AT_BEGIN,
-        "// the angelOS switcher: niri's own is off, the keys go to the shell",
-        "recent-windows {",
-        "    off",
-        "}",
-        "binds {",
-        f'    Alt+Tab repeat=false hotkey-overlay-title="angelOS: Alt+Tab" {{ spawn-sh "{ANGELOS}next"; }}',
-        f'    Alt+Shift+Tab repeat=false {{ spawn-sh "{ANGELOS}prev"; }}',
-        "}",
-        AT_END,
-        "",
-    ])
+    out = []
+    if alttab:
+        out += [AT_BEGIN, "// the angelOS switcher: niri's own is off, the keys go to the shell",
+                "recent-windows {", "    off", "}", AT_END]
+    if lens:
+        out += [LS_BEGIN, "// the lens at the pointer: its keys are in the binds below", LS_END]
+    out += ["// angelOS keys (one binds node per file)", "binds {"]
+    if alttab:
+        out += [f'    Alt+Tab repeat=false hotkey-overlay-title="angelOS: Alt+Tab" {{ spawn-sh "{ANGELOS}next"; }}',
+                f'    Alt+Shift+Tab repeat=false {{ spawn-sh "{ANGELOS}prev"; }}']
+    if lens:
+        out += [f'    Mod+Alt+Equal hotkey-overlay-title="angelOS: лупа ближе" {{ spawn-sh "{LENS}in"; }}',
+                f'    Mod+Alt+Minus hotkey-overlay-title="angelOS: лупа дальше" {{ spawn-sh "{LENS}out"; }}',
+                f'    Mod+Alt+0 repeat=false hotkey-overlay-title="angelOS: убрать лупу" {{ spawn-sh "{LENS}close"; }}']
+    out += ["}", "// <<< angelOS keys", ""]
+    return "\n".join(out)
 
 
 def strip_block(text, begin, end):
@@ -164,6 +184,7 @@ def current():
         "apps": read_apps(),
         "taskmgr": read_taskmgr(),
         "alttab": read_alttab(),
+        "lens": read_lens(),
     }
 
 
@@ -195,11 +216,11 @@ def set_block(text, name, lines):
     return new
 
 
-def render_apps(rules, taskmgr=None, alttab=False):
+def render_apps(rules, taskmgr=None, alttab=False, lens=False):
     out = ["// Managed by angelOS → Настройки → Окна. Per-app default widths.", ""]
     for app, w in sorted(rules.items()):
         out += ["window-rule {", f'    match app-id=r#"^{re.escape(app)}$"#', f"    default-column-width {{ {w}; }}", "}", ""]
-    return "\n".join(out) + render_taskmgr(taskmgr) + render_alttab(alttab)
+    return "\n".join(out) + render_taskmgr(taskmgr) + render_keys(alttab, lens)
 
 
 def atomic_write(path, content):
@@ -216,7 +237,7 @@ def atomic_write(path, content):
 
 
 def apply(changes):
-    unknown = set(changes) - {"gaps", "center", "defaultWidth", "presets", "apps", "taskmgr", "alttab"}
+    unknown = set(changes) - {"gaps", "center", "defaultWidth", "presets", "apps", "taskmgr", "alttab", "lens"}
     if unknown:
         raise ValueError("unknown keys: " + ", ".join(sorted(unknown)))
     layout = layout_path.read_text()
@@ -240,7 +261,7 @@ def apply(changes):
         new_layout = set_block(new_layout, "preset-column-widths", ps)
 
     files = {layout_path: (layout, new_layout)} if new_layout != layout else {}
-    if "apps" in changes or "taskmgr" in changes or "alttab" in changes:
+    if "apps" in changes or "taskmgr" in changes or "alttab" in changes or "lens" in changes:
         rules = read_apps()
         for app, w in (changes.get("apps") or {}).items():
             if not re.match(r"^[\w.+-]{1,120}$", app):
@@ -251,8 +272,9 @@ def apply(changes):
                 rules[app] = check_width(w)
         taskmgr = changes["taskmgr"] if "taskmgr" in changes else read_taskmgr()
         alttab = bool(changes["alttab"]) if "alttab" in changes else read_alttab()
+        lens = bool(changes["lens"]) if "lens" in changes else read_lens()
         old_apps = apps_path.read_text() if apps_path.exists() else None
-        files[apps_path] = (old_apps, render_apps(rules, taskmgr, alttab))
+        files[apps_path] = (old_apps, render_apps(rules, taskmgr, alttab, lens))
         cfg = config_path.read_text()
         if 'include "./cfg/angelos-windows.kdl"' not in cfg:
             anchor = 'include "./cfg/rules.kdl"'
@@ -291,4 +313,9 @@ if __name__ == "__main__":
     if len(sys.argv) == 1:
         print(json.dumps(current()))
     else:
-        apply(json.loads(sys.argv[1]))
+        import fcntl
+        lock_dir = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp")) / "angelos"
+        lock_dir.mkdir(parents=True, exist_ok=True)
+        with open(lock_dir / "window-config.lock", "w") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            apply(json.loads(sys.argv[1]))

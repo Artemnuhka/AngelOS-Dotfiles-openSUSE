@@ -21,7 +21,8 @@ PxButton {
         anchors.centerIn: parent
         anchors.horizontalCenterOffset: root.down ? Theme.u : 0
         anchors.verticalCenterOffset: root.down ? Theme.u : 0
-        emblemOnly: root.small
+        // Settings → Bar → Logo → "Wordmark on the Start button": off leaves the emblem
+        emblemOnly: root.small || Config.bar.logoText === false
     }
     kind: small ? "body" : "title"
     checked: Shell.startScreen !== "" && Shell.startScreen === screenName

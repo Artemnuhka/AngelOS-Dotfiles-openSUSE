@@ -10,6 +10,11 @@ Singleton {
     id: root
 
     property var session: ({messages: [], plan: null, draft: null, installed: ""})
+    // changing an installed plugin (Settings → Plugins → "Improve"): the draft starts as its files
+    readonly property bool editing: session.mode === "edit"
+    readonly property string target: editing ? session.target || "" : ""
+    property var backups: ({})          // user plugin id -> saved earlier versions
+    property string editRequest: ""     // Settings → Plugins → Improve: Studio opens it
     property var keys: ({openai: false, anthropic: false})
     property var cli: ({})              // {"claude-cli": {installed, loggedIn, method}, "codex-cli": {…}}
     property var models: ({})           // provider -> [{id, label, efforts, default, speed}]
@@ -94,17 +99,21 @@ Singleton {
         Quickshell.execDetached(Shell.terminalArgv(["sh", "-c", 'PATH="$HOME/.local/bin:$PATH"; "$@"; printf "\\n♡ Готово — вернись в angelOS и нажми «Проверить вход». Enter закроет окно."; read _', "sh"].concat(argv)));
     }
     readonly property string elapsedText: elapsed >= 60 ? Math.floor(elapsed / 60) + I18n.t(" мин ", " min ") + (elapsed % 60) + I18n.t(" с", " s") : elapsed + I18n.t(" с", " s")
-    readonly property string statusText: !busy ? "" : (stage === "validation"
+    readonly property string statusText: !busy ? "" : (action === "update" ? I18n.t("Обновляю плагин…", "Updating the plugin…")
+        : action === "rollback" ? I18n.t("Возвращаю прошлую версию…", "Restoring the earlier version…")
+        : action === "edit_start" ? I18n.t("Открываю плагин…", "Opening the plugin…")
+        : stage === "validation"
         ? I18n.t("Проверяю файлы…", "Checking files…")
         : stage === "runtime" ? I18n.t("Запускаю плагин в песочнице и проверяю, что всё загружается…", "Loading the plugin in a sandbox to see that everything works…")
         : stage === "repair" ? I18n.t("Нашлись ошибки — ИИ исправляет (попытка ", "Checks failed — AI is fixing them (attempt ") + repairRound + "/" + repairOf + ")…"
-        : action === "generate" ? I18n.t("ИИ пишет плагин… ", "AI is writing your plugin… ") + effortHint(effort)
+        : action === "generate" ? (editing ? I18n.t("ИИ дорабатывает плагин… ", "AI is changing the plugin… ") : I18n.t("ИИ пишет плагин… ", "AI is writing your plugin… ")) + effortHint(effort)
         : action === "plan" ? I18n.t("ИИ разбирает запрос…", "AI is reviewing your request…")
         : I18n.t("Обрабатываю…", "Working…")) + (elapsed > 2 ? "  ·  " + elapsedText : "")
 
     function send(name, params) {
-        if (busy || worker.running || (!Config.developer.enabled && name !== "status"))
+        if (busy || worker.running || (!Config.developer.enabled && name !== "status" && name !== "reload"))
             return false;
+        _clearComposer = name === "plan" || name === "reset" || name === "edit_start" || (name === "generate" && !!(params && params.prompt));
         error = "";
         action = name;
         stage = "";
@@ -133,14 +142,41 @@ Singleton {
         send("status");
     }
     function cancel() {
-        // Installation is a short, atomic local operation; never interrupt it.
-        if (!busy || action === "install")
+        // Installation and updates are short, atomic local operations; never interrupt them.
+        if (!busy || ["install", "update", "rollback", "save_file", "delete_file", "edit_start"].includes(action))
             return;
         worker.signal(15);
         _request = "";
         _received = true;
         error = I18n.t("Запрос отменён. Провайдер мог уже учесть отправленный запрос.", "Request cancelled. The provider may already have counted the request.");
     }
+    // ---- improving an installed plugin ----
+    function startEdit(id) {
+        return send("edit_start", {id: id});
+    }
+    // change the plugin straight from a request, without a plan
+    function applyChange(prompt) {
+        return send("generate", {prompt: prompt});
+    }
+    function saveFile(path, content) {
+        return send("save_file", {path: path, content: content});
+    }
+    function deleteFile(path) {
+        return send("delete_file", {path: path});
+    }
+    function update() {
+        if (draft)
+            send("update", {digest: draft.digest});
+    }
+    function rollback(id) {
+        return send("rollback", {id: id});
+    }
+    // load an installed plugin's files again (after editing them by hand)
+    function reloadPlugin(id) {
+        return send("reload", {id: id});
+    }
+    property bool _clearComposer: false
+
     function install(addDesktop) {
         if (!draft)
             return;
@@ -180,9 +216,13 @@ Singleton {
             models = event.models;
         if (event.session !== undefined)
             session = event.session;
-        if (action === "plan" || action === "reset")
+        if (event.backups !== undefined)
+            backups = event.backups;
+        if (_clearComposer)
             composer = "";
         loaded = true;
+        if (event.reloaded && event.reloaded.loadDir)
+            Plugins.setLoadDir(event.reloaded.id, event.reloaded.loadDir);
         if (event.installed) {
             _enableAfterScan = event.installed.id;
             Plugins.reload();
@@ -206,7 +246,7 @@ Singleton {
         id: deadline
         interval: 240000
         onTriggered: {
-            if (root.busy && root.action !== "install") {
+            if (root.busy && !["install", "update", "rollback"].includes(root.action)) {
                 worker.signal(15);
                 root._received = true;
                 root._request = "";

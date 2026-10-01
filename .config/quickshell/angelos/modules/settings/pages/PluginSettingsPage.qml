@@ -33,6 +33,10 @@ PxPage {
             });
         }
         Component.onCompleted: reloadPlugin()
+        // changed by Plugin Studio while open: a new load path
+        readonly property string src: page.plugin && page.plugin.settings ? Plugins.url(page.plugin, page.plugin.settings) : ""
+        onSrcChanged: if (item)
+            reloadPlugin()
         Connections {
             target: page
             function onPluginChanged() {

@@ -9,8 +9,11 @@ import qs.widgets
 
 // Start menu as a layer-shell overlay: opens from the Start button, from a
 // Meta tap or over IPC, takes the keyboard and closes on a click outside.
-// Three looks (Settings → Bar → Start): classic Win98 list, Windows 11 panel,
-// iPhone-like full screen grid. All of them animate through `reveal` (0 → 1).
+// Looks (Settings → Bar → Start): classic Win98 list, Windows 11 panel, Windose
+// (NGO) window — by the button; iPhone-like grid, PSP XMB, Wii channels — the whole
+// screen; Spotlight — a search pill centred in the upper third. All of them animate
+// through `reveal` (0 → 1) and share the body interface: closeRequested, current,
+// reset(), setQuery(text), key(event).
 Variants {
     model: Shell.screens
 
@@ -20,8 +23,9 @@ Variants {
         required property var modelData
         readonly property string screenName: modelData.name
         readonly property bool open: Shell.startScreen === screenName
-        readonly property string style: ["classic", "win11", "fullscreen"].includes(Config.bar.startStyle) ? Config.bar.startStyle : "classic"
-        readonly property bool full: style === "fullscreen"
+        readonly property string style: ["classic", "win11", "fullscreen", "xmb", "windose", "wii", "spotlight"].includes(Config.bar.startStyle) ? Config.bar.startStyle : "classic"
+        readonly property bool full: style === "fullscreen" || style === "xmb" || style === "wii"
+        readonly property bool spot: style === "spotlight"
         property bool shown: false
         property real reveal: 0
 
@@ -46,6 +50,7 @@ Variants {
                     body.item.reset();
                 if (body.item)
                     body.item.current = -1;
+                win.takePrefill();
                 revealAnim.to = 1;
                 revealAnim.duration = win.full ? 340 : 230;
                 revealAnim.easing.type = win.full ? Easing.OutQuint : Easing.OutCubic;
@@ -56,6 +61,19 @@ Variants {
                 revealAnim.duration = win.full ? 200 : 140;
                 revealAnim.easing.type = Easing.InCubic;
                 revealAnim.restart();
+            }
+        }
+        // `angelos startText …`: the search box of the open Start takes the text
+        function takePrefill() {
+            if (!open || !Shell.startPrefill || !body.item || !body.item.setQuery)
+                return;
+            body.item.setQuery(Shell.startPrefill);
+            Shell.startPrefill = "";
+        }
+        Connections {
+            target: Shell
+            function onStartPrefillChanged() {
+                win.takePrefill();
             }
         }
         NumberAnimation {
@@ -84,7 +102,8 @@ Variants {
         mask: Region {
             item: win.open ? catcher : null
         }
-        BackgroundEffect.blurRegion: Config.appearance.blur && win.shown ? blurRegion : null
+        // (Spotlight's pill and list are near opaque; its box is mostly air)
+        BackgroundEffect.blurRegion: Config.appearance.blur && win.shown && !win.spot ? blurRegion : null
         Region {
             id: blurRegion
             item: win.full ? catcher : body
@@ -111,15 +130,25 @@ Variants {
             // Settings → Bar → Start: auto keeps classic at the button and win11 centred;
             // left / center / right pin either of them there. Fullscreen fills.
             readonly property real restY: win.above ? win.button.y - height - Theme.u * 2 : win.button.y + win.button.height + Theme.u * 2
-            readonly property string align: Config.bar.startAlign && Config.bar.startAlign !== "auto" ? Config.bar.startAlign : win.style === "win11" ? "center" : "button"
+            readonly property string align: win.spot ? "center" : Config.bar.startAlign && Config.bar.startAlign !== "auto" ? Config.bar.startAlign : win.style === "win11" ? "center" : "button"
             readonly property real edge: Theme.u * 4
             x: win.full ? 0 : align === "center" ? Math.round((win.width - width) / 2) : align === "left" ? edge : align === "right" ? win.width - width - edge : Math.max(Theme.u * 2, Math.min(win.width - width - Theme.u * 2, win.button.x))
-            y: win.full ? 0 : restY + (win.style === "win11" ? (win.above ? 1 : -1) * (1 - win.reveal) * Theme.u * 24 : 0)
+            // win11 (and anything over a centred taskbar) slides up like Windows 11
+            readonly property bool slides: win.style === "win11" || Config.bar.taskbarAlign === "center"
+            // Spotlight: a fifth down the screen, dropping in a little
+            y: win.full ? 0 : win.spot ? Math.round(win.height * 0.2) - (1 - win.reveal) * Theme.u * 10 : restY + (slides ? (win.above ? 1 : -1) * (1 - win.reveal) * Theme.u * 24 : 0)
             opacity: win.full ? 1 : win.reveal
-            // classic pops out of its corner, win11 slides
-            scale: win.style === "classic" ? 0.9 + 0.1 * win.reveal : 1
+            // classic and Windose pop out of their corner, win11 slides, Spotlight swells
+            scale: win.spot ? 0.96 + 0.04 * win.reveal : (win.style === "classic" || win.style === "windose") && !slides ? 0.9 + 0.1 * win.reveal : 1
             transformOrigin: align === "right" ? (win.above ? Item.BottomRight : Item.TopRight) : align === "center" ? (win.above ? Item.Bottom : Item.Top) : (win.above ? Item.BottomLeft : Item.TopLeft)
-            sourceComponent: win.full ? fullComp : win.style === "win11" ? win11Comp : classicComp
+            sourceComponent: ({
+                    "fullscreen": fullComp,
+                    "xmb": xmbComp,
+                    "wii": wiiComp,
+                    "win11": win11Comp,
+                    "windose": windoseComp,
+                    "spotlight": spotComp
+                })[win.style] || classicComp
             onLoaded: {
                 item.closeRequested.connect(Shell.closeStart);
                 if (win.open && item.reset)
@@ -146,6 +175,30 @@ Variants {
                 width: win.width
                 height: win.height
             }
+        }
+        Component {
+            id: xmbComp
+            StartXmb {
+                reveal: win.reveal
+                width: win.width
+                height: win.height
+            }
+        }
+        Component {
+            id: wiiComp
+            StartWii {
+                reveal: win.reveal
+                width: win.width
+                height: win.height
+            }
+        }
+        Component {
+            id: windoseComp
+            StartWindose {}
+        }
+        Component {
+            id: spotComp
+            StartSpotlight {}
         }
 
         RightClickGuard {}

@@ -307,7 +307,14 @@ Item {
             // the input copy of a widget with nothing to click runs nothing: the face shows it
             visible: host.face || host.interactive
             onLoaded: host.checkInput()
-            Component.onCompleted: {
+            // a plugin changed by Plugin Studio comes back through a new path
+            readonly property string src: host.info && host.info.plugin ? Plugins.url(host.info.plugin, host.info.plugin.desktopWidget) : ""
+            onSrcChanged: if (item) {
+                source = "";
+                load();
+            }
+            Component.onCompleted: load()
+            function load() {
                 if (!host.widget || !host.info)
                     return;
                 const props = {
@@ -316,7 +323,7 @@ Item {
                 };
                 if (host.info.plugin) {
                     props.plugin = Plugins.context(host.info.plugin);
-                    setSource(Plugins.url(host.info.plugin, host.info.plugin.desktopWidget), props);
+                    setSource(src, props);
                 } else {
                     const name = host.info.type.charAt(0).toUpperCase() + host.info.type.slice(1);
                     setSource(Qt.resolvedUrl("widgets/" + ({

@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
-"""Report mouse clicks for the Y2K "Click" sound (Settings → Y2K → Sounds).
+"""Report mouse clicks and key presses for the input sounds (Settings → System sounds).
 
-Prints "click" for every left or right button press on any mouse or touchpad,
-anywhere on the desktop (the shell only sees clicks on its own windows, so this
-reads evdev like meta-tap.py; needs the `input` group). Runs only while the
-click sound is on.
+  click-watch.py [--mouse] [--keys]     (no flag = --mouse)
 
-  noperm   no pointer device could be opened
+  click left|right|middle      a mouse / touchpad button went down
+  release left|right|middle    …and up (the "release" tick)
+  key                          a key went down on a keyboard (not its auto-repeat)
+  noperm                       no device could be opened (the `input` group)
 
-Privacy: nothing but "a button went down" is printed — no positions, no keys.
-Devices are opened read-only and never grabbed.
+The shell only sees clicks on its own windows, so this reads evdev like meta-tap.py,
+anywhere on the desktop. Runs only while one of these sounds is on.
+
+Privacy: nothing but "a button / some key went down" is printed — no positions, no
+key codes. Devices are opened read-only and never grabbed.
 """
 import glob
 import os
@@ -18,22 +21,36 @@ import struct
 import sys
 import time
 
-EV_KEY, BTN_LEFT, BTN_RIGHT = 1, 272, 273
+EV_KEY = 1
+BTN_LEFT, BTN_RIGHT, BTN_MIDDLE = 272, 273, 274
+KEY_A, KEY_SPACE = 30, 57
+BUTTONS = {BTN_LEFT: "left", BTN_RIGHT: "right", BTN_MIDDLE: "middle"}
 EVENT = struct.Struct("llHHi")
 
 
-def has_button(event_dir):
+def key_bits(event_dir):
     try:
         words = open(os.path.join(event_dir, "device/capabilities/key")).read().split()
     except OSError:
-        return False
+        return 0
     bits = 0
     for word in words:
         bits = (bits << 64) | int(word, 16)
-    return bool(bits >> BTN_LEFT & 1)
+    return bits
+
+
+def wanted(event_dir, mouse, keys):
+    bits = key_bits(event_dir)
+    if mouse and bits >> BTN_LEFT & 1:
+        return True
+    # a keyboard: has letters and a space bar (not a power button or a headset)
+    return keys and bool(bits >> KEY_A & 1) and bool(bits >> KEY_SPACE & 1)
 
 
 def main():
+    args = set(sys.argv[1:])
+    keys = "--keys" in args
+    mouse = "--mouse" in args or not keys
     fds = {}
     said_noperm = False
     last_scan = 0.0
@@ -46,7 +63,7 @@ def main():
             for event_dir in glob.glob("/sys/class/input/event*"):
                 path = "/dev/input/" + os.path.basename(event_dir)
                 seen.add(path)
-                if path in fds or not has_button(event_dir):
+                if path in fds or not wanted(event_dir, mouse, keys):
                     continue
                 try:
                     fds[path] = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
@@ -73,8 +90,13 @@ def main():
                 continue
             for off in range(0, len(data) - EVENT.size + 1, EVENT.size):
                 _, _, kind, code, value = EVENT.unpack_from(data, off)
-                if kind == EV_KEY and code in (BTN_LEFT, BTN_RIGHT) and value == 1:
-                    print("click", flush=True)
+                if kind != EV_KEY:
+                    continue
+                if code in BUTTONS:
+                    if mouse and value in (0, 1):
+                        print(("click " if value == 1 else "release ") + BUTTONS[code], flush=True)
+                elif keys and code < BTN_LEFT and value == 1:
+                    print("key", flush=True)
 
 
 if __name__ == "__main__":

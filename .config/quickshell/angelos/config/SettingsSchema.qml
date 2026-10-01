@@ -41,12 +41,16 @@ JsonAdapter {
         property bool showMedia: true
         property bool showSeconds: false
         property string startLabel: "angelOS"
-        property string startStyle: "classic" // classic (Win98 list) | win11 (centred, pinned grid) | fullscreen (iPhone-like app grid)
+        property string startStyle: "classic" // classic (Win98 list) | win11 (centred, pinned grid) | fullscreen (iPhone-like app grid) | xmb (PSP) | windose (NGO window) | wii (channels) | spotlight (a search pill)
         property var startPinned: []        // desktop entry ids pinned in Start
         property string startAlign: "auto" // auto (classic at the button, win11 centred) | left | center | right
+        property string taskbarAlign: "left" // left | center — Start and the window buttons in the middle, like Windows 11
         property int startWidth: 100        // Start menu width, % of the default
         property int startRows: 3           // win11: rows of pinned apps
-        property string logoStyle: "classic" // classic | angel
+        property string logoStyle: "classic" // wordmark: classic | angel | windose (NGO, pill O) | hell (gothic, drips) | chrome (Y2K)
+        property string logoEmblem: "heart" // emblem: heart (winged, halo) | pill | star | cd | kitty
+        property bool logoFastfetch: true   // fastfetch draws the chosen emblem (~/.config/fastfetch/logo.txt)
+        property bool logoText: true        // the wordmark next to the emblem on the Start button (false: the emblem only)
         property bool metaTap: true         // a short Meta tap opens Start (Windows-like)
         property int metaTapMs: 400         // longer presses are holds, not taps
         property bool metaTapFullscreen: false // also over fullscreen windows / games
@@ -54,6 +58,7 @@ JsonAdapter {
         property var hidden: []             // widget ids removed from the bar
         property string trayTint: "accent"  // off | mono | accent — recolor tray icons to the theme
         property string trayDensity: "normal" // tray grid: compact | normal | airy | spacious (fewer, bigger cells)
+        property string rightDensity: "normal" // the right side of the bar (tray, bell, clock…): compact | normal | airy
         property bool tintTasks: false      // same for window buttons
         property string taskRightClick: "menu" // menu (window menu with Close) | close (closes at once) | none
         property bool taskMiddleClose: true // middle click on a window button closes the window
@@ -126,6 +131,15 @@ JsonAdapter {
         property bool initialized: false
         property bool snap: true
         property string titleSuffix: "exe"  // widget titles end in .exe | .sh | .bin
+        // the right-click menu on the wallpaper (services/DeskMenu, Settings → Right-click menu)
+        property string menuStyle: "list"   // list (the usual, Windows 11-like) | radial (a ring) | y2k (glossy bubble) | tiles (Control Center) | pentagram
+        property var menuQuick: ["terminal", "files", "monitor", "wallpaperPick", "settings"] // the list's top row, the ring's first slots (up to 6)
+        property var menuItems: ["view", "new", "wallpaper", "open", "sep", "displaySettings", "personalize", "more"] // the rest, in order; "sep" = a line in the list
+        property var menuCustom: []         // own entries [{id: "custom:<n>", label, icon, kind: app|command|path|url, target}]
+        property string menuSize: "normal"  // compact | normal | large
+        property bool menuIcons: true       // icons in the list
+        property bool menuLabels: true      // names under the ring's icons
+        property bool menuAnim: true        // the ring flies out, the list pops
     }
 
     property JsonObject voxtype: JsonObject {
@@ -136,6 +150,8 @@ JsonAdapter {
     property JsonObject launcher: JsonObject {
         property string terminal: "kitty"
         property var usage: ({})            // desktop id -> launches
+        property bool calc: true            // Start search and the launcher count: 2+2, 10 km in mi, 100 usd in rub
+        property bool settings: true        // Start search and the launcher find settings too, mixed with apps by relevance
     }
 
     property JsonObject lock: JsonObject {
@@ -145,6 +161,7 @@ JsonAdapter {
         property bool hearts: true          // floating pixel hearts
         property bool reactions: true       // hearts on typing, a broken heart on a mistake, a burst on unlock
         property bool indicators: true      // Caps Lock, layout, battery, time locked, missed notifications
+        property bool logo: true            // the angelOS logo above the clock
         property bool stream: false         // NGO stream overlay: LIVE badge, viewers, cute chat
         property string streamTitle: ""      // "" = "angel is on a break" 
     }
@@ -174,6 +191,7 @@ JsonAdapter {
     property JsonObject plugins: JsonObject {
         property var enabled: ({})          // id -> bool (missing = manifest default)
         property var data: ({})             // id -> plugin settings object
+        property var removed: []            // bundled plugins removed by hand (hidden; "Restore" brings them back)
     }
 
     property JsonObject dotfiles: JsonObject {
@@ -201,6 +219,9 @@ JsonAdapter {
         property string theme: ""           // "" = leave the system cursor alone
         property int size: 24
         property bool flatpak: true         // also hand the theme to Flatpak apps
+        property bool shake: true           // shake the mouse to find the pointer: it grows for a moment (macOS)
+        property string shakeSensitivity: "normal" // low | normal | high — how hard a shake has to be
+        property real shakeScale: 4         // how big it grows, × the cursor size
     }
 
     property JsonObject updates: JsonObject {
@@ -227,6 +248,13 @@ JsonAdapter {
         property real soundVolume: 0.55
         property real helperVolume: 0.6     // the angel's / demon's voice, pips and effects, on top of soundVolume
         property var soundOff: ["click"]    // events kept quiet: startup notify error click shutdown angel
+        property var soundTweaks: ({})      // System sounds: {event: {on, vol (0–1.5), sound ("" | other event | "file:/path"), vary}}
+        property var clickButtons: ["left", "right"] // which mouse buttons make the click sound (left right middle)
+        property bool clickRelease: false   // a softer tick when the button comes up
+        property bool quietFullscreen: true // no click / typing sounds over a fullscreen window (games)
+        property bool quietHours: false     // no sounds from quietFrom to quietTo (hours)
+        property int quietFrom: 23
+        property int quietTo: 8
         property bool boot: true            // CD-ROM style loading screen once per login
         property var bootScreens: []        // empty = every screen
         property string soundPack: "y2k"    // y2k (synthesised here) | overdose (NEEDY GIRL OVERDOSE sounds, downloaded on first use)
@@ -241,6 +269,7 @@ JsonAdapter {
         property double nextPrank: 0        // ms; not before
         property string cracks: "full"      // the demon's broken screen corner: full | weak | off
         property bool heavenFx: true        // sun rays and a choir when the angel comes back
+        property bool raysSeen: false       // the rays played when she first appeared; not again on every start
         property string textShake: "light"  // the helper's letters twitch now and then: off | light | strong
         property string hellStyle: "pack"   // the demon's wallpaper: pack (pixel paintings, Hell pack) | drawn
         property bool shake: true           // the angel ↔ demon swap shakes the screen (the demon brings 8-bit rocks)
@@ -248,6 +277,20 @@ JsonAdapter {
         property string hellPicture: ""     // "" = generated pixel hell (scripts/hell-wallpaper.py)
         property var angelSaved: null       // wallpaper + theme mode kept while the demon rules
         property bool jokes: true           // she jokes now and then, not only tips
+        property string hellMenu: "pentagram" // the right-click menu while the demon rules ("" = the usual one)
+        property string hellSettings: "grimoire" // Settings while the demon rules: grimoire (a book) | "" (the usual window)
+        property string angelLook: "glitch" // glitch (cracked halo, pictures) | chibi (the first pictures) | adult (30×40 pixels) | mini (the first 20×21)
+        property string demonLook: "glitch" // the same for the demon (glitch: the sleepless neon one)
+    }
+
+    // the lens at the pointer (services/Lens, Settings → Keyboard and mouse → Lens)
+    property JsonObject lens: JsonObject {
+        property real zoom: 2               // how much a fresh lens magnifies
+        property int size: 300              // its diameter (or side), px
+        property string shape: "circle"     // circle | square
+        property bool crisp: true           // sharp pixels (off: smoothed like KDE)
+        property int refresh: 0             // s; re-take the picture under the lens this often (0 = only on a click / R)
+        property bool keys: true            // niri keys Mod+Alt+= / Mod+Alt+- / Mod+Alt+0 (cfg/angelos-windows.kdl)
     }
 
     property JsonObject stream: JsonObject {

@@ -10,6 +10,8 @@ import qs.services
 import qs.widgets
 import "AngelSprite.js" as AngelArt
 import "DemonSprite.js" as DemonArt
+import "AngelSpriteMini.js" as AngelMini
+import "DemonSpriteMini.js" as DemonMini
 
 // The Y2K helper: a pixel angel (or the demon, services/Angel) floating in the
 // bottom-right corner of her screen. Speech bubble with buttons; a click on her
@@ -66,8 +68,15 @@ Scope {
             readonly property bool demonArt: Angel.demon
             readonly property bool blinking: tick % 29 === 0
             readonly property bool mouthOpen: Angel.talking && typer.shown < Angel.text.length && tick % 2 === 0
-            // the pixel sprite, when the pictures are missing (SpriteRig.ready)
-            readonly property var art: demonArt ? DemonArt : AngelArt
+            // Settings → Y2K → Looks, each of them apart: glitch (the cracked-halo angel /
+            // the sleepless neon demon, SpriteRig), chibi (the first pictures), adult (the
+            // 30×40 pixel sprite, also when the pictures are missing) or mini (20×21)
+            readonly property string look: {
+                const l = demonArt ? Config.y2k.demonLook : Config.y2k.angelLook;
+                return ["glitch", "chibi", "adult", "mini"].includes(l) ? l : "glitch";
+            }
+            readonly property bool mini: look === "mini"
+            readonly property var art: mini ? (demonArt ? DemonMini : AngelMini) : (demonArt ? DemonArt : AngelArt)
             readonly property var frame: {
                 if (mouthOpen)
                     return art.talk;
@@ -492,18 +501,28 @@ Scope {
                             blink: win.blinking
                             talk: win.mouthOpen
                             flutter: grab.held
+                            use: win.look === "chibi" || win.look === "glitch"
+                            variant: win.look === "glitch" ? "glitch" : ""
                             // one screen pixel per art pixel at the default size (~120 px tall)
                             px: Math.max(1, Theme.u / 2)
 
                             // without the pictures: the 30×40 pixel sprite, 3 screen
-                            // pixels each at the default size
+                            // pixels each at the default size; the mini ones 4 each
                             PxIcon {
                                 id: pixelArt
                                 visible: !sprite.ready
                                 bitmap: sprite.ready ? null : win.frame
-                                pixel: Math.max(2, Math.round(Theme.u * 1.5))
-                                // her own colours; the angel's pink follows the accent
-                                palette: win.demonArt ? DemonArt.palette : Object.assign({}, AngelArt.palette, {
+                                pixel: win.mini ? Theme.u * 2 : Math.max(2, Math.round(Theme.u * 1.5))
+                                // the mini ones: the colours they had, from the theme
+                                ink: win.demonArt ? "#1a0a14" : (Theme.dark ? Theme.text : Theme.edge)
+                                body: win.demonArt ? "#f7d9e3" : "#ffd9c7"
+                                fill: win.demonArt ? "#ff3b6b" : Theme.accent
+                                fill2: "#3a1a46"
+                                fill3: Theme.dark ? "#ffe07a" : "#f5c542"
+                                light: win.demonArt ? "#7a1e46" : "#ffffff"
+                                bad: "#d8203a"
+                                // the adult ones: her own colours; the angel's pink follows the accent
+                                palette: win.mini ? ({}) : win.demonArt ? DemonArt.palette : Object.assign({}, AngelArt.palette, {
                                     "o": Theme.hex(Theme.accent)
                                 })
                             }

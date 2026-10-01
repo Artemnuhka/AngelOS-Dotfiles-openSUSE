@@ -28,6 +28,31 @@ IpcHandler {
     function startMenu(screen: string): void {
         Shell.toggleStart(screen);
     }
+    // the owner check: GitHub's answer for the admin repo (services/Owner)
+    function owner(): string {
+        return (Owner.check || "not asked") + (Owner.login ? " " + Owner.login : "") + (Owner.enabled ? " · owner features on" : " · owner features off");
+    }
+    // the lens at the pointer: in | out | close | toggle | refresh (services/Lens)
+    function lens(cmd: string): void {
+        Lens.cmd(cmd, "");
+    }
+    // …on a given screen (tests, the dev stand)
+    function lensOn(cmd: string, screen: string): void {
+        Lens.cmd(cmd, screen);
+    }
+    // show where the pointer is, as if the mouse were shaken (a niri bind can call it)
+    function findCursor(): void {
+        CursorShake.demo();
+    }
+    // open Start with its search filled in: `angelos startText "2+2"` (classic Start: the launcher)
+    function startText(text: string): void {
+        if (Config.bar.startStyle === "classic" || !Config.bar.startStyle) {
+            launcherText(text);
+            return;
+        }
+        Shell.startPrefill = text;
+        Shell.openStart("");
+    }
     // switch workspaces through angelOS: a number, up, down or prev
     function ws(target: string): void {
         WorkspaceAnim.go(target);
@@ -129,10 +154,11 @@ IpcHandler {
         Config.workspaces.heartAnim = style;
         return "ok";
     }
-    // classic | win11 | fullscreen
+    // classic | win11 | fullscreen | xmb | windose | wii | spotlight
     function startStyle(style: string): string {
-        if (!["classic", "win11", "fullscreen"].includes(style))
-            return "styles: classic, win11, fullscreen";
+        const styles = ["classic", "win11", "fullscreen", "xmb", "windose", "wii", "spotlight"];
+        if (!styles.includes(style))
+            return "styles: " + styles.join(", ");
         Config.bar.startStyle = style;
         return "ok";
     }

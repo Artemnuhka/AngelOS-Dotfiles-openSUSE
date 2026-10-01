@@ -5,10 +5,14 @@ import Quickshell
 import Quickshell.Io
 import qs.config
 
-// Owner-only features (dotfiles pull/publish) exist only when BOTH are present:
+// Owner-only features (dotfiles pull/publish) exist only when ALL of this holds:
 //   <shell>/owner/                  — never published (see owner/checks.sh)
-//   ~/.config/angelos/owner         — marker with `remote=<git url>`, never published
-// In the public version neither exists, so none of this shows up.
+//   ~/.config/angelos/owner         — marker with `remote=<git url>` and `admin=<private
+//                                     admin repo url>`, never published
+//   the user check                  — the GitHub account logged in here (gh) administers
+//                                     that admin repo (scripts/owner-check.sh; GitHub's
+//                                     answer, remembered 14 days for offline use)
+// In the public version none of it exists, so none of this shows up.
 Singleton {
     id: root
 
@@ -17,7 +21,38 @@ Singleton {
     property bool hasDir: false
     property bool hasMarker: false
     property string remote: ""
-    readonly property bool enabled: hasDir && hasMarker
+    property string admin: ""
+    // the user check: "admin" | "cached" | "denied" | "unknown" | "" (not asked yet)
+    property string check: ""
+    property string login: ""
+    readonly property bool verified: check === "admin" || check === "cached"
+    readonly property bool enabled: hasDir && hasMarker && verified
+    // ask GitHub again (the Dotfiles page has a button; also every 6 hours)
+    function recheck() {
+        if (!hasDir || !hasMarker || !admin)
+            return;
+        verify.running = false;
+        verify.running = true;
+    }
+    Process {
+        id: verify
+        command: ["sh", Quickshell.shellDir + "/scripts/owner-check.sh", root.admin]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const [state, who] = text.trim().split(" ");
+                root.check = state || "unknown";
+                root.login = who || "";
+            }
+        }
+    }
+    onHasDirChanged: recheck()
+    onAdminChanged: recheck()
+    Timer {
+        interval: 6 * 3600 * 1000
+        running: root.hasDir && root.hasMarker
+        repeat: true
+        onTriggered: root.recheck()
+    }
     // background jobs live here so an update keeps running when the settings page closes
     readonly property var jobs: jobsLoader.item
 
@@ -35,8 +70,14 @@ Singleton {
             root.hasMarker = true;
             const m = text().match(/^remote=(.+)$/m);
             root.remote = m ? m[1].trim() : "";
+            const a = text().match(/^admin=(.+)$/m);
+            root.admin = a ? a[1].trim() : "";
         }
-        onLoadFailed: root.hasMarker = false
+        onLoadFailed: {
+            root.hasMarker = false;
+            root.admin = "";
+            root.check = "";
+        }
     }
     LazyLoader {
         id: jobsLoader

@@ -7,13 +7,22 @@ import qs.config
 import qs.services
 import qs.widgets
 
-// Right-click desktop menu, laid out like Windows 11: signed quick actions on top
-// (terminal, files, task manager, wallpaper, settings), then Вид ▸ / Создать ▸ /
-// Обои ▸ / Открыть ▸, display & personalization, and "Показать больше ▸" for plugins.
+// Right-click desktop menu, laid out like Windows 11: signed quick actions on top,
+// then the entries with flyouts (Вид ▸ / Создать ▸ / Обои ▸ / Открыть ▸ / Показать больше ▸).
+// What it holds and in which order: services/DeskMenu (Settings → Right-click menu).
+// The "ring" look is RadialMenu: openAt() hands over to it, the flyouts' lists stay here.
 PopupWindow {
     id: root
 
     required property var parentWindow
+    property var radial: null               // RadialMenu of the same screen
+    // the ring, the tiles and the pentagram live in RadialMenu; the list here, plain or Y2K
+    readonly property bool ringStyle: DeskMenu.overlay && !!radial
+    readonly property string skin: DeskMenu.style === "y2k" ? "y2k" : ""
+    readonly property real k: ({
+            "compact": 0.85,
+            "large": 1.25
+        })[Config.desktop.menuSize] || 1
     readonly property string screenName: parentWindow && parentWindow.screen ? parentWindow.screen.name : ""
     property real px: 0
     property real py: 0
@@ -24,6 +33,12 @@ PopupWindow {
     // right-click shows the menu once, where it was asked for last.
     property bool reopening: false
     function openAt(x, y) {
+        if (ringStyle) {
+            if (visible)
+                close();
+            radial.openAt(x, y);
+            return;
+        }
         px = x;
         py = y;
         sub.visible = false;
@@ -49,6 +64,18 @@ PopupWindow {
         reopening = false;
         sub.visible = false;
         visible = false;
+        if (radial && radial.visible)
+            radial.close();
+    }
+    // a flyout's entries by name
+    function listFor(name) {
+        return ({
+                "view": viewItems,
+                "new": newItems,
+                "wallpaper": wallpaperItems,
+                "open": openItems,
+                "more": moreItems
+            })[name] || [];
     }
     function run(fn) {
         close();
@@ -214,6 +241,8 @@ PopupWindow {
     implicitHeight: frame.height + Theme.u * 3
     onVisibleChanged: {
         if (visible) {
+            if (Config.desktop.menuAnim !== false)
+                popAnim.restart();
             if (PopupManager.active && PopupManager.active !== root)
                 PopupManager.close(PopupManager.active);
             PopupManager.active = root;
@@ -244,16 +273,15 @@ PopupWindow {
             sub.openFor(item, list)
     }
     // scripting: open a flyout by name ("view" | "new" | "wallpaper" | "open" | "more")
+    property var subAnchors: ({})
     function openSub(name) {
-        const m = {
-            "view": [viewItem, viewItems],
-            "new": [newItem, newItems],
-            "wallpaper": [wallItem, wallpaperItems],
-            "open": [openItem, openItems],
-            "more": [moreItem, moreItems]
-        }[name];
-        if (m)
-            sub.openFor(m[0], m[1]);
+        if (radial && radial.visible) {
+            radial.openSub(name);
+            return;
+        }
+        const it = subAnchors[name];
+        if (it)
+            sub.openFor(it, listFor(name));
     }
     function hoverSub(item, list) {
         if (sub.visible && sub.anchorItem === item)
@@ -265,62 +293,80 @@ PopupWindow {
 
     PxBox {
         id: frame
-        width: Math.max(Theme.u * 150, quick.implicitWidth + Theme.u * 8, ...col.children.map(c => c.implicitWidth || 0)) + inset * 2
+        width: Math.max(Theme.u * 150 * root.k, quick.implicitWidth + Theme.u * 8, ...col.children.map(c => c.implicitWidth || 0)) + inset * 2
+        // a little pop when it opens (Settings → Right-click menu → Animation)
+        transformOrigin: Item.TopLeft
+        scale: popAnim.running ? popAnim.v : 1
+        NumberAnimation {
+            id: popAnim
+            property real v: 1
+            target: popAnim
+            property: "v"
+            from: 0.92
+            to: 1
+            duration: 120
+            easing.type: Easing.OutCubic
+        }
         height: col.implicitHeight + inset * 2
-        color: Qt.alpha(Theme.menuSurface, Theme.panelAlpha)
-        shadow: Config.appearance.shadows
+        color: root.skin === "y2k" ? "transparent" : Qt.alpha(Theme.menuSurface, Theme.panelAlpha)
+        outline: root.skin !== "y2k"
+        flat: root.skin === "y2k"
+        shadow: Config.appearance.shadows && root.skin !== "y2k"
         focus: true
         Keys.onEscapePressed: root.close()
+        // Y2K gloss: the chrome bubble instead of the bevelled box
+        Y2kGloss {
+            visible: root.skin === "y2k"
+            anchors.fill: parent
+            z: -1
+        }
 
         Column {
             id: col
             width: parent.width - frame.inset * 2
+            bottomPadding: root.skin === "y2k" ? Theme.u * 3 : 0
 
+            // Y2K gloss: a little title in the chrome
+            PxText {
+                visible: root.skin === "y2k"
+                anchors.horizontalCenter: parent.horizontalCenter
+                topPadding: Theme.u * 4
+                kind: "tiny"
+                font.bold: true
+                color: Theme.text
+                style: Text.Outline
+                styleColor: Qt.alpha(Theme.accent, 0.6)
+                text: "✧ angelOS ✧"
+            }
             // quick actions (Windows 11 puts cut/copy/paste here; we put the everyday stuff), signed
             Row {
                 id: quick
+                visible: DeskMenu.quick.length > 0
                 anchors.horizontalCenter: parent.horizontalCenter
                 topPadding: Theme.u * 2
                 bottomPadding: Theme.u * 2
                 spacing: Theme.u
                 Repeater {
-                    model: [
-                        {
-                            "icon": "terminal",
-                            "label": I18n.t("Терминал", "Terminal"),
-                            "run": () => Shell.terminal()
-                        },
-                        {
-                            "icon": "folder",
-                            "label": I18n.t("Файлы", "Files"),
-                            "run": () => DesktopActions.openDirectory("HOME")
-                        },
-                        {
-                            "icon": "chip",
-                            "label": I18n.t("Диспетчер", "Tasks"),
-                            "run": () => DesktopActions.launchMonitor()
-                        },
-                        {
-                            "icon": "image",
-                            "label": I18n.t("Обои", "Wallpaper"),
-                            "run": () => Shell.openSettings("wallpaper")
-                        },
-                        {
-                            "icon": "gear",
-                            "label": I18n.t("Настройки", "Settings"),
-                            "run": () => Shell.openSettings()
-                        }
-                    ]
+                    model: DeskMenu.quick
                     Item {
                         id: qa
-                        required property var modelData
-                        width: Theme.u * 30
+                        required property string modelData
+                        readonly property var e: DeskMenu.entry(modelData)
+                        width: Math.round(Theme.u * 30 * root.k)
                         height: qaCol.implicitHeight + Theme.u * 4
                         PxBox {
                             anchors.fill: parent
-                            visible: qm.containsMouse
+                            visible: qm.containsMouse && root.skin !== "y2k"
                             sunken: qm.pressed
                             color: Theme.mix(Theme.face, Theme.accent, 0.18)
+                        }
+                        Rectangle {
+                            anchors.fill: parent
+                            visible: qm.containsMouse && root.skin === "y2k"
+                            radius: Theme.u * 5
+                            color: Qt.alpha(Theme.accent, qm.pressed ? 0.45 : 0.3)
+                            border.width: Math.max(1, Theme.u / 2)
+                            border.color: Qt.alpha("#ffffff", 0.55)
                         }
                         Column {
                             id: qaCol
@@ -328,11 +374,12 @@ PopupWindow {
                             spacing: Theme.u
                             Item {
                                 anchors.horizontalCenter: parent.horizontalCenter
-                                width: Theme.u * 12
-                                height: Theme.u * 12
+                                width: Theme.u * 12 * root.k
+                                height: width
                                 PxIcon {
                                     anchors.centerIn: parent
-                                    name: qa.modelData.icon
+                                    name: qa.e ? qa.e.icon : "heart"
+                                    pixel: root.k > 1.1 ? Theme.u * 2 : Theme.u
                                 }
                             }
                             PxText {
@@ -340,7 +387,7 @@ PopupWindow {
                                 width: qa.width - Theme.u * 2
                                 horizontalAlignment: Text.AlignHCenter
                                 elide: Text.ElideRight
-                                text: qa.modelData.label
+                                text: qa.e ? (qa.e.short || qa.e.label) : ""
                                 kind: "tiny"
                             }
                         }
@@ -350,78 +397,55 @@ PopupWindow {
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
                             onEntered: sub.visible = false
-                            onClicked: root.run(qa.modelData.run)
+                            onClicked: {
+                                const e = qa.e;
+                                if (e && e.flyout)
+                                    sub.openFor(qa, root.listFor(qa.modelData));
+                                else
+                                    root.run(() => DeskMenu.run(qa.modelData, root.screenName));
+                            }
                         }
                     }
                 }
             }
             PxMenuItem {
+                visible: DeskMenu.quick.length > 0 && DeskMenu.items.length > 0
+                height: visible ? implicitHeight : 0
                 separator: true
+                skin: root.skin
             }
 
-            PxMenuItem {
-                id: viewItem
-                text: I18n.t("Вид", "View")
-                icon: "layers"
-                submenu: true
-                onHoveredChanged: if (hovered)
-                    root.hoverSub(viewItem, root.viewItems)
-                onTriggered: sub.openFor(viewItem, root.viewItems)
-            }
-            PxMenuItem {
-                id: newItem
-                text: I18n.t("Создать", "New")
-                icon: "plus"
-                submenu: true
-                onHoveredChanged: if (hovered)
-                    root.hoverSub(newItem, root.newItems)
-                onTriggered: sub.openFor(newItem, root.newItems)
-            }
-            PxMenuItem {
-                id: wallItem
-                text: I18n.t("Обои", "Wallpaper")
-                icon: "image"
-                submenu: true
-                onHoveredChanged: if (hovered)
-                    root.hoverSub(wallItem, root.wallpaperItems)
-                onTriggered: sub.openFor(wallItem, root.wallpaperItems)
-            }
-            PxMenuItem {
-                id: openItem
-                text: I18n.t("Открыть", "Open")
-                icon: "folder"
-                submenu: true
-                onHoveredChanged: if (hovered)
-                    root.hoverSub(openItem, root.openItems)
-                onTriggered: sub.openFor(openItem, root.openItems)
-            }
-            PxMenuItem {
-                separator: true
-            }
-            PxMenuItem {
-                text: I18n.t("Параметры экрана", "Display settings")
-                icon: "monitor"
-                onHoveredChanged: if (hovered)
-                    sub.visible = false
-                onTriggered: root.run(() => Shell.openSettings("monitor"))
-            }
-            PxMenuItem {
-                text: I18n.t("Персонализация", "Personalize")
-                icon: "palette"
-                onHoveredChanged: if (hovered)
-                    sub.visible = false
-                onTriggered: root.run(() => Shell.openSettings("appearance"))
-            }
-            PxMenuItem {
-                id: moreItem
-                visible: root.moreItems.length > 0 || Plugins.menuComponents.length > 0
-                height: visible ? implicitHeight : 0
-                text: I18n.t("Показать больше", "Show more options")
-                icon: "sparkle"
-                submenu: true
-                onHoveredChanged: if (hovered)
-                    root.hoverSub(moreItem, root.moreItems)
-                onTriggered: sub.openFor(moreItem, root.moreItems)
+            Repeater {
+                model: DeskMenu.items
+                PxMenuItem {
+                    id: entryItem
+                    required property string modelData
+                    readonly property var e: DeskMenu.entry(modelData)
+                    readonly property bool fly: !!(e && e.flyout)
+                    visible: modelData !== "more" || root.moreItems.length > 0 || Plugins.menuComponents.length > 0
+                    height: visible ? implicitHeight : 0
+                    separator: modelData === "sep"
+                    skin: root.skin
+                    text: e ? e.label : ""
+                    icon: Config.desktop.menuIcons !== false && e ? e.icon : ""
+                    submenu: fly
+                    Component.onCompleted: if (fly)
+                        root.subAnchors[modelData] = entryItem
+                    onHoveredChanged: {
+                        if (!hovered)
+                            return;
+                        if (fly)
+                            root.hoverSub(entryItem, root.listFor(modelData));
+                        else
+                            sub.visible = false;
+                    }
+                    onTriggered: {
+                        if (fly)
+                            sub.openFor(entryItem, root.listFor(modelData));
+                        else
+                            root.run(() => DeskMenu.run(modelData, root.screenName));
+                    }
+                }
             }
             Repeater {
                 // QML menu components from plugins can't live in a flyout list; they stay inline

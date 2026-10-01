@@ -105,6 +105,28 @@ return a complete corrected bundle, not a diff. Generated code runs as the
 desktop user after installation; no sandbox is promised there. Never ask for
 the Studio API key in chat.
 
+## Editing an installed plugin
+
+Applies only when the context says EDIT MODE. The user is changing a plugin
+that is already installed and in use; its current files are supplied.
+
+- Keep the plugin id and the directory layout. Change only what the request
+  needs; leave working code, comments and files that are not involved as they
+  are. Never drop a feature the user did not ask to remove.
+- Keep settings compatible: existing `plugin.get` keys keep their names and
+  meaning (users already have values saved). New settings get defaults.
+- Bump `version` in manifest.json (patch for fixes, minor for new features).
+  Keep `enabledByDefault` as it is. The rules for new plugins (README,
+  Settings.qml, `enabledByDefault: false`) apply only if the plugin already
+  follows them or the request adds them.
+- Planning: `summary` explains what will change and why, in the user's
+  language; `spec` describes the plugin after the change (same id). Ask only
+  when the change is ambiguous.
+- Generation: return the complete bundle — every editable file, changed or
+  not. Files listed as kept (pictures, sounds) are carried over automatically;
+  do not return them. `summary` lists the changes, `notes` what to check by hand.
+- A request to fix check errors: fix exactly those, nothing else.
+
 ## Checklist before answering
 
 1. Every type, property, signal and function you use exists in Qt Quick 6,

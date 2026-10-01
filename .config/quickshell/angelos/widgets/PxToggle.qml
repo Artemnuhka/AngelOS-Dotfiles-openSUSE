@@ -10,8 +10,22 @@ Item {
     property string text: ""
     signal toggled(bool checked)
 
+    // Long labels wrap instead of running off a narrow page (the grimoire's right
+    // page): inside a box marked `fixedWidth` (SettingRow's control slot, PxGroup's
+    // column) the switch is no wider than what is left of that box.
+    readonly property real room: {
+        let dx = 0;
+        for (let p = root; p && p.parent; p = p.parent) {
+            dx += p.x;
+            if (p.parent.fixedWidth === true)
+                return p.parent.width - dx;
+        }
+        return Infinity;
+    }
+
     implicitWidth: track.width + (label.visible ? label.implicitWidth + Theme.u * 5 : 0)
     implicitHeight: Math.max(track.height, label.implicitHeight)
+    width: Math.max(track.width, Math.min(implicitWidth, room))
     opacity: enabled ? 1 : 0.45
 
     PxBox {
@@ -49,6 +63,8 @@ Item {
         id: label
         visible: root.text !== ""
         text: root.text
+        width: Math.min(implicitWidth, Math.max(0, root.width - track.width - Theme.u * 5))
+        wrapMode: Text.Wrap
         anchors.left: track.right
         anchors.leftMargin: Theme.u * 5
         anchors.verticalCenter: parent.verticalCenter

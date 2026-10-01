@@ -9,6 +9,7 @@ import qs.services
 import qs.modules.settings
 import qs.modules.y2k
 import qs.modules.alttab
+import qs.modules.bar
 import qs.modules.bar.parts
 import qs.widgets
 
@@ -22,6 +23,8 @@ import qs.widgets
 //             their rig.json says, swapped and played through without errors
 //   alttab    the three Alt+Tab switcher styles load and follow the pick
 //   bar       bar widgets (Wi-Fi, Bluetooth, wired, tray, desk sprites) load, their panels open
+//   wrap      long switch labels wrap inside a narrow group instead of running past it
+//   start     every Start look (the bodies of StartOverlay) loads, searches, walks with the keys, Esc closes
 //   rmb       a right click into the window's corner pixel does not crash Qt
 // Prints "TEST <name> PASS|FAIL [detail]" and "TEST-PAGE <id>" markers (the
 // script ties log errors to the page that caused them), "TEST DONE <n>" last.
@@ -109,6 +112,115 @@ Scope {
                 }
             }
         }
+        // switch labels on a page as narrow as the grimoire's right one
+        Loader {
+            id: wrapStage
+            active: false
+            sourceComponent: Column {
+                id: wrapPage
+                readonly property string long: "Калькулятор: 2+2·3, 15% от 200, 10 км в милях, 100 usd в rub"
+                property alias group: groupW
+                property alias direct: directT
+                property alias inRow: rowT
+                property alias row: rowW
+                property alias inColumn: colT
+                property alias row2: row2W
+                property alias short: shortT
+                property alias free: freeT
+                width: Theme.u * 170
+                PxGroup {
+                    id: groupW
+                    width: parent.width
+                    title: "wrap"
+                    PxToggle {
+                        id: directT
+                        text: wrapPage.long
+                    }
+                    PxToggle {
+                        id: shortT
+                        text: "Да"
+                    }
+                    SettingRow {
+                        id: rowW
+                        label: "Поиск"
+                        PxToggle {
+                            id: rowT
+                            text: wrapPage.long
+                        }
+                    }
+                    SettingRow {
+                        id: row2W
+                        label: "Поиск"
+                        Column {
+                            width: parent.width
+                            PxToggle {
+                                id: colT
+                                text: wrapPage.long
+                            }
+                        }
+                    }
+                }
+                // nothing fixes the width here: the label stays on one line
+                Row {
+                    PxToggle {
+                        id: freeT
+                        text: wrapPage.long
+                    }
+                }
+            }
+        }
+        // the Start looks outside their layer-shell overlay
+        Loader {
+            id: startStage
+            property string style: ""
+            active: style !== ""
+            sourceComponent: ({
+                    "classic": stClassic,
+                    "win11": stWin11,
+                    "fullscreen": stFull,
+                    "xmb": stXmb,
+                    "windose": stWindose,
+                    "wii": stWii,
+                    "spotlight": stSpot
+                })[style] || null
+        }
+        Component {
+            id: stClassic
+            StartMenuBody {}
+        }
+        Component {
+            id: stWin11
+            StartWin11 {}
+        }
+        Component {
+            id: stFull
+            StartFullscreen {
+                width: 1100
+                height: 780
+            }
+        }
+        Component {
+            id: stXmb
+            StartXmb {
+                width: 1100
+                height: 780
+            }
+        }
+        Component {
+            id: stWindose
+            StartWindose {}
+        }
+        Component {
+            id: stWii
+            StartWii {
+                width: 1100
+                height: 780
+            }
+        }
+        Component {
+            id: stSpot
+            StartSpotlight {}
+        }
         QtObject {
             id: altTabHost
             property var screen: null
@@ -144,7 +256,7 @@ Scope {
     // variants worth playing per scene ("" = the scene's default)
     readonly property var variants: ({
             "WallpaperFx": Wallpapers.transitions.map(t => t.id),
-            "StartMenu": ["classic", "win11", "fullscreen"],
+            "StartMenu": ["classic", "win11", "fullscreen", "xmb", "windose", "wii", "spotlight"],
             "BarStyle": ["taskbar", "top", "island"],
             "DeskSwitch": WorkspaceAnim.styles.map(s => s.id),
             "OpenFx": WindowAnim.openStyles.map(s => s.id),
@@ -160,6 +272,9 @@ Scope {
     property bool expertPass: false
     property bool undoFrom: false
     property var altTabStyles: []
+    property var startStyles: []
+    property var startSeen: []
+    property bool startTried: false
     property var altTabSeen: []
     property string altTabShot: ""
     readonly property string shots: Quickshell.env("ANGELOS_TEST_SHOTS") || ""
@@ -337,15 +452,18 @@ Scope {
         if (phase === "rig") {
             // the swap flips `who` in one go; every frame of every part gets shown
             const seen = [];
-            for (const who of ["angel", "demon", "angel"]) {
+            // the chibi pictures and the glitch ones (the default look), both figures each
+            for (const [variant, who] of [["", "angel"], ["", "demon"], ["", "angel"], ["glitch", "angel"], ["glitch", "demon"], ["", "demon"]]) {
+                rig.variant = variant;
                 rig.who = who;
                 const r = rig.rig;
+                const name = (variant ? variant + " " : "") + who;
                 if (!rig.ready)
-                    seen.push(who + " FAIL: no rig");
+                    seen.push(name + " FAIL: no rig");
                 else if (rig.implicitWidth !== r.size[0] * rig.px || rig.implicitHeight !== r.size[1] * rig.px || rig.body.width !== r.body.w * rig.px)
-                    seen.push(who + " FAIL: " + rig.implicitWidth + "×" + rig.implicitHeight + " for " + r.size);
+                    seen.push(name + " FAIL: " + rig.implicitWidth + "×" + rig.implicitHeight + " for " + r.size);
                 else
-                    seen.push(who + " " + r.size[0] + "×" + r.size[1] + " " + Object.keys(r.parts).join("+"));
+                    seen.push(name + " " + r.size[0] + "×" + r.size[1] + " " + Object.keys(r.parts).join("+"));
                 for (let i = 0; i < 16; i++) {
                     rig.tick = i;
                     rig.blink = i % 3 === 0;
@@ -424,7 +542,77 @@ Scope {
                 Config.workspaces.sprite = sp;
             report("bar-widgets", ok, ok ? "wifi, bluetooth, wired, tray, workspaces" : "status " + barStage.status);
             barStage.active = false;
-            phase = "rmb";
+            console.log("TEST-PAGE toggle-wrap");
+            wrapStage.active = true;
+            phase = "wrap";
+            return;
+        }
+        if (phase === "wrap") {
+            // PxToggle wraps a long label inside PxGroup / SettingRow, keeps short and free ones on one line
+            const w = wrapStage.item;
+            const fits = (t, box) => t.mapToItem(box, t.width, 0).x <= box.width + 0.5;
+            const wrapped = t => t.height > w.short.height + 1;
+            const checks = [
+                ["group", fits(w.direct, w.group) && wrapped(w.direct)],
+                ["row", fits(w.inRow, w.row) && wrapped(w.inRow)],
+                ["column", fits(w.inColumn, w.row2) && wrapped(w.inColumn)],
+                ["short", w.short.width === w.short.implicitWidth && !wrapped(w.short)],
+                ["free", w.free.width === w.free.implicitWidth && !wrapped(w.free)]
+            ];
+            const bad = checks.filter(c => !c[1]).map(c => c[0]);
+            report("toggle-wrap", bad.length === 0, bad.length ? "overflow/one line: " + bad.join(", ") : "long labels wrap in " + Math.round(w.direct.width) + " px, short and free stay " + Math.round(w.short.height) + " px tall");
+            wrapStage.active = false;
+            console.log("TEST-PAGE start-styles");
+            startStyles = ["classic", "win11", "fullscreen", "xmb", "windose", "wii", "spotlight"];
+            startSeen = [];
+            phase = "start";
+            return;
+        }
+        if (phase === "start") {
+            // one look per tick: load it, then search, walk, clear and close it with keys
+            if (!startStage.style) {
+                startStage.style = startStyles[startSeen.length];
+                startTried = false;
+                return;
+            }
+            // a tick after the keys: callLater work (focus) is done, unload it
+            if (startTried) {
+                startStage.style = "";
+                if (startSeen.length < startStyles.length)
+                    return;
+                report("start-styles", startSeen.every(x => x.indexOf("FAIL") < 0), startSeen.join(", "));
+                phase = "rmb";
+                return;
+            }
+            startTried = true;
+            const it = startStage.item;
+            let closed = 0;
+            const ok = startStage.status === Loader.Ready && !!it && it.width > 0 && it.height > 0;
+            if (ok) {
+                const onClose = () => closed++;
+                it.closeRequested.connect(onClose);
+                const press = (k, text) => {
+                    const e = {
+                        "key": k,
+                        "text": text || "",
+                        "modifiers": Qt.NoModifier,
+                        "accepted": false
+                    };
+                    it.key(e);
+                };
+                if (it.reset)
+                    it.reset();
+                for (const k of [Qt.Key_Down, Qt.Key_Down, Qt.Key_Right, Qt.Key_Up, Qt.Key_Left, Qt.Key_PageDown, Qt.Key_PageUp])
+                    press(k);
+                if (it.setQuery)
+                    it.setQuery("set");
+                press(0, "t");
+                press(Qt.Key_Down);
+                press(Qt.Key_Escape);         // clears the search (or closes the classic one)
+                press(Qt.Key_Escape);         // closes
+                it.closeRequested.disconnect(onClose);
+            }
+            startSeen.push(startStage.style + (ok && closed > 0 ? " " + Math.round(it.width) + "×" + Math.round(it.height) : " FAIL" + (ok ? " (Esc did not close)" : "")));
             return;
         }
         if (phase === "rmb") {

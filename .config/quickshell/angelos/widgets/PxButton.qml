@@ -22,7 +22,9 @@ Item {
     signal rightClicked
     signal middleClicked
 
-    implicitWidth: row.implicitWidth + (compact ? Theme.u * 6 : Theme.pad * 2 + Theme.u * 2)
+    // left + right padding; -1 = by `compact` (the bar's dense right side sets it)
+    property real hpad: -1
+    implicitWidth: row.implicitWidth + (hpad >= 0 ? hpad : compact ? Theme.u * 6 : Theme.pad * 2 + Theme.u * 2)
     implicitHeight: Math.max(row.implicitHeight + Theme.u * (compact ? 5 : 8), Theme.u * (compact ? 11 : 15))
     opacity: enabled ? 1 : 0.45
 

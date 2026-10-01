@@ -12,8 +12,11 @@ RowLayout {
     required property var bar
     property bool fillTasks: false
     property real lyricsMax: Theme.u * 150
+    // Settings → Bar → Icons → "Right side": compact packs the widgets close together
+    property string density: "normal"      // compact | normal | airy
+    property bool centered: false          // the Windows 11-like centred group (BarContent)
 
-    spacing: Theme.u * 3
+    spacing: density === "compact" ? Math.max(1, Theme.u / 2) : density === "airy" ? Theme.u * 6 : Theme.u * 3
 
     Repeater {
         model: root.ids
@@ -23,6 +26,8 @@ RowLayout {
             bar: root.bar
             fillTasks: root.fillTasks
             lyricsMax: root.lyricsMax
+            dense: root.density === "compact"
+            centered: root.centered
         }
     }
 }

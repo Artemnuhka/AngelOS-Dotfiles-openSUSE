@@ -14,20 +14,104 @@ import qs.config
 // demon's voice, and the effects crack/choir/rocks/shatter (always synthesised;
 // rocks: the demon's 8-bit rockfall, shatter: the screen breaking when the
 // angel and the demon swap). Quiet in stream mode (StreamMode.quiet).
+// Settings → System sounds (SfxPage) tunes each one (Config.y2k.soundTweaks,
+// {event: {on, vol, sound, vary}}): on/off, its own volume, another event's sound
+// ("notify") or a file ("file:/path", e.g. from sounds/custom), and for the input
+// sounds which buttons click, a release tick and typing with three variants. The
+// newer events (opt-in) stay quiet until switched on there.
 Singleton {
     id: root
 
-    readonly property var events: ["startup", "notify", "error", "click", "shutdown", "angel", "wallpaper", "open", "toggle", "screenshot", "volume", "windowClose", "demon", "crack", "choir", "rocks", "shatter", "voice"]
+    readonly property var events: ["startup", "notify", "error", "click", "shutdown", "angel", "wallpaper", "open", "toggle", "screenshot", "volume", "windowClose", "demon", "crack", "choir", "rocks", "shatter", "voice", "clickRight", "key", "windowOpen", "workspace", "lock", "unlock"]
+    // off until switched on in System sounds (typing and such would surprise)
+    readonly property var optIn: ["clickRight", "key", "windowOpen", "workspace", "lock", "unlock"]
+    // the input ones: quiet over a fullscreen window (games) when asked
+    readonly property var input: ["click", "clickRight", "key"]
     // the helper's Undertale "pips", one per letter (AngelHelper plays them as
-    // SoundEffect, so they stay .wav); "voice" above is their switch and preview
-    readonly property var extra: ["voiceAngel", "voiceDemon"]
+    // SoundEffect, so they stay .wav); "voice" above is their switch and preview;
+    // key2 key3: the typing variants
+    readonly property var extra: ["voiceAngel", "voiceDemon", "key2", "key3"]
+    readonly property string customDir: base + "/custom"
     readonly property var cute: ["open", "toggle", "screenshot", "volume", "windowClose"]
     readonly property var effects: ["crack", "choir", "rocks", "shatter", "voice"]
     // the helper's own sounds follow "Her voice" (Config.y2k.helperVolume) on top of the volume
     readonly property var helperSounds: ["angel", "demon", "crack", "choir", "rocks", "shatter", "voice", "voiceAngel", "voiceDemon"]
     function volumeOf(name) {
         const v = Math.max(0, Math.min(1, Config.y2k.soundVolume));
-        return helperSounds.includes(name) ? v * Math.max(0, Math.min(1, Config.y2k.helperVolume)) : v;
+        const own = Math.max(0, Math.min(1.5, Number(tweak(name).vol === undefined ? 1 : tweak(name).vol)));
+        return Math.min(1, (helperSounds.includes(name) ? v * Math.max(0, Math.min(1, Config.y2k.helperVolume)) : v) * own);
+    }
+    // ---- per-event tuning (System sounds) ----
+    function tweak(name) {
+        return (Config.y2k.soundTweaks || {})[name] || {};
+    }
+    function setTweak(name, key, value) {
+        const all = Object.assign({}, Config.y2k.soundTweaks || {});
+        const t = Object.assign({}, all[name] || {});
+        if (value === undefined || value === null)
+            delete t[key];
+        else
+            t[key] = value;
+        if (Object.keys(t).length)
+            all[name] = t;
+        else
+            delete all[name];
+        Config.y2k.soundTweaks = all;
+    }
+    // the switch of one event (the old "soundOff" list follows along)
+    function isOn(name) {
+        const t = tweak(name);
+        if (t.on !== undefined)
+            return !!t.on;
+        return optIn.includes(name) ? false : !(Config.y2k.soundOff || []).includes(name);
+    }
+    function setOn(name, on) {
+        setTweak(name, "on", !!on);
+        const off = (Config.y2k.soundOff || []).filter(x => x !== name);
+        Config.y2k.soundOff = on ? off : off.concat([name]);
+    }
+    // what an event plays: "" its own, another event's id, or "file:/path"
+    function soundOf(name) {
+        return String(tweak(name).sound || "");
+    }
+    // quiet hours (y2k.quietHours, from → to, whole hours, may wrap past midnight)
+    function quietNow() {
+        if (!Config.y2k.quietHours)
+            return false;
+        const h = new Date().getHours(), a = Config.y2k.quietFrom, b = Config.y2k.quietTo;
+        return a === b ? false : a < b ? (h >= a && h < b) : (h >= a || h < b);
+    }
+    function fullscreenNow() {
+        return !!Niri.focusedOutput && Shell.fullscreenOn(Niri.focusedOutput);
+    }
+    // the files in sounds/custom (System sounds lists them)
+    property var customFiles: []
+    function rescanCustom() {
+        customScan.running = false;
+        customScan.running = true;
+    }
+    Process {
+        id: customScan
+        command: ["sh", "-c", 'mkdir -p "$1"; cd "$1" && for f in *.ogg *.oga *.wav *.mp3 *.flac *.opus; do [ -f "$f" ] && echo "$f"; done', "sh", root.customDir]
+        stdout: StdioCollector {
+            onStreamFinished: root.customFiles = text.split("\n").filter(s => s !== "")
+        }
+    }
+    signal picked(string path)
+    // a file from anywhere (zenity); the caller decides what to do with it
+    function pickFile() {
+        picker.running = true;
+    }
+    Process {
+        id: picker
+        command: ["zenity", "--file-selection", "--title=angelOS", "--file-filter=Sounds | *.ogg *.oga *.wav *.mp3 *.flac *.opus"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const f = text.trim();
+                if (f)
+                    root.picked(f);
+            }
+        }
     }
     // scripts/y2k-sounds.py PACK_VERSION: an older pack is synthesised again
     readonly property string packVersion: "2"
@@ -42,38 +126,55 @@ Singleton {
     property var lastAt: ({})
 
     function enabled(name) {
-        if (!Config.y2k.sounds || (Config.y2k.soundOff || []).includes(name))
+        if (!Config.y2k.sounds || !isOn(name))
             return false;
         return !cute.includes(name) || Config.y2k.cuteSounds;
     }
     // play even when switched off (the settings page "listen" buttons)
     function preview(name) {
-        _play(name, true);
+        _play(name, true, 1);
     }
     function play(name) {
-        if (enabled(name) && !StreamMode.quiet)
-            _play(name, false);
+        playSoft(name, 1);
     }
-    function _play(name, force) {
+    // `soft`: a share of the volume (the click's release tick)
+    function playSoft(name, soft) {
+        if (!enabled(name) || StreamMode.quiet || quietNow())
+            return;
+        if (input.includes(name) && Config.y2k.quietFullscreen && fullscreenNow())
+            return;
+        _play(name, false, soft);
+    }
+    function _play(name, force, soft) {
         if (!events.includes(name))
             return;
         // a burst of the same event (volume wheel, many toggles) plays once
-        const now = Date.now();
-        if (!force && now - (lastAt[name] || 0) < (name === "volume" ? 140 : name === "click" ? 45 : 90))
+        const now = Date.now(), key = soft < 1 ? name + "-soft" : name;
+        if (!force && now - (lastAt[key] || 0) < (name === "volume" ? 140 : name === "click" || name === "clickRight" ? 45 : name === "key" ? 25 : 90))
             return;
-        lastAt[name] = now;
+        lastAt[key] = now;
+        const vol = String(Math.max(0, Math.min(1, volumeOf(name) * (soft || 1))));
+        const chosen = soundOf(name);
+        if (chosen.startsWith("file:")) {
+            Quickshell.execDetached(["pw-play", "--volume", vol, chosen.slice(5)]);
+            return;
+        }
+        // another event's sound, or its own; typing picks one of three
+        let id = chosen && events.concat(extra).includes(chosen) ? chosen : name;
+        if (id === "key" && tweak("key").vary !== false)
+            id = ["key", "key2", "key3"][Math.floor(Math.random() * 3)];
         if (!ready) {
             pending = pending.concat([name]);
             make.running = true;
             return;
         }
-        const overdose = pack === "overdose" && !effects.includes(name);
+        const overdose = pack === "overdose" && !effects.includes(id);
         if (overdose && !overdoseReady && !fetch.running) {
             fetch.running = true;
             return;
         }
         const first = overdose ? base + "/overdose" : dir;
-        Quickshell.execDetached(["sh", "-c", 'f="$1/$3.ogg"; [ -f "$f" ] || f="$2/$3.ogg"; [ -f "$f" ] || f="$2/$3.wav"; exec pw-play --volume "$4" "$f"', "sh", first, dir, name, String(volumeOf(name))]);
+        Quickshell.execDetached(["sh", "-c", 'f="$1/$3.ogg"; [ -f "$f" ] || f="$2/$3.ogg"; [ -f "$f" ] || f="$2/$3.wav"; exec pw-play --volume "$4" "$f"', "sh", first, dir, id, vol]);
     }
 
     // the pack must be there before something plays it without _play() (the pips)
@@ -82,31 +183,65 @@ Singleton {
             make.running = true;
     }
 
-    // ---- "Click": every left / right click on the desktop (issue #10). The shell
-    // only sees clicks on its own windows, so scripts/click-watch.py reports
-    // them from the mice; it runs only while the sound is on.
-    readonly property bool clicksWanted: Config.ready && enabled("click") && !Shell.dev
+    // ---- "Click" and typing: every click / key press on the desktop (issue #10).
+    // The shell only sees clicks on its own windows, so scripts/click-watch.py
+    // reports them from the mice and keyboards; it runs only while one is on.
+    // Which buttons click: y2k.clickButtons; the right one has its own sound when
+    // "clickRight" is on; y2k.clickRelease: a softer tick on release.
+    readonly property bool clicksWanted: Config.ready && !Shell.dev && (enabled("click") || enabled("clickRight"))
+    readonly property bool keysWanted: Config.ready && !Shell.dev && enabled("key")
+    readonly property var watchArgs: (clicksWanted ? ["--mouse"] : []).concat(keysWanted ? ["--keys"] : [])
     property string clickStatus: ""          // "" | noperm
+    function onPress(button) {
+        if (button === "right" && enabled("clickRight"))
+            play("clickRight");
+        else if ((Config.y2k.clickButtons || ["left", "right"]).includes(button))
+            play("click");
+    }
+    function onRelease(button) {
+        if (!Config.y2k.clickRelease)
+            return;
+        if (button === "right" && enabled("clickRight"))
+            playSoft("clickRight", 0.45);
+        else if ((Config.y2k.clickButtons || ["left", "right"]).includes(button))
+            playSoft("click", 0.45);
+    }
     Process {
         id: clicks
-        running: root.clicksWanted
-        command: ["python3", "-u", Quickshell.shellDir + "/scripts/click-watch.py"]
+        running: root.watchArgs.length > 0
+        command: ["python3", "-u", Quickshell.shellDir + "/scripts/click-watch.py"].concat(root.watchArgs)
         stdout: SplitParser {
             onRead: line => {
-                if (line === "click")
-                    root.play("click");
-                else if (line === "noperm")
+                const [what, button] = line.split(" ");
+                if (what === "click")
+                    root.onPress(button || "left");
+                else if (what === "release")
+                    root.onRelease(button || "left");
+                else if (what === "key")
+                    root.play("key");
+                else if (what === "noperm")
                     root.clickStatus = "noperm";
             }
         }
-        onExited: if (root.clicksWanted)
+        onExited: if (root.watchArgs.length > 0 && !clickRestart.running)
             clickRestart.start()
+    }
+    // mouse / keys switched: the watcher starts again with the new flags (or stops)
+    onWatchArgsChanged: {
+        clicks.running = false;
+        if (watchArgs.length > 0) {
+            clickRestart.interval = 50;
+            clickRestart.start();
+        }
     }
     Timer {
         id: clickRestart
         interval: 5000
-        onTriggered: if (root.clicksWanted)
-            clicks.running = true
+        onTriggered: {
+            interval = 5000;
+            if (root.watchArgs.length > 0)
+                clicks.running = true;
+        }
     }
 
     // ---- the shell's own moments ----
@@ -130,6 +265,20 @@ Singleton {
         target: Niri
         function onWindowClosed(id) {
             root.play("windowClose");
+        }
+        function onWindowOpened(id) {
+            root.play("windowOpen");
+        }
+        function onWorkspaceActivated(ws, focused) {
+            if (focused && root.settled())
+                root.play("workspace");
+        }
+    }
+    Connections {
+        target: Shell
+        function onLockedChanged() {
+            if (root.settled())
+                root.play(Shell.locked ? "lock" : "unlock");
         }
     }
     Connections {

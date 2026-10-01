@@ -5,6 +5,11 @@ import Quickshell
 import qs.config
 import qs.services
 import qs.widgets
+import qs.modules.y2k
+import "../../y2k/AngelSprite.js" as AngelArt
+import "../../y2k/DemonSprite.js" as DemonArt
+import "../../y2k/AngelSpriteMini.js" as AngelMini
+import "../../y2k/DemonSpriteMini.js" as DemonMini
 
 // Y2K bits: the helper angel, glitter, the sound pack and the CD-ROM loading screen.
 PxPage {
@@ -119,6 +124,136 @@ PxPage {
         }
     }
 
+    // the helper's four versions, for each of them apart
+    component LookCard: PxButton {
+        id: card
+        required property var modelData
+        property string who: "angel"
+        readonly property string current: who === "demon" ? Config.y2k.demonLook || "glitch" : Config.y2k.angelLook || "glitch"
+        width: Math.max(Theme.u * 64, lookLabel.implicitWidth + Theme.u * 8)
+        height: Theme.u * 78
+        checked: current === modelData.value
+        onClicked: {
+            if (who === "demon")
+                Config.y2k.demonLook = modelData.value;
+            else
+                Config.y2k.angelLook = modelData.value;
+        }
+        Item {
+            anchors.horizontalCenter: parent.horizontalCenter
+            y: Theme.u * 4
+            width: parent.width - Theme.u * 6
+            height: parent.height - lookLabel.height - Theme.u * 10
+            SpriteRig {
+                visible: card.modelData.value === "chibi" || card.modelData.value === "glitch"
+                anchors.centerIn: parent
+                who: card.who
+                variant: card.modelData.value === "glitch" ? "glitch" : ""
+                px: Math.max(0.5, Theme.u / 4)
+                width: implicitWidth
+                height: implicitHeight
+            }
+            PxIcon {
+                visible: card.modelData.value !== "chibi" && card.modelData.value !== "glitch"
+                anchors.centerIn: parent
+                readonly property bool mini: card.modelData.value === "mini"
+                bitmap: mini ? (card.who === "demon" ? DemonMini.up : AngelMini.up) : (card.who === "demon" ? DemonArt.up : AngelArt.up)
+                pixel: mini ? Math.max(1, Theme.u) : Math.max(1, Math.round(Theme.u * 0.75))
+                ink: card.who === "demon" ? "#1a0a14" : (Theme.dark ? Theme.text : Theme.edge)
+                body: card.who === "demon" ? "#f7d9e3" : "#ffd9c7"
+                fill: card.who === "demon" ? "#ff3b6b" : Theme.accent
+                fill2: "#3a1a46"
+                fill3: Theme.dark ? "#ffe07a" : "#f5c542"
+                light: card.who === "demon" ? "#7a1e46" : "#ffffff"
+                bad: "#d8203a"
+                palette: mini ? ({}) : card.who === "demon" ? DemonArt.palette : Object.assign({}, AngelArt.palette, {
+                    "o": Theme.hex(Theme.accent)
+                })
+            }
+        }
+        PxText {
+            id: lookLabel
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: Theme.u * 3
+            kind: "tiny"
+            font.bold: card.checked
+            text: (card.checked ? "♡ " : "") + card.modelData.label
+        }
+    }
+
+    PxGroup {
+        width: parent.width
+        title: I18n.t("Внешность", "Looks")
+        icon: "palette"
+        PxText {
+            width: parent.width
+            wrapMode: Text.Wrap
+            dim: true
+            text: I18n.t("Нынешние глитч-девочки (ангел с треснувшим нимбом и неоновая демоница), прошлые чиби, взрослые пиксельные 30×40 или самые первые малышки 20×21. Ангел и демоница выбираются отдельно.", "Today's glitch girls (the cracked-halo angel and the neon demon), the earlier chibi, the adult 30×40 pixel ones or the very first 20×21 minis. The angel and the demon are picked apart.")
+        }
+        SettingRow {
+            label: I18n.t("Ангел", "Angel")
+            Flow {
+                width: parent.width
+                spacing: Theme.u * 4
+                Repeater {
+                    model: [
+                        {
+                            "value": "glitch",
+                            "label": I18n.t("Треснувший нимб (сейчас)", "Cracked halo (now)")
+                        },
+                        {
+                            "value": "chibi",
+                            "label": I18n.t("Чиби", "Chibi")
+                        },
+                        {
+                            "value": "adult",
+                            "label": I18n.t("Взрослая 30×40", "Adult 30×40")
+                        },
+                        {
+                            "value": "mini",
+                            "label": I18n.t("Малышка 20×21", "Mini 20×21")
+                        }
+                    ]
+                    LookCard {
+                        who: "angel"
+                    }
+                }
+            }
+        }
+        SettingRow {
+            label: I18n.t("Демоница", "Demon")
+            Flow {
+                width: parent.width
+                spacing: Theme.u * 4
+                Repeater {
+                    model: [
+                        {
+                            "value": "glitch",
+                            "label": I18n.t("Неон без сна (сейчас)", "Sleepless neon (now)")
+                        },
+                        {
+                            "value": "chibi",
+                            "label": I18n.t("Чиби", "Chibi")
+                        },
+                        {
+                            "value": "adult",
+                            "label": I18n.t("Суккуб 30×40", "Succubus 30×40")
+                        },
+                        {
+                            "value": "mini",
+                            "label": I18n.t("Чертёнок 20×21", "Imp 20×21")
+                        }
+                    ]
+                    LookCard {
+                        who: "demon"
+                    }
+                }
+            }
+        }
+    }
+
     PxGroup {
         width: parent.width
         title: I18n.t("Ангел или демон", "Angel or demon")
@@ -129,6 +264,55 @@ PxPage {
             PxIcon {
                 name: Angel.demon ? "fire" : "heart"
                 pixel: Theme.u * 2
+            }
+        }
+        SettingRow {
+            label: I18n.t("ПКМ в аду", "Right-click menu in hell")
+            hint: I18n.t("пока правит демоница; вернётся ангел — снова твоё меню", "while the demon rules; the angel brings your own menu back")
+            PxCombo {
+                width: Math.min(parent.width, Theme.u * 120)
+                model: [
+                    {
+                        "label": I18n.t("Пентаграмма", "Pentagram"),
+                        "value": "pentagram"
+                    },
+                    {
+                        "label": I18n.t("Как обычно (моё меню)", "As usual (my menu)"),
+                        "value": ""
+                    },
+                    {
+                        "label": I18n.t("Кольцо", "Ring"),
+                        "value": "radial"
+                    },
+                    {
+                        "label": I18n.t("Y2K глянец", "Y2K gloss"),
+                        "value": "y2k"
+                    },
+                    {
+                        "label": I18n.t("Плитки", "Tiles"),
+                        "value": "tiles"
+                    }
+                ]
+                currentValue: Config.y2k.hellMenu || ""
+                onActivated: v => Config.y2k.hellMenu = v
+            }
+        }
+        SettingRow {
+            label: I18n.t("Настройки в аду", "Settings in hell")
+            hint: I18n.t("гримуар: окно настроек становится старой книгой — оглавление слева, страницы перелистываются", "grimoire: Settings turn into an old book — contents on the left, pages that turn")
+            PxSegmented {
+                model: [
+                    {
+                        "label": I18n.t("Гримуар", "Grimoire"),
+                        "value": "grimoire"
+                    },
+                    {
+                        "label": I18n.t("Как обычно", "As usual"),
+                        "value": ""
+                    }
+                ]
+                currentValue: Config.y2k.hellSettings || ""
+                onActivated: v => Config.y2k.hellSettings = v
             }
         }
         SettingRow {
@@ -213,7 +397,7 @@ PxPage {
         }
         SettingRow {
             label: I18n.t("Лучи и хор ангела", "The angel's rays and choir")
-            hint: I18n.t("когда она появляется: полторы секунды солнца справа", "When she appears: a second and a half of sunshine on the right")
+            hint: I18n.t("когда она возвращается из ада: полторы секунды солнца справа (при запуске — только самый первый раз)", "When she comes back from hell: a second and a half of sunshine on the right (at start-up only the very first time)")
             PxToggle {
                 checked: Config.y2k.heavenFx
                 onToggled: c => Config.y2k.heavenFx = c
@@ -415,120 +599,13 @@ PxPage {
                 }
             }
         }
-        Repeater {
-            model: [
-                {
-                    "id": "startup",
-                    "label": I18n.t("Вход", "Startup"),
-                    "hint": I18n.t("вместе с загрузочным экраном", "with the loading screen")
-                },
-                {
-                    "id": "notify",
-                    "label": I18n.t("Уведомление", "Notification"),
-                    "hint": I18n.t("не звучит в «Не беспокоить»", "Silent in Do not disturb")
-                },
-                {
-                    "id": "error",
-                    "label": I18n.t("Важное уведомление", "Urgent notification"),
-                    "hint": ""
-                },
-                {
-                    "id": "angel",
-                    "label": I18n.t("Ангелочек говорит", "The angel speaks"),
-                    "hint": ""
-                },
-                {
-                    "id": "demon",
-                    "label": I18n.t("Демоница говорит", "The demon speaks"),
-                    "hint": ""
-                },
-                {
-                    "id": "wallpaper",
-                    "label": I18n.t("Смена обоев", "Wallpaper change"),
-                    "hint": I18n.t("каждый раз", "Every time")
-                },
-                {
-                    "id": "open",
-                    "label": I18n.t("Окна angelOS", "angelOS windows"),
-                    "hint": I18n.t("милая мелочь", "A cute one")
-                },
-                {
-                    "id": "toggle",
-                    "label": I18n.t("Переключатель", "Switch"),
-                    "hint": I18n.t("милая мелочь", "A cute one")
-                },
-                {
-                    "id": "screenshot",
-                    "label": I18n.t("Скриншот", "Screenshot"),
-                    "hint": I18n.t("вместо обычного уведомления", "Instead of the usual notification")
-                },
-                {
-                    "id": "volume",
-                    "label": I18n.t("Громкость", "Volume"),
-                    "hint": I18n.t("милая мелочь", "A cute one")
-                },
-                {
-                    "id": "windowClose",
-                    "label": I18n.t("Окно закрылось", "A window closed"),
-                    "hint": I18n.t("милая мелочь", "A cute one")
-                },
-                {
-                    "id": "choir",
-                    "label": I18n.t("Хор ангела", "The angel's choir"),
-                    "hint": ""
-                },
-                {
-                    "id": "crack",
-                    "label": I18n.t("Удар по стеклу", "The glass punch"),
-                    "hint": ""
-                },
-                {
-                    "id": "voice",
-                    "label": I18n.t("Голоса (пип-пип)", "Voices (pip-pip)"),
-                    "hint": I18n.t("как в Undertale: писк на каждую букву, у ангела и демоницы свой", "Like Undertale: a pip for every letter, the angel's and the demon's own")
-                },
-                {
-                    "id": "rocks",
-                    "label": I18n.t("Тряска и камни", "Quake and rocks"),
-                    "hint": I18n.t("8-битный грохот камней, когда приходит демоница", "8-bit rumble of rocks when the demon arrives")
-                },
-                {
-                    "id": "shatter",
-                    "label": I18n.t("Экран ломается", "The screen breaks"),
-                    "hint": I18n.t("8-битный звон стекла, когда ангел и демоница меняются", "8-bit glass crash when the angel and the demon swap")
-                },
-                {
-                    "id": "shutdown",
-                    "label": I18n.t("Выход и выключение", "Log out and power off"),
-                    "hint": I18n.t("успевает доиграть перед выходом", "Plays out before the session ends")
-                },
-                {
-                    "id": "click",
-                    "label": I18n.t("Клик", "Click"),
-                    "hint": Sounds.clickStatus === "noperm" ? I18n.t("нет доступа к мыши (группа input) — клики не слышно", "No access to the mouse (the input group): clicks stay silent") : I18n.t("щелчок на каждый клик ЛКМ и ПКМ, во всех окнах", "A tick on every left and right click, in every window")
-                }
-            ]
-            SettingRow {
-                id: soundRow
-                required property var modelData
-                enabled: Config.y2k.sounds
-                opacity: enabled ? 1 : 0.5
-                label: modelData.label
-                hint: modelData.hint
-                Row {
-                    spacing: Theme.u * 3
-                    PxToggle {
-                        anchors.verticalCenter: parent.verticalCenter
-                        checked: !(Config.y2k.soundOff || []).includes(soundRow.modelData.id)
-                        onToggled: c => Config.y2k.soundOff = page.toggleIn(Config.y2k.soundOff, soundRow.modelData.id, !c)
-                    }
-                    PxButton {
-                        compact: true
-                        icon: "play"
-                        text: I18n.t("Послушать", "Listen")
-                        onClicked: Sounds.preview(soundRow.modelData.id)
-                    }
-                }
+        SettingRow {
+            label: I18n.t("Каждый звук отдельно", "Every sound on its own")
+            hint: I18n.t("вкл/выкл, громкость и свой звук у каждого: клики, клавиши, окна, столы, блокировка", "On/off, volume and a sound of your own for each: clicks, keys, windows, desks, the lock")
+            PxButton {
+                text: I18n.t("Звуки системы →", "System sounds →")
+                icon: "bell"
+                onClicked: Shell.settingsPage = "sfx"
             }
         }
     }

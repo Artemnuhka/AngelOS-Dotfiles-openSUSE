@@ -20,10 +20,32 @@ Item {
     readonly property int rows: Math.max(2, Math.min(5, Math.floor((height - Theme.u * 150) / (tile + Theme.u * 8))))
     readonly property int perPage: columns * rows
     readonly property var list: query.trim() !== "" ? StartApps.search(query).slice(0, perPage) : StartApps.apps
+    // like Spotlight: the sum and matching settings above the apps; Enter opens the best match
+    readonly property var hits: query.trim() !== "" ? StartApps.searchAll(query, 30) : []
+    readonly property var extras: hits.filter(r => r.kind !== "app").slice(0, 4)
+    function activate(row) {
+        if (!row)
+            return;
+        if (row.kind === "app")
+            run(row.app);
+        else if (row.kind === "setting") {
+            closeRequested();
+            Qt.callLater(() => StartApps.openSetting(row.doc));
+        } else if (row.kind === "calc") {
+            Calc.copy(row.calc);
+            if (row.calc.copy)
+                closeRequested();
+        }
+    }
     readonly property int pageCount: Math.max(1, Math.ceil(list.length / perPage))
     readonly property var dock: StartApps.pinned.slice(0, Math.min(7, columns))
     readonly property int page: pages.currentIndex
 
+    function setQuery(t) {
+        field.text = t;
+        query = t;
+        current = -1;
+    }
     function reset() {
         current = -1;
         query = "";
@@ -90,8 +112,12 @@ Item {
             flip(1);
         else if (e.key === Qt.Key_PageUp)
             flip(-1);
-        else if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter)
-            run(list[Math.max(page * perPage, current)]);
+        else if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) {
+            if (current < 0 && hits.length)
+                activate(hits[0]);
+            else
+                run(list[Math.max(page * perPage, current)]);
+        }
         else
             return false;
         e.accepted = true;
@@ -214,15 +240,77 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
             width: Math.min(root.width - Theme.u * 40, Theme.u * 170)
             icon: "search"
-            placeholder: I18n.t("Поиск", "Search")
+            placeholder: Config.launcher.settings !== false ? I18n.t("Поиск: приложения, настройки, 2+2", "Search: apps, settings, 2+2") : I18n.t("Поиск", "Search")
             onEdited: {
                 root.query = text;
-                root.current = text ? 0 : -1;
+                root.current = -1;
                 pages.currentIndex = 0;
             }
-            onAccepted: if (root.list.length)
-                root.run(root.list[Math.max(0, root.current)])
+            onAccepted: {
+                if (root.current < 0 && root.hits.length)
+                    root.activate(root.hits[0]);
+                else if (root.list.length)
+                    root.run(root.list[Math.max(0, root.current)]);
+            }
             onKeyPressed: e => root.nav(e)
+        }
+        // the calculator and settings found
+        Column {
+            visible: root.extras.length > 0
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: field.width
+            spacing: Theme.u * 2
+            Repeater {
+                model: root.extras
+                Rectangle {
+                    id: extra
+                    required property var modelData
+                    required property int index
+                    readonly property bool best: root.current < 0 && root.hits.length > 0 && root.hits[0] === modelData
+                    readonly property bool isCalc: modelData.kind === "calc"
+                    width: parent.width
+                    height: (isCalc ? Theme.u * 22 : Theme.u * 17)
+                    radius: Theme.u * 6
+                    color: Qt.alpha(Theme.panel, best || em.containsMouse ? 0.8 : 0.55)
+                    border.width: best ? Math.max(1, Theme.u / 2) : 0
+                    border.color: Qt.alpha("#ffffff", 0.6)
+                    PxIcon {
+                        id: extraIcon
+                        x: Theme.u * 5
+                        anchors.verticalCenter: parent.verticalCenter
+                        name: extra.isCalc ? "calc" : extra.modelData.doc.icon || "gear"
+                    }
+                    Column {
+                        anchors.left: extraIcon.right
+                        anchors.leftMargin: Theme.u * 5
+                        anchors.right: parent.right
+                        anchors.rightMargin: Theme.u * 5
+                        anchors.verticalCenter: parent.verticalCenter
+                        PxText {
+                            width: parent.width
+                            elide: Text.ElideRight
+                            kind: extra.isCalc ? "title" : "body"
+                            font.bold: true
+                            text: extra.isCalc ? extra.modelData.calc.title : extra.modelData.doc.title
+                        }
+                        PxText {
+                            width: parent.width
+                            visible: text !== ""
+                            elide: Text.ElideRight
+                            kind: "tiny"
+                            dim: true
+                            text: extra.isCalc ? extra.modelData.calc.subtitle : I18n.t("Настройки", "Settings") + (extra.modelData.doc.crumb ? " › " + extra.modelData.doc.crumb : "")
+                        }
+                    }
+                    MouseArea {
+                        id: em
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.activate(extra.modelData)
+                    }
+                }
+            }
         }
     }
     SystemClock {

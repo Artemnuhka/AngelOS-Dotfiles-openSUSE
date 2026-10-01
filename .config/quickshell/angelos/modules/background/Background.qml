@@ -139,11 +139,19 @@ Variants {
             DesktopMenu {
                 id: menu
                 parentWindow: win
+                radial: ring
                 Component.onCompleted: {
                     const m = Shell.desktopMenus;
                     m[win.modelData.name] = menu;
                     Shell.desktopMenus = m;
                 }
+            }
+
+            // the ring look of the same menu (Settings → Right-click menu)
+            RadialMenu {
+                id: ring
+                parentWindow: win
+                listMenu: menu
             }
 
             RightClickGuard {}

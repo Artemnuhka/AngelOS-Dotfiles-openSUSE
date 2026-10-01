@@ -23,6 +23,8 @@ import qs.modules.idle
 import qs.modules.sidebar
 import qs.modules.y2k
 import qs.modules.alttab
+import qs.modules.cursor
+import qs.modules.lens
 import qs.widgets
 
 // angelOS — pixel pink shell for niri.
@@ -54,6 +56,8 @@ ShellRoot {
     ScreenQuake {}
     BootScreen {}
     AltTabHost {}
+    ShakeCursor {}
+    LensOverlay {}
     Ipc {}
 
     // Keep dynamically loaded settings pages visible to Quickshell's static
@@ -96,5 +100,7 @@ ShellRoot {
         Angel.demon; // the corner helper's schedule (tips, the demon's pranks)
         AltTab.ours; // Alt+Tab: windows in MRU order, niri's binds follow the chosen style
         InputConfig.numlock; // NumLock on login: checked once per login (scripts/numlock.py)
+        FastfetchLogo.signature; // fastfetch draws the chosen emblem (Settings → Bar → Logo)
+        CursorShake.status; // shake the mouse to find the pointer (Settings → Cursor)
     }
 }

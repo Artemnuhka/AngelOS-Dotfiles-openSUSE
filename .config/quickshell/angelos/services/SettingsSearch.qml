@@ -40,14 +40,16 @@ Singleton {
             "capture": ["скриншот", "снимок экрана", "запись экрана", "screenshot", "recording", "capture"],
             "cursor": ["курсор", "указатель", "cursor", "pointer"],
             "widgets": ["виджет", "часы", "визуализатор", "cava", "widget", "clock", "visualizer"],
+            "deskmenu": ["пкм", "правая кнопка", "контекстное меню", "меню рабочего стола", "меню обоев", "кольцо", "радиальное меню", "right click", "context menu", "desktop menu", "radial menu", "pie menu"],
             "bar": ["панель", "таскбар", "пуск", "трей", "меню пуск", "кнопки окон", "taskbar", "panel", "start", "start menu", "tray", "dock"],
             "workspaces": ["рабочие столы", "воркспейсы", "столы", "сердечки", "переход", "desks", "virtual desktops", "workspaces", "transition"],
             "lyrics": ["лирика", "текст песни", "караоке", "песня", "музыка", "lyrics", "song", "karaoke", "music"],
             "monitor": ["экран", "дисплей", "монитор", "разрешение", "частота", "герцы", "масштаб", "display", "screen", "monitor", "resolution", "refresh rate", "hz", "scale"],
-            "keyboard": ["клавиатура", "мышь", "мышка", "раскладка", "тачпад", "чувствительность", "keyboard", "mouse", "layout", "touchpad", "sensitivity"],
+            "keyboard": ["клавиатура", "мышь", "мышка", "раскладка", "тачпад", "чувствительность", "лупа", "увеличение", "зум", "приблизить", "keyboard", "mouse", "layout", "touchpad", "sensitivity", "lens", "magnifier", "zoom"],
             "shortcuts": ["горячие клавиши", "хоткеи", "сочетания", "бинды", "клавиши", "shortcuts", "hotkeys", "keybinds", "bindings", "keys"],
             "windows": ["окна", "закрытие окон", "анимация закрытия", "отступы", "колонки", "диспетчер", "windows", "close", "gaps", "columns"],
             "sound": ["звук", "громкость", "микрофон", "аудио", "колонки", "наушники", "sound", "audio", "volume", "microphone", "speakers", "headphones"],
+            "sfx": ["звуки", "звуки системы", "клик", "клики", "щелчок", "клавиши", "набор", "печать", "звук уведомления", "тихие часы", "sounds", "system sounds", "click", "clicks", "keys", "typing", "notification sound", "quiet hours"],
             "network": ["сеть", "интернет", "вайфай", "wifi", "network", "internet"],
             "bluetooth": ["блютуз", "беспроводные", "bluetooth", "wireless"],
             "gamepad": ["геймпад", "джойстик", "контроллер", "gamepad", "controller", "joystick"],
@@ -450,7 +452,10 @@ Singleton {
             return [];
         const variants = [phrase];
         const swapped = meaningful(norm(swapLayout(phrase)));
-        if (swapped !== phrase)
+        // only a real word typed in the other layout ("ифк" → bar): "блюр" turns into ",k.h",
+        // whose stray single letters would match "keybinds" and "hotkeys"
+        const letters = x => x.replace(/[\s]/g, "").length;
+        if (swapped !== phrase && letters(norm(swapLayout(phrase))) === letters(phrase))
             variants.push(swapped);
         // what the ghost completion suggests counts too ("Bl" → Blur ranks first)
         const ghost = complete(text);
@@ -486,8 +491,10 @@ Singleton {
             if (out.length >= (limit || 12))
                 break;
         }
+        // cleared in place: search() also runs inside bindings (Start, the launcher)
         if (Object.keys(_results).length > 400)
-            _results = {};
+            for (const k in _results)
+                delete _results[k];
         _results[key] = out;
         return out;
     }

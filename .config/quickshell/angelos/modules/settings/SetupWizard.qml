@@ -193,6 +193,10 @@ FloatingWindow {
         PxPage {
             heading: I18n.t("Твой angelOS", "Your angelOS")
             subtitle: I18n.t("Настрой оболочку под себя. Основная тема останется доступной, а мастер можно снова открыть в настройках внешнего вида.", "Make the shell your own. The original theme stays available, and you can reopen this wizard in Appearance settings.")
+            AngelLogo {
+                pixel: Theme.u * 2
+                fontSize: Theme.sizeHuge
+            }
             SettingRow {
                 label: "Язык / Language"
                 PxCombo {
@@ -422,15 +426,16 @@ FloatingWindow {
                 title: I18n.t("Логотип", "Logo")
                 icon: "heart"
                 width: parent.width
-                Row {
+                Flow {
+                    width: parent.width
                     spacing: Theme.u * 6
                     Repeater {
-                        model: ["classic", "angel"]
+                        model: ["classic", "angel", "windose", "hell", "chrome"]
                         PxButton {
                             required property string modelData
                             width: logoPreview.implicitWidth + Theme.u * 12
-                            height: Theme.u * 23
-                            checked: (Config.bar.logoStyle === "angel" ? "angel" : "classic") === modelData
+                            height: Math.max(Theme.u * 23, logoPreview.implicitHeight + Theme.u * 8)
+                            checked: (Config.bar.logoStyle || "classic") === modelData
                             onClicked: Config.bar.logoStyle = modelData
                             AngelLogo {
                                 id: logoPreview
@@ -439,6 +444,31 @@ FloatingWindow {
                             }
                         }
                     }
+                }
+                Flow {
+                    width: parent.width
+                    spacing: Theme.u * 4
+                    Repeater {
+                        model: ["heart", "pill", "star", "cd", "kitty"]
+                        PxButton {
+                            required property string modelData
+                            width: emblemPreview.implicitWidth + Theme.u * 10
+                            height: emblemPreview.implicitHeight + Theme.u * 8
+                            checked: (Config.bar.logoEmblem || "heart") === modelData
+                            onClicked: Config.bar.logoEmblem = modelData
+                            AngelLogo {
+                                id: emblemPreview
+                                anchors.centerIn: parent
+                                emblemOnly: true
+                                emblemName: parent.modelData
+                            }
+                        }
+                    }
+                }
+                PxToggle {
+                    text: I18n.t("Надпись на кнопке «Пуск» (выключи — останется только значок)", "Wordmark on the Start button (off leaves the emblem)")
+                    checked: Config.bar.logoText !== false
+                    onToggled: c => Config.bar.logoText = c
                 }
             }
         }
@@ -459,6 +489,59 @@ FloatingWindow {
                         text: modelData.label
                         checked: DesktopWidgets.has(modelData.type, Shell.focusedScreen ? Shell.focusedScreen.name : "")
                         onToggled: DesktopWidgets.toggle(modelData.type, Shell.focusedScreen ? Shell.focusedScreen.name : "")
+                    }
+                }
+            }
+            // the right-click menu on the wallpaper (Settings → Right-click menu has the rest)
+            PxGroup {
+                title: I18n.t("Меню по правой кнопке", "Right-click menu")
+                icon: "grid"
+                width: parent.width
+                PxText {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    dim: true
+                    text: I18n.t("Каким будет меню, если нажать правой кнопкой на обои. Потом его можно настроить до пункта: Настройки → ПКМ-меню.", "What a right click on the wallpaper opens. Every entry can be tuned later in Settings → Right-click menu.")
+                }
+                Flow {
+                    width: parent.width
+                    spacing: Theme.u * 4
+                    Repeater {
+                        model: ["list", "radial", "y2k", "tiles"]
+                        PxButton {
+                            id: menuCard
+                            required property string modelData
+                            width: menuThumb.implicitWidth + Theme.u * 8
+                            height: menuThumb.implicitHeight + menuName.implicitHeight + Theme.u * 10
+                            checked: DeskMenu.chosen === modelData
+                            onClicked: Config.desktop.menuStyle = modelData
+                            MenuStyleThumb {
+                                id: menuThumb
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                y: Theme.u * 4
+                                style: menuCard.modelData
+                            }
+                            PxText {
+                                id: menuName
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                anchors.bottom: parent.bottom
+                                anchors.bottomMargin: Theme.u * 3
+                                kind: "tiny"
+                                font.bold: menuCard.checked
+                                text: (menuCard.checked ? "♡ " : "") + DeskMenu.styleLabel(menuCard.modelData)
+                            }
+                        }
+                    }
+                }
+                PxButton {
+                    compact: true
+                    icon: "sparkle"
+                    text: I18n.t("Попробовать", "Try it")
+                    onClicked: {
+                        const sc = Shell.focusedScreen;
+                        const m = sc ? Shell.desktopMenus[sc.name] : null;
+                        if (m)
+                            Qt.callLater(() => m.openAt(Math.round(sc.width / 2), Math.round(sc.height / 2)));
                     }
                 }
             }

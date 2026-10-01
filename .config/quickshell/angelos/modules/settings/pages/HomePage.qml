@@ -98,6 +98,11 @@ PxPage {
         return top;
     }
 
+    // the chosen logo (Bar → Logo) greets you here too
+    AngelLogo {
+        pixel: Theme.u
+    }
+
     PxGroup {
         width: parent.width
         title: I18n.t("Частое", "Everyday")

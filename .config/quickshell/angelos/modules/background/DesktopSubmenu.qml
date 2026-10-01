@@ -48,16 +48,27 @@ PopupWindow {
     PxBox {
         id: frame
         width: Math.max(Theme.u * 110, ...col.children.map(c => c.implicitWidth || 0)) + inset * 2
-        height: col.implicitHeight + inset * 2
-        color: Qt.alpha(Theme.menuSurface, Theme.panelAlpha)
-        shadow: Config.appearance.shadows
+        height: col.implicitHeight + inset * 2 + (y2k ? Theme.u * 6 : 0)
+        readonly property bool y2k: root.parentMenu && root.parentMenu.skin === "y2k"
+        color: y2k ? "transparent" : Qt.alpha(Theme.menuSurface, Theme.panelAlpha)
+        outline: !y2k
+        flat: y2k
+        shadow: Config.appearance.shadows && !y2k
+        Y2kGloss {
+            visible: frame.y2k
+            anchors.fill: parent
+            z: -1
+            sparkles: false
+        }
         Column {
             id: col
+            y: frame.y2k ? Theme.u * 4 : 0
             width: parent.width - frame.inset * 2
             Repeater {
                 model: root.items
                 PxMenuItem {
                     required property var modelData
+                    skin: frame.y2k ? "y2k" : ""
                     text: modelData.label || ""
                     icon: modelData.icon || ""
                     hint: modelData.hint || ""

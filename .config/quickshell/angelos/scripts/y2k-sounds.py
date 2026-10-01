@@ -3,9 +3,11 @@
 
   y2k-sounds.py <dir> [name…]  writes startup notify error click shutdown angel
                                wallpaper open toggle screenshot volume windowClose
-                               demon crack choir rocks shatter voice as .ogg (.wav
-                               without ffmpeg) and the pips voiceAngel voiceDemon
-                               as .wav, prints JSON
+                               demon crack choir rocks shatter voice, the input and
+                               system ones clickRight key (+ key2 key3, typing
+                               variety) windowOpen workspace lock unlock as .ogg
+                               (.wav without ffmpeg) and the pips voiceAngel
+                               voiceDemon as .wav, prints JSON
 
 Chimes are FM bells and detuned triangle pads with a small echo, levelled to
 about -6 dBFS peak and at most -20 dBFS RMS so they sit under music and voice.
@@ -91,8 +93,9 @@ def level(x, peak_db=-6.0, rms_db=-20.0):
 
 # RMS ceilings, dBFS: the helper speaks under everything else
 LOUDNESS = {"voiceAngel": -25.0, "voiceDemon": -26.0, "voice": -25.0, "angel": -24.0, "demon": -25.0,
-            "choir": -23.0, "crack": -25.0, "rocks": -23.0, "shatter": -23.0}
-PACK_VERSION = "2"
+            "choir": -23.0, "crack": -25.0, "rocks": -23.0, "shatter": -23.0,
+            "key": -27.0, "key2": -27.0, "key3": -27.0, "clickRight": -22.0, "workspace": -24.0}
+PACK_VERSION = "3"
 
 
 def startup():
@@ -214,6 +217,69 @@ def window_close():
     place(buf, bell(note(84), 0.3, index=0.7, decay=10) * 0.55, 0.0)
     place(buf, bell(note(77), 0.35, index=0.7, decay=9) * 0.55, 0.08)
     return buf
+
+
+def click_right():
+    # lower than the left click, and doubled: "tik-tik"
+    sec = 0.07
+    buf = np.zeros(int(sec * RATE))
+    t = t_axis(0.03)
+    tick = np.sin(2 * np.pi * 1700 * t) * np.exp(-t * 200)
+    place(buf, tick, 0.0)
+    place(buf, tick * 0.6, 0.032)
+    return buf
+
+
+def key(variant=0):
+    # a soft typewriter tick: a short band of noise and a little body; three
+    # variants so fast typing does not sound like a machine gun
+    cut, body, seed = ((4200, 520, 11), (3600, 470, 12), (4800, 580, 13))[variant]
+    sec = 0.045
+    t = t_axis(sec)
+    n = lowpass(noise(sec, seed), cut) * np.exp(-t * 160)
+    thump = np.sin(2 * np.pi * body * t) * np.exp(-t * 120) * 0.5
+    return n + thump
+
+
+def window_open():
+    # window_close turned around: two bells going up
+    sec = 0.4
+    buf = np.zeros(int(sec * RATE))
+    place(buf, bell(note(77), 0.3, index=0.7, decay=10) * 0.55, 0.0)
+    place(buf, bell(note(84), 0.35, index=0.7, decay=9) * 0.55, 0.07)
+    return buf
+
+
+def workspace():
+    # a soft swish: noise through a sweeping low-pass
+    sec = 0.22
+    t = t_axis(sec)
+    n = noise(sec, 21)
+    out = np.zeros_like(n)
+    for i, cut in enumerate(np.linspace(900, 5200, 8)):
+        a, b = int(i * len(n) / 8), int((i + 1) * len(n) / 8)
+        out[a:b] = lowpass(n, cut)[a:b]
+    return out * np.sin(np.pi * t / sec) ** 2
+
+
+def lock():
+    # a little padlock: a click and a falling fifth
+    sec = 0.5
+    buf = np.zeros(int(sec * RATE))
+    place(buf, lowpass(noise(0.02, 31), 3000) * np.exp(-t_axis(0.02) * 200) * 0.8, 0.0)
+    place(buf, bell(note(79), 0.35, index=0.9, decay=8) * 0.5, 0.03)
+    place(buf, bell(note(72), 0.45, index=0.9, decay=7) * 0.5, 0.14)
+    return buf
+
+
+def unlock():
+    # the padlock opens: a rising arpeggio with a sparkle on top
+    sec = 0.6
+    buf = np.zeros(int(sec * RATE))
+    for i, n in enumerate((72, 76, 79, 84)):
+        place(buf, bell(note(n), 0.4, index=0.8, decay=8) * 0.45, i * 0.06)
+    place(buf, bell(note(96), 0.25, index=0.5, decay=14) * 0.2, 0.26)
+    return echo(buf, 0.1, 0.2, 2)
 
 
 def demon():
@@ -370,7 +436,9 @@ def voice():
 SOUNDS = {"startup": startup, "notify": notify, "error": error, "click": click, "shutdown": shutdown, "angel": angel,
           "wallpaper": wallpaper, "open": open_, "toggle": toggle, "screenshot": screenshot, "volume": volume,
           "windowClose": window_close, "demon": demon, "crack": crack, "choir": choir, "rocks": rocks,
-          "shatter": shatter, "voice": voice, "voiceAngel": voice_angel, "voiceDemon": voice_demon}
+          "shatter": shatter, "voice": voice, "voiceAngel": voice_angel, "voiceDemon": voice_demon,
+          "clickRight": click_right, "key": key, "key2": lambda: key(1), "key3": lambda: key(2),
+          "windowOpen": window_open, "workspace": workspace, "lock": lock, "unlock": unlock}
 # played by QtMultimedia's SoundEffect, which only takes .wav
 WAV_ONLY = {"voiceAngel", "voiceDemon"}
 

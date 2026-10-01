@@ -1,46 +1,36 @@
 import QtQuick
 import qs.config
 import qs.services
+import "Logos.js" as Logos
 
-// angelOS logo: a pixel angel-heart (halo + wings) and a wordmark.
-//   classic — "angel" + a Win98 "OS" plate
-//   angel   — pink "angel" + cyan "OS" with sparkles
-// While the demon rules (services/Angel) the heart wears horns instead of the halo.
+// angelOS logo: an emblem and a wordmark (Settings → Bar → Logo; widgets/Logos.js).
+//   wordmarks: classic — "angel" + a Win98 "OS" plate · angel — pink "angel" + cyan "OS"
+//              with sparkles · windose — NGO sticker letters, the O is a pill ·
+//              hell — gothic red letters with drips · chrome — Y2K silver-to-pink
+//   emblems:   heart (winged, halo) · pill · star · cd · kitty
+// While the demon rules (services/Angel) the halo turns into horns (the star turns red).
 Item {
     id: root
 
     property bool emblemOnly: false
     property int pixel: Theme.u
-    property string variant: Config.bar.logoStyle === "angel" ? "angel" : "classic"
+    readonly property var variants: ["classic", "angel", "windose", "hell", "chrome"]
+    readonly property var emblemNames: ["heart", "pill", "star", "cd", "kitty"]
+    property string variant: variants.includes(Config.bar.logoStyle) ? Config.bar.logoStyle : "classic"
+    property string emblemName: emblemNames.includes(Config.bar.logoEmblem) ? Config.bar.logoEmblem : "heart"
     property int fontSize: Theme.sizeTitle
+    // one art pixel of a pixel wordmark: the pixel of the 9 px title font at this size,
+    // whole (crisp), so the letters match "angel" set in it (scripts/wordmark-art.py)
+    property int wordPixel: Math.max(1, Math.round(fontSize / 9))
     readonly property bool angel: variant === "angel"
+    readonly property var wordArt: Logos.wordmark(variant)
     property bool horns: Angel.demon
 
-    // 19×12 art pixels: '#' outline, 'o' heart, 'w' wings/shine, 'y' halo, 'r' horns
-    readonly property var emblemRows: (horns ? [
-            "...r...........r...",
-            "...rr.........rr...",
-            "....rr.......rr....",
-            ".....rr.....rr....."
-        ] : [
-            "......yyyyyyy......",
-            ".....y.......y.....",
-            "......yyyyyyy......",
-            "..................."
-        ]).concat(heartRows)
-    readonly property var heartRows: [
-        "#.....##...##.....#",
-        "#w#..#wo#.#oo#..#w#",
-        "#ww###ooo#ooo###ww#",
-        ".#www#ooooooo#www#.",
-        "..#w#.#ooooo#.#w#..",
-        "...##..#ooo#..##...",
-        "........#o#........",
-        ".........#........."
-    ]
+    readonly property var emblemRows: Logos.emblem(emblemName, horns)
+    readonly property bool redStar: horns && !Logos.emblemHasHalo(emblemName)
 
     implicitWidth: emblemOnly ? emblem.width : row.implicitWidth
-    implicitHeight: Math.max(emblem.height, wordmark.implicitHeight)
+    implicitHeight: Math.max(emblem.height, emblemOnly ? 0 : wordArt ? art.height : wordmark.implicitHeight)
 
     Row {
         id: row
@@ -54,14 +44,45 @@ Item {
             pixel: root.pixel
             ink: Theme.dark ? Theme.mix(Theme.accent, Theme.edge, 0.55) : Theme.edge
             fill: Theme.accent
+            fill2: Theme.accent2
             light: "#ffffff"
-            fill3: Theme.mix(Theme.accent3, Qt.color("#ffd84a"), 0.6)
+            fill3: root.redStar ? "#e0203a" : Theme.mix(Theme.accent3, Qt.color("#ffd84a"), 0.6)
             bad: "#e0203a"
+            palette: ({
+                    "p": Theme.hex(Theme.mix(Theme.accent, "#ffffff", 0.45)),
+                    "x": Theme.hex(root.redStar ? Qt.color("#7a0a1e") : Theme.accent2)
+                })
+        }
+
+        // pixel wordmarks (windose, hell, chrome)
+        PxIcon {
+            id: art
+            visible: !root.emblemOnly && !!root.wordArt
+            anchors.verticalCenter: parent.verticalCenter
+            bitmap: root.wordArt || []
+            pixel: Math.max(1, Math.round(root.wordPixel * Logos.wordmarkScale(root.variant)))
+            ink: Theme.dark ? Theme.mix(Theme.accent, Theme.edge, 0.55) : Theme.edge
+            fill: Theme.accent
+            fill2: Theme.accent2
+            fill3: Theme.mix(Theme.accent3, Qt.color("#ffd84a"), 0.6)
+            light: "#ffffff"
+            body: Theme.mix(Theme.accent2, "#ffffff", 0.55)
+            palette: root.variant === "hell" ? {
+                "r": "#e0203a",
+                "d": "#7a0a1e",
+                "k": "#1a0508",
+                "e": "#ff6a5a"
+            } : {
+                "k": Theme.hex(Theme.dark ? Theme.mix(Theme.accent, Theme.edge, 0.55) : Theme.edge),
+                "s": "#c8c8d7",
+                "g": "#9696aa",
+                "p": Theme.hex(Theme.mix(Theme.accent, "#ffffff", 0.45))
+            }
         }
 
         Row {
             id: wordmark
-            visible: !root.emblemOnly
+            visible: !root.emblemOnly && !root.wordArt
             anchors.verticalCenter: parent.verticalCenter
             spacing: root.angel ? 0 : root.pixel * 2
 

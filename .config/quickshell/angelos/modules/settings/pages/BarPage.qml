@@ -6,6 +6,9 @@ import qs.widgets
 import qs.modules.settings
 
 PxPage {
+    id: page
+    // the Start looks that fill the screen (no position, no size)
+    readonly property bool startFull: ["fullscreen", "xmb", "wii"].includes(Config.bar.startStyle)
     heading: I18n.t("Панель", "Bar")
     subtitle: I18n.t("Три вида: таскбар как в Win98, тонкая полоса сверху или плавающий остров.", "Choose a taskbar, a top strip, or a floating island.")
 
@@ -15,39 +18,87 @@ PxPage {
         width: parent.width
         SettingRow {
             id: startStyleRow
+            readonly property var styles: [
+                {
+                    "label": I18n.t("Классика", "Classic"),
+                    "value": "classic",
+                    "hint": I18n.t("список как в Win98 у кнопки", "A Win98 list next to the button")
+                },
+                {
+                    "label": "Windows 11",
+                    "value": "win11",
+                    "hint": I18n.t("по центру: поиск, закреплённые (ПКМ — закрепить), все приложения, питание", "Centred: search, pinned apps (right-click pins), all apps, power")
+                },
+                {
+                    "label": I18n.t("Как iPhone", "iPhone-like"),
+                    "value": "fullscreen",
+                    "hint": I18n.t("на весь экран, как на iPhone: страницы иконок, док, колесо листает", "Full screen like an iPhone: pages of icons, a dock, the wheel flips pages")
+                },
+                {
+                    "label": "PSP XMB",
+                    "value": "xmb",
+                    "hint": I18n.t("на весь экран, как PSP: разделы в строку, пункты столбиком, волна на фоне; ←→ ↑↓, печатай — поиск", "Full screen like a PSP: sections in a row, items in a column, the wave behind; ←→ ↑↓, type to search")
+                },
+                {
+                    "label": "Windose ♡",
+                    "value": "windose",
+                    "hint": I18n.t("розовое окно NEEDY GIRL OVERDOSE у кнопки: закреплённые наклейками, все программы с сердечками", "A pink NEEDY GIRL OVERDOSE window by the button: pinned apps as stickers, every program with hearts")
+                },
+                {
+                    "label": I18n.t("Wii «Каналы»", "Wii channels"),
+                    "value": "wii",
+                    "hint": I18n.t("на весь экран, как Wii: каналы 4×3, часы на дуге внизу, кнопки настроек и питания", "Full screen like a Wii: 4×3 channels, the clock on the curved band, settings and power buttons")
+                },
+                {
+                    "label": "Spotlight",
+                    "value": "spotlight",
+                    "hint": I18n.t("только строка поиска посередине: приложения, настройки, папки, действия, калькулятор", "Just a search pill in the middle: apps, settings, folders, actions, the calculator")
+                }
+            ]
             preview: "StartMenu"
             label: I18n.t("Вид меню", "Menu style")
-            hint: Config.bar.startStyle === "win11" ? I18n.t("по центру: поиск, закреплённые (ПКМ — закрепить), все приложения, питание", "Centred: search, pinned apps (right-click pins), all apps, power") : Config.bar.startStyle === "fullscreen" ? I18n.t("на весь экран, как на iPhone: страницы иконок, док, колесо листает", "Full screen like an iPhone: pages of icons, a dock, the wheel flips pages") : I18n.t("список как в Win98 у кнопки", "A Win98 list next to the button")
+            hint: (styles.find(s => s.value === (Config.bar.startStyle || "classic")) || styles[0]).hint
+            Flow {
+                width: parent.width
+                spacing: Theme.u * 2
+                Repeater {
+                    model: startStyleRow.styles
+                    PxButton {
+                        required property var modelData
+                        text: modelData.label
+                        checked: (Config.bar.startStyle || "classic") === modelData.value
+                        onClicked: {
+                            Config.bar.startStyle = modelData.value;
+                            startStyleRow.show(modelData.value, modelData.label);
+                        }
+                    }
+                }
+            }
+        }
+        SettingRow {
+            id: taskbarAlignRow
+            visible: Config.bar.style !== "island"
+            label: I18n.t("Панель задач", "Taskbar alignment")
+            hint: Config.bar.taskbarAlign === "center" ? I18n.t("как в Windows 11: «Пуск» и окна посередине, лирика — слева; меню выезжает снизу", "Like Windows 11: Start and windows in the middle, lyrics on the left; the menu slides up") : I18n.t("«Пуск» и окна у левого края", "Start and windows at the left edge")
             PxSegmented {
                 model: [
                     {
-                        "label": I18n.t("Классика", "Classic"),
-                        "value": "classic"
+                        "label": I18n.t("Слева", "Left"),
+                        "value": "left"
                     },
                     {
-                        "label": "Windows 11",
-                        "value": "win11"
-                    },
-                    {
-                        "label": I18n.t("Как iPhone", "iPhone-like"),
-                        "value": "fullscreen"
+                        "label": I18n.t("По центру", "Center"),
+                        "value": "center"
                     }
                 ]
-                currentValue: Config.bar.startStyle
-                onActivated: v => {
-                    Config.bar.startStyle = v;
-                    startStyleRow.show(v, ({
-                            "classic": I18n.t("классика", "classic"),
-                            "win11": "Windows 11",
-                            "fullscreen": I18n.t("как iPhone", "iPhone-like")
-                        })[v]);
-                }
+                currentValue: Config.bar.taskbarAlign || "left"
+                onActivated: v => Config.bar.taskbarAlign = v
             }
         }
         SettingRow {
             id: startPosRow
             preview: "StartMenu"
-            visible: Config.bar.startStyle !== "fullscreen"
+            visible: !page.startFull && Config.bar.startStyle !== "spotlight"
             label: I18n.t("Где открывать", "Position")
             hint: I18n.t("«Авто»: классика — у кнопки, Windows 11 — посередине", "Auto: classic at the button, Windows 11 in the middle")
             PxSegmented {
@@ -82,7 +133,7 @@ PxPage {
             }
         }
         SettingRow {
-            visible: Config.bar.startStyle !== "fullscreen"
+            visible: !page.startFull
             label: I18n.t("Размер меню", "Menu size")
             hint: I18n.t("ширина; у Windows 11 вместе с ней растёт число колонок", "Width; the Windows 11 menu gains columns as it grows")
             PxSlider {
@@ -93,6 +144,24 @@ PxPage {
                 value: Config.bar.startWidth || 100
                 suffix: " %"
                 onReleased: v => Config.bar.startWidth = v
+            }
+        }
+        SettingRow {
+            label: I18n.t("Поиск", "Search")
+            hint: I18n.t("что ещё находит поиск «Пуска» и Win+Space, кроме приложений", "what Start's search and Win+Space find besides apps")
+            Column {
+                width: parent.width
+                spacing: Theme.u * 3
+                PxToggle {
+                    text: I18n.t("Настройки — вперемешку с приложениями", "Settings, mixed with apps")
+                    checked: Config.launcher.settings !== false
+                    onToggled: v => Config.launcher.settings = v
+                }
+                PxToggle {
+                    text: I18n.t("Калькулятор: 2+2·3, 15% от 200, 10 км в милях, 100 usd в rub", "Calculator: 2+2·3, 15% of 200, 10 km in mi, 100 usd in rub")
+                    checked: Config.launcher.calc !== false
+                    onToggled: v => Config.launcher.calc = v
+                }
             }
         }
         SettingRow {
@@ -107,7 +176,7 @@ PxPage {
             }
         }
         Row {
-            visible: Config.bar.startStyle !== "fullscreen"
+            visible: !page.startFull
             spacing: Theme.u * 3
             PxButton {
                 compact: true
@@ -392,7 +461,8 @@ PxPage {
         width: parent.width
         // one choice, as pictures with their names (issue #15: buttons and pictures disagreed)
         SettingRow {
-            label: I18n.t("Вариант", "Variant")
+            label: I18n.t("Надпись", "Wordmark")
+            hint: I18n.t("на кнопке «Пуск», в меню, на загрузке, экране блокировки и в настройках", "on the Start button, in Start, on the boot and lock screens and in Settings")
             Flow {
                 width: parent.width
                 spacing: Theme.u * 6
@@ -405,13 +475,25 @@ PxPage {
                         {
                             "value": "angel",
                             "label": "Angel +"
+                        },
+                        {
+                            "value": "windose",
+                            "label": "Windose"
+                        },
+                        {
+                            "value": "hell",
+                            "label": "Hell"
+                        },
+                        {
+                            "value": "chrome",
+                            "label": "Y2K Chrome"
                         }
                     ]
                     PxButton {
                         id: logoCard
                         required property var modelData
                         width: Math.max(preview.implicitWidth, caption.implicitWidth) + Theme.u * 12
-                        height: Theme.u * 34
+                        height: preview.implicitHeight + caption.implicitHeight + Theme.u * 14
                         checked: Config.bar.logoStyle === modelData.value
                         onClicked: Config.bar.logoStyle = modelData.value
                         AngelLogo {
@@ -433,11 +515,77 @@ PxPage {
                 }
             }
         }
+        SettingRow {
+            label: I18n.t("Значок", "Emblem")
+            hint: I18n.t("пока правит демоница, нимб становится рожками", "while the demon rules, the halo turns into horns")
+            Flow {
+                width: parent.width
+                spacing: Theme.u * 6
+                Repeater {
+                    model: [
+                        {
+                            "value": "heart",
+                            "label": I18n.t("Сердце", "Heart")
+                        },
+                        {
+                            "value": "pill",
+                            "label": I18n.t("Таблетка", "Pill")
+                        },
+                        {
+                            "value": "star",
+                            "label": I18n.t("Звезда", "Star")
+                        },
+                        {
+                            "value": "cd",
+                            "label": "CD"
+                        },
+                        {
+                            "value": "kitty",
+                            "label": I18n.t("Котик", "Kitty")
+                        }
+                    ]
+                    PxButton {
+                        id: emblemCard
+                        required property var modelData
+                        width: Math.max(emblemPreview.implicitWidth, emblemCaption.implicitWidth) + Theme.u * 12
+                        height: emblemPreview.implicitHeight + emblemCaption.implicitHeight + Theme.u * 14
+                        checked: Config.bar.logoEmblem === modelData.value
+                        onClicked: Config.bar.logoEmblem = modelData.value
+                        AngelLogo {
+                            id: emblemPreview
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            y: Theme.u * 5
+                            emblemOnly: true
+                            emblemName: emblemCard.modelData.value
+                        }
+                        PxText {
+                            id: emblemCaption
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            anchors.bottom: parent.bottom
+                            anchors.bottomMargin: Theme.u * 4
+                            text: (emblemCard.checked ? "♡ " : "") + emblemCard.modelData.label
+                            kind: "tiny"
+                            font.bold: emblemCard.checked
+                        }
+                    }
+                }
+            }
+        }
+        PxToggle {
+            text: I18n.t("Надпись на кнопке «Пуск» (выключи — останется только значок)", "Wordmark on the Start button (off leaves the emblem)")
+            checked: Config.bar.logoText !== false
+            onToggled: c => Config.bar.logoText = c
+        }
+        PxToggle {
+            text: I18n.t("fastfetch рисует этот значок", "fastfetch draws this emblem")
+            checked: Config.bar.logoFastfetch
+            onToggled: v => Config.bar.logoFastfetch = v
+        }
         PxText {
             width: parent.width
             wrapMode: Text.Wrap
             dim: true
-            text: I18n.t("Classic 95 — Liberation Sans; Angel + — Pixeloid Sans. Цвета следуют текущей теме.", "Classic 95 uses Liberation Sans; Angel + uses Pixeloid Sans. Both follow the current theme.")
+            text: I18n.t("Classic 95 и Angel + — шрифтом темы, Windose, Hell и Y2K Chrome — пиксельные буквы. Цвета следуют теме (Hell всегда кровавый). Сердце в fastfetch — прежний рисунок с нимбом и таблеткой.", "Classic 95 and Angel + use the theme font; Windose, Hell and Y2K Chrome are pixel letters. Colours follow the theme (Hell is always blood red). The heart in fastfetch keeps the original drawing with the halo and pill.")
         }
     }
 
@@ -538,6 +686,32 @@ PxPage {
                 ]
                 currentValue: Config.bar.trayDensity || "normal"
                 onActivated: v => Config.bar.trayDensity = v
+            }
+        }
+        SettingRow {
+            label: I18n.t("Правая часть панели", "Right side of the bar")
+            hint: ({
+                    "compact": I18n.t("значки вплотную, кнопки уже — больше места окнам и лирике", "icons packed close, narrower buttons — more room for windows and lyrics"),
+                    "normal": I18n.t("как было", "as before"),
+                    "airy": I18n.t("с большими промежутками — легче попасть мышкой", "wide gaps — easier to hit")
+                })[Config.bar.rightDensity || "normal"] || ""
+            PxSegmented {
+                model: [
+                    {
+                        "label": I18n.t("Плотно", "Compact"),
+                        "value": "compact"
+                    },
+                    {
+                        "label": I18n.t("Обычно", "Normal"),
+                        "value": "normal"
+                    },
+                    {
+                        "label": I18n.t("Свободно", "Airy"),
+                        "value": "airy"
+                    }
+                ]
+                currentValue: Config.bar.rightDensity || "normal"
+                onActivated: v => Config.bar.rightDensity = v
             }
         }
         SettingRow {

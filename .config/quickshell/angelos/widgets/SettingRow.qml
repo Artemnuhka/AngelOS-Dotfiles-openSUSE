@@ -51,6 +51,7 @@ Item {
     }
     Item {
         id: slot
+        readonly property bool fixedWidth: true // PxToggle wraps its label to fit
         anchors.left: labels.right
         anchors.leftMargin: Theme.u * 6
         anchors.right: parent.right

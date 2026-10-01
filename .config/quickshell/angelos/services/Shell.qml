@@ -83,6 +83,7 @@ Singleton {
     // ---- Start menu: a layer-shell overlay per screen (xdg popups opened without
     // a click are dismissed by the compositor, so Meta taps could not use them) ----
     property string startScreen: ""          // screen whose Start menu is open
+    property string startPrefill: ""         // `angelos startText …`: typed into Start's search when it opens
     property var startButtons: ({})          // screen -> {item, window} of its Start button
     function registerStartButton(screen, item, window) {
         const m = Object.assign({}, startButtons);

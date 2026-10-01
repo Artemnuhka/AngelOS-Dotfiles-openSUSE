@@ -92,6 +92,7 @@ Item {
             ids: root.inline ? root.layout.right : []
             bar: root
             lyricsMax: root.compact ? Theme.u * 110 : Theme.u * 200
+            density: Config.bar.rightDensity || "normal"
         }
     }
 
@@ -102,6 +103,9 @@ Item {
 
         readonly property bool tasksLeft: root.layout.left.includes("tasks")
         readonly property real mid: width / 2
+        // Settings → Bar → Start → "Taskbar": like Windows 11, Start with the window buttons in
+        // the middle (they slide there and back); the lyrics then take the room on the left
+        readonly property bool centered: Config.bar.taskbarAlign === "center"
 
         // sunken Win98 notification area behind the right side of the taskbar
         PxBox {
@@ -123,30 +127,42 @@ Item {
             ids: root.inline ? [] : root.layout.right
             bar: root
             lyricsMax: Theme.u * 150
+            density: Config.bar.rightDensity || "normal"
         }
 
         BarSection {
             id: center
             anchors.verticalCenter: parent.verticalCenter
-            x: Math.round(Math.max(leftNeed, Math.min(parent.mid - width / 2, right.x - root.gap - width)))
+            x: parent.centered ? Theme.u * 2 : Math.round(Math.max(leftNeed, Math.min(parent.mid - width / 2, right.x - root.gap - width)))
             ids: root.inline ? [] : root.layout.center
             bar: root
             // widest centred run that still leaves room for the left side (+ a few task buttons) and the right side
             readonly property real leftNeed: Theme.u * 2 + left.implicitWidth + (parent.tasksLeft ? (root.compact ? Theme.u * 4 : Theme.u * 44) : 0) + root.gap
             // the lyrics box takes the song's longest line, up to all the room between the sides
-            lyricsMax: Math.max(0, Math.min(parent.width * 0.6, right.x - root.gap - leftNeed - (root.layout.center.length > 1 ? Theme.u * 60 : 0)))
+            // (centred taskbar: the room left of the centred group)
+            lyricsMax: parent.centered ? Math.max(0, left.x - root.gap - Theme.u * 2 - (root.layout.center.length > 1 ? Theme.u * 60 : 0)) : Math.max(0, Math.min(parent.width * 0.6, right.x - root.gap - leftNeed - (root.layout.center.length > 1 ? Theme.u * 60 : 0)))
         }
 
         BarSection {
             id: left
-            anchors.left: parent.left
-            anchors.leftMargin: Theme.u * 2
             anchors.verticalCenter: parent.verticalCenter
-            width: Math.max(implicitWidth, (center.implicitWidth > 0 && center.visible ? center.x : right.x - Theme.u * 6) - root.gap - x)
+            // left: from the edge to the lyrics; centred: as wide as it needs, in the middle
+            readonly property real room: right.x - root.gap - Theme.u * 2
+            readonly property real centeredX: Math.round(Math.max(Theme.u * 2, Math.min((parent.width - width) / 2, right.x - root.gap - width)))
+            x: parent.centered ? centeredX : Theme.u * 2
+            width: parent.centered ? Math.min(implicitWidth, room) : Math.max(implicitWidth, (center.implicitWidth > 0 && center.visible ? center.x : right.x - Theme.u * 6) - root.gap - x)
             ids: root.inline ? [] : root.layout.left
             bar: root
-            fillTasks: true
+            fillTasks: !parent.centered
+            centered: parent.centered
             lyricsMax: Theme.u * 150
+            // the Windows 11 slide when the alignment changes or a window button comes and goes
+            Behavior on x {
+                NumberAnimation {
+                    duration: 320
+                    easing.type: Easing.OutCubic
+                }
+            }
         }
     }
 }

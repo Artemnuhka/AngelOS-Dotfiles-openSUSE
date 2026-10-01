@@ -14,13 +14,19 @@ Loader {
     required property var bar          // BarContent: screenName, barWindow, above, compact, itemHeight, …
     property bool fillTasks: false
     property real lyricsMax: Theme.u * 150
+    // the dense right side: narrower buttons (widgets built on PxButton)
+    property bool dense: false
+    onLoaded: if (item && item.hpad !== undefined)
+        item.hpad = Qt.binding(() => root.dense ? Theme.u * 2 : -1)
 
     readonly property bool tall: wid === "start" || wid === "tasks" || wid === "media" || wid === "lyrics"
-    Layout.fillWidth: fillTasks && wid === "tasks"
+    // Windows 11-like centred taskbar: the window buttons as wide as they need, shrinking when crowded
+    property bool centered: false
+    Layout.fillWidth: (fillTasks || centered) && wid === "tasks"
     // compact "Windows": grows only as far as its buttons need, the next widgets follow right after (issue #16)
-    Layout.maximumWidth: wid === "tasks" && fillTasks && Config.bar.tasksWidth === "compact" && item ? Math.max(Theme.u * 16, item.naturalWidth) : Number.POSITIVE_INFINITY
+    Layout.maximumWidth: wid === "tasks" && (centered || (fillTasks && Config.bar.tasksWidth === "compact")) && item ? Math.max(Theme.u * 16, item.naturalWidth) : Number.POSITIVE_INFINITY
     Layout.minimumWidth: wid === "tasks" ? Theme.u * 16 : -1
-    Layout.preferredWidth: wid === "tasks" ? (fillTasks ? Theme.u * 16 : Theme.u * 120) : -1
+    Layout.preferredWidth: wid === "tasks" ? (centered && item ? Math.max(Theme.u * 16, item.naturalWidth) : fillTasks ? Theme.u * 16 : Theme.u * 120) : -1
     Layout.preferredHeight: tall ? bar.itemHeight : -1
     Layout.alignment: Qt.AlignVCenter
     // Never bind a parent's visibility to its child's effective visibility:
@@ -171,15 +177,21 @@ Loader {
         id: pluginC
         Loader {
             readonly property var p: Plugins.byId(root.wid.slice(7))
+            // a new path after the plugin was changed (Plugin Studio): load the new files
+            readonly property string src: p ? Plugins.url(p, p.barWidget) : ""
             function load() {
                 if (p && !item)
-                    setSource(Plugins.url(p, p.barWidget), {
+                    setSource(src, {
                         "plugin": Plugins.context(p),
                         "screenName": root.bar.screenName,
                         "barWindow": root.bar.barWindow
                     });
             }
             onPChanged: load()
+            onSrcChanged: if (item) {
+                source = "";
+                load();
+            }
             Component.onCompleted: load()
         }
     }

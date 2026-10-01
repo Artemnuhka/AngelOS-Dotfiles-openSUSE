@@ -117,18 +117,59 @@ PanelWindow {
         const usage = Config.launcher.usage || {};
         let rows = apps.map(a => ({
                     "app": a,
+                    "base": score(a, q),
                     "s": score(a, q) + Math.min(30, (usage[a.id] || 0) * 2)
-                })).filter(r => r.s > 0);
+                })).filter(r => r.base > 0);   // frequent apps rank higher, but only when they match
         if (q)
             for (const p of providers)
                 if (p.global !== false)
                     rows = rows.concat(fromProvider(p, query.trim(), false));
+        // the calculator on top (2+2, 10 km in mi, 100 usd in rub) and settings among the apps
+        if (q) {
+            const calc = Calc.evaluate(query);
+            if (calc)
+                rows.push({
+                    "builtin": "calc",
+                    "calc": calc,
+                    "r": {
+                        "title": calc.title,
+                        "subtitle": calc.subtitle,
+                        "icon": "calc"
+                    },
+                    "s": 1000
+                });
+            if (Config.launcher.settings !== false && !calc) {
+                SettingsSearch.load();
+                for (const d of SettingsSearch.search(query, 5))
+                    rows.push({
+                        "builtin": "setting",
+                        "doc": d,
+                        "r": {
+                            "title": d.title,
+                            "subtitle": I18n.t("Настройки", "Settings") + (d.crumb ? " › " + d.crumb : ""),
+                            "icon": d.icon || "gear"
+                        },
+                        "s": Math.min(95, d.score / 6.3 * 100)
+                    });
+            }
+        }
         return rows.sort((x, y) => y.s - x.s || (x.app && y.app ? x.app.name.localeCompare(y.app.name) : 0)).slice(0, 60);
     }
 
     function activate(row) {
         if (row.app) {
             launch(row.app);
+            return;
+        }
+        if (row.builtin === "calc") {
+            Calc.copy(row.calc);
+            if (row.calc.copy)
+                Shell.launcherOpen = false;
+            return;
+        }
+        if (row.builtin === "setting") {
+            Shell.launcherOpen = false;
+            Qt.callLater(() => StartApps.openSetting(row.doc));
             return;
         }
         const keep = row.provider.activate(row.r.id, row.r);
@@ -228,7 +269,7 @@ PanelWindow {
             keepFocus: true
             width: parent.width
             icon: "search"
-            placeholder: I18n.t("Программа… ", "Application… ") + win.providers.filter(p => p.prefix).map(p => p.prefix + " …").concat([I18n.t("> команда", "> command")]).join(" · ")
+            placeholder: I18n.t("Программа… ", "Application… ") + win.providers.filter(p => p.prefix).map(p => p.prefix + " …").concat(Config.launcher.calc !== false ? ["2+2"] : []).concat([I18n.t("> команда", "> command")]).join(" · ")
             kind: "title"
             onEdited: {
                 win.query = text;

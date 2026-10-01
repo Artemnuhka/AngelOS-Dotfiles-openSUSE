@@ -32,6 +32,7 @@ Singleton {
     signal layoutSwitched(string name)
     signal configLoaded(bool failed)
     signal windowClosed(int id)
+    signal windowOpened(int id)
 
     function shortLayout(name) {
         if (!name)
@@ -282,6 +283,7 @@ Singleton {
         case "WindowOpenedOrChanged":
             {
                 const list = windows.filter(w => w.id !== d.window.id);
+                const isNew = list.length === windows.length;
                 list.push(d.window);
                 if (d.window.is_focused) {
                     focusedWindowId = d.window.id;
@@ -292,6 +294,8 @@ Singleton {
                             });
                 }
                 windows = list;
+                if (isNew && ready)
+                    windowOpened(d.window.id);
                 break;
             }
         case "WindowClosed":

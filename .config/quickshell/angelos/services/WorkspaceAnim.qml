@@ -242,6 +242,14 @@ Singleton {
                     const m = line.trim().match(/^ws ([0-9]{1,2}|up|down|prev)$/);
                     // Alt+Tab shares the socket (services/AltTab): one hop instead of `qs ipc`
                     const a = line.trim().match(/^alttab (next|prev|cancel)$/);
+                    // the lens at the pointer, too (services/Lens)
+                    const l = line.trim().match(/^lens (in|out|close|toggle|refresh)$/);
+                    if (l) {
+                        client.write("ok\n");
+                        client.flush();
+                        Lens.cmd(l[1], "");
+                        return;
+                    }
                     const ok = !!m || !!a && AltTab.ours;
                     client.write(ok ? "ok\n" : "err\n");
                     client.flush();

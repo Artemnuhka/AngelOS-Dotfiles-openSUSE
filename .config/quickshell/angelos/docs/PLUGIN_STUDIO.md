@@ -40,6 +40,34 @@
 Выключение режима разработчика скрывает мастер и отменяет запрос к ИИ,
 но установленные плагины продолжают работать.
 
+## Доработка готового плагина
+
+Свой плагин (из `~/.config/angelos/plugins`) можно менять прямо в системе:
+**Настройки → Плагины → «Доработать»** или блок **«Доработать готовый плагин»**
+в мастере.
+
+- **Сразу переделать** — пишешь, что поменять («добавь выбор цвета», «сделай
+  меньше»), ИИ возвращает обновлённые файлы. **Сначала обсудить** — сперва план
+  «что изменится», вопросы, потом «План подходит — переделать».
+- **Изменения**: список изменённых файлов (`+` добавлен, `~` изменён, `−` удалён)
+  и разница построчно (зелёное — добавлено, красное — убрано).
+- **Править вручную** — встроенный редактор: любой файл черновика, новый файл,
+  удаление; «Сохранить и проверить» сразу прогоняет проверки и песочницу.
+  Работает и для черновика нового плагина до установки.
+- **Обновить плагин** — прошлая версия уходит в
+  `~/.local/state/angelos/plugin-backups/<id>/` (последние 10), новая
+  ставится атомарно и **перезагружается без перезапуска оболочки** (QML грузит
+  её по новому пути `~/.cache/angelos/plugin-load/<id>.<n>`, поэтому кэш
+  компонентов не мешает). Можно дорабатывать дальше — следующая разница
+  считается от новой версии.
+- **Вернуть прошлую версию** — одной кнопкой; заменённая версия тоже
+  сохраняется (второе нажатие возвращает её обратно).
+- Картинки, звуки и другие файлы, которые мастер не редактирует, переносятся
+  как есть. Если плагин изменили на диске после начала доработки, обновление
+  остановится и попросит открыть его заново.
+- Кнопка **↻** у своего плагина в «Плагинах» перезагружает его файлы после
+  ручной правки во внешнем редакторе (режим разработчика не нужен).
+
 ## Модель, уровень, проверка
 
 - **Модель** выбирается карточками: для Claude Code — Haiku / Sonnet / Opus / Fable,
@@ -88,9 +116,9 @@ Python, JSON и shell. Проверка синтаксиса не гаранти
 правами текущего пользователя.
 
 Установка не заменяет существующий ID и не запускает установочные скрипты.
-После ручных правок нужно нажать **Проверить ещё раз**: установка сверяет
-файлы с просмотренным результатом. Сейчас мастер создаёт новые плагины;
-обновление уже установленного плагина под тем же ID выполняется вручную.
+После ручных правок во внешнем редакторе нужно нажать **Проверить ещё раз**:
+установка сверяет файлы с просмотренным результатом. Установленный плагин
+меняется через «Доработать» (см. выше) — с бэкапом и откатом.
 
 При ошибке синтаксиса доступно **Исправить с ИИ**. При неполном ответе
 увеличь лимит ответа или упрости задачу. Ошибка 401 означает отклонённый
@@ -131,8 +159,17 @@ Drafts are checked without executing them. The checks cover manifest structure,
 file paths, required entry points and QML/Python/JSON/shell syntax. They do not
 prove runtime correctness. Installed plugins run as your desktop user. Existing
 plugin IDs are never overwritten. After editing files externally, use
-**Recheck files** before installing. Studio creates new plugins; updating an
-installed ID is currently a manual operation.
+**Recheck files** before installing.
+
+**Improving an installed plugin**: Settings → Plugins → Improve (or the
+"Improve an installed plugin" list in Studio). "Change it now" applies a
+request directly; "Discuss first" plans the change. The Changes view lists
+added/changed/removed files with a line diff; "Edit by hand" is a built-in
+editor (save = recheck). "Update plugin" backs the old version up to
+`~/.local/state/angelos/plugin-backups/<id>/` (last 10), swaps the new one in
+atomically and hot-reloads it through a fresh load path (QML caches
+components by URL). "Restore previous version" undoes it (and can redo).
+Files Studio cannot edit ride along untouched.
 
 For “remaining Codex tokens,” Studio must clarify the actual metric and data
 source instead of inventing a subscription-balance API. Its own token counter

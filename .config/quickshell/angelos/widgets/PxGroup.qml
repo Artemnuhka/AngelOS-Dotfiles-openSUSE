@@ -83,6 +83,7 @@ Item {
 
     Column {
         id: col
+        readonly property bool fixedWidth: true // PxToggle wraps its label to fit
         visible: !root.folded
         x: Theme.pad
         y: head.height + Theme.u * 4

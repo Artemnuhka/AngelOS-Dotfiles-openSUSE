@@ -113,6 +113,20 @@ const icons = {
         "...o...",
         "...o..."
     ],
+    // the Start / launcher calculator
+    calc: [
+        "#########",
+        "#fffffff#",
+        "#f#####f#",
+        "#f#wwo#f#",
+        "#f#####f#",
+        "#fffffff#",
+        "#fwfwfof#",
+        "#fffffff#",
+        "#fwfwfxf#",
+        "#fffffff#",
+        "#########"
+    ],
     gear: [
         "....###....",
         ".##.#o#.##.",

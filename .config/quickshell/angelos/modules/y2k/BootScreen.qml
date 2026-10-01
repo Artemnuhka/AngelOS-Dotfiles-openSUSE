@@ -177,7 +177,6 @@ Scope {
                         anchors.horizontalCenter: parent.horizontalCenter
                         pixel: Theme.u * 3
                         fontSize: Math.round(Theme.sizeHuge * 1.6)
-                        variant: "angel"
                     }
                     PxText {
                         anchors.horizontalCenter: parent.horizontalCenter

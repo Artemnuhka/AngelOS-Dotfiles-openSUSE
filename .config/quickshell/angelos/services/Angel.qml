@@ -411,6 +411,7 @@ Singleton {
                             "icon": "chat",
                             "run": () => root.say(root.tr(Lines.demonTips[3]))
                         }, 16000);
+                        hellNews.restart();
                     });
                 } else {
                     root.breakScreen();
@@ -419,14 +420,34 @@ Singleton {
             }
         }
     }
-    // sun rays for the angel, broken glass for the demon — when she shows up
-    function effect() {
+    // after her intro: what hell did to the right-click menu and Settings (Y2K → Angel or demon)
+    Timer {
+        id: hellNews
+        interval: 16500
+        onTriggered: {
+            const menu = DeskMenu.hellish, book = Config.y2k.hellSettings === "grimoire";
+            if (!root.demon || (!menu && !book))
+                return;
+            const what = menu && book ? I18n.t("ПКМ по обоям теперь — " + DeskMenu.styleLabel(DeskMenu.style).toLowerCase() + ", а настройки — мой гримуар", "right-click on the wallpaper is a " + DeskMenu.styleLabel(DeskMenu.style).toLowerCase() + " now, and Settings are my grimoire") : menu ? I18n.t("ПКМ по обоям теперь — " + DeskMenu.styleLabel(DeskMenu.style).toLowerCase(), "right-click on the wallpaper is a " + DeskMenu.styleLabel(DeskMenu.style).toLowerCase() + " now") : I18n.t("настройки теперь — мой гримуар", "Settings are my grimoire now");
+            root.say(I18n.t("И да: ", "Oh, and ") + what + I18n.t(" 😈 Вернётся ангел — вернётся и твоё.", " 😈 When the angel's back, so is yours."), {
+                "label": I18n.t("Где это?", "Where is it?"),
+                "icon": "gear",
+                "run": () => Shell.openSettings("y2k")
+            }, 12000);
+        }
+    }
+    // sun rays for the angel, broken glass for the demon — when she shows up. `arriving`:
+    // she appears with the shell (every start, login, restart): the rays and the choir
+    // only the very first time (Config.y2k.raysSeen), the demon's cracks come back silently
+    function effect(arriving) {
         if (!fxHere())
             return;
         if (demon) {
             if (Config.y2k.cracks !== "off")
-                punched(screenName, "crack");
-        } else if (Config.y2k.heavenFx) {
+                punched(screenName, arriving ? "" : "crack");
+        } else if (Config.y2k.heavenFx && !(arriving && Config.y2k.raysSeen)) {
+            if (arriving)
+                Config.y2k.raysSeen = true;
             heaven(screenName);
         }
     }
@@ -485,7 +506,7 @@ Singleton {
     Timer {
         id: appear
         interval: 700
-        onTriggered: root.effect()
+        onTriggered: root.effect(true)
     }
 
     // ---- the demon's wallpaper: dark while she rules, yours with the angel ----

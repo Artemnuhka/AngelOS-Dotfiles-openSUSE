@@ -135,6 +135,12 @@ Item {
         anchors.centerIn: parent
         spacing: Theme.u * 10
 
+        AngelLogo {
+            visible: Config.lock.logo
+            anchors.horizontalCenter: parent.horizontalCenter
+            pixel: Theme.u * 2
+            fontSize: Theme.sizeHuge
+        }
         PxText {
             anchors.horizontalCenter: parent.horizontalCenter
             text: Qt.formatTime(clock.date, "HH") + (clock.date.getSeconds() % 2 || !root.reactions ? ":" : " ") + Qt.formatTime(clock.date, "mm")

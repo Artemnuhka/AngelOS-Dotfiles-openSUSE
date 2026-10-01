@@ -127,6 +127,68 @@ PxPage {
     }
 
     PxGroup {
+        title: I18n.t("Найти курсор встряхиванием", "Shake to find the pointer")
+        icon: "search"
+        width: parent.width
+        SettingRow {
+            label: I18n.t("Увеличивать при встряхивании", "Grow when shaken")
+            hint: CursorShake.status === "noperm" ? I18n.t("нет доступа к мыши: нужна группа input (как для Meta → «Пуск»), затем перезайди", "no access to the mouse: the input group is needed (like Meta → Start), then log in again") : CursorShake.status === "noevdev" ? I18n.t("не нашлось ни мыши, ни тачпада", "no mouse or touchpad found") : I18n.t("потряси мышкой — курсор ненадолго станет большим, как в macOS. В играх на весь экран не срабатывает.", "shake the mouse and the pointer grows for a moment, like on macOS. Not in fullscreen games.")
+            PxToggle {
+                checked: Config.cursor.shake
+                onToggled: c => Config.cursor.shake = c
+            }
+        }
+        SettingRow {
+            visible: Config.cursor.shake
+            label: I18n.t("Чувствительность", "Sensitivity")
+            hint: ({
+                    "low": I18n.t("только размашистая тряска", "only a big, wide shake"),
+                    "normal": I18n.t("несколько быстрых взмахов", "a few quick strokes"),
+                    "high": I18n.t("хватит лёгкого покачивания", "a light wiggle is enough")
+                })[Config.cursor.shakeSensitivity || "normal"] || ""
+            PxSegmented {
+                model: [
+                    {
+                        "label": I18n.t("Низкая", "Low"),
+                        "value": "low"
+                    },
+                    {
+                        "label": I18n.t("Обычная", "Normal"),
+                        "value": "normal"
+                    },
+                    {
+                        "label": I18n.t("Высокая", "High"),
+                        "value": "high"
+                    }
+                ]
+                currentValue: Config.cursor.shakeSensitivity || "normal"
+                onActivated: v => Config.cursor.shakeSensitivity = v
+            }
+        }
+        SettingRow {
+            visible: Config.cursor.shake
+            label: I18n.t("Во сколько раз", "How big")
+            hint: I18n.t("во сколько раз вырастает курсор", "how many times the pointer grows")
+            PxSlider {
+                width: parent.width
+                from: 2
+                to: 8
+                stepSize: 1
+                value: Config.cursor.shakeScale || 4
+                suffix: "×"
+                onReleased: v => Config.cursor.shakeScale = v
+            }
+        }
+        PxButton {
+            visible: Config.cursor.shake
+            compact: true
+            icon: "sparkle"
+            text: I18n.t("Показать", "Show me")
+            onClicked: CursorShake.demo()
+        }
+    }
+
+    PxGroup {
         title: I18n.t("Размер и совместимость", "Size and compatibility")
         icon: "gear"
         width: parent.width

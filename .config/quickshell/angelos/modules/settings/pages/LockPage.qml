@@ -91,6 +91,14 @@ PxPage {
             }
         }
         SettingRow {
+            label: I18n.t("Логотип", "Logo")
+            hint: I18n.t("логотип angelOS над часами (какой — Панель → Логотип)", "the angelOS logo above the clock (pick one in Bar → Logo)")
+            PxToggle {
+                checked: Config.lock.logo
+                onToggled: c => Config.lock.logo = c
+            }
+        }
+        SettingRow {
             id: streamRow
             label: I18n.t("NGO-стрим", "NGO stream")
             hint: I18n.t("LIVE, «зрители» и милый чат, который реагирует на ввод. Всё выдумано локально.", "LIVE badge, “viewers” and a cute chat reacting to typing. All made up locally.")
