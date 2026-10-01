@@ -59,7 +59,7 @@ else
 fi
 
 if command -v shellcheck >/dev/null 2>&1; then
-  if shellcheck -S warning "$ROOT/install.sh" "$ROOT/scripts/check.sh" "$ROOT/scripts/test-update.sh" \
+  if shellcheck -S warning "$ROOT/install.sh" "$ROOT/scripts/check.sh" "$ROOT/scripts/test-update.sh" "$ROOT/scripts/ci-local.sh" \
        "$ROOT/.config/quickshell/angelos/scripts/dotfiles-update.sh" "$ROOT/.config/quickshell/angelos/tests/updates/run.sh" &&
      shellcheck -s sh -S warning "$ROOT/.config/quickshell/angelos/bin/angelos"; then
     pass "shellcheck"

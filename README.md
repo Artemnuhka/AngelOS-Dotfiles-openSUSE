@@ -295,6 +295,8 @@ Run the repository check before installing. Besides syntax and hygiene checks it
 ./scripts/check.sh
 ```
 
+`./scripts/ci-local.sh` runs the GitHub check itself (`.github/workflows/angelos.yml`) in the same `archlinux` container with Docker or Podman — what passes there passes on GitHub.
+
 <details>
 <summary>♡ Prefer Noctalia?</summary>
 
@@ -412,6 +414,7 @@ Pictures/                    The three default wallpapers (the packs live in Pix
 packages/                    Arch, AUR and Flatpak package lists (angelos.txt, sddm.txt)
 sddm/                        SDDM pixel-cyberpunk theme and its config drop-in
 scripts/check.sh             Repository check, including end-to-end installer tests
+scripts/ci-local.sh          The GitHub check, run locally in its own container
 docs/screenshots/            Static preview images
 docs/demo/                   GIFs used in this README
 install.sh                   Installer with backups, profiles and a shell choice

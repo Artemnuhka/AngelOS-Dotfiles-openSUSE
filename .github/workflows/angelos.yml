@@ -42,9 +42,12 @@ jobs:
       # glyphs (the bundled Jacquard is Latin only) and the text-layout checks fail.
       # qt6-declarative also brings Qt 6 qmlformat (/usr/lib/qt6/bin), which Plugin
       # Studio's checks need; shellcheck and ripgrep make check.sh run in full.
+      # diffutils: the image has no diff/cmp, which the installer and the update
+      # tests use. scripts/ci-local.sh runs this job locally in the same image —
+      # the publish script and the pre-push hook do that before every push.
       - name: Packages
         run: |
-          pacman -Syu --noconfirm --needed git dbus python python-pillow python-numpy \
+          pacman -Syu --noconfirm --needed git dbus diffutils python python-pillow python-numpy \
             quickshell qt6-declarative qt6-5compat qt6-imageformats qt6-svg niri noto-fonts \
             shellcheck ripgrep
           test -x /usr/lib/qt6/bin/qmlformat
