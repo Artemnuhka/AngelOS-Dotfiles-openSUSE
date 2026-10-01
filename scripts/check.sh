@@ -3,7 +3,8 @@
 # throw-away $HOME and never touches your real configuration.
 #
 #   ./scripts/check.sh            everything
-#   SKIP_INSTALL_TEST=1 ./scripts/check.sh   static checks only
+#   SKIP_INSTALL_TEST=1 ./scripts/check.sh   static checks only (no installer, no update tests)
+#   REQUIRE_UI=1 ./scripts/check.sh          a missing quickshell fails the Updates UI test (CI)
 set -Eeuo pipefail
 
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
@@ -58,7 +59,9 @@ else
 fi
 
 if command -v shellcheck >/dev/null 2>&1; then
-  if shellcheck -S warning "$ROOT/install.sh" "$ROOT/scripts/check.sh"; then
+  if shellcheck -S warning "$ROOT/install.sh" "$ROOT/scripts/check.sh" "$ROOT/scripts/test-update.sh" \
+       "$ROOT/.config/quickshell/angelos/scripts/dotfiles-update.sh" "$ROOT/.config/quickshell/angelos/tests/updates/run.sh" &&
+     shellcheck -s sh -S warning "$ROOT/.config/quickshell/angelos/bin/angelos"; then
     pass "shellcheck"
   else
     fail "shellcheck"
@@ -244,7 +247,7 @@ else
     echo '{ "old": true }' >"$d/$ff"
     manifest="$d/.local/state/angelos/installed-files.sha256"
     sed -i "s|^[0-9a-f]*  $ff\$|$(sha256sum "$d/$ff" | cut -d' ' -f1)  $ff|" "$manifest"
-    install_case default
+    install_case default || fail "installer: update run with changed configs"
     if grep -q '// my own binds' "$d/.config/niri/cfg/keybinds.kdl" &&
        grep -q 'firefox.desktop' "$d/.config/mimeapps.list" &&
        [[ -f "$d/.local/state/angelos/kept-updates/.config/niri/cfg/keybinds.kdl" ]]; then
@@ -257,12 +260,26 @@ else
     else
       fail "installer: an update refreshes configs the user did not change"
     fi
-    echo 'output "X" { scale 2 }' >"$WORK/default/.config/niri/monitor.kdl"
-    install_case default
+    # (valid KDL: an invalid niri config now fails the installer)
+    echo 'output "X" { scale 2; }' >"$WORK/default/.config/niri/monitor.kdl"
+    install_case default || fail "installer: run with the user's monitor.kdl"
     if grep -q 'scale 2' "$WORK/default/.config/niri/monitor.kdl"; then
       pass "installer: existing monitor.kdl is preserved"
     else
       fail "installer: existing monitor.kdl is preserved"
+    fi
+    # A config niri refuses: the installer says so and exits with an error instead of "Done".
+    if command -v niri >/dev/null 2>&1; then
+      echo 'output "X" { scale 2 }' >"$WORK/default/.config/niri/monitor.kdl"
+      if install_case default; then
+        fail "installer: a config niri refuses fails the run"
+      elif grep -q 'failed validation' "$WORK/default.log"; then
+        pass "installer: a config niri refuses fails the run"
+      else
+        fail "installer: a config niri refuses fails the run (no validation message)"
+      fi
+    else
+      skip "installer: a config niri refuses fails the run (niri is not installed)"
     fi
   else
     fail "installer: default run"; sed 's/^/    /' "$WORK/default.log" >&2
@@ -382,6 +399,21 @@ else
     if install_case bad "$bad"; then fail "installer rejects: $bad"; else pass "installer rejects: $bad"; fi
     rm -rf "${WORK:?}/bad"
   done
+fi
+
+# ── Settings → Updates: update, failures, restore ────────────────────────────
+
+# A throw-away $HOME and a local origin (scripts/test-update.sh): a good update,
+# a failing installer, a niri config niri refuses, niri missing, a snapshot that
+# cannot be written, restores that work, conflict and fail — plus the UI's view.
+if [[ "${SKIP_INSTALL_TEST:-0}" == 1 ]]; then
+  skip "update tests (SKIP_INSTALL_TEST=1)"
+elif bash "$ROOT/scripts/test-update.sh" >"$WORK/update.log" 2>&1; then
+  grep -E '^\[update\] SKIP|^  ✕' "$WORK/update.log" || true
+  pass "updates: success, failures, restore and the Settings → Updates UI"
+else
+  sed 's/^/    /' "$WORK/update.log" >&2
+  fail "updates: scripts/test-update.sh"
 fi
 
 # ── Hygiene ──────────────────────────────────────────────────────────────────

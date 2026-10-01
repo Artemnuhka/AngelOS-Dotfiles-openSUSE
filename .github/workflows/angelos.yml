@@ -1,18 +1,34 @@
-# angelOS checks on every push and pull request that touches the shell or niri:
+# angelOS checks on every push and pull request that touches the shell, the
+# configs, the installer, the check scripts or the package lists:
 # the offscreen UI self-test (every settings page, preview scene, search speed,
-# the right-click crash guard) and `niri validate` of the shipped config.
+# the right-click crash guard), `niri validate` of the shipped config, and the
+# repository check (scripts/check.sh: syntax, shellcheck, Plugin Studio, the
+# installer end to end, Settings → Updates update/failure/restore with its UI).
+# Any failing check fails the job.
 name: angelOS
 
 on:
   push:
     paths:
-      - ".config/quickshell/angelos/**"
-      - ".config/niri/**"
+      - ".config/**"
+      - ".local/**"
+      - "install.sh"
+      - ".install"
+      - "scripts/**"
+      - "packages/**"
+      - "sddm/**"
+      - "Pictures/**"
       - ".github/workflows/angelos.yml"
   pull_request:
     paths:
-      - ".config/quickshell/angelos/**"
-      - ".config/niri/**"
+      - ".config/**"
+      - ".local/**"
+      - "install.sh"
+      - ".install"
+      - "scripts/**"
+      - "packages/**"
+      - "sddm/**"
+      - "Pictures/**"
       - ".github/workflows/angelos.yml"
   workflow_dispatch:
 
@@ -23,12 +39,19 @@ jobs:
     steps:
       # noto-fonts: the image has no fonts at all, and a real install always has this
       # Cyrillic fallback (packages/pacman.txt) — without it Russian labels get no
-      # glyphs (the bundled Jacquard is Latin only) and the text-layout checks fail
+      # glyphs (the bundled Jacquard is Latin only) and the text-layout checks fail.
+      # qt6-declarative also brings Qt 6 qmlformat (/usr/lib/qt6/bin), which Plugin
+      # Studio's checks need; shellcheck and ripgrep make check.sh run in full.
       - name: Packages
         run: |
           pacman -Syu --noconfirm --needed git dbus python python-pillow python-numpy \
-            quickshell qt6-declarative qt6-5compat qt6-imageformats qt6-svg niri noto-fonts
+            quickshell qt6-declarative qt6-5compat qt6-imageformats qt6-svg niri noto-fonts \
+            shellcheck ripgrep
+          test -x /usr/lib/qt6/bin/qmlformat
       - uses: actions/checkout@v5
+      # the checkout belongs to another user than the container's root
+      - name: Git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: UI self-test (offscreen)
         run: bash .config/quickshell/angelos/scripts/test-ui.sh .config/quickshell/angelos
       - name: niri validate
@@ -36,3 +59,5 @@ jobs:
           T="$(mktemp -d)"; mkdir -p "$T/.config"; cp -r .config/niri "$T/.config/"
           grep -rlF '@HOME@' "$T/.config/niri" | xargs -r sed -i "s#@HOME@#$T#g"
           HOME="$T" XDG_CONFIG_HOME="$T/.config" niri validate -c "$T/.config/niri/config.kdl"
+      - name: Repository checks (scripts/check.sh)
+        run: REQUIRE_UI=1 bash scripts/check.sh

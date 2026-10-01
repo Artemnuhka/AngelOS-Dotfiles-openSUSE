@@ -306,7 +306,9 @@ Run the repository check before installing. Besides syntax and hygiene checks it
 
 ## ✧ Updating
 
-With angelOS: **Settings → Updates** checks the repository you installed from, shows what is new and, on a click, runs `git pull` and the installer without packages (a snapshot of your configs is taken first). It can also check once a day and only notify you.
+With angelOS: **Settings → Updates** checks the repository you installed from, shows what is new and, on a click, runs `git pull` and the installer without packages. It can also check once a day and only notify you.
+
+Before anything changes, every file the installer may write is copied to `~/.local/state/angelos/backups/<date>-update/` and read back; if that copy fails, nothing is updated. An update counts as installed only when the installer, the niri wiring and `niri validate` all pass. If one of them fails, the page says which step failed and where the snapshot is, and offers **Restore the state before the update**. Restoring only undoes what that update changed: files you changed again since then stay as they are and are listed as conflicts, and files the update created are removed. After that, niri's config is validated and the repository goes back to the old commit, so the update is offered again. From a terminal: `~/.config/quickshell/angelos/scripts/dotfiles-update.sh --restore <snapshot>`.
 
 Installs made before this page existed need one manual update to get it:
 

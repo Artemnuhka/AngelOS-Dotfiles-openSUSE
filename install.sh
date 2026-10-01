@@ -32,6 +32,11 @@
 #   INSTALL_FLATPAK=0|1            install packages/flatpak-apps.txt
 #   OVERWRITE_CONFIGS=0|1          1 = replace config files you changed too (backed up);
 #                                  default 0 keeps them (see below)
+#   VALIDATE_NIRI=1|0              check the installed config with `niri validate` (default 1;
+#                                  a failure ends the run with an error). Settings → Updates
+#                                  passes 0 and validates itself, after wiring the shell
+#   DOTFILES_STAMP=YYYYMMDD-HHMMSS suffix of this run's *.bak.<stamp> backups (default: now);
+#                                  Settings → Updates passes the stamp of its snapshot
 #
 # Every file that gets replaced is first moved to  name.bak.YYYYMMDD-HHMMSS.
 # Re-running the installer is safe: unchanged files are left alone.
@@ -45,7 +50,8 @@ set -Eeuo pipefail
 
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 HOME_DIR="${HOME:?HOME is not set}"
-STAMP="$(date +%Y%m%d-%H%M%S)"
+STAMP="${DOTFILES_STAMP:-$(date +%Y%m%d-%H%M%S)}"
+VALIDATE_NIRI="${VALIDATE_NIRI:-1}"
 VOXTYPE_VERSION="${VOXTYPE_VERSION:-1.1.0}"
 VOXTYPE_FORCE="${VOXTYPE_FORCE:-0}"
 
@@ -130,6 +136,9 @@ confirm() {
   answer="${answer:-$default}"
   [[ "$answer" =~ ^([yYдД]|yes|да|Да)$ ]]
 }
+
+[[ "$STAMP" =~ ^[0-9]{8}-[0-9]{6}(-[0-9]+)?$ ]] || die "DOTFILES_STAMP must look like 20260101-120000 (got: $STAMP)"
+[[ "$VALIDATE_NIRI" == 0 || "$VALIDATE_NIRI" == 1 ]] || die "VALIDATE_NIRI must be 0 or 1"
 
 # ── Keyboard layouts ─────────────────────────────────────────────────────────
 
@@ -881,13 +890,21 @@ install_shell() {
   fi
 }
 
+# A config niri refuses would leave the next login without a desktop: the run
+# ends with an error (after the summary) instead of "Done".
+NIRI_INVALID=0
 validate() {
-  command -v niri >/dev/null 2>&1 || return 0
-  if niri validate -c "$HOME_DIR/.config/niri/config.kdl" >/dev/null 2>&1; then
+  local out
+  [[ "$VALIDATE_NIRI" == 1 ]] || return 0
+  if ! command -v niri >/dev/null 2>&1; then
+    warn "$(_ 'niri is not installed: the Niri config was NOT validated' 'niri не установлен: конфиг Niri НЕ проверен')"
+    return 0
+  fi
+  if out="$(niri validate -c "$HOME_DIR/.config/niri/config.kdl" 2>&1)"; then
     say "$(_ 'Niri config is valid' 'Конфиг Niri валиден')"
   else
-    warn "$(_ 'Niri config failed validation; see: niri validate -c ~/.config/niri/config.kdl' \
-               'Конфиг Niri не прошёл проверку; смотрите: niri validate -c ~/.config/niri/config.kdl')"
+    printf '%s\n' "$out" | tail -n 20 >&2
+    NIRI_INVALID=1
   fi
 }
 
@@ -977,4 +994,6 @@ install_sddm
 enable_services
 validate
 summary
+((NIRI_INVALID == 0)) || die "$(_ 'Niri config failed validation; see: niri validate -c ~/.config/niri/config.kdl' \
+                                   'Конфиг Niri не прошёл проверку; смотрите: niri validate -c ~/.config/niri/config.kdl')"
 restart_shell
