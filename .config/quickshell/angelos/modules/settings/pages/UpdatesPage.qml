@@ -11,7 +11,7 @@ PxPage {
     id: page
 
     heading: I18n.t("Обновления", "Updates")
-    subtitle: I18n.t("angelOS обновляется из репозитория dotfiles, из которого его установили: git pull и установщик без пакетов. Перед этим снимок конфигов, заменённые файлы остаются как *.bak.", "angelOS updates from the dotfiles repository it was installed from: git pull and the installer without packages. A snapshot of your configs is taken first; replaced files stay as *.bak.")
+    subtitle: I18n.t("angelOS обновляется из репозитория dotfiles, из которого его установили: git pull и установщик без пакетов. Сначала снимок всех файлов, которые он может заменить, — если что-то пойдёт не так, отсюда же можно вернуть как было. Конфиги, которые ты менял, установщик не трогает.", "angelOS updates from the dotfiles repository it was installed from: git pull and the installer without packages. First a snapshot of every file it may replace — if something goes wrong, you can go back from here. Configs you changed are left alone.")
 
     Component.onCompleted: {
         Updates.find();
@@ -64,6 +64,14 @@ PxPage {
                 text: Updates.state === "checking" ? I18n.t("проверяю…", "checking…") : Updates.error ? "✕ " + Updates.error : Updates.available ? I18n.t("доступно изменений: ", "changes available: ") + Updates.behind : I18n.t("у тебя последняя версия ♡", "you are up to date ♡")
             }
         }
+        // stopped before the snapshot: nothing was changed, but say why
+        PxText {
+            visible: Updates.lastRun === "failed" && !Updates.canRestore && !!Updates.failure
+            width: parent.width
+            wrapMode: Text.Wrap
+            color: Theme.danger
+            text: "✕ " + Updates.failure
+        }
         PxText {
             visible: !Updates.trusted && !!Updates.repo
             width: parent.width
@@ -108,7 +116,7 @@ PxPage {
             width: parent.width
             wrapMode: Text.Wrap
             color: Theme.accent
-            text: I18n.t("Новая версия установлена, но работает ещё прошлая — она загрузится после перезапуска оболочки или следующего входа.", "The new version is installed, but the previous one is still running: it loads after a shell restart or the next login.")
+            text: Updates.restored ? I18n.t("Прежняя версия возвращена на диск, но в памяти ещё та, что была запущена, — перезапусти оболочку.", "The previous version is back on disk, but the one in memory is still running — restart the shell.") : I18n.t("Новая версия установлена, но работает ещё прошлая — она загрузится после перезапуска оболочки или следующего входа.", "The new version is installed, but the previous one is still running: it loads after a shell restart or the next login.")
         }
         SettingRow {
             label: I18n.t("Проверять раз в день", "Check once a day")
@@ -116,6 +124,64 @@ PxPage {
             PxToggle {
                 checked: Config.updates.autoCheck
                 onToggled: c => Config.updates.autoCheck = c
+            }
+        }
+    }
+
+    // the last attempt went wrong: what, where its snapshot is, the way back
+    PxGroup {
+        id: failedGroup
+        visible: Updates.canRestore || Updates.lastStatus === "restored" && Updates.conflicts.length > 0
+        title: Updates.lastStatus === "restored" ? I18n.t("Возвращено как было", "Restored") : Updates.lastStatus === "restore-failed" ? I18n.t("Вернуть не получилось", "The restore failed") : I18n.t("Обновление не установлено", "The update is not installed")
+        icon: Updates.lastStatus === "restored" ? "heart" : "warn"
+        width: parent.width
+
+        PxText {
+            visible: Updates.lastStatus !== "restored"
+            width: parent.width
+            wrapMode: Text.Wrap
+            color: Theme.danger
+            text: "✕ " + (Updates.lastStatus === "restore-failed" ? "" : Updates.stageText(Updates.failedStage) + (Updates.failure && Updates.failure !== Updates.stageText(Updates.failedStage) ? ": " : "")) + (Updates.failure && Updates.failure !== Updates.stageText(Updates.failedStage) ? Updates.failure : "")
+        }
+        PxText {
+            visible: Updates.lastStatus !== "restored"
+            width: parent.width
+            wrapMode: Text.Wrap
+            text: Updates.lastStatus === "restore-failed" ? I18n.t("Снимок цел, ничего из него не потеряно. Подробности — в журнале ниже; можно поправить и попробовать ещё раз.", "The snapshot is intact, nothing from it is lost. Details are in the log below; fix it and try again.") : I18n.t("Часть файлов могла уже смениться. Перед обновлением всё, что оно трогает, сохранено — можно вернуть систему к состоянию до этой попытки. Файлы, которые ты успел изменить после неё, останутся как есть.", "Some files may already have changed. Everything the update touches was saved first — you can put the system back to how it was before this attempt. Files you changed after it stay as they are.")
+        }
+        SettingRow {
+            label: I18n.t("Снимок", "Snapshot")
+            hint: I18n.t("резервная копия до обновления", "the copy taken before the update")
+            PxText {
+                width: parent.width
+                wrapMode: Text.WrapAnywhere
+                kind: "mono"
+                text: Updates.backupDir
+            }
+        }
+        PxButton {
+            visible: Updates.canRestore
+            icon: "refresh"
+            accent: true
+            enabled: !Updates.busy
+            text: Updates.state === "restoring" ? I18n.t("возвращаю…", "restoring…") : I18n.t("Вернуть как было до обновления", "Restore the state before the update")
+            onClicked: Updates.restore()
+        }
+        PxText {
+            visible: Updates.conflicts.length > 0
+            width: parent.width
+            wrapMode: Text.Wrap
+            color: Theme.accent3
+            text: I18n.t("Эти файлы изменились уже после обновления — оставлены как есть (версия до обновления лежит в снимке):", "These files changed after the update — kept as they are (the version from before is in the snapshot):")
+        }
+        Repeater {
+            model: Updates.conflicts
+            PxText {
+                required property string modelData
+                width: parent.width
+                elide: Text.ElideMiddle
+                kind: "mono"
+                text: "• " + modelData.replace(Config.home + "/", "~/")
             }
         }
     }

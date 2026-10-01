@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """Switch the desktop shell between Noctalia and angelOS.
 
-  switch.py angelos [--no-restart]   patch niri + app themes for angelOS, start it
+  switch.py angelos [--no-restart] [--no-validate]
+                                     patch niri + app themes for angelOS, start it;
+                                     --no-validate: the caller runs `niri validate` itself
+                                     and undoes a failure (Settings → Updates), so no
+                                     fallback to Noctalia here
   switch.py noctalia                 restore files from the last switch backup, start Noctalia
   switch.py status
 
@@ -140,7 +144,7 @@ def patch_rules(t):
     return t.rstrip() + "\n" + RULES
 
 
-def to_angelos(restart=True):
+def to_angelos(restart=True, validate=True):
     backup("switch")
     # theme files first: niri must never include a missing file
     subprocess.run([sys.executable, str(SHELL / "scripts/render-templates.py"), str(SHELL / "templates/palette-default.json")], check=False)
@@ -157,13 +161,14 @@ def to_angelos(restart=True):
     edit(HOME / ".config/alacritty/alacritty.toml", lambda t: t.replace("themes/noctalia.toml", "themes/angelos.toml"))
     for g in ("gtk-3.0", "gtk-4.0"):
         edit(HOME / f".config/{g}/gtk.css", lambda t: t.replace('@import url("noctalia.css");', '@import url("angelos.css");'))
-    r = subprocess.run(["niri", "validate"], capture_output=True, text=True)
-    if r.returncode != 0:
+    r = subprocess.run(["niri", "validate"], capture_output=True, text=True) if validate else None
+    if r and r.returncode != 0:
         log("niri validate НЕ прошёл — откатываю")
         print(r.stderr)
         to_noctalia(restart=False)
         sys.exit(1)
-    log("niri: конфиг валиден")
+    if r:
+        log("niri: конфиг валиден")
     MARK.parent.mkdir(parents=True, exist_ok=True)
     MARK.write_text("angelos\n")
     if restart:
@@ -233,7 +238,7 @@ def to_noctalia(restart=True):
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else "status"
     if cmd == "angelos":
-        to_angelos(restart="--no-restart" not in sys.argv)
+        to_angelos(restart="--no-restart" not in sys.argv, validate="--no-validate" not in sys.argv)
     elif cmd == "noctalia-forward":
         to_noctalia_forward()
     elif cmd == "noctalia":

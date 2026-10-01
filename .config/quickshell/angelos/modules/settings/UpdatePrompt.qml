@@ -57,7 +57,7 @@ PanelWindow {
         anchors.centerIn: parent
         width: Theme.u * 200
         height: titleHeight + col.implicitHeight + Theme.pad * 2 + Theme.u * 8
-        title: I18n.t("angelOS обновлён ♡", "angelOS is updated ♡")
+        title: Updates.restored ? I18n.t("angelOS: прежняя версия ♡", "angelOS: the previous version ♡") : I18n.t("angelOS обновлён ♡", "angelOS is updated ♡")
         icon: "download"
         onCloseClicked: win.answer(false)
 
@@ -95,13 +95,13 @@ PanelWindow {
                     width: parent.width - Theme.u * 30
                     wrapMode: Text.Wrap
                     kind: "title"
-                    text: I18n.t("Новая версия установлена", "The new version is installed") + (Updates.landed > 0 ? I18n.t(" (изменений: ", " (changes: ") + Updates.landed + ")" : "")
+                    text: Updates.restored ? I18n.t("Возвращено как было до обновления", "Restored to how it was before the update") : I18n.t("Новая версия установлена", "The new version is installed") + (Updates.landed > 0 ? I18n.t(" (изменений: ", " (changes: ") + Updates.landed + ")" : "")
                 }
             }
             PxText {
                 width: parent.width
                 wrapMode: Text.Wrap
-                text: I18n.t("Сейчас работает ещё прошлая — она в памяти. Перезагрузить оболочку? Окна и программы останутся открытыми, панель пропадёт на пару секунд.", "The previous one is still running from memory. Restart the shell now? Windows and apps stay open; the bar disappears for a couple of seconds.")
+                text: Updates.restored ? I18n.t("Оболочка запущена с файлами того обновления. Перезагрузить её? Окна и программы останутся открытыми.", "The shell was started with that update's files. Restart it? Windows and apps stay open.") : I18n.t("Сейчас работает ещё прошлая — она в памяти. Перезагрузить оболочку? Окна и программы останутся открытыми, панель пропадёт на пару секунд.", "The previous one is still running from memory. Restart the shell now? Windows and apps stay open; the bar disappears for a couple of seconds.")
             }
             PxText {
                 width: parent.width

@@ -70,7 +70,36 @@ save_env() { python3 "$SHELL_DIR/scripts/session-env.py" "$1" "$RUN_DIR/session.
 
 case "$1" in
   ""|help|-h|--help) sed -n '2,6p' "$0"; exec qs -c angelos ipc show ;;
-  run)     shell_env; exec qs -c angelos -n ;;
+  run)
+    shell_env
+    # under the service, a watchdog for a shell that stops answering (see guard below)
+    if [ "${ANGELOS_SERVICE:-}" = 1 ] && [ "$(cat "$CONF_DIR/guard" 2>/dev/null | tr -cd 'a-z')" != off ]; then
+      "$0" guard "$$" </dev/null &
+    fi
+    exec qs -c angelos -n ;;
+  # A hung main thread (2026-10-01: a Qt socket notifier spun on a closed fd, the
+  # shell froze and flooded its log in /run at ~6 MB/s) answers no IPC, so even
+  # `angelos quit` cannot stop it. Three missed probes in a row (about 15 s)
+  # → SIGABRT: Quickshell writes a crash report with the stack and the log tail
+  # (~/.cache/quickshell/crashes, `angelos report`) and starts itself again in the
+  # same process. Off with `echo off > ~/.config/angelos/guard`.
+  guard)
+    pid="${2:?pid}" misses=0 first="${ANGELOS_GUARD_FIRST:-25}" tick="${ANGELOS_GUARD_TICK:-3}" probe_timeout="${ANGELOS_GUARD_TIMEOUT:-2}"
+    sleep "$first"
+    while kill -0 "$pid" 2>/dev/null; do
+      if timeout "$probe_timeout" "$(qs_bin)" ipc --pid "$pid" show >/dev/null 2>&1; then
+        misses=0
+      else
+        misses=$((misses + 1))
+      fi
+      if [ "$misses" -ge 3 ]; then
+        echo "angelOS guard: pid $pid has not answered IPC for ~15 s, SIGABRT (crash report + restart)" >&2
+        kill -ABRT "$pid" 2>/dev/null
+        misses=0
+        sleep "$first"
+      fi
+      sleep "$tick"
+    done ;;
   start)
     if use_service; then
       # started by niri at login: its environment is what the shell should have
@@ -103,11 +132,13 @@ case "$1" in
   # ExecStop of the service: a clean exit, so Quickshell stops its helper processes
   quit)
     [ -n "${2:-}" ] || exit 0
-    "$(qs_bin)" kill --pid "$2" >/dev/null 2>&1
-    for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+    # a hung shell never answers, and the client would wait for it past TimeoutStopSec
+    timeout 2 "$(qs_bin)" kill --pid "$2" >/dev/null 2>&1
+    for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
       kill -0 "$2" 2>/dev/null || exit 0
       sleep 0.2
-    done ;;
+    done
+    kill -TERM "$2" 2>/dev/null ;;
   # ExecStopPost: helpers left behind by a hard kill (their parent is gone)
   reap)
     cg="/sys/fs/cgroup$(sed -n 's/^0:://p' /proc/self/cgroup)"
@@ -115,8 +146,11 @@ case "$1" in
     for p in $(cat "$cg/cgroup.procs" 2>/dev/null); do
       [ "$p" = "$$" ] && continue
       cmd="$(tr '\0' ' ' < "/proc/$p/cmdline" 2>/dev/null)" || continue
+      # the shell's own long-running helpers (night light, the sleep watch and its
+      # inhibitor, the guard); anything else in here is left alone
       case "$cmd" in
-        *"$SHELL_DIR/scripts/"*|*"$SHELL_DIR/plugins/"*|cava\ *angelos*|*/cava\ *angelos*) kill "$p" 2>/dev/null ;;
+        *"$SHELL_DIR/scripts/"*|*"$SHELL_DIR/plugins/"*|cava\ *angelos*|*/cava\ *angelos*|*"$SHELL_DIR/bin/angelos guard "*|\
+        wlsunset\ *|*/wlsunset\ *|*"gdbus monitor --system --dest org.freedesktop.login1"*|*systemd-inhibit\ *--who=angelOS*) kill "$p" 2>/dev/null ;;
       esac
     done ;;
   status)
