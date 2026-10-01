@@ -1,10 +1,10 @@
 #!/bin/sh
 # angelOS owner check: is the GitHub account logged in here (gh) an admin of the
-# private admin repository? Owner features (services/Owner) and the owner's publish
+# dotfiles repository? Owner features (services/Owner) and the owner's publish
 # script switch on only then — the owner/ folder and the marker file alone are not
 # enough, anyone could copy those.
 #
-#   owner-check.sh <admin repo url>   prints one line:
+#   owner-check.sh <repo url>   prints one line:
 #     admin <login>    gh says this account administers the repo (remembered)
 #     cached <login>   gh could not ask (offline, no gh), but it did within 14 days
 #     denied <login>   gh answered: no admin rights / no such repo for this account

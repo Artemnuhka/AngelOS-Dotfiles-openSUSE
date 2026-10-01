@@ -37,6 +37,12 @@ done < <(grep -rlE '^\s*(PanelWindow|FloatingWindow|PopupWindow)\s*\{' --include
 if out=$(python3 -m py_compile "$DIR"/scripts/*.py 2>&1); then ok "scripts/*.py compile"; else bad "python: $out"; fi
 find "$DIR/scripts" -name __pycache__ -type d -exec rm -rf {} + 2>/dev/null
 
+# the text-layout checks need real glyphs: with no system font at all (a bare CI
+# image) Russian labels have no width, and toggle-wrap fails for no visible reason
+if command -v fc-list >/dev/null && [[ -z "$(fc-list 2>/dev/null | head -n1)" ]]; then
+  bad "no system fonts (fc-list is empty): install noto-fonts, angelOS's Cyrillic fallback"
+fi
+
 # a short runtime dir: Quickshell's IPC socket path must fit in 108 bytes
 T="$(mktemp -d /tmp/aos-test.XXXXXX)"
 trap 'rm -rf "$T"' EXIT

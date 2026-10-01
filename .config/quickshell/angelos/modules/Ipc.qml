@@ -28,7 +28,7 @@ IpcHandler {
     function startMenu(screen: string): void {
         Shell.toggleStart(screen);
     }
-    // the owner check: GitHub's answer for the admin repo (services/Owner)
+    // the owner check: GitHub's answer for the dotfiles repo (services/Owner)
     function owner(): string {
         return (Owner.check || "not asked") + (Owner.login ? " " + Owner.login : "") + (Owner.enabled ? " · owner features on" : " · owner features off");
     }

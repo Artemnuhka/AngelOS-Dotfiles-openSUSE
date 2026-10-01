@@ -7,10 +7,10 @@ import qs.config
 
 // Owner-only features (dotfiles pull/publish) exist only when ALL of this holds:
 //   <shell>/owner/                  — never published (see owner/checks.sh)
-//   ~/.config/angelos/owner         — marker with `remote=<git url>` and `admin=<private
-//                                     admin repo url>`, never published
+//   ~/.config/angelos/owner         — marker with `remote=<public dotfiles repo url>` (and
+//                                     optionally `admin=<private admin repo url>`), never published
 //   the user check                  — the GitHub account logged in here (gh) administers
-//                                     that admin repo (scripts/owner-check.sh; GitHub's
+//                                     the dotfiles repo (scripts/owner-check.sh; GitHub's
 //                                     answer, remembered 14 days for offline use)
 // In the public version none of it exists, so none of this shows up.
 Singleton {
@@ -22,6 +22,9 @@ Singleton {
     property bool hasMarker: false
     property string remote: ""
     property string admin: ""
+    // whose admin rights make the owner: the public dotfiles repo (only its owner
+    // administers it), the admin repo for an old marker without remote=
+    readonly property string checkRepo: remote || admin
     // the user check: "admin" | "cached" | "denied" | "unknown" | "" (not asked yet)
     property string check: ""
     property string login: ""
@@ -29,14 +32,14 @@ Singleton {
     readonly property bool enabled: hasDir && hasMarker && verified
     // ask GitHub again (the Dotfiles page has a button; also every 6 hours)
     function recheck() {
-        if (!hasDir || !hasMarker || !admin)
+        if (!hasDir || !hasMarker || !checkRepo)
             return;
         verify.running = false;
         verify.running = true;
     }
     Process {
         id: verify
-        command: ["sh", Quickshell.shellDir + "/scripts/owner-check.sh", root.admin]
+        command: ["sh", Quickshell.shellDir + "/scripts/owner-check.sh", root.checkRepo]
         stdout: StdioCollector {
             onStreamFinished: {
                 const [state, who] = text.trim().split(" ");
@@ -46,7 +49,7 @@ Singleton {
         }
     }
     onHasDirChanged: recheck()
-    onAdminChanged: recheck()
+    onCheckRepoChanged: recheck()
     Timer {
         interval: 6 * 3600 * 1000
         running: root.hasDir && root.hasMarker
@@ -75,6 +78,7 @@ Singleton {
         }
         onLoadFailed: {
             root.hasMarker = false;
+            root.remote = "";
             root.admin = "";
             root.check = "";
         }
