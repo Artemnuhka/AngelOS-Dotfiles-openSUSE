@@ -79,12 +79,12 @@ PxPage {
             "label": I18n.t("Виджеты на столе", "Desktop widgets")
         }
     ]
-    // four most visited pages (not wallpaper: it has its own button); the
+    // four most visited pages (not wallpaper or updates: they have their own buttons); the
     // defaults fill up while there is no history yet
     readonly property var frequent: {
         const usage = Config.settingsUi.usage || {};
         const all = Shell.settingsView ? Shell.settingsView.allPages : [];
-        const top = Object.keys(usage).filter(id => id !== "wallpaper" && usage[id] >= 2 && all.some(p => p.id === id)).sort((a, b) => usage[b] - usage[a]).slice(0, 4).map(id => {
+        const top = Object.keys(usage).filter(id => id !== "wallpaper" && id !== "updates" && usage[id] >= 2 && all.some(p => p.id === id)).sort((a, b) => usage[b] - usage[a]).slice(0, 4).map(id => {
             const p = all.find(x => x.id === id);
             return {
                 "id": id,
@@ -131,6 +131,13 @@ PxPage {
                 enabled: Config.appearance.px > 1
                 text: I18n.t("Мельче", "Smaller")
                 onClicked: Config.appearance.px = Math.max(1, Config.appearance.px - 1)
+            }
+            // Updates sits under «Ещё» otherwise: keep it one click away
+            PxButton {
+                icon: "download"
+                accent: Updates.available
+                text: Updates.available ? I18n.t("Обновление готово ♡", "Update available ♡") : I18n.t("Обновление", "Update")
+                onClicked: Shell.settingsPage = "updates"
             }
             // the pages you open most (Config.settingsUi.usage); until there is a
             // history: sound, shortcuts, widgets

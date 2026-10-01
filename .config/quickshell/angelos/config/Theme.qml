@@ -377,6 +377,57 @@ Singleton {
     readonly property color panel: Qt.alpha(face, panelAlpha)
     readonly property color panelAlt: Qt.alpha(faceAlt, panelAlpha)
 
+    // ---- the two dimensions: heaven and hell ----
+    // The desktop widgets live in one of them: heaven (the usual look) or hell while
+    // the demon rules (Y2K → Angel or demon → Widgets in hell). DesktopWidgets sets
+    // `realm` midway through the widgets' burn, so a widget can simply bind to it:
+    //   color: Theme.hell ? Theme.hellEmber : Theme.accent
+    // Plugins declare that they draw both in manifest.json: "realms": ["heaven", "hell"].
+    property string realm: "heaven"
+    readonly property bool hell: realm === "hell"
+    // hell's palette: obsidian, blood, embers and grimoire gold (fixed, not from the flavour)
+    readonly property color hellBody: "#160609"
+    readonly property color hellFace: "#2a0b10"
+    readonly property color hellFaceAlt: "#3d1016"
+    readonly property color hellSunken: "#0c0305"
+    readonly property color hellEdge: "#050102"
+    readonly property color hellHi: "#6e1a21"
+    readonly property color hellLo: "#0a0204"
+    readonly property color hellBlood: "#b3142b"
+    readonly property color hellEmber: "#ff6a1a"
+    readonly property color hellFlame: "#ffb02e"
+    readonly property color hellGold: "#d9a441"
+    readonly property color hellText: "#f3d9c0"
+    readonly property color hellTextDim: "#a8857a"
+    readonly property color hellPanel: Qt.alpha(hellBody, Math.max(0.82, panelAlpha))
+    // Jacquard 24, a pixel blackletter (OFL, data/fonts): Latin only — Cyrillic falls
+    // back to the body font. Crisp at 24 px and its multiples (Theme.hellPx).
+    readonly property string fontHell: hellFont.status === FontLoader.Ready ? hellFont.name : fontTitle
+    function hellPx(n) {
+        return 24 * Math.max(1, Math.round(n || 1));
+    }
+    // Jacquard has Latin only: use it for text that is all ASCII, the title font otherwise
+    function latin(text) {
+        return /^[\x00-\x7F]*$/.test(String(text));
+    }
+    function roman(n) {
+        n = Math.floor(n);
+        if (n <= 0)
+            return "N";                     // nulla, the medieval zero
+        const r = [[1000, "M"], [900, "CM"], [500, "D"], [400, "CD"], [100, "C"], [90, "XC"], [50, "L"], [40, "XL"], [10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"]];
+        let s = "";
+        for (const [v, c] of r)
+            while (n >= v) {
+                s += c;
+                n -= v;
+            }
+        return s;
+    }
+    FontLoader {
+        id: hellFont
+        source: Qt.resolvedUrl("../data/fonts/Jacquard24-Regular.ttf")
+    }
+
     // ---- metrics ----
     readonly property int u: Math.max(1, Config.appearance.px)   // one art pixel
     readonly property int fs: Math.max(1, Config.appearance.fontScale)

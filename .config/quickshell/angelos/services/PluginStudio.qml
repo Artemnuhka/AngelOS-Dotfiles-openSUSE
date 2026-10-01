@@ -15,6 +15,7 @@ Singleton {
     readonly property string target: editing ? session.target || "" : ""
     property var backups: ({})          // user plugin id -> saved earlier versions
     property string editRequest: ""     // Settings → Plugins → Improve: Studio opens it
+    property string hellRequest: ""     // …and then makes its hell version (Settings → Plugins → Hell version)
     property var keys: ({openai: false, anthropic: false})
     property var cli: ({})              // {"claude-cli": {installed, loggedIn, method}, "codex-cli": {…}}
     property var models: ({})           // provider -> [{id, label, efforts, default, speed}]
@@ -158,6 +159,16 @@ Singleton {
     function applyChange(prompt) {
         return send("generate", {prompt: prompt});
     }
+    // ---- heaven and hell (docs/STUDIO_CONTRACT.md, "Two realms") ----
+    // An installed plugin of yours whose desktop widget only knows heaven: in hell
+    // the shell just re-inks it. makeHell() asks the AI for its own hell look.
+    function needsHell(p) {
+        return !!p && !p.bundled && !!p.desktopWidget && !(p.realms || []).includes("hell");
+    }
+    readonly property string hellPrompt: I18n.t("Сделай адскую версию виджета рабочего стола (контракт, раздел «Two realms»): добавь в manifest.json \"realms\": [\"heaven\", \"hell\"], а виджету — свой адский облик, привязанный к Theme.hell. Те же данные и кнопки на тех же местах, палитра Theme.hell…, шрифт Theme.fontHell для латиницы, PxBox/PxButton с hell: Theme.hell, размер почти тот же. Ад — не перекраска: придумай, чем этот виджет станет в аду. Остальное не меняй; в README опиши оба вида.", "Make the hell version of the desktop widget (contract section “Two realms”): add \"realms\": [\"heaven\", \"hell\"] to manifest.json and give the widget its own hell look bound to Theme.hell. Same data and controls in the same places, the Theme.hell… palette, Theme.fontHell for Latin text, PxBox/PxButton with hell: Theme.hell, about the same size. Hell is not a recolour: decide what this widget becomes in hell. Change nothing else; describe both looks in the README.")
+    function makeHell() {
+        return editing && applyChange(hellPrompt);
+    }
     function saveFile(path, content) {
         return send("save_file", {path: path, content: content});
     }
@@ -181,7 +192,7 @@ Singleton {
         if (!draft)
             return;
         _addDesktop = addDesktop;
-        _screen = Shell.focusedScreen ? Shell.focusedScreen.name : "";
+        _screen = Shell.primaryName;
         send("install", {digest: draft.digest});
     }
     function activateInstalled() {
@@ -278,6 +289,17 @@ Singleton {
             root.busy = false;
             if (!root._received)
                 root.error = I18n.t("Мастер завершился без ответа. Проверьте наличие Python 3.", "Studio exited without a response. Check that Python 3 is installed.");
+            // Settings → Plugins → Hell version: the plugin is open, now the request
+            if (root.hellRequest && root.action === "edit_start") {
+                const forHell = root.hellRequest === root.target;
+                root.hellRequest = "";
+                if (forHell && root.editing && !root.error) {
+                    if (root.hasKey)
+                        Qt.callLater(root.makeHell);
+                    else
+                        root.composer = root.hellPrompt;
+                }
+            }
         }
         onRunningChanged: {
             if (!running && root.busy) {

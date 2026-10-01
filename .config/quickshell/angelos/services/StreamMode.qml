@@ -16,10 +16,22 @@ Singleton {
     property bool obsUp: false
     property bool obsLive: false
     property bool obsAuth: false             // OBS asks for a password we do not have
-    // switched off by hand while OBS is live: stays off until this stream ends
-    property bool suppressed: false
+    // switched off by hand while OBS is live: stays off until this stream ends — also
+    // through a shell restart in the middle of it (Config.stream.suppressed)
+    readonly property bool suppressed: !!Config.stream.suppressed
+    function unsuppress() {
+        if (Config.stream.suppressed)
+            Config.stream.suppressed = false;
+    }
     onObsLiveChanged: if (!obsLive)
-        suppressed = false
+        unsuppress()
+    // OBS answered but isn't streaming: the stream that was switched off is over
+    Timer {
+        id: notLive
+        interval: 6000
+        onTriggered: if (!root.obsLive)
+            root.unsuppress()
+    }
     readonly property bool active: Config.ready && (Config.stream.manual || (Config.stream.auto && obsLive && !suppressed))
     readonly property var screens: Config.stream.screens || []
 
@@ -40,6 +52,8 @@ Singleton {
     }
 
     function set(mode) {
+        if (mode !== "toggle")
+            unsuppress();
         if (mode === "on")
             Config.stream.manual = true;
         else if (mode === "off") {
@@ -51,7 +65,7 @@ Singleton {
         } else if (mode === "toggle") {
             const on = !active;
             Config.stream.manual = on;
-            suppressed = !on && obsLive;
+            Config.stream.suppressed = !on && obsLive;
         }
     }
 
@@ -84,13 +98,18 @@ Singleton {
                 if (line === "up") {
                     root.obsUp = true;
                     root.obsAuth = false;
+                    notLive.restart();
                 } else if (line === "down") {
                     root.obsUp = false;
                     root.obsLive = false;
-                } else if (line === "live")
+                    root.unsuppress();
+                } else if (line === "live") {
+                    notLive.stop();
                     root.obsLive = true;
-                else if (line === "off")
+                } else if (line === "off") {
                     root.obsLive = false;
+                    root.unsuppress();
+                }
                 else if (line === "auth")
                     root.obsAuth = true;
             }

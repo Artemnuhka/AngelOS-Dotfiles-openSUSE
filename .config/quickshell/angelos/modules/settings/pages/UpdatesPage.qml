@@ -96,11 +96,19 @@ PxPage {
                 onClicked: Updates.update()
             }
             PxButton {
-                visible: Updates.state === "done"
+                visible: Updates.needsRestart
+                accent: true
                 icon: "power"
                 text: I18n.t("Перезапустить оболочку", "Restart the shell")
                 onClicked: Updates.restartShell()
             }
+        }
+        PxText {
+            visible: Updates.needsRestart
+            width: parent.width
+            wrapMode: Text.Wrap
+            color: Theme.accent
+            text: I18n.t("Новая версия установлена, но работает ещё прошлая — она загрузится после перезапуска оболочки или следующего входа.", "The new version is installed, but the previous one is still running: it loads after a shell restart or the next login.")
         }
         SettingRow {
             label: I18n.t("Проверять раз в день", "Check once a day")

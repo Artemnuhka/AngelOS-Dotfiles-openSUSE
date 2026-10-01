@@ -479,7 +479,7 @@ FloatingWindow {
             heading: I18n.t("Рабочий стол", "Desktop")
             subtitle: I18n.t("Виджеты на обоях — таскаются за заголовок, добавляются и убираются через ПКМ → Вид.", "Widgets on the wallpaper — drag them by the title, add or remove via right-click → View.")
             PxGroup {
-                title: I18n.t("Виджеты на ", "Widgets on ") + (Shell.focusedScreen ? Shell.focusedScreen.name : "")
+                title: I18n.t("Виджеты на ", "Widgets on ") + Shell.primaryName
                 icon: "layers"
                 width: parent.width
                 Repeater {
@@ -487,8 +487,8 @@ FloatingWindow {
                     PxCheck {
                         required property var modelData
                         text: modelData.label
-                        checked: DesktopWidgets.has(modelData.type, Shell.focusedScreen ? Shell.focusedScreen.name : "")
-                        onToggled: DesktopWidgets.toggle(modelData.type, Shell.focusedScreen ? Shell.focusedScreen.name : "")
+                        checked: DesktopWidgets.has(modelData.type, Shell.primaryName)
+                        onToggled: DesktopWidgets.toggle(modelData.type, Shell.primaryName)
                     }
                 }
             }

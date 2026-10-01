@@ -38,12 +38,17 @@ PxPage {
         }
         SettingRow {
             label: I18n.t("На каком экране", "Screen")
+            hint: I18n.t("главный выбирается в «Мониторе»; там же — её трещины и лучи", "The main one is picked on the Monitor page; her cracks and rays go along")
             PxCombo {
                 width: parent.width
                 model: [
                     {
-                        "label": I18n.t("Где фокус", "Where the focus is"),
+                        "label": I18n.t("Главный (", "Main (") + Shell.primaryName + ")",
                         "value": ""
+                    },
+                    {
+                        "label": I18n.t("Где фокус", "Where the focus is"),
+                        "value": "focus"
                     }
                 ].concat(page.screenNames.map(n => ({
                             "label": n,
@@ -313,6 +318,24 @@ PxPage {
                 ]
                 currentValue: Config.y2k.hellSettings || ""
                 onActivated: v => Config.y2k.hellSettings = v
+            }
+        }
+        SettingRow {
+            label: I18n.t("Виджеты в аду", "Widgets in hell")
+            hint: I18n.t("когда бьётся стекло, виджеты сгорают и встают адскими: обсидиан, пламя, римские часы, огненные столбы; с ангелом пепел сдувает ветром. Свои плагины без адской версии перекрашиваются", "When the glass breaks the widgets burn and rise from hell: obsidian, flames, a Roman clock, columns of fire; with the angel the wind blows the ash away. Plugins without a hell look of their own are re-inked")
+            PxToggle {
+                checked: Config.y2k.hellWidgets
+                onToggled: c => Config.y2k.hellWidgets = c
+            }
+        }
+        SettingRow {
+            label: I18n.t("Курсор в аду", "Cursor in hell")
+            hint: Config.cursor.hell ? I18n.t("пока правит демоница, курсор — ", "While the demon rules the pointer is ") + ((Cursors.entryOf(Config.cursor.hell) || {}).name || Config.cursor.hell) + I18n.t("; шесть адских тем — на странице «Курсор»", "; six hell themes are on the Cursor page") : I18n.t("демоница не трогает курсор", "The demon leaves the cursor alone")
+            PxButton {
+                compact: true
+                icon: "cursor"
+                text: I18n.t("Выбрать", "Choose")
+                onClicked: Shell.settingsPage = "cursor"
             }
         }
         SettingRow {

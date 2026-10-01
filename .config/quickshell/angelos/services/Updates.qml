@@ -27,6 +27,11 @@ Singleton {
     property string error: ""
     readonly property bool busy: state === "checking" || state === "updating" || state === "cloning"
     readonly property bool available: behind > 0
+    // a new version landed on disk, but this shell keeps running the old one from
+    // memory: UpdatePrompt asks to restart now or leave it for the next login
+    property bool needsRestart: false
+    property bool askRestart: false
+    property int landed: 0                        // commits the last update brought
 
     function find() {
         if (!finder.running)
@@ -57,7 +62,16 @@ Singleton {
         runner.running = true;
     }
     function restartShell() {
+        askRestart = false;
+        // `angelos restart` restarts the live instance: never from a dev one
+        if (Shell.dev) {
+            console.log("angelOS dev: restart skipped");
+            return;
+        }
         Quickshell.execDetached([Quickshell.shellDir + "/bin/angelos", "restart"]);
+    }
+    function restartLater() {
+        askRestart = false;
     }
 
     Process {
@@ -109,7 +123,18 @@ Singleton {
     Process {
         id: runner
         stdout: SplitParser {
-            onRead: line => root.log = root.log.concat([line]).slice(-500)
+            onRead: line => {
+                // "UPDATED <old> <new> <commits>": the script's last word, not for the log
+                if (line.startsWith("UPDATED ")) {
+                    const p = line.split(" ");
+                    if (p[1] !== p[2]) {
+                        root.landed = parseInt(p[3]) || 0;
+                        root.needsRestart = true;
+                    }
+                    return;
+                }
+                root.log = root.log.concat([line]).slice(-500);
+            }
         }
         stderr: SplitParser {
             onRead: line => root.log = root.log.concat([line]).slice(-500)
@@ -121,8 +146,13 @@ Singleton {
             if (code === 0 && !cloned) {
                 // the installer ships default binds / cursor: put the user's choices back
                 WorkspaceAnim.reapply();
-                if (Config.cursor.theme)
+                if (Cursors.hellOn)
+                    Cursors.put(Config.cursor.hell, Config.cursor.size);
+                else if (Config.cursor.theme)
                     Cursors.apply(Config.cursor.theme, Config.cursor.size);
+                // also after a "nothing new" run while an earlier update still waits
+                if (root.needsRestart)
+                    root.askRestart = true;
             }
             root.find();
             Qt.callLater(root.check);

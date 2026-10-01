@@ -47,6 +47,7 @@ ShellRoot {
     Lock {}
     PolkitDialog {}
     SettingsWindow {}
+    UpdatePrompt {}
     SetupWizard {}
     TourOverlay {}
     PluginHost {}

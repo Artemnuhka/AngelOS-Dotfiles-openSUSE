@@ -25,6 +25,8 @@ import qs.widgets
 //   bar       bar widgets (Wi-Fi, Bluetooth, wired, tray, desk sprites) load, their panels open
 //   wrap      long switch labels wrap inside a narrow group instead of running past it
 //   start     every Start look (the bodies of StartOverlay) loads, searches, walks with the keys, Esc closes
+//   hell      the built-in desktop widgets and a hell window frame load in heaven and in hell,
+//             the widgets burn over and back, the six hell cursors are in the catalog
 //   rmb       a right click into the window's corner pixel does not crash Qt
 // Prints "TEST <name> PASS|FAIL [detail]" and "TEST-PAGE <id>" markers (the
 // script ties log errors to the page that caused them), "TEST DONE <n>" last.
@@ -169,6 +171,26 @@ Scope {
                 }
             }
         }
+        // the desktop widgets' content in heaven and in hell (Theme.realm), and a hell frame
+        // (hidden: cava must not start its audio tap here)
+        Loader {
+            id: hellStage
+            property string kind: ""
+            visible: false
+            active: kind !== "" && kind !== "frame"
+            source: active ? Quickshell.shellDir + "/modules/desktop/widgets/" + kind + "Widget.qml" : ""
+        }
+        Loader {
+            id: frameStage
+            active: hellStage.kind === "frame"
+            sourceComponent: PxWindow {
+                hell: true
+                compact: true
+                title: "clock.exe"
+                width: Theme.u * 120
+                height: Theme.u * 60
+            }
+        }
         // the Start looks outside their layer-shell overlay
         Loader {
             id: startStage
@@ -275,6 +297,10 @@ Scope {
     property var startStyles: []
     property var startSeen: []
     property bool startTried: false
+    property string startShot: ""
+    property var hellSteps: []
+    property var hellSeen: []
+    property bool hellLoaded: false
     property var altTabSeen: []
     property string altTabShot: ""
     readonly property string shots: Quickshell.env("ANGELOS_TEST_SHOTS") || ""
@@ -573,6 +599,7 @@ Scope {
             if (!startStage.style) {
                 startStage.style = startStyles[startSeen.length];
                 startTried = false;
+                started = Date.now();
                 return;
             }
             // a tick after the keys: callLater work (focus) is done, unload it
@@ -581,13 +608,32 @@ Scope {
                 if (startSeen.length < startStyles.length)
                     return;
                 report("start-styles", startSeen.every(x => x.indexOf("FAIL") < 0), startSeen.join(", "));
-                phase = "rmb";
+                console.log("TEST-PAGE hell-widgets");
+                hellSteps = [];
+                for (const k of ["Clock", "Sysmon", "Cava", "NowPlaying", "frame"])
+                    for (const r of ["heaven", "hell"])
+                        hellSteps.push([k, r]);
+                hellSeen = [];
+                phase = "hell";
                 return;
             }
-            startTried = true;
             const it = startStage.item;
-            let closed = 0;
             const ok = startStage.status === Loader.Ready && !!it && it.width > 0 && it.height > 0;
+            // ANGELOS_TEST_SHOTS=<dir>: a picture of each look as it opens
+            if (ok && shots && !startShot) {
+                startShot = "wait";
+                const name = shots + "/start-" + startStage.style + ".png";
+                it.grabToImage(r => {
+                    r.saveToFile(name);
+                    root.startShot = "done";
+                });
+                return;
+            }
+            if (startShot === "wait" && Date.now() - started < 3000)
+                return;
+            startShot = "";
+            startTried = true;
+            let closed = 0;
             if (ok) {
                 const onClose = () => closed++;
                 it.closeRequested.connect(onClose);
@@ -613,6 +659,38 @@ Scope {
                 it.closeRequested.disconnect(onClose);
             }
             startSeen.push(startStage.style + (ok && closed > 0 ? " " + Math.round(it.width) + "×" + Math.round(it.height) : " FAIL" + (ok ? " (Esc did not close)" : "")));
+            return;
+        }
+        if (phase === "hell") {
+            // one widget and realm per tick: load it, next tick measure it
+            const st = hellSteps[hellSeen.length];
+            if (!hellLoaded) {
+                Theme.realm = st[1];
+                hellStage.kind = st[0];
+                hellLoaded = true;
+                return;
+            }
+            const stage = st[0] === "frame" ? frameStage : hellStage;
+            const it = stage.item;
+            hellSeen.push(st[0] + "/" + st[1] + (stage.status === Loader.Ready && it && (it.implicitWidth > 0 || it.width > 0) ? "" : " FAIL"));
+            hellStage.kind = "";
+            hellLoaded = false;
+            if (hellSeen.length < hellSteps.length)
+                return;
+            Theme.realm = "heaven";
+            report("hell-widgets", hellSeen.every(x => x.indexOf("FAIL") < 0), hellSeen.filter(x => x.indexOf("FAIL") >= 0).join(", ") || hellSeen.length + " loads");
+            // a burn there and back (DesktopWidgets.burnPreview) must land in heaven again
+            DesktopWidgets.burnPreview("hell");
+            started = Date.now();
+            phase = "hell-burn";
+            return;
+        }
+        if (phase === "hell-burn") {
+            if ((DesktopWidgets.burning || Theme.realm !== "heaven") && Date.now() - started < DesktopWidgets.burnMs * 2 + 2500)
+                return;
+            const hellCursors = Cursors.hellish.length;
+            report("hell-burn", !DesktopWidgets.burning && Theme.realm === "heaven" && hellCursors === 6, "burnt over and back in " + (Date.now() - started) + " ms, " + hellCursors + " hell cursors");
+            phase = "rmb";
             return;
         }
         if (phase === "rmb") {

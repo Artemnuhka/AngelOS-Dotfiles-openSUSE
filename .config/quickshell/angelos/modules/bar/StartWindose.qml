@@ -517,6 +517,10 @@ Rectangle {
                         "run": () => Shell.openSettings("")
                     },
                     {
+                        "icon": "download",
+                        "run": () => Shell.openSettings("updates")
+                    },
+                    {
                         "icon": "lock",
                         "run": () => Shell.lock()
                     },

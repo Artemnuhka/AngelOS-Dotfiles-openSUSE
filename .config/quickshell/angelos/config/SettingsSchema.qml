@@ -213,6 +213,7 @@ JsonAdapter {
         property int monitorHeight: 760
         property string monitorPlace: "center" // center | corner (bottom-right, next to the tray)
         property bool nautilusDefaults: false // angelOS Nautilus extensions + prefs applied once
+        property string primaryScreen: ""   // the main screen (widgets, the angel, the lock…); "" = the widest
     }
 
     property JsonObject cursor: JsonObject {
@@ -222,6 +223,9 @@ JsonAdapter {
         property bool shake: true           // shake the mouse to find the pointer: it grows for a moment (macOS)
         property string shakeSensitivity: "normal" // low | normal | high — how hard a shake has to be
         property real shakeScale: 4         // how big it grows, × the cursor size
+        property string hell: "angelOS-Hell" // the demon's cursor while she rules (a hell theme), "" = she leaves it alone
+        property string beforeHell: ""      // never picked one: the cursor she replaced, put back by the angel
+        property int beforeHellSize: 0
     }
 
     property JsonObject updates: JsonObject {
@@ -239,7 +243,7 @@ JsonAdapter {
 
     property JsonObject y2k: JsonObject {
         property bool helper: true          // the pixel angel in a screen corner
-        property string helperScreen: ""   // "" = the main screen
+        property string helperScreen: ""   // "" = the main screen (Shell.primaryScreen), "focus" = where the focus is
         property string helperTips: "rare" // off | rare | often
         property bool helperGreeted: false
         property bool sparkles: true        // sparkle trail over the bare desktop
@@ -279,6 +283,7 @@ JsonAdapter {
         property bool jokes: true           // she jokes now and then, not only tips
         property string hellMenu: "pentagram" // the right-click menu while the demon rules ("" = the usual one)
         property string hellSettings: "grimoire" // Settings while the demon rules: grimoire (a book) | "" (the usual window)
+        property bool hellWidgets: true     // desktop widgets burn over to their hell look while the demon rules
         property string angelLook: "glitch" // glitch (cracked halo, pictures) | chibi (the first pictures) | adult (30×40 pixels) | mini (the first 20×21)
         property string demonLook: "glitch" // the same for the demon (glitch: the sleepless neon one)
     }
@@ -303,6 +308,7 @@ JsonAdapter {
         property bool dnd: true             // Do not disturb while live
         property bool effects: true         // no sparkles, loading screen or angel/demon effects on the streamed screens
         property bool dndSet: false         // stream mode switched DND on (switched off again when the stream ends)
+        property bool suppressed: false     // switched off by hand during this stream (kept through a shell restart)
     }
 
     property JsonObject settingsUi: JsonObject {

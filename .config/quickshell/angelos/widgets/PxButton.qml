@@ -12,6 +12,7 @@ Item {
     property bool danger: false
     property bool flat: false
     property bool compact: false
+    property bool hell: false              // hell's palette (Theme.realm): obsidian, blood, bone text
     property int iconPixel: Theme.u
     property bool middleButton: false      // also report middle clicks (task buttons close windows with them)
     property string kind: "body"
@@ -32,7 +33,8 @@ Item {
         anchors.fill: parent
         visible: !root.flat || mouse.containsMouse || root.checked
         sunken: root.down
-        color: root.accent ? (mouse.containsMouse ? Qt.lighter(Theme.accent, 1.08) : Theme.accent) : root.danger && mouse.containsMouse ? Theme.danger : root.checked ? Theme.mix(Theme.face, Theme.accent, Theme.dark ? 0.4 : 0.3) : mouse.containsMouse ? Theme.mix(Theme.face, Theme.accent, 0.12) : Theme.face
+        hell: root.hell
+        color: root.hell ? (root.accent ? (mouse.containsMouse ? Qt.lighter(Theme.hellBlood, 1.15) : Theme.hellBlood) : root.checked ? Theme.mix(Theme.hellFace, Theme.hellBlood, 0.45) : mouse.containsMouse ? Theme.mix(Theme.hellFace, Theme.hellEmber, 0.2) : Theme.hellFace) : root.accent ? (mouse.containsMouse ? Qt.lighter(Theme.accent, 1.08) : Theme.accent) : root.danger && mouse.containsMouse ? Theme.danger : root.checked ? Theme.mix(Theme.face, Theme.accent, Theme.dark ? 0.4 : 0.3) : mouse.containsMouse ? Theme.mix(Theme.face, Theme.accent, 0.12) : Theme.face
     }
 
     Row {
@@ -47,14 +49,14 @@ Item {
             name: root.icon || "heart"
             pixel: root.iconPixel
             anchors.verticalCenter: parent.verticalCenter
-            ink: root.accent ? Theme.selectText : (Theme.dark ? Theme.text : Theme.edge)
+            ink: root.hell ? Theme.hellText : root.accent ? Theme.selectText : (Theme.dark ? Theme.text : Theme.edge)
         }
         PxText {
             visible: root.text !== ""
             text: root.text
             kind: root.kind
             anchors.verticalCenter: parent.verticalCenter
-            color: root.accent ? Theme.selectText : root.danger && mouse.containsMouse ? "#ffffff" : Theme.text
+            color: root.hell ? Theme.hellText : root.accent ? Theme.selectText : root.danger && mouse.containsMouse ? "#ffffff" : Theme.text
             font.bold: root.checked
         }
     }

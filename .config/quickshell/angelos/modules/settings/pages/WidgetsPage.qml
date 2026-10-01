@@ -14,7 +14,7 @@ PxPage {
     subtitle: I18n.t("Окошки на рабочем столе. Таскаются за заголовок; двойной клик по заголовку — режим правки с крестиками. Ещё их можно добавить через ПКМ → Вид.", "Little windows on the desktop. Drag them by the title; double-click the title for edit mode. You can also add them via right-click → View.")
 
     property string newType: DesktopWidgets.types.length ? DesktopWidgets.types[0].type : ""
-    property string newScreen: Shell.focusedScreen ? Shell.focusedScreen.name : (Quickshell.screens[0] ? Quickshell.screens[0].name : "")
+    property string newScreen: Shell.primaryName || (Quickshell.screens[0] ? Quickshell.screens[0].name : "")
     readonly property var screenModel: Quickshell.screens.map(s => ({
                 "label": s.name,
                 "value": s.name

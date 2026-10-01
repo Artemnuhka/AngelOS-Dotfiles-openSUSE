@@ -124,6 +124,9 @@ IpcHandler {
             Angel.effect();
         else if (debug && cmd === "hellwall")
             return Angel.newHell() ? "ok" : "not now (angel, off, or your own picture)";
+        // the widgets burn over to the other side and back: "realm [hell|heaven]"
+        else if (debug && cmd === "realm")
+            return "burning to " + DesktopWidgets.burnPreview(arg);
         else if (cmd !== "status")
             return "summon | tip | joke | hint | ask <text> | plea | menu [main|ask] | status" + (Owner.enabled ? " | angel" : "");
         return JSON.stringify({
@@ -131,6 +134,8 @@ IpcHandler {
             "shown": Angel.shown,
             "screen": Angel.screenName,
             "transition": Angel.transition,
+            "realm": Theme.realm + (DesktopWidgets.burning ? " → " + DesktopWidgets.burnTo : ""),
+            "cursor": Cursors.active,
             "pleas": Angel.pleasCounted + "/" + Angel.pleasNeeded,
             "pranks": (Config.y2k.pranks || []).map(p => p.id + (p.undone ? " (undone)" : "")),
             "text": Angel.talking ? Angel.text : ""
@@ -179,7 +184,7 @@ IpcHandler {
     function widget(type: string, screen: string): string {
         if (!DesktopWidgets.typeInfo(type))
             return "unknown widget: " + type + " (" + DesktopWidgets.types.map(t => t.type).join(", ") + ")";
-        DesktopWidgets.toggle(type, screen || (Shell.focusedScreen ? Shell.focusedScreen.name : ""));
+        DesktopWidgets.toggle(type, screen || Shell.primaryName);
         return "ok";
     }
     function widgetEdit(): void {
@@ -418,6 +423,31 @@ IpcHandler {
         else if (action === "check")
             Owner.jobs.publish(true);
         return "ok";
+    }
+    // Settings → Updates: check | update | prompt (the restart question an update ends with) | later | status
+    function updates(cmd: string): string {
+        if (cmd === "check") {
+            Updates.check();
+            return "checking";
+        }
+        if (cmd === "update") {
+            Updates.update();
+            return Updates.repo ? "updating " + Updates.repo : "no repository";
+        }
+        if (cmd === "prompt") {
+            Updates.askRestart = true;
+            return "ok";
+        }
+        if (cmd === "later") {
+            Updates.restartLater();
+            return "ok";
+        }
+        return JSON.stringify({
+            "state": Updates.state,
+            "behind": Updates.behind,
+            "needsRestart": Updates.needsRestart,
+            "repo": Updates.repo
+        });
     }
     // used by ~/.local/bin/polkit-agent-guard to hand the session slot back to angelOS
     function polkitRegister(): void {

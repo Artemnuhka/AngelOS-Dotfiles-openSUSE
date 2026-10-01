@@ -20,6 +20,7 @@ The plan must specify:
 - Actual data sources, update frequency, empty/loading/error/offline states.
 - Settings, actions, dependencies and limitations; list "none" if none.
 - How it starts, stops, and releases timers/processes when disabled.
+- For a desktop widget: its heaven look and its hell look (section "Two realms").
 
 For a vague request, choose sensible defaults and explain them. Prefer a
 desktop widget at 150 × 80 art pixels (300 × 160 screen pixels at Theme.u=2).
@@ -75,6 +76,45 @@ stderr should be consumed; failures visible in UI; no unbounded histories.
 Never interpolate prompt/user data into shell commands. No sudo, destructive
 commands, access to unrelated private files, or reading Studio credentials.
 Explain in the plan any access to network, local files or command execution.
+
+## Two realms: heaven and hell
+
+angelOS has two dimensions. Heaven is the usual look. When the user throws the
+angel into hell the demon rules: the wallpaper becomes pixel hell and the desktop
+widgets burn and rise again in their hell versions (Y2K → Angel or demon →
+Widgets in hell). Every desktop widget you make is designed for both:
+
+- manifest.json declares `"realms": ["heaven", "hell"]`. Without it the shell
+  re-inks the widget with a shader in hell — a fallback, not acceptable for a
+  new widget.
+- `Theme.realm` is "heaven" or "hell"; `Theme.hell` is true in hell. Bind to
+  them, never cache them. The flip happens in the middle of the burn; the host
+  draws the burn and the hell window frame (obsidian, flames on top, blood
+  drips) — never animate the switch, never draw your own frame or flames
+  around the content.
+- Hell is not a recolour: give the hell version its own character with the same
+  data and the same controls in the same places — a clock in Roman numerals
+  (`Theme.roman(n)`), a CPU meter called "Heat", counters as souls, a progress
+  bar as a burning fuse, a cover as a burning record. Keep the size within
+  ±20 % so the widget doesn't jump. Labels stay `I18n.t("…", "…")` in both.
+- Hell palette (fixed, not from the flavour): `Theme.hellBody`, `hellFace`,
+  `hellFaceAlt`, `hellSunken` (obsidian), `hellEdge`, `hellHi`, `hellLo`
+  (bevels), `hellBlood`, `hellEmber`, `hellFlame`, `hellGold`, `hellText`
+  (bone), `hellTextDim`. In heaven keep the theme tokens (`Theme.accent` …).
+- Font: `Theme.fontHell` (Jacquard 24, a pixel blackletter) has Latin only —
+  use it when `Theme.latin(text)`, at `Theme.hellPx(n)` px (24·n); other
+  scripts keep the normal fonts.
+- Native controls follow with `PxBox { hell: Theme.hell }` and
+  `PxButton { hell: Theme.hell }`. PxIcon names "skull", "pentagram" and "fire"
+  suit hell.
+- Same timers and processes in both realms; a small stepped animation in hell
+  (≥ 120 ms a step, only while visible) is fine, per-frame loops are not.
+- Bar widgets and other entry points may stay heaven-only.
+- The README describes both looks.
+
+A request to "make the hell version" of an installed plugin (EDIT MODE) adds
+exactly this: `realms`, the hell look of the desktop widget bound to
+`Theme.hell`, and a README note — nothing else changes.
 
 ## Data honesty
 
@@ -161,3 +201,6 @@ that is already installed and in use; its current files are supplied.
 9. `plugin` may arrive after creation: `plugin ? plugin.get("k", d) : d`.
 10. manifest.json is valid JSON, file names match exactly (case-sensitive),
     `enabledByDefault` is false, and the entry point of the plan's kind exists.
+11. A desktop widget declares `"realms": ["heaven", "hell"]` and has a real hell
+    look bound to `Theme.hell` (palette, font and controls as in "Two realms"),
+    readable in both realms. The check loads it in heaven and in hell.

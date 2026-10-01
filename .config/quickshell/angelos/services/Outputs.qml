@@ -7,8 +7,46 @@ import Quickshell.Io
 import qs.config
 
 // Monitor configuration through niri: live apply via `niri msg output`, persist to monitor.kdl.
+// The main screen: angelOS's own (Config.system.primaryScreen → Shell.primaryScreen), and
+// niri focuses it at login (`focus-at-startup`, scripts/primary-output.py).
 Singleton {
     id: root
+
+    property var niriFocused: []      // outputs with focus-at-startup in niri's config
+    property string primaryLog: ""
+    // "" = automatic (the widest screen); niri is left as it is then
+    function setPrimary(name) {
+        Config.system.primaryScreen = name;
+        primaryLog = "";
+        if (!name || Shell.dev)
+            return;
+        primary.command = ["python3", Quickshell.shellDir + "/scripts/primary-output.py", "set", name];
+        primary.running = true;
+    }
+    Process {
+        id: primary
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const r = JSON.parse(text);
+                    if (r.error)
+                        root.primaryLog = I18n.t("niri: ", "niri: ") + r.error;
+                    else if (r.focused)
+                        root.niriFocused = r.focused;
+                    else if (r.ok)
+                        root.primaryLog = r.changed.length ? I18n.t("niri теперь фокусирует его при входе (", "niri now focuses it at login (") + r.changed.join(", ") + ")" : "";
+                } catch (e) {}
+            }
+        }
+        onExited: if (command[2] === "set")
+            Qt.callLater(root.primaryStatus)
+    }
+    function primaryStatus() {
+        if (primary.running)
+            return;
+        primary.command = ["python3", Quickshell.shellDir + "/scripts/primary-output.py", "status"];
+        primary.running = true;
+    }
 
     readonly property string monitorFile: Config.home + "/.config/niri/monitor.kdl"
     property var outputs: ({})        // name -> niri output json
@@ -75,6 +113,7 @@ Singleton {
 
     function refresh() {
         query.running = true;
+        primaryStatus();
     }
     Component.onCompleted: refresh()
 
@@ -166,6 +205,8 @@ Singleton {
             out += "    position x=" + Math.round(d.x) + " y=" + Math.round(d.y) + "\n";
             if (d.vrr)
                 out += "    variable-refresh-rate\n";
+            if (name === Config.system.primaryScreen)
+                out += "    focus-at-startup\n";
             out += "}\n";
         }
         return out;

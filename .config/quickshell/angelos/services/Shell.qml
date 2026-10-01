@@ -122,8 +122,14 @@ Singleton {
     readonly property var onlyScreens: (Quickshell.env("ANGELOS_SCREENS") || "").split(",").filter(s => s !== "")
     readonly property var screens: dev && onlyScreens.length ? Quickshell.screens.filter(s => onlyScreens.includes(s.name)) : Quickshell.screens
     readonly property var focusedScreen: screens.find(s => s.name === Niri.focusedOutput) || screens[0]
-    // the widest screen: the main landscape monitor next to portrait side screens
-    readonly property var primaryScreen: screens.reduce((best, s) => !best || s.width > best.width ? s : best, null)
+    // The main screen (Settings → Monitor → Main screen): the desktop widgets, the angel
+    // and her cracks, rays and quake, the idle screen and the sidebar live there. Not
+    // picked, or not connected: the widest screen — the main landscape monitor next to
+    // portrait side screens. The lock keeps its password box where the focus is: that
+    // is where niri sends the keys.
+    readonly property var widestScreen: screens.reduce((best, s) => !best || s.width > best.width ? s : best, null)
+    readonly property var primaryScreen: screenByName(Config.system.primaryScreen) || widestScreen
+    readonly property string primaryName: primaryScreen ? primaryScreen.name : ""
 
     function screenByName(name) {
         return screens.find(s => s.name === name) || null;
@@ -177,8 +183,8 @@ Singleton {
             for (const k of ["ANGELOS_SERVICE", "INVOCATION_ID", "JOURNAL_STREAM", "SYSTEMD_EXEC_PID", "MANAGERPID", "MANAGERPIDFDID", "MEMORY_PRESSURE_WATCH", "MEMORY_PRESSURE_WRITE"])
                 e[k] = null;
         }
-        if (Cursors.theme) {
-            e.XCURSOR_THEME = Cursors.theme;
+        if (Cursors.active) {
+            e.XCURSOR_THEME = Cursors.active;
             e.XCURSOR_SIZE = String(Cursors.size);
         }
         return e;

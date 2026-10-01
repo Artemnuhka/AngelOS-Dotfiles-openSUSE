@@ -2,19 +2,21 @@ import QtQuick
 import qs.config
 
 // Win98-style bevelled box. raised by default, `sunken` for inputs/pressed.
+// `hell: Theme.hell` gives it hell's obsidian bevels (Theme.realm).
 Item {
     id: root
 
-    property color color: Theme.face
+    property bool hell: false
+    property color color: hell ? Theme.hellFace : Theme.face
     property int bevel: Theme.u
     property bool sunken: false
     property bool outline: true
     property bool flat: false
     property bool shadow: false
     property int shadowSize: Theme.u * 2
-    property color hiColor: Theme.hi
-    property color loColor: Theme.lo
-    property color edgeColor: Theme.edge
+    property color hiColor: hell ? Theme.hellHi : Theme.hi
+    property color loColor: hell ? Theme.hellLo : Theme.lo
+    property color edgeColor: hell ? Theme.hellEdge : Theme.edge
     readonly property int ob: outline ? bevel : 0
     readonly property int inset: ob + (flat ? 0 : bevel)
     default property alias content: inner.data

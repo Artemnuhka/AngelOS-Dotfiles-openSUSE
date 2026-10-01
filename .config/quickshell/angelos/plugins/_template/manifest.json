@@ -12,6 +12,7 @@
   "barWidget": "BarWidget.qml",
   "desktopTitle": "__ID__.exe",
   "desktopWidget": "DesktopWidget.qml",
+  "realms": ["heaven", "hell"],
   "settings": "Settings.qml",
   "main": "Main.qml"
 }

@@ -13,7 +13,7 @@ import "../../widgets/Place.js" as Place
 PanelWindow {
     id: win
 
-    screen: Shell.screenByName(Config.notifications.screen) || Shell.focusedScreen
+    screen: Config.notifications.screen === "primary" ? Shell.primaryScreen : Shell.screenByName(Config.notifications.screen) || Shell.focusedScreen
     visible: Notifs.popups.length > 0
     readonly property string pos: Config.notifications.position || "top-right"
     anchors.top: Place.top(pos)

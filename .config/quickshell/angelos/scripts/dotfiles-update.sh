@@ -4,7 +4,8 @@
 #   dotfiles-update.sh --find                 print the repository path, if any
 #   dotfiles-update.sh --check REPO           fetch; print BRANCH/UPSTREAM/BEHIND/AHEAD/DIRTY/REMOTE and IN <commit> lines
 #   dotfiles-update.sh --clone DEST [URL]     first-time download of the official repository
-#   dotfiles-update.sh REPO                   git pull --ff-only, snapshot configs, run the installer non-interactively
+#   dotfiles-update.sh REPO                   git pull --ff-only, snapshot configs, run the installer non-interactively;
+#                                             ends with "UPDATED <old> <new> <commits>" (the shell then offers a restart)
 #
 # Nothing is updated without a click. The installer keeps replaced files as
 # *.bak.<date>; the current keyboard layouts are passed through so they survive.
@@ -88,7 +89,9 @@ if [[ -n "$(git status --porcelain)" ]]; then
 fi
 
 say "git pull ($(git rev-parse --abbrev-ref HEAD))"
+old="$(git rev-parse HEAD)"
 git pull --ff-only 2>&1
+new="$(git rev-parse HEAD)"
 
 # snapshot the configs into a fresh folder before the installer touches them
 B="$STATE/backups/$(date +%Y%m%d-%H%M%S)-update"
@@ -113,7 +116,8 @@ if [[ -f "$input" ]]; then
 fi
 
 say "запускаю установщик (без пакетов, SDDM и служб)"
-env DOTFILES_MODE=full DESKTOP_SHELL=angelos SKIP_PACKAGES=1 INSTALL_SDDM=0 INSTALL_VOXTYPE=0 \
+# ANGELOS_RESTART=shell: the running shell asks about the restart itself (UpdatePrompt)
+env ANGELOS_RESTART=shell DOTFILES_MODE=full DESKTOP_SHELL=angelos SKIP_PACKAGES=1 INSTALL_SDDM=0 INSTALL_VOXTYPE=0 \
     DOWNLOAD_VOXTYPE_MODEL=0 INSTALL_WALLPAPERS=0 INSTALL_FLATPAK=0 ENABLE_SERVICES=0 "${kb_env[@]}" \
     bash ./install.sh </dev/null 2>&1
 
@@ -125,3 +129,4 @@ if command -v niri >/dev/null; then
   if niri validate >/dev/null 2>&1; then say "niri: конфиг валиден"; else say "niri: validate НЕ прошёл — смотри niri validate"; fi
 fi
 say "готово ♡"
+printf 'UPDATED %s %s %s\n' "$old" "$new" "$(git rev-list --count "$old..$new" 2>/dev/null || echo 0)"

@@ -21,6 +21,11 @@ import qs.widgets
 // Dragged by the title bar, double click on the title toggles edit mode, Ctrl +
 // wheel (or the wheel in edit mode) resizes it, a right click on a bare spot
 // opens the desktop menu.
+// Heaven and hell (Theme.realm): in hell the frame is obsidian with flames
+// (PxWindow.hell) and the built-in widgets draw their own hell look; a plugin
+// that doesn't ("realms" in its manifest) is re-inked by shaders/hell_widget.
+// Going over, the widget burns (into hell) or turns to ash (back to heaven) —
+// not on streamed screens, where it simply changes.
 Item {
     id: host
 
@@ -37,6 +42,11 @@ Item {
     readonly property bool wants: !content.item || content.item.wantVisible === undefined || content.item.wantVisible
     readonly property bool dragging: DesktopWidgets.drag.uid === uid
     readonly property alias frame: frame
+    // ---- heaven / hell ----
+    readonly property bool selfHell: !info || !info.plugin || (info.plugin.realms || []).includes("hell")
+    readonly property bool fxOn: StreamMode.effectsOn(screenName)
+    readonly property bool burningHere: DesktopWidgets.burning && fxOn
+    readonly property real recolor: Theme.hell && !selfHell ? 1 : 0
     // 70–130 %: the frame is drawn scaled, the host takes the scaled size
     readonly property real zoom: DesktopWidgets.scaleOf(widget)
     signal contextMenu(real x, real y)
@@ -283,52 +293,79 @@ Item {
         }
     }
 
-    PxWindow {
-        id: frame
-        scale: host.zoom
-        transformOrigin: Item.TopLeft
-        width: Math.max(Theme.u * 70, content.implicitWidth + (inset + bodyPadding) * 2)
-        height: titleHeight + content.implicitHeight + bodyPadding * 2 + inset * 2 + Theme.u * 2
-        readonly property int inset: Theme.u * 2
-        title: DesktopWidgets.titleOf(host.info)
-        icon: host.info ? host.info.icon : "heart"
-        compact: true
-        decor: false
-        bodyColor: host.overFace ? "transparent" : Theme.panel
-        shadow: Config.appearance.shadows && !host.overFace
-        closable: DesktopWidgets.editMode
-        active: !host.dragging
-        onCloseClicked: DesktopWidgets.remove(host.uid)
+    // room around the frame for its shadow, the drips under a hell frame and the
+    // burn; the frame itself sits at the host's (0, 0)
+    Item {
+        id: canvas
+        readonly property int pad: Theme.u * 12
+        x: -pad
+        y: -pad
+        width: host.width + pad * 2
+        height: host.height + pad * 2
+        layer.enabled: host.burningHere || host.recolor > 0
+        layer.smooth: false
+        layer.effect: ShaderEffect {
+            readonly property real burn: host.burningHere ? DesktopWidgets.burn : 1
+            readonly property real mode: DesktopWidgets.burnTo === "heaven" ? 1 : 0
+            readonly property real recolor: host.recolor
+            readonly property real seed: (host.uid.length * 7.31) % 13
+            readonly property size cell: Qt.size(Theme.u * host.zoom / Math.max(1, canvas.width), Theme.u * host.zoom / Math.max(1, canvas.height))
+            readonly property rect box: Qt.rect(canvas.pad / canvas.width, canvas.pad / canvas.height, (canvas.pad + host.width) / canvas.width, (canvas.pad + host.height) / canvas.height)
+            fragmentShader: Qt.resolvedUrl("../../shaders/hell_widget.frag.qsb")
+        }
 
-        Loader {
-            id: content
-            width: implicitWidth
-            height: implicitHeight
-            // the input copy of a widget with nothing to click runs nothing: the face shows it
-            visible: host.face || host.interactive
-            onLoaded: host.checkInput()
-            // a plugin changed by Plugin Studio comes back through a new path
-            readonly property string src: host.info && host.info.plugin ? Plugins.url(host.info.plugin, host.info.plugin.desktopWidget) : ""
-            onSrcChanged: if (item) {
-                source = "";
-                load();
-            }
-            Component.onCompleted: load()
-            function load() {
-                if (!host.widget || !host.info)
-                    return;
-                const props = {
-                    "screenName": host.screenName,
-                    "widget": Qt.binding(() => host.widget)
-                };
-                if (host.info.plugin) {
-                    props.plugin = Plugins.context(host.info.plugin);
-                    setSource(src, props);
-                } else {
-                    const name = host.info.type.charAt(0).toUpperCase() + host.info.type.slice(1);
-                    setSource(Qt.resolvedUrl("widgets/" + ({
-                            "Nowplaying": "NowPlaying"
-                        }[name] || name) + "Widget.qml"), props);
+        PxWindow {
+            id: frame
+            x: canvas.pad
+            y: canvas.pad
+            hell: Theme.hell
+            flamesLive: host.face ? !Shell.hiddenScreen(host.screenName) : host.shown
+            trim: !host.overFace
+            scale: host.zoom
+            transformOrigin: Item.TopLeft
+            width: Math.max(Theme.u * 70, content.implicitWidth + (inset + bodyPadding) * 2)
+            height: titleHeight + content.implicitHeight + bodyPadding * 2 + inset * 2 + Theme.u * 2
+            readonly property int inset: Theme.u * 2
+            title: DesktopWidgets.titleOf(host.info)
+            icon: host.info ? host.info.icon : "heart"
+            compact: true
+            decor: false
+            bodyColor: host.overFace ? "transparent" : Theme.panel
+            shadow: Config.appearance.shadows && !host.overFace
+            closable: DesktopWidgets.editMode
+            active: !host.dragging
+            onCloseClicked: DesktopWidgets.remove(host.uid)
+
+            Loader {
+                id: content
+                width: implicitWidth
+                height: implicitHeight
+                // the input copy of a widget with nothing to click runs nothing: the face shows it
+                visible: host.face || host.interactive
+                onLoaded: host.checkInput()
+                // a plugin changed by Plugin Studio comes back through a new path
+                readonly property string src: host.info && host.info.plugin ? Plugins.url(host.info.plugin, host.info.plugin.desktopWidget) : ""
+                onSrcChanged: if (item) {
+                    source = "";
+                    load();
+                }
+                Component.onCompleted: load()
+                function load() {
+                    if (!host.widget || !host.info)
+                        return;
+                    const props = {
+                        "screenName": host.screenName,
+                        "widget": Qt.binding(() => host.widget)
+                    };
+                    if (host.info.plugin) {
+                        props.plugin = Plugins.context(host.info.plugin);
+                        setSource(src, props);
+                    } else {
+                        const name = host.info.type.charAt(0).toUpperCase() + host.info.type.slice(1);
+                        setSource(Qt.resolvedUrl("widgets/" + ({
+                                "Nowplaying": "NowPlaying"
+                            }[name] || name) + "Widget.qml"), props);
+                    }
                 }
             }
         }

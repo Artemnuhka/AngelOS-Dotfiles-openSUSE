@@ -112,6 +112,69 @@ Singleton {
         onTriggered: root.advance()
     }
 
+    // ---- heaven ⇄ hell: the widgets burn over (DesktopWidgetHost draws it) ----
+    // While the demon rules (and Y2K → Widgets in hell is on) the widgets live in
+    // hell. A swap holds them until the glass breaks (Angel.holdWidgets); then they
+    // burn over in burnMs — the old look goes, Theme.realm flips at the middle and
+    // the new one shows. At start-up they are simply where they belong.
+    readonly property bool hellWanted: Config.ready && Angel.demon && Config.y2k.hellWidgets
+    property real burn: 1                    // 0 → 1 through a burn-over; 1 = settled
+    property string burnTo: ""               // "hell" | "heaven" while burning
+    readonly property bool burning: burnTo !== ""
+    readonly property int burnMs: 1500
+    property bool _realmSet: false
+    onHellWantedChanged: Qt.callLater(settleRealm)
+    Component.onCompleted: Qt.callLater(settleRealm)
+    Connections {
+        target: Config
+        function onReadyChanged() {
+            Qt.callLater(root.settleRealm);
+        }
+    }
+    Connections {
+        target: Angel
+        function onHoldWidgetsChanged() {
+            if (!Angel.holdWidgets)
+                Qt.callLater(root.settleRealm);
+        }
+    }
+    function settleRealm() {
+        if (!Config.ready || Angel.holdWidgets)
+            return;
+        const want = hellWanted ? "hell" : "heaven";
+        if (!_realmSet) {
+            _realmSet = true;
+            Theme.realm = want;
+            return;
+        }
+        if (want === (burning ? burnTo : Theme.realm))
+            return;
+        burnTo = want;
+        burnAnim.restart();
+    }
+    // dev/owner (`angelos helper realm`): burn over to the other side and back, for a look
+    function burnPreview(to) {
+        burnTo = to === "hell" || to === "heaven" ? to : (Theme.hell ? "heaven" : "hell");
+        burnAnim.restart();
+        return burnTo;
+    }
+    NumberAnimation {
+        id: burnAnim
+        target: root
+        property: "burn"
+        from: 0
+        to: 1
+        duration: root.burnMs
+        onFinished: {
+            Theme.realm = root.burnTo || Theme.realm;
+            root.burnTo = "";
+            // the wish may have changed while it burned (a quick toggle)
+            Qt.callLater(root.settleRealm);
+        }
+    }
+    onBurnChanged: if (burnTo && burn >= 0.5 && Theme.realm !== burnTo)
+        Theme.realm = burnTo
+
     property var hosts: ({})                 // uid -> DesktopWidgetHost, the input copy
     property var faces: ({})                 // uid -> DesktopWidgetHost, the face
     function registerFace(uid, item) {
@@ -207,8 +270,22 @@ Singleton {
     function byUid(uid) {
         return widgets.find(w => w.uid === uid) || null;
     }
+    // a widget whose monitor isn't connected (unplugged, renamed) shows on the main screen
+    function screenOf(w) {
+        return !w || Quickshell.screens.some(s => s.name === w.screen) ? (w ? w.screen : "") : Shell.primaryName;
+    }
     function uidsFor(screen) {
-        return widgets.filter(w => w.screen === screen).map(w => w.uid);
+        return widgets.filter(w => screenOf(w) === screen).map(w => w.uid);
+    }
+    // Settings → Monitor → "Move every widget here": all of them onto one screen, as they are
+    function moveAllTo(screen) {
+        if (!screen)
+            return 0;
+        const moved = (Config.desktop.widgets || []).filter(w => w.screen !== screen).length;
+        _save((Config.desktop.widgets || []).map(w => w.screen === screen ? w : Object.assign({}, w, {
+                    "screen": screen
+                })));
+        return moved;
     }
     function has(type, screen) {
         return widgets.some(w => w.type === type && w.screen === screen);
@@ -218,6 +295,7 @@ Singleton {
         Config.desktop.widgets = list;
     }
     function add(type, screen, x, y) {
+        screen = screen || Shell.primaryName;
         const n = widgets.filter(w => w.screen === screen).length;
         _save((Config.desktop.widgets || []).concat([{
                     "uid": type.replace(/[^\w-]/g, "_") + "-" + Date.now().toString(36),
@@ -278,7 +356,7 @@ Singleton {
         running: Config.ready && !Config.desktop.initialized && Plugins.plugins.length > 0
         interval: 1500
         onTriggered: {
-            const first = (Quickshell.screens[0] || {}).name || "DP-1";
+            const first = Shell.primaryName || (Quickshell.screens[0] || {}).name || "DP-1";
             const list = (Config.desktop.widgets || []).slice();
             for (const p of Plugins.desktopWidgets) {
                 if (list.some(w => w.type === "plugin:" + p.id))

@@ -29,7 +29,8 @@ Singleton {
 
     // ---- who and where ----
     readonly property bool demon: Config.y2k.character === "demon"
-    readonly property var screen: StreamMode.angelScreen(Config.y2k.helperScreen ? Shell.screenByName(Config.y2k.helperScreen) : Shell.focusedScreen)
+    // the main screen, her own one (Y2K → Screen; unplugged → the main one), or where the focus is
+    readonly property var screen: StreamMode.angelScreen(Config.y2k.helperScreen === "focus" ? Shell.focusedScreen : Shell.screenByName(Config.y2k.helperScreen) || Shell.primaryScreen)
     readonly property string screenName: screen ? screen.name : ""
 
     property string text: ""
@@ -46,6 +47,8 @@ Singleton {
     // the swap animation: angel falls into hell and the demon climbs out, or back
     property string transition: ""           // "" | toHell | ascend
     property real swap: 0                    // 0..1 through it; the character flips at 0.5
+    // the desktop widgets wait for the glass to break before they burn over (DesktopWidgets)
+    property bool holdWidgets: false
     signal heaven(string screenName)
     signal punched(string screenName, string sound)
     signal shattered(string screenName)
@@ -380,6 +383,7 @@ Singleton {
 
     // ---- the swap animation, stepped like the sprite (AngelHelper draws it) ----
     function startSwap(kind) {
+        holdWidgets = true;
         transition = kind;
         swap = 0;
         swapTick.restart();
@@ -425,10 +429,26 @@ Singleton {
         id: hellNews
         interval: 16500
         onTriggered: {
-            const menu = DeskMenu.hellish, book = Config.y2k.hellSettings === "grimoire";
-            if (!root.demon || (!menu && !book))
+            if (!root.demon)
                 return;
-            const what = menu && book ? I18n.t("ПКМ по обоям теперь — " + DeskMenu.styleLabel(DeskMenu.style).toLowerCase() + ", а настройки — мой гримуар", "right-click on the wallpaper is a " + DeskMenu.styleLabel(DeskMenu.style).toLowerCase() + " now, and Settings are my grimoire") : menu ? I18n.t("ПКМ по обоям теперь — " + DeskMenu.styleLabel(DeskMenu.style).toLowerCase(), "right-click on the wallpaper is a " + DeskMenu.styleLabel(DeskMenu.style).toLowerCase() + " now") : I18n.t("настройки теперь — мой гримуар", "Settings are my grimoire now");
+            const style = DeskMenu.styleLabel(DeskMenu.style).toLowerCase();
+            const parts = [];
+            if (DeskMenu.hellish)
+                parts.push(I18n.t("ПКМ по обоям теперь — " + style, "right-click on the wallpaper is a " + style + " now"));
+            if (Config.y2k.hellSettings === "grimoire")
+                parts.push(I18n.t("настройки — мой гримуар", "Settings are my grimoire"));
+            const mine = [];
+            if (Config.y2k.hellWidgets && DesktopWidgets.widgets.length)
+                mine.push(I18n.t("виджеты", "the widgets"));
+            if (Cursors.hellOn)
+                mine.push(I18n.t("курсор", "the cursor"));
+            if (mine.length) {
+                const one = mine.length === 1 && !(Config.y2k.hellWidgets && DesktopWidgets.widgets.length);   // just the cursor
+                parts.push(mine.join(I18n.t(" и ", " and ")) + (one ? I18n.t(" — тоже мой", " is mine too") : I18n.t(" — тоже мои", " are mine too")));
+            }
+            if (!parts.length)
+                return;
+            const what = parts.length > 1 ? parts.slice(0, -1).join(", ") + I18n.t(", а ", ", and ") + parts[parts.length - 1] : parts[0];
             root.say(I18n.t("И да: ", "Oh, and ") + what + I18n.t(" 😈 Вернётся ангел — вернётся и твоё.", " 😈 When the angel's back, so is yours."), {
                 "label": I18n.t("Где это?", "Where is it?"),
                 "icon": "gear",
@@ -479,6 +499,7 @@ Singleton {
         onTriggered: root.quakeDone()
     }
     function breakScreen() {
+        holdWidgets = false;
         if (!fxHere())
             return;
         Sounds.play("shatter");
@@ -503,6 +524,17 @@ Singleton {
     }
     onPresentChanged: if (present && !transition)
         appear.restart()
+    // she moved (the main screen changed, a monitor came or went): her cracks come along, silently
+    onScreenNameChanged: if (demon && present && !transition && screenName)
+        moved.restart()
+    property string _crackedOn: ""            // where her cracks were put last
+    onPunched: name => _crackedOn = name
+    Timer {
+        id: moved
+        interval: 300
+        onTriggered: if (root.demon && !appear.running && root._crackedOn && root._crackedOn !== root.screenName && root.fxHere() && Config.y2k.cracks !== "off")
+            root.punched(root.screenName, "")
+    }
     Timer {
         id: appear
         interval: 700
@@ -859,17 +891,19 @@ Singleton {
                 pageTip.restart();
         }
     }
-    // the first visit of a settings page gets its own tip
+    // the first visit of a settings page gets its own tip — the angel's, or the demon's
+    // own take on it (counted apart: "demon:<page>")
     Timer {
         id: pageTip
         interval: 1500
         onTriggered: {
             const page = Shell.settingsPage;
-            const t = Lines.pageTips[page];
+            const t = (root.demon ? Lines.demonPageTips : Lines.pageTips)[page];
+            const key = (root.demon ? "demon:" : "") + page;
             const seen = Config.y2k.seenTips || [];
-            if (!t || root.demon || !Shell.settingsOpen || seen.includes(page) || root.talking || root.transition)
+            if (!t || !Shell.settingsOpen || seen.includes(key) || root.talking || root.transition)
                 return;
-            Config.y2k.seenTips = seen.concat([page]);
+            Config.y2k.seenTips = seen.concat([key]);
             root.say(root.tr(t));
         }
     }

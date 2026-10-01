@@ -15,112 +15,156 @@ PxPage {
     Component.onCompleted: Cursors.refresh()
     readonly property int size: Config.cursor.size || 24
 
+    // one theme: preview strip, about, licence and the buttons; `hell` cards pick
+    // the demon's cursor (Config.cursor.hell) instead of yours
+    component CursorCard: PxBox {
+        id: card
+        required property var modelData
+        property bool hell: false
+        property int columns: 1
+        property real gap: 0
+        readonly property bool current: hell ? Config.cursor.hell === modelData.theme : Cursors.theme === modelData.theme
+        readonly property bool working: Cursors.busy && (Cursors.working === modelData.id || Cursors.working === modelData.theme)
+        width: (parent.width - (columns - 1) * gap) / columns
+        height: cardCol.implicitHeight + Theme.u * 8
+        sunken: current
+        color: current ? Theme.mix(Theme.face, hell ? Theme.hellBlood : Theme.accent, 0.3) : Theme.face
+        Column {
+            id: cardCol
+            x: Theme.u * 4
+            y: Theme.u * 4
+            width: parent.width - Theme.u * 8
+            spacing: Theme.u * 2
+            PxText {
+                text: (card.current ? (card.hell ? "⛧ " : "♡ ") : "") + card.modelData.name
+                font.bold: true
+            }
+            // preview strip: arrow, hand, text, wait, grab, forbidden
+            Rectangle {
+                width: parent.width
+                height: Theme.u * 22
+                color: card.hell ? "#1a0508" : Theme.dark ? "#1b1d24" : "#e9e3ec"
+                border.width: Math.max(1, Theme.u / 2)
+                border.color: Theme.lo
+                Image {
+                    anchors.centerIn: parent
+                    visible: !!card.modelData.installed && source !== ""
+                    source: card.modelData.preview ? "file://" + card.modelData.preview + "?" + Cursors.catalog.length : ""
+                    cache: false
+                    smooth: false
+                    height: parent.height - Theme.u * 4
+                    fillMode: Image.PreserveAspectFit
+                }
+                PxText {
+                    anchors.centerIn: parent
+                    visible: !card.modelData.installed
+                    text: I18n.t("ещё не скачан", "not downloaded yet")
+                    kind: "tiny"
+                    dim: true
+                }
+            }
+            PxText {
+                width: parent.width
+                text: card.modelData.about || ""
+                kind: "tiny"
+                dim: true
+                wrapMode: Text.Wrap
+            }
+            PxText {
+                width: parent.width
+                text: "© " + card.modelData.license
+                kind: "tiny"
+                dim: true
+                wrapMode: Text.Wrap
+            }
+            Flow {
+                width: parent.width
+                spacing: Theme.u * 2
+                PxButton {
+                    compact: true
+                    visible: !card.modelData.installed
+                    enabled: !Cursors.busy
+                    icon: "download"
+                    text: card.working ? I18n.t("качаю…", "downloading…") : card.hell ? I18n.t("Скачать для ада", "Get it for hell") : I18n.t("Скачать и включить", "Get and use")
+                    accent: true
+                    onClicked: {
+                        if (card.hell) {
+                            Cursors.setHell(card.modelData.theme);
+                            return;
+                        }
+                        Config.cursor.theme = card.modelData.theme;
+                        Cursors.install(card.modelData.id, true);
+                    }
+                }
+                PxButton {
+                    compact: true
+                    visible: !!card.modelData.installed && !card.current
+                    enabled: !Cursors.busy
+                    text: card.working ? I18n.t("применяю…", "applying…") : card.hell ? I18n.t("Для ада", "Use in hell") : I18n.t("Включить", "Use")
+                    accent: true
+                    onClicked: card.hell ? Cursors.setHell(card.modelData.theme) : Cursors.apply(card.modelData.theme, page.size)
+                }
+                PxButton {
+                    compact: true
+                    visible: card.modelData.id === "angelos" && !!card.modelData.installed
+                    enabled: !Cursors.busy
+                    icon: "palette"
+                    text: I18n.t("Под акцент", "Match accent")
+                    onClicked: {
+                        if (card.current)
+                            Cursors.recolor();
+                        else
+                            Cursors.install("angelos", false);
+                    }
+                }
+            }
+        }
+    }
+
     PxGroup {
         title: I18n.t("Пиксельные темы", "Pixel themes")
         icon: "cursor"
         width: parent.width
 
         Grid {
+            id: heavenGrid
             width: parent.width
             columns: Math.max(1, Math.floor(width / (Theme.u * 150)))
             spacing: Theme.u * 3
             Repeater {
-                model: Cursors.catalog
-                PxBox {
-                    id: card
-                    required property var modelData
-                    readonly property bool current: Cursors.theme === modelData.theme
-                    readonly property bool working: Cursors.busy && (Cursors.working === modelData.id || Cursors.working === modelData.theme)
-                    width: (parent.width - (parent.columns - 1) * parent.spacing) / parent.columns
-                    height: cardCol.implicitHeight + Theme.u * 8
-                    sunken: current
-                    color: current ? Theme.mix(Theme.face, Theme.accent, 0.3) : Theme.face
-                    Column {
-                        id: cardCol
-                        x: Theme.u * 4
-                        y: Theme.u * 4
-                        width: parent.width - Theme.u * 8
-                        spacing: Theme.u * 2
-                        PxText {
-                            text: (card.current ? "♡ " : "") + card.modelData.name
-                            font.bold: true
-                        }
-                        // preview strip: arrow, hand, text, wait, grab, forbidden
-                        Rectangle {
-                            width: parent.width
-                            height: Theme.u * 22
-                            color: Theme.dark ? "#1b1d24" : "#e9e3ec"
-                            border.width: Math.max(1, Theme.u / 2)
-                            border.color: Theme.lo
-                            Image {
-                                anchors.centerIn: parent
-                                visible: card.modelData.installed && source !== ""
-                                source: card.modelData.preview ? "file://" + card.modelData.preview + "?" + Cursors.catalog.length : ""
-                                cache: false
-                                smooth: false
-                                height: parent.height - Theme.u * 4
-                                fillMode: Image.PreserveAspectFit
-                            }
-                            PxText {
-                                anchors.centerIn: parent
-                                visible: !card.modelData.installed
-                                text: I18n.t("ещё не скачан", "not downloaded yet")
-                                kind: "tiny"
-                                dim: true
-                            }
-                        }
-                        PxText {
-                            width: parent.width
-                            text: card.modelData.about
-                            kind: "tiny"
-                            dim: true
-                            wrapMode: Text.Wrap
-                        }
-                        PxText {
-                            width: parent.width
-                            text: "© " + card.modelData.license
-                            kind: "tiny"
-                            dim: true
-                            wrapMode: Text.Wrap
-                        }
-                        Flow {
-                            width: parent.width
-                            spacing: Theme.u * 2
-                            PxButton {
-                                compact: true
-                                visible: !card.modelData.installed
-                                enabled: !Cursors.busy
-                                icon: "download"
-                                text: card.working ? I18n.t("качаю…", "downloading…") : I18n.t("Скачать и включить", "Get and use")
-                                accent: true
-                                onClicked: {
-                                    Config.cursor.theme = card.modelData.theme;
-                                    Cursors.install(card.modelData.id, true);
-                                }
-                            }
-                            PxButton {
-                                compact: true
-                                visible: card.modelData.installed && !card.current
-                                enabled: !Cursors.busy
-                                text: card.working ? I18n.t("применяю…", "applying…") : I18n.t("Включить", "Use")
-                                accent: true
-                                onClicked: Cursors.apply(card.modelData.theme, page.size)
-                            }
-                            PxButton {
-                                compact: true
-                                visible: card.modelData.id === "angelos" && card.modelData.installed
-                                enabled: !Cursors.busy
-                                icon: "palette"
-                                text: I18n.t("Под акцент", "Match accent")
-                                onClicked: {
-                                    if (card.current)
-                                        Cursors.recolor();
-                                    else
-                                        Cursors.install("angelos", false);
-                                }
-                            }
-                        }
-                    }
+                model: Cursors.heavenly
+                CursorCard {
+                    columns: heavenGrid.columns
+                    gap: heavenGrid.spacing
+                }
+            }
+        }
+    }
+
+    PxGroup {
+        title: I18n.t("Курсор в аду", "Cursor in hell")
+        icon: "fire"
+        width: parent.width
+        SettingRow {
+            label: I18n.t("Демоница меняет курсор", "The demon changes the cursor")
+            hint: Cursors.hellOn ? I18n.t("сейчас она тут — курсор адский; твой вернётся вместе с ангелом", "she's here now, so the cursor is hers; yours comes back with the angel") : I18n.t("пока она правит, курсор — одна из адских тем ниже; ангел вернёт твой", "while she rules the pointer is one of the hell themes below; the angel gives yours back")
+            PxToggle {
+                checked: !!Config.cursor.hell
+                onToggled: c => Cursors.setHell(c ? "angelOS-Hell" : "")
+            }
+        }
+        Grid {
+            id: hellGrid
+            visible: !!Config.cursor.hell
+            width: parent.width
+            columns: Math.max(1, Math.floor(width / (Theme.u * 150)))
+            spacing: Theme.u * 3
+            Repeater {
+                model: Cursors.hellish
+                CursorCard {
+                    hell: true
+                    columns: hellGrid.columns
+                    gap: hellGrid.spacing
                 }
             }
         }

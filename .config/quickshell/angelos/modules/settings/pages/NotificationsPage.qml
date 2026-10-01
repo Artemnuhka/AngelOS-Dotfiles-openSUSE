@@ -51,13 +51,17 @@ PxPage {
         }
         SettingRow {
             label: I18n.t("Монитор", "Monitor")
-            hint: I18n.t("пусто = где фокус", "Empty = focused display")
+            hint: I18n.t("где фокус, на главном экране (страница «Монитор») или на выбранном", "The focused display, the main one (Monitor page) or a fixed one")
             PxCombo {
                 width: Theme.u * 100
                 model: [
                     {
                         "label": I18n.t("где фокус", "Focused display"),
                         "value": ""
+                    },
+                    {
+                        "label": I18n.t("главный (", "main (") + Shell.primaryName + ")",
+                        "value": "primary"
                     }
                 ].concat(Quickshell.screens.map(s => ({
                             "label": s.name,

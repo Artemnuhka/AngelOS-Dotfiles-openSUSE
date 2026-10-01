@@ -80,7 +80,7 @@ Singleton {
     }
 
     // the arrow of the current theme, again when the theme changes
-    readonly property string theme: Cursors.theme || "default"
+    readonly property string theme: Cursors.active || "default"
     onThemeChanged: if (wanted)
         imager.load()
     Component.onCompleted: if (wanted)

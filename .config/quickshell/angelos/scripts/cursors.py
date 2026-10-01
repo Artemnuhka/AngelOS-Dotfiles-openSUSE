@@ -8,6 +8,10 @@
 
 Themes are downloaded from pinned archives (SHA-256 checked) or built from the
 pixel-cursors assets (mikaeladev, GPL-3.0) recoloured with the angelOS palette.
+The hell themes ("realm": "hell") are pixel-cursors too: their own palettes, some
+shapes redrawn (a devil's tail, a pitchfork, claws, a skull) and two animated
+(embers rising, lava flowing). angelOS puts the picked one on while the demon
+rules (Settings → Cursor → Hell). The pixel-cursors archive is cached.
 `apply` sets the theme for niri (Wayland + XWayland via xwayland-satellite),
 GTK 3/4 (settings.ini, gsettings, xsettingsd), plain X11 clients and Steam
 (~/.icons/default, ~/.icons/<theme>), the systemd/D-Bus activation environment
@@ -62,7 +66,114 @@ CATALOG = [
      "about": "black-and-white pixel set with a skull", "license": "BSD-3-Clause (da0ab/Pixel-Linux-Cursor)",
      "url": "https://codeload.github.com/da0ab/Pixel-Linux-Cursor/tar.gz/fdef33f8c87bff22812048c6060d6f36a12f1aaa",
      "sha256": "6039f887cec4d32de0b5cea9b87a55c009a9e2975fde1e87211ee57b57dbe55a"},
+    # ---- hell: while the demon rules (pixel-cursors, GPL-3.0) ----
+    {"id": "hell", "theme": "angelOS-Hell", "name": "angelOS Hell", "realm": "hell",
+     "about": "blood and obsidian; the arrow grew a devil's tail", "license": "GPL-3.0 (mikaeladev/pixel-cursors)",
+     "build": "pixel", "palette": {"primary": "#ff4a3d", "secondary": "#8e1022", "border": "#14040a"},
+     "shapes": {"default": "tail"}},
+    {"id": "hell-ember", "theme": "angelOS-Hell-Ember", "name": "Hell Ember", "realm": "hell",
+     "about": "smouldering: embers float up off the pointer", "license": "GPL-3.0 (mikaeladev/pixel-cursors)",
+     "build": "pixel", "palette": {"primary": "#ffb02e", "secondary": "#d9431b", "border": "#1c0606"}, "fx": "embers"},
+    {"id": "hell-pitchfork", "theme": "angelOS-Hell-Pitchfork", "name": "Hell Pitchfork", "realm": "hell",
+     "about": "the arrow is a pitchfork, the rest dark crimson", "license": "GPL-3.0 (mikaeladev/pixel-cursors)",
+     "build": "pixel", "palette": {"primary": "#c9283c", "secondary": "#6a0d1c", "border": "#120306"},
+     "shapes": {"default": "pitchfork"}},
+    {"id": "hell-claw", "theme": "angelOS-Hell-Claw", "name": "Hell Claw", "realm": "hell",
+     "about": "the hands are the demon's claws", "license": "GPL-3.0 (mikaeladev/pixel-cursors)",
+     "build": "pixel", "palette": {"primary": "#ff3b6b", "secondary": "#7a1e46", "border": "#1a0a14"},
+     "shapes": {"hand-pointing": "claw", "hand-open": "claw-open", "hand-closed": "claw-closed"}},
+    {"id": "hell-bone", "theme": "angelOS-Hell-Bone", "name": "Hell Bone", "realm": "hell",
+     "about": "bone white; “forbidden” is a skull", "license": "GPL-3.0 (mikaeladev/pixel-cursors)",
+     "build": "pixel", "palette": {"primary": "#efe6d0", "secondary": "#a89a7c", "border": "#1a1010"},
+     "shapes": {"forbidden": "skull"}},
+    {"id": "hell-brimstone", "theme": "angelOS-Hell-Brimstone", "name": "Hell Brimstone", "realm": "hell",
+     "about": "lava flows through every pointer", "license": "GPL-3.0 (mikaeladev/pixel-cursors)",
+     "build": "pixel", "palette": {"primary": "#ff8a1a", "secondary": "#b3142b", "border": "#0d0303"}, "fx": "lava"},
 ]
+
+# Redrawn hell shapes on the 12×12 pixel-cursors grid: # border, o primary,
+# + secondary (the theme's palette), w bone, r ember-yellow. (rows, hotspot)
+HELL_SHAPES = {
+    "tail": ([
+        "............",
+        "............",
+        "..##........",
+        "..#o#.......",
+        "..#oo#......",
+        "..#ooo#.....",
+        "..#oooo#....",
+        "..#ooo+#....",
+        "..#oo+##....",
+        "..#####+#...",
+        ".......#+#..",
+        "........##.."], (2, 2)),
+    "pitchfork": ([
+        "w..w..w.....",
+        "w..w..w.....",
+        "#w.#w.#w....",
+        ".#w#w#w#....",
+        "..#www#.....",
+        "...#w+#.....",
+        "....#+#.....",
+        ".....#+#....",
+        "......#+#...",
+        ".......#+#..",
+        "........#+#.",
+        ".........##."], (0, 0)),
+    "claw": ([
+        "....w.......",
+        "....#w......",
+        "....#o#.....",
+        "....#o##....",
+        "..w##ooo#w..",
+        "..#o#o+o+#..",
+        "..#+ooo++#..",
+        "..##++++##..",
+        "...######...",
+        "............",
+        "............",
+        "............"], (4, 0)),
+    "claw-open": ([
+        "............",
+        "..w..w..w...",
+        "..#w.#w.#w..",
+        "..#o##o##o#.",
+        "..#o#o#o#o#.",
+        "..#ooooooo#.",
+        "..#+ooooo+#.",
+        "..#++ooo++#.",
+        "...#+++++#..",
+        "....#####...",
+        "............",
+        "............"], (6, 6)),
+    "claw-closed": ([
+        "............",
+        "............",
+        "............",
+        "...#######..",
+        "..#ooooooo#.",
+        "..#w#w#w#o#.",
+        "..#ooooooo#.",
+        "..#+ooooo+#.",
+        "..#++ooo++#.",
+        "...#+++++#..",
+        "....#####...",
+        "............"], (6, 6)),
+    "skull": ([
+        "............",
+        "...######...",
+        "..#oooooo#..",
+        ".#oooooooo#.",
+        ".#o##oo##o#.",
+        ".#o#r+o#ro#.",
+        ".#oo++oooo#.",
+        "..#ooo#oo#..",
+        "...#o#o#o#..",
+        "...#o+o+o#..",
+        "....#####...",
+        "............"], (5, 5)),
+}
+SHAPE_EXTRA = {"w": "#ece6d8", "r": "#ffd23f"}
 NAME_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.+-]{0,63}\Z")
 HEX_RE = re.compile(r"#[0-9a-fA-F]{6}\Z")
 # names apps ask for that pixel-cursors does not list
@@ -211,9 +322,88 @@ def glitterize(img, accent, light, frames=6):
     return out
 
 
+def hell_shape(name, palette, flop):
+    """A redrawn 12×12 shape in the theme's palette; hotspot follows a flop."""
+    from PIL import Image
+    rows, (hx, hy) = HELL_SHAPES[name]
+    colours = {"#": palette["border"], "o": palette["primary"], "+": palette["secondary"], **SHAPE_EXTRA}
+    img = Image.new("RGBA", (12, 12), (0, 0, 0, 0))
+    for y, row in enumerate(rows):
+        for x, ch in enumerate(row):
+            if ch in colours:
+                img.putpixel((x, y), hex_rgb(colours[ch]) + (255,))
+    if flop:
+        img = img.transpose(Image.FLIP_LEFT_RIGHT)
+        hx = 11 - hx
+    return img, hx, hy
+
+
+def embers(img, frames=6):
+    """Hell Ember: sparks float up along the pointer's right side and fade,
+    yellow → orange → blood (the canvas grows right/down only: same hotspot)."""
+    from PIL import Image
+    x0, y0, x1, y1 = img.getbbox() or (0, 0, img.width, img.height)
+    canvas = (max(img.width, x1 + 4), max(img.height, y1 + 2))
+    ramp = [(255, 236, 140), (255, 210, 63), (255, 138, 26), (217, 67, 27), (142, 16, 34), None]
+    # (x, start row, phase): each spark climbs one pixel a frame
+    sparks = [(x1 + 1, y1, 0), (x1 + 3, y1 - 1, 2), ((x0 + x1) // 2 + 2, y1 + 1, 4)]
+    out = []
+    for f in range(frames):
+        c = Image.new("RGBA", canvas, (0, 0, 0, 0))
+        c.paste(img, (0, 0), img)
+        px = c.load()
+        for x, y, phase in sparks:
+            age = (f + phase) % frames
+            col, yy = ramp[age], y - age
+            if col and 0 <= x < canvas[0] and 0 <= yy < canvas[1] and px[x, yy][3] == 0:
+                px[x, yy] = col + (255,)
+        out.append(c)
+    return out
+
+
+def lava(img, palette, frames=6):
+    """Hell Brimstone: the fill flows like lava, a bright band sliding down-right."""
+    primary, secondary = hex_rgb(palette["primary"]), hex_rgb(palette["secondary"])
+    hot = [(255, 236, 140), (255, 210, 63), (255, 138, 26), (232, 64, 28), (179, 20, 43), (232, 64, 28)]
+    cool = [(232, 64, 28), (179, 20, 43), (110, 10, 24), (70, 6, 14), (110, 10, 24), (179, 20, 43)]
+    out = []
+    for f in range(frames):
+        c = img.copy()
+        px = c.load()
+        for y in range(c.height):
+            for x in range(c.width):
+                r, g, b, a = px[x, y]
+                if not a:
+                    continue
+                k = (x + y * 2 - f) % frames
+                if (r, g, b) == primary:
+                    px[x, y] = hot[k] + (a,)
+                elif (r, g, b) == secondary:
+                    px[x, y] = cool[k] + (a,)
+        out.append(c)
+    return out
+
+
+def pixel_source():
+    """The pixel-cursors archive, kept in the cache (checked against its SHA-256)."""
+    import hashlib
+    url, sha = PIXEL_SRC
+    cached = CACHE / f"pixel-cursors-{sha[:16]}.tar.gz"
+    if cached.is_file():
+        data = cached.read_bytes()
+        if hashlib.sha256(data).hexdigest() == sha:
+            return data
+    data = fetch(url, sha)
+    CACHE.mkdir(parents=True, exist_ok=True)
+    tmp = cached.with_suffix(".part")
+    tmp.write_bytes(data)
+    os.replace(tmp, cached)
+    return data
+
+
 def build_pixel(entry, accent=None, edge=None, light=None):
     from PIL import Image
-    data = fetch(*PIXEL_SRC)
+    data = pixel_source()
     with tempfile.TemporaryDirectory(prefix="angelos-pixel-") as tmp:
         with tarfile.open(fileobj=io.BytesIO(data)) as tar:
             tar.extractall(tmp, members=list(safe_members(tar)), filter="data")
@@ -229,15 +419,20 @@ def build_pixel(entry, accent=None, edge=None, light=None):
         for name, spec in cfg["cursors"].items():
             asset = spec.get("asset", name)
             opts = asset if isinstance(asset, dict) else {"name": asset}
-            img = Image.open(src / "assets" / (opts["name"] + ".png")).convert("RGBA")
-            px = img.load()
-            for y in range(img.height):
-                for x in range(img.width):
-                    r, g, b, a = px[x, y]
-                    if a and (r, g, b) in recolor:
-                        px[x, y] = recolor[(r, g, b)] + (a,)
-            if opts.get("flop"):
-                img = img.transpose(Image.FLIP_LEFT_RIGHT)
+            hx, hy = int(spec.get("hot_x", 0)), int(spec.get("hot_y", 0))
+            shape = (entry.get("shapes") or {}).get(opts["name"])
+            if shape:
+                img, hx, hy = hell_shape(shape, palette, opts.get("flop"))
+            else:
+                img = Image.open(src / "assets" / (opts["name"] + ".png")).convert("RGBA")
+                px = img.load()
+                for y in range(img.height):
+                    for x in range(img.width):
+                        r, g, b, a = px[x, y]
+                        if a and (r, g, b) in recolor:
+                            px[x, y] = recolor[(r, g, b)] + (a,)
+                if opts.get("flop"):
+                    img = img.transpose(Image.FLIP_LEFT_RIGHT)
             frames = [img]
             delay = 0
             if "frames" in opts:
@@ -250,7 +445,12 @@ def build_pixel(entry, accent=None, edge=None, light=None):
             if entry.get("glitter") and len(frames) == 1:
                 frames = glitterize(frames[0], hex_rgb(palette["secondary"]), hex_rgb(palette["primary"]))
                 delay = 110
-            hx, hy = int(spec.get("hot_x", 0)), int(spec.get("hot_y", 0))
+            elif entry.get("fx") == "embers" and len(frames) == 1:
+                frames = embers(frames[0])
+                delay = 130
+            elif entry.get("fx") == "lava":
+                frames = [g for f in frames for g in lava(f, palette)] if len(frames) == 1 else frames
+                delay = delay or 150
             images = []
             for s in scales:
                 for f in frames:
@@ -442,6 +642,7 @@ def listing():
     catalog = []
     for e in CATALOG:
         item = {k: e[k] for k in ("id", "theme", "name", "about", "license")}
+        item["realm"] = e.get("realm", "heaven")
         item["installed"] = e["theme"] in dirs
         prev = CACHE / f"{e['theme']}.png"
         item["preview"] = str(prev) if prev.exists() else ""

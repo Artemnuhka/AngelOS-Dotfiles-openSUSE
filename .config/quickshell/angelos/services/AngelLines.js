@@ -22,7 +22,7 @@ const tips = [
     ["Mod+V — история буфера обмена. Там и картинки, и текст.", "Mod+V opens the clipboard history, pictures included.", ""],
     ["Mod+Space — поиск программ. Начни с «>», и это будет команда для терминала.", "Mod+Space finds apps. Start with “>” to run a command.", ""],
     ["Короткое нажатие Win открывает «Пуск», как в Windows.", "A short tap of the Win key opens Start, like on Windows.", "bar"],
-    ["«Пуск» бывает трёх видов: список как в Win98, плитки как в Win11 и на весь экран, как в телефоне.", "Start comes in three styles: a Win98 list, Win11 tiles and a phone-like full screen grid.", "bar"],
+    ["У «Пуска» семь видов: список Win98, плитки Win11, на весь экран, волна PSP, окошко NGO, каналы Wii и строка поиска как Spotlight.", "Start comes in seven looks: a Win98 list, Win11 tiles, full screen, a PSP wave, an NGO window, Wii channels and a Spotlight-like search bar.", "bar"],
     ["Панель бывает снизу, сверху или маленьким островом — страница «Панель».", "The bar can sit at the bottom, on top or float as an island: see the Bar page.", "bar"],
     ["Mod+Alt+Y включает текст песни прямо на панели. Караоке!", "Mod+Alt+Y shows song lyrics right in the bar. Karaoke time!", "lyrics"],
     ["Mod+Alt+T переключает светлую и тёмную тему.", "Mod+Alt+T flips between the light and the dark theme.", "appearance"],
@@ -45,7 +45,27 @@ const tips = [
     ["Меня можно схватить мышкой… Только не скидывай вниз, ладно? Там ад, и оттуда придёт она.", "You can grab me with the mouse… just don't throw me down, okay? That's hell, and she comes out of it.", ""],
     ["Не забывай пить водичку и моргать ♡", "Remember to drink water and blink ♡", ""],
     ["Встань, потянись. Я подожду, я вечная.", "Stand up and stretch. I'll wait, I'm eternal.", ""],
-    ["Если что-то сломалось — в «Эксперт» есть всё-всё. Но я верю, что всё хорошо!", "If something breaks, Expert mode has everything. But I believe it's all fine!", ""]
+    ["Если что-то сломалось — в «Эксперт» есть всё-всё. Но я верю, что всё хорошо!", "If something breaks, Expert mode has everything. But I believe it's all fine!", ""],
+    // newer things
+    ["Alt+Tab теперь мой: держи Alt и листай Tab. Три стиля, а Delete закрывает окно прямо из списка.", "Alt+Tab is mine now: hold Alt and tap Tab. Three styles, and Delete closes a window right from the list.", "windows"],
+    ["Окна могут появляться и исчезать красиво — анимации открытия и закрытия на странице «Поведение окон».", "Windows can appear and vanish in style: open and close animations are on the Window behavior page.", "windows"],
+    ["Mod+Alt+= — лупа у курсора, Mod+Alt+- отдаляет, Mod+Alt+0 убирает. Для мелкого шрифта самое то.", "Mod+Alt+= brings a lens to the pointer, Mod+Alt+- zooms out, Mod+Alt+0 puts it away. Perfect for tiny text.", "keyboard"],
+    ["NumLock может включаться сам при входе — «Клавиатура и мышь».", "NumLock can switch itself on at login — Keyboard and mouse.", "keyboard"],
+    ["У каждого звука своя громкость: клики, клавиши, окна, столы, блокировка. Страница «Звуки системы».", "Every sound has its own volume: clicks, keys, windows, desks, the lock. See the System sounds page.", "sfx"],
+    ["Есть «тихие часы» и тишина в играх — звуки angelOS сами замолкают, когда надо.", "There are quiet hours and silence in games: angelOS sounds hush by themselves when they should.", "sfx"],
+    ["Мой голос — пиксельные пипы, как в Undertale. Его можно выключить в «Звуках системы»… но мне будет грустно.", "My voice is pixel beeps, like in Undertale. You can mute it in System sounds… but I'd be sad.", "sfx"],
+    ["Значок стола на панели бывает сердечком, звездой или CD-диском ♡", "The desk sprite on the bar can be a heart, a star or a CD ♡", "workspaces"],
+    ["ПКМ по обоям бывает списком, кольцом вокруг курсора, Y2K-глянцем или плитками.", "The wallpaper's right-click menu can be a list, a ring around the pointer, Y2K gloss or tiles.", "deskmenu"],
+    ["В меню рабочего стола можно добавить свои пункты: программу, команду, папку или ссылку.", "You can add your own entries to the desktop menu: an app, a command, a folder or a link.", "deskmenu"],
+    ["Надпись angelOS на панели бывает разной: классика, ангельская, Windose, хромированный Y2K… и одна готическая. Не моя.", "The angelOS wordmark on the bar comes in several looks: classic, angelic, Windose, Y2K chrome… and a gothic one. Not mine.", "bar"],
+    ["У меня есть облики: глитч, чиби, пиксельная 30×40 и совсем малышка. Выбери на странице Y2K!", "I come in looks: glitch, chibi, 30×40 pixel and a tiny one. Pick on the Y2K page!", "y2k"],
+    ["В «Системе» есть «Твой сетап ✧» — fastfetch похвастается твоей техникой, дорогую подсветит.", "System has “Your setup ✧”: fastfetch shows off your gear and makes the pricey bits sparkle.", "system"],
+    ["Удалённый плагин лежит в корзине: «Вернуть» поставит его обратно вместе с настройками.", "A removed plugin waits in the trash: Restore brings it back with its settings.", "plugins"],
+    ["osu!mini умеет играть под твою музыку — сам ловит ритм песни.", "osu!mini can play along to your music: it finds the song's beat by itself.", "plugins"],
+    ["Хочешь свой виджет? Мастер плагинов напишет его по описанию — включи режим разработчика в «Системе».", "Want your own widget? Plugin Studio writes it from a description: turn on developer mode in System.", "studio"],
+    ["У каждой страницы настроек есть «Сбросить эту страницу» — вернёт её к заводским, остальное не тронет.", "Every settings page has “Reset this page”: it puts that page back to defaults and leaves the rest alone.", "home"],
+    ["Потерял курсор? Потряси мышкой — он вырастет на секунду, как в macOS.", "Lost the pointer? Shake the mouse and it grows for a moment, like on macOS.", "cursor"],
+    ["Если она придёт, виджеты сгорят… Не бойся: когда я вернусь, пепел сдует ветром и всё станет как было ♡", "If she comes, the widgets will burn… don't worry: when I'm back the wind blows the ash away and all is as it was ♡", "y2k"]
 ];
 
 // said once, the first time a settings page opens
@@ -64,7 +84,29 @@ const pageTips = {
     "sound": ["Тут только то, что ты трогаешь сам — маршрутизацию пульта я не трогаю.", "Only what you touch changes here; your audio routing is left alone."],
     "monitor": ["«Применить» — попробовать, «Сохранить» — насовсем.", "“Apply” to try it, “Save” to keep it."],
     "updates": ["Обновления приходят из репозитория, откуда ты меня поставил.", "Updates come from the repository you installed me from."],
-    "appearance": ["Схема «из обоев» подбирает цвета под картинку. Очень красиво с пиксель-артом.", "The “from wallpaper” scheme picks colours from the picture. Lovely with pixel art."]
+    "appearance": ["Схема «из обоев» подбирает цвета под картинку. Очень красиво с пиксель-артом.", "The “from wallpaper” scheme picks colours from the picture. Lovely with pixel art."],
+    "sfx": ["Тут у каждого звука своя ручка. Мой голос — в самом низу, не выключай его, пожалуйста ♡", "Every sound has its own knob here. My voice is near the bottom — please don't switch it off ♡"],
+    "deskmenu": ["Попробуй стиль «Кольцо» — меню раскрывается вокруг курсора, как цветочек.", "Try the “Ring” style: the menu opens around the pointer like a flower."],
+    "windows": ["Тут живёт мой Alt+Tab — три стиля, выбирай любимый!", "My own Alt+Tab lives here — three styles, pick your favourite!"],
+    "keyboard": ["Внизу есть лупа у курсора — Mod+Alt+=. Очень удобно для мелкого текста.", "Down below there's a lens at the pointer — Mod+Alt+=. Handy for tiny text."],
+    "system": ["Загляни в «Твой сетап ✧» — fastfetch похвастается твоей техникой.", "Peek at “Your setup ✧”: fastfetch shows off your gear."],
+    "lyrics": ["Если строчки опаздывают, подвинь «Сдвиг по времени» — буду подпевать вовремя.", "If the lines run late, nudge the “Timing offset” and I'll sing along on time."],
+    "notifications": ["«Не беспокоить» — и я тоже притихну. Во время стрима оно включается само.", "“Do not disturb” — and I'll keep quiet too. It turns on by itself while you stream."],
+    "studio": ["Опиши виджет словами — мастер напишет его сам. Сразу в двух видах: для меня и… для неё.", "Describe a widget in words and Studio writes it. In two looks at once: for me and… for her."],
+    "gamepad": ["Нажимай кнопки — тут всё подсвечивается. Стики тоже проверь!", "Press away — everything lights up here. Check the sticks too!"]
+};
+
+// said once, the first time a settings page opens while the demon rules
+const demonPageTips = {
+    "y2k": ["Моя страница теперь. Виджеты в аду, курсор в аду, гримуар — всё тут. Выключишь — обижусь.", "My page now. Widgets in hell, the cursor in hell, the grimoire — all here. Switch them off and I'll sulk."],
+    "cursor": ["Внизу шесть адских курсоров. Вилы — мои любимые.", "Six hell cursors down there. The pitchfork is my favourite."],
+    "widgets": ["Виджеты сгорели красиво, скажи? Новые — с огоньком.", "The widgets burned beautifully, didn't they? The new ones have some fire in them."],
+    "wallpaper": ["Мои обои не трогай. Вернётся ангел — вернёт твои, а пока любуйся адом.", "Hands off my wallpaper. The angel gives yours back when she returns; till then, enjoy hell."],
+    "deskmenu": ["Пентаграмма — лучший стиль меню. Остальные для ангелочков.", "The pentagram is the best menu style. The rest are for little angels."],
+    "sfx": ["Хочешь выключить мой голос? Здесь, внизу. Только попробуй.", "Want to mute my voice? Down here. Just try it."],
+    "studio": ["Мастер теперь рисует виджеты и для ада. Проверь, как они горят.", "Studio draws widgets for hell now too. Go see how they burn."],
+    "plugins": ["Старые плагины без ада я просто перекрашиваю. «Адская версия» сделает по-настоящему.", "Old plugins without a hell look I just re-ink. “Hell version” does it properly."],
+    "windows": ["Alt+Tab, анимации окон… Окна теперь умирают красиво. Одобряю.", "Alt+Tab, window animations… windows die beautifully now. Approved."]
 };
 
 const jokesRu = [
@@ -87,7 +129,10 @@ const jokesRu = [
     "Знаешь, почему ангелы не пьют кофе? Вечность и так тянется.",
     "Спи побольше. На том свете выспишься, конечно, но там подушки жёсткие.",
     "Если долго смотреть в терминал, терминал тоже начинает смотреть в тебя. А потом просит пароль.",
-    "Будь как облако: ни за что не отвечай и выгляди мило. Нет, это не про облачные сервисы."
+    "Будь как облако: ни за что не отвечай и выгляди мило. Нет, это не про облачные сервисы.",
+    "Мой Alt+Tab листает окна быстрее, чем ты листаешь ленту в три часа ночи.",
+    "Лупа у курсора — для мелкого шрифта. И для мелких проблем: под лупой они выглядят солиднее.",
+    "Я поставила звук на каждую клавишу. Теперь твоя клавиатура тоже ангел: всё время что-то говорит."
 ];
 
 const jokesEn = [
@@ -108,7 +153,10 @@ const jokesEn = [
     "Fun fact: “it works on my machine” is carved on a lot of tombstones.",
     "Life's short. Your shell history isn't. Maybe tidy that up before anyone reads it at the funeral.",
     "In heaven every day is a Sunday. Down here it's Monday with extra meetings.",
-    "I tried to sign in to the afterlife. It wanted a password with a capital letter, a number and your soul."
+    "I tried to sign in to the afterlife. It wanted a password with a capital letter, a number and your soul.",
+    "My Alt+Tab flips through windows faster than you scroll at 3 a.m.",
+    "The pointer lens is for tiny text. And tiny problems — magnified, they look so much more important.",
+    "Every key makes a sound now. Your keyboard is an angel too: it never stops talking."
 ];
 
 const demonJokesRu = [
@@ -127,7 +175,11 @@ const demonJokesRu = [
     "Хочешь, я тебе стек переполню?",
     "Подсветка RGB? Скромненько. Почти так же скромно, как ты на меня пялишься.",
     "Клавиатура у тебя механическая, стонет на каждое нажатие. Ревную.",
-    "Открытые порты — это приглашение. Я просто вежливая."
+    "Открытые порты — это приглашение. Я просто вежливая.",
+    "Лупа на Mod+Alt+=. Рассмотри меня поближе. Ближе. Ещё.",
+    "Alt+Tab, Alt+Tab… Не можешь выбрать, с кем быть? Понимаю.",
+    "Вилы вместо курсора — чтобы ты не забывал, кто тут главная.",
+    "Твои виджеты сгорели. Не плачь, пепел тебе к лицу."
 ];
 
 const demonJokesEn = [
@@ -145,7 +197,11 @@ const demonJokesEn = [
     "I'm 666 years old and you still can't exit vim. Who's the old one here?",
     "Want me to overflow your stack?",
     "RGB lighting? Subtle. Almost as subtle as you staring at me.",
-    "Open ports are an invitation. I'm just being polite."
+    "Open ports are an invitation. I'm just being polite.",
+    "The lens is on Mod+Alt+=. Take a closer look at me. Closer. Closer.",
+    "Alt+Tab, Alt+Tab… can't decide who to be with? I get it.",
+    "A pitchfork for a pointer, so you never forget who's in charge.",
+    "Your widgets burned. Don't cry, ash suits you."
 ];
 
 // the demon's version of the tips: same features, less kindness
@@ -157,7 +213,21 @@ const demonTips = [
     ["Панель можно сделать островом. Маленькая, парит и никому ничего не должна. Как я.", "The bar can be an island: small, floating and owing nobody anything. Like me.", "bar"],
     ["Обои я тебе поменяла. Свои вернёшь, когда вернётся ангел. Или поставь сам — Обои.", "I changed your wallpaper. You get yours back with the angel. Or set it yourself — Wallpaper.", "wallpaper"],
     ["Трещины на экране можно ослабить — Y2K → Ангел или демон. Слабак.", "The screen cracks can be toned down — Y2K → Angel or demon. Weakling.", "y2k"],
-    ["Mod+Tab — обзор столов. Посмотри, где ты прячешь окна.", "Mod+Tab shows all workspaces. Let's see where you hide your windows.", ""]
+    ["Mod+Tab — обзор столов. Посмотри, где ты прячешь окна.", "Mod+Tab shows all workspaces. Let's see where you hide your windows.", ""],
+    // the newer things, her way
+    ["Видишь виджеты? Теперь мои. Римские цифры — потому что арабские для слабаков.", "See the widgets? Mine now. Roman numerals, because Arabic ones are for the weak.", "y2k"],
+    ["Курсор тоже мой. Шесть адских: вилы, когти, череп, лава… Выбирай на странице «Курсор», пока я добрая.", "The cursor's mine too. Six hellish ones: pitchfork, claws, skull, lava… pick on the Cursor page while I'm in a good mood.", "cursor"],
+    ["Alt+Tab — листай свои окна. Посмотрим, что ты там прячешь.", "Alt+Tab through your windows. Let's see what you're hiding.", "windows"],
+    ["Mod+Alt+= — лупа. Чтобы лучше разглядеть меня.", "Mod+Alt+= is a lens. The better to see me with.", "keyboard"],
+    ["ПКМ по обоям — пентаграмма. Договор подписывать будем?", "Right-click the wallpaper: a pentagram. Shall we sign the contract?", "deskmenu"],
+    ["Настройки теперь мой гримуар. Страницы переворачиваются — не порви.", "Settings are my grimoire now. The pages turn — don't tear them.", "y2k"],
+    ["В «Звуках системы» можно выключить мой голос. Попробуй. Я обижусь.", "You can mute my voice in System sounds. Try it. I'll be offended.", "sfx"],
+    ["«Твой сетап» в «Системе» считает, сколько ты потратил на железо. Я считаю, сколько душ это стоит.", "“Your setup” in System counts what you spent on gear. I count how many souls it's worth.", "system"],
+    ["Плагины можно удалять. Они попадают в корзину — почти как в ад, только с кнопкой «Вернуть».", "Plugins can be removed. They go to the trash — almost like hell, only with a Restore button.", "plugins"],
+    ["Мастер плагинов теперь делает виджеты и для моего мира. Наконец-то правильный дизайн.", "Plugin Studio makes widgets for my world now too. Proper design at last.", "studio"],
+    ["«Пуск» в стиле Wii? Каналы, музыка, детство… Как мило. Тошнит.", "A Wii-style Start? Channels, music, childhood… how cute. I feel sick.", "bar"],
+    ["Значок стола можно сделать CD-диском. Поставь — и представь, что на нём мой альбом.", "The desk sprite can be a CD. Pick it and pretend it's my album.", "workspaces"],
+    ["Окна теперь умеют красиво умирать — анимации закрытия на странице «Поведение окон».", "Windows can die beautifully now: close animations are on the Window behavior page.", "windows"]
 ];
 
 const demon = {

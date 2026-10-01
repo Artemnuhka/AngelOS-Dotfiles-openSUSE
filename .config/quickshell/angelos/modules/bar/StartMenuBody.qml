@@ -59,10 +59,10 @@ PxBox {
             "show": Owner.enabled,
             "act": () => Shell.openSettings("dotfiles")
         },
+        // always there: users looked for it before the daily check found anything
         {
-            "text": I18n.t("Обновление готово ♡", "Update available ♡"),
+            "text": Updates.available ? I18n.t("Обновление готово ♡", "Update available ♡") : I18n.t("Обновление", "Update"),
             "icon": "download",
-            "show": Updates.available,
             "act": () => Shell.openSettings("updates")
         },
         {

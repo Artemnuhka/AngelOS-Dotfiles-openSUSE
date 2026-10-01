@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
 import qs.config
 import qs.services
 import qs.widgets
@@ -24,6 +25,89 @@ PxPage {
         if (/90|270/.test(dd.transform))
             [w, h] = [h, w];
         return [w / dd.scale, h / dd.scale];
+    }
+
+    // the main screen: where the desk lives (Shell.primaryScreen)
+    readonly property int widgetsElsewhere: DesktopWidgets.widgets.filter(w => w.screen !== Shell.primaryName).length
+    readonly property string angelOwn: Config.y2k.helperScreen && Config.y2k.helperScreen !== "focus" && Config.y2k.helperScreen !== Shell.primaryName ? Config.y2k.helperScreen : ""
+    PxGroup {
+        title: I18n.t("Главный экран", "Main screen")
+        icon: "star"
+        width: parent.width
+        SettingRow {
+            label: I18n.t("Главный экран", "Main screen")
+            hint: I18n.t("здесь живут виджеты, ангел (и трещины демоницы, лучи, тряска), заставка и сайдбар; niri фокусирует его при входе. «Авто» — самый широкий экран", "Home of the widgets, the angel (and the demon's cracks, the rays, the quake), the idle screen and the sidebar; niri focuses it at login. “Auto” is the widest screen")
+            Flow {
+                width: parent.width
+                spacing: Theme.u * 2
+                Repeater {
+                    model: [
+                        {
+                            "label": I18n.t("Авто (", "Auto (") + (Shell.widestScreen ? Shell.widestScreen.name : "—") + ")",
+                            "value": ""
+                        }
+                    ].concat(Quickshell.screens.map(sc => ({
+                                "label": sc.name,
+                                "value": sc.name
+                            })))
+                    PxButton {
+                        required property var modelData
+                        compact: true
+                        icon: modelData.value && modelData.value === Shell.primaryName ? "star" : ""
+                        text: modelData.label
+                        checked: (Config.system.primaryScreen || "") === modelData.value
+                        enabled: !Outputs.busy
+                        onClicked: Outputs.setPrimary(modelData.value)
+                    }
+                }
+            }
+        }
+        SettingRow {
+            visible: page.widgetsElsewhere > 0
+            label: I18n.t("Виджеты на других экранах: ", "Widgets on other screens: ") + page.widgetsElsewhere
+            hint: I18n.t("перенести их все на главный (позиции сохранятся, лишнее прижмётся к краю)", "Move them all to the main screen (positions kept, anything off the edge snaps back)")
+            PxButton {
+                compact: true
+                icon: "layers"
+                text: I18n.t("Перенести сюда", "Move here")
+                onClicked: DesktopWidgets.moveAllTo(Shell.primaryName)
+            }
+        }
+        SettingRow {
+            visible: page.angelOwn !== ""
+            label: I18n.t("У ангела свой экран: ", "The angel has her own screen: ") + page.angelOwn
+            hint: I18n.t("Y2K → «На каком экране»; с главным её трещины и лучи тоже уйдут туда", "Y2K → Screen; with the main one her cracks and rays move there too")
+            PxButton {
+                compact: true
+                text: I18n.t("Тоже на главный", "Main screen too")
+                onClicked: Config.y2k.helperScreen = ""
+            }
+        }
+        SettingRow {
+            visible: !!Config.sidebar.screen && Config.sidebar.screen !== Shell.primaryName
+            label: I18n.t("У сайдбара свой экран: ", "The sidebar has its own screen: ") + Config.sidebar.screen
+            PxButton {
+                compact: true
+                text: I18n.t("Тоже на главный", "Main screen too")
+                onClicked: Config.sidebar.screen = ""
+            }
+        }
+        PxText {
+            width: parent.width
+            wrapMode: Text.Wrap
+            kind: "tiny"
+            dim: !Outputs.primaryLog.startsWith("niri: ")
+            color: Outputs.primaryLog.startsWith("niri: ") ? Theme.danger : Theme.textDim
+            text: Outputs.primaryLog || (Outputs.niriFocused.length ? I18n.t("niri при входе фокусирует: ", "niri focuses at login: ") + Outputs.niriFocused.join(", ") : I18n.t("niri при входе фокусирует первый экран (focus-at-startup не задан)", "niri focuses the first screen at login (no focus-at-startup)"))
+        }
+        PxText {
+            width: parent.width
+            wrapMode: Text.Wrap
+            kind: "tiny"
+            dim: true
+            visible: StreamMode.active && Config.stream.hideAngel && StreamMode.onStream(Shell.primaryName)
+            text: I18n.t("Сейчас идёт эфир: ангел и её эффекты ушли с этого экрана (Y2K → Стрим-режим)", "You're live: the angel and her effects have left this screen (Y2K → Stream mode)")
+        }
     }
 
     PxGroup {
@@ -78,7 +162,7 @@ PxPage {
                             }
                             PxText {
                                 anchors.horizontalCenter: parent.horizontalCenter
-                                text: mon.modelData
+                                text: (Shell.primaryName === mon.modelData ? "★ " : "") + mon.modelData
                                 font.bold: true
                             }
                             PxText {

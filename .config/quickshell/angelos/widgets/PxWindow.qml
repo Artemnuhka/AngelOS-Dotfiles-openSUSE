@@ -2,8 +2,14 @@ import QtQuick
 import qs.config
 
 // NGO-style window: bevelled frame, gradient title bar, pixel buttons.
+// `hell` (Theme.realm, desktop widgets): obsidian frame, blackletter title,
+// pixel flames licking up from the top edge and blood dripping off the bottom.
 Item {
     id: root
+
+    property bool hell: false
+    property bool flamesLive: true         // the flames move (off while nobody sees them)
+    property bool trim: true               // flames and drips (a copy drawn over its twin leaves them to it)
 
     property string title: ""
     property string icon: "heart"
@@ -17,7 +23,7 @@ Item {
     property bool shadow: Config.appearance.shadows
     property color bodyColor: translucent ? Theme.panel : Theme.face
     property int bodyPadding: Theme.pad
-    readonly property int titleHeight: compact ? Theme.sizeBody + Theme.u * 5 : Theme.sizeTitle + Theme.u * 5
+    readonly property int titleHeight: hell ? Theme.hellPx(Theme.fs) + Theme.u * 3 : compact ? Theme.sizeBody + Theme.u * 5 : Theme.sizeTitle + Theme.u * 5
     readonly property int chrome: frame.inset + Theme.u
     property alias titleBar: bar
     property alias titleMouse: titleMouse
@@ -31,8 +37,58 @@ Item {
     PxBox {
         id: frame
         anchors.fill: parent
-        color: root.bodyColor
+        hell: root.hell
+        color: root.hell && root.bodyColor.a > 0 ? Theme.hellPanel : root.bodyColor
         shadow: root.shadow
+    }
+
+    // ---- hell's trim ----
+    ShaderEffect {
+        id: flames
+        visible: root.hell && root.trim
+        readonly property int rows: 7
+        width: root.width
+        height: Theme.u * rows
+        y: -height + Theme.u
+        property real time: 0
+        readonly property real seed: (root.title.length * 3.17) % 11
+        readonly property size cells: Qt.size(Math.max(1, Math.round(width / Theme.u)), rows)
+        fragmentShader: Qt.resolvedUrl("../shaders/hell_flames.frag.qsb")
+        Timer {
+            interval: 140
+            repeat: true
+            running: flames.visible && root.flamesLive && root.visible
+            onTriggered: flames.time += 0.14
+        }
+    }
+    // blood dripping off the bottom edge, at fixed spots
+    Repeater {
+        model: root.hell && root.trim ? [[0.11, 3], [0.24, 5], [0.43, 2], [0.6, 4], [0.78, 2], [0.9, 6]] : []
+        Item {
+            id: drip
+            required property var modelData
+            x: Math.round(root.width * modelData[0] / Theme.u) * Theme.u
+            y: root.height - Theme.u
+            width: Theme.u * 2
+            height: Theme.u * (modelData[1] + 2)
+            Rectangle {
+                x: Theme.u / 2
+                width: Theme.u
+                height: Theme.u * drip.modelData[1]
+                color: Theme.hellBlood
+            }
+            Rectangle {
+                y: Theme.u * drip.modelData[1]
+                width: Theme.u * 2
+                height: Theme.u * 2
+                color: Theme.hellBlood
+                Rectangle {
+                    width: Theme.u
+                    height: Theme.u
+                    color: "#e8404f"
+                }
+            }
+        }
     }
 
     Rectangle {
@@ -41,7 +97,7 @@ Item {
         y: frame.inset + Theme.u
         width: root.width - 2 * x
         height: root.titleHeight
-        color: root.active ? Theme.menuHeader : Theme.faceAlt
+        color: root.hell ? (root.active ? Theme.mix(Theme.hellFaceAlt, Theme.hellBlood, 0.35) : Theme.hellFace) : root.active ? Theme.menuHeader : Theme.faceAlt
 
         MouseArea {
             id: titleMouse
@@ -58,16 +114,20 @@ Item {
             PxIcon {
                 name: root.icon
                 anchors.verticalCenter: parent.verticalCenter
-                ink: Theme.edge
-                fill: "#ffffff"
-                light: Theme.accent3
-                fill2: "#ffffff"
-                body: "#ffffff"
+                ink: root.hell ? Theme.hellEdge : Theme.edge
+                fill: root.hell ? Theme.hellFlame : "#ffffff"
+                light: root.hell ? Theme.hellText : Theme.accent3
+                fill2: root.hell ? Theme.hellEmber : "#ffffff"
+                body: root.hell ? Theme.hellFace : "#ffffff"
+                bad: root.hell ? Theme.hellEmber : Theme.danger
             }
             PxText {
                 text: root.title
                 kind: root.compact ? "body" : "title"
-                color: Theme.text
+                readonly property bool gothic: root.hell && Theme.latin(root.title)
+                font.family: gothic ? Theme.fontHell : root.compact ? Theme.fontBody : Theme.fontTitle
+                font.pixelSize: gothic ? Theme.hellPx(Theme.fs) : root.compact ? Theme.sizeBody : Theme.sizeTitle
+                color: root.hell ? Theme.hellFlame : Theme.text
                 style: Text.Normal
                 styleColor: Qt.alpha(Theme.edge, 0.55)
                 anchors.verticalCenter: parent.verticalCenter
@@ -131,14 +191,15 @@ Item {
                     PxBox {
                         anchors.fill: parent
                         sunken: tbMouse.pressed
-                        color: tbMouse.containsMouse && tb.modelData.id === "close" ? Theme.danger : Theme.face
+                        hell: root.hell
+                        color: tbMouse.containsMouse && tb.modelData.id === "close" ? (root.hell ? Theme.hellBlood : Theme.danger) : root.hell ? Theme.hellFace : Theme.face
                     }
                     PxIcon {
                         anchors.centerIn: parent
                         anchors.horizontalCenterOffset: tbMouse.pressed ? Theme.u : 0
                         name: tb.modelData.icon
                         pixel: Math.max(1, Math.floor(Theme.u * (root.compact ? 0.5 : 1)))
-                        ink: tbMouse.containsMouse && tb.modelData.id === "close" ? "#ffffff" : (Theme.dark ? Theme.text : Theme.edge)
+                        ink: tbMouse.containsMouse && tb.modelData.id === "close" ? "#ffffff" : root.hell ? Theme.hellText : (Theme.dark ? Theme.text : Theme.edge)
                     }
                     MouseArea {
                         id: tbMouse

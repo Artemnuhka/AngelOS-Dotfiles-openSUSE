@@ -7,12 +7,21 @@ import qs.config
 
 // Cursor theme: one theme everywhere (niri, GTK, Qt, X11/XWayland, Steam, Flatpak).
 // scripts/cursors.py downloads/builds the themes and writes every config.
+// Hell: while the demon rules the pointer is Config.cursor.hell (one of the six
+// hell themes, built on first use); the angel brings yours back. Your own pick
+// stays in Config.cursor.theme the whole time. If you never picked one, the
+// cursor that was there before (niri's) is kept in Config.cursor.beforeHell.
 Singleton {
     id: root
 
     readonly property string theme: Config.cursor.theme || Quickshell.env("XCURSOR_THEME") || ""
-    readonly property int size: Config.cursor.theme ? Config.cursor.size : (parseInt(Quickshell.env("XCURSOR_SIZE")) || 24)
+    readonly property int size: Config.cursor.theme || hellOn ? Config.cursor.size : (parseInt(Quickshell.env("XCURSOR_SIZE")) || 24)
+    // the theme on screen right now: the demon's while she rules
+    readonly property bool hellOn: Config.ready && Angel.demon && !!Config.cursor.hell
+    readonly property string active: hellOn ? Config.cursor.hell : theme
     property var catalog: []
+    readonly property var heavenly: catalog.filter(c => c.realm !== "hell")
+    readonly property var hellish: catalog.filter(c => c.realm === "hell")
     property var other: []              // cursor themes found on the system
     property var status: ({})           // where which theme is set
     property string log: ""
@@ -27,6 +36,9 @@ Singleton {
     function colors() {
         return ["--accent", Theme.hex(Theme.accent), "--edge", Theme.hex(Theme.edge), "--light", "#fff4fb"];
     }
+    function entryOf(themeName) {
+        return catalog.find(c => c.theme === themeName) || null;
+    }
     function install(id, thenApply) {
         if (worker.running)
             return;
@@ -36,6 +48,7 @@ Singleton {
         worker.command = ["python3", script, "install", id].concat(colors());
         worker.running = true;
     }
+    // your pick (Settings → Cursor). In hell it waits for the angel.
     function apply(themeName, sz) {
         if (worker.running)
             return;
@@ -45,8 +58,30 @@ Singleton {
             log = I18n.t("В dev-режиме системные настройки курсора не меняются", "Dev mode does not change the system cursor");
             return;
         }
+        if (hellOn) {
+            _pending = true;
+            Qt.callLater(sync);
+            log = I18n.t("Запомнила. Пока правит демоница, курсор адский — твой вернётся вместе с ангелом.", "Saved. While the demon rules the cursor is hers — yours comes back with the angel.");
+            return;
+        }
+        put(themeName, sz);
+    }
+    // the theme the demon puts on (Settings → Cursor → Hell); "" = she leaves the cursor alone
+    function setHell(themeName) {
+        Config.cursor.hell = themeName;
+        _attempt = "";
+        const e = entryOf(themeName);
+        // not built yet: now (on at once if she's here, otherwise ready for when she comes)
+        if (e && !e.installed && !worker.running)
+            install(e.id, hellOn);
+        else
+            Qt.callLater(sync);
+    }
+    // the theme on the system, without touching your pick
+    function put(themeName, sz) {
+        if (worker.running || Shell.dev || !themeName)
+            return;
         working = themeName;
-        log = "";
         worker.after = "";
         worker.command = ["python3", script, "apply", themeName, String(sz)].concat(Config.cursor.flatpak ? [] : ["--no-flatpak"]);
         worker.running = true;
@@ -54,6 +89,77 @@ Singleton {
     // angelOS Pixel follows the accent: rebuild, then make niri reload the files
     function recolor() {
         install("angelos", true);
+    }
+
+    // ---- heaven ⇄ hell ----
+    // What should be on the system now: the demon's theme while she rules; back
+    // from hell yours, or what niri had before her if you never picked one. Runs
+    // after every listing, so it only ever acts on fresh status.
+    property bool _listed: false
+    property bool _pending: false       // picked in hell: put on when the angel is back
+    property string _attempt: ""        // what sync last tried: never the same twice in a row
+    onHellOnChanged: {
+        _attempt = "";
+        Qt.callLater(sync);
+    }
+    Connections {
+        target: Config
+        function onReadyChanged() {
+            Qt.callLater(root.sync);
+        }
+    }
+    function isHell(themeName) {
+        const e = entryOf(themeName);
+        return !!e && e.realm === "hell";
+    }
+    function wanted() {
+        const sz = Config.cursor.size || 24;
+        if (hellOn)
+            return {
+                "theme": Config.cursor.hell,
+                "size": sz
+            };
+        const now = status.niri ? status.niri[0] : "";
+        if (!_pending && !isHell(now))
+            return null;
+        if (Config.cursor.theme)
+            return {
+                "theme": Config.cursor.theme,
+                "size": sz
+            };
+        return Config.cursor.beforeHell ? {
+            "theme": Config.cursor.beforeHell,
+            "size": Config.cursor.beforeHellSize || sz
+        } : null;
+    }
+    function sync() {
+        if (!_listed || !Config.ready || Shell.dev || worker.running)
+            return;
+        const w = wanted();
+        if (!w)
+            return;
+        const now = status.niri || [];
+        if (now[0] === w.theme && now[1] === w.size) {
+            if (!hellOn) {
+                _pending = false;
+                Config.cursor.beforeHell = "";
+            }
+            return;
+        }
+        const key = w.theme + "@" + w.size;
+        if (_attempt === key)
+            return;
+        _attempt = key;
+        // never picked a cursor: remember the one she replaces
+        if (hellOn && !Config.cursor.theme && !isHell(now[0])) {
+            Config.cursor.beforeHell = now[0] || status.x11 || status.gsettings || Quickshell.env("XCURSOR_THEME") || "Adwaita";
+            Config.cursor.beforeHellSize = now[1] || parseInt(Quickshell.env("XCURSOR_SIZE")) || 24;
+        }
+        const e = entryOf(w.theme);
+        if (e && !e.installed)
+            install(e.id, true);
+        else
+            put(w.theme, w.size);
     }
 
     Process {
@@ -69,6 +175,8 @@ Singleton {
                     root.catalog = r.catalog;
                     root.other = r.other;
                     root.status = r.status || {};
+                    root._listed = true;
+                    Qt.callLater(root.sync);
                 } catch (e) {}
             }
         }
@@ -91,11 +199,15 @@ Singleton {
                 else if (r.theme && worker.after) {
                     // freshly built: apply it (a size nudge makes niri reload the same theme name)
                     const t = r.theme, sz = Config.cursor.size || 24;
+                    const hell = root.hellOn && t === Config.cursor.hell;
                     Qt.callLater(() => {
-                        if (Config.cursor.theme === t && !Shell.dev) {
+                        if (Shell.dev)
+                            return;
+                        if (hell || (Config.cursor.theme === t && !root.hellOn)) {
                             worker.command = ["python3", root.script, "apply", t, String(sz + 1)];
                             worker.after = "";
                             worker.nudgeBack = sz;
+                            worker.nudgeTheme = t;
                             worker.running = true;
                         } else {
                             root.apply(t, sz);
@@ -105,11 +217,12 @@ Singleton {
             }
         }
         property int nudgeBack: 0
+        property string nudgeTheme: ""
         onExited: {
             if (nudgeBack > 0) {
-                const sz = nudgeBack;
+                const sz = nudgeBack, t = nudgeTheme;
                 nudgeBack = 0;
-                Qt.callLater(() => root.apply(Config.cursor.theme, sz));
+                Qt.callLater(() => root.put(t, sz));
                 return;
             }
             root.working = "";

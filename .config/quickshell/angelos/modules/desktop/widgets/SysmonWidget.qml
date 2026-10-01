@@ -8,7 +8,8 @@ import qs.services
 import qs.widgets
 
 // CPU / GPU / RAM / temperatures / network in pixel meters (paused while the
-// desk is out of sight: locked or under a fullscreen window).
+// desk is out of sight: locked or under a fullscreen window). In hell (Theme.realm)
+// the same numbers as Heat, Inferno, Souls and Cauldron, in meters of fire.
 Item {
     id: root
 
@@ -140,24 +141,28 @@ Item {
             model: [
                 {
                     "k": "CPU",
+                    "hell": I18n.t("ЖАР", "HEAT"),
                     "v": root.cpu,
                     "t": Math.round(root.cpu * 100) + "%" + (root.cpuTemp > 0 ? "  " + Math.round(root.cpuTemp) + "°" : ""),
                     "c": Theme.accent
                 },
                 {
                     "k": "GPU",
+                    "hell": I18n.t("ПЕКЛО", "INFERNO"),
                     "v": Math.max(0, root.gpu),
                     "t": root.gpu < 0 ? "—" : Math.round(root.gpu * 100) + "%" + (root.gpuTemp > 0 ? "  " + Math.round(root.gpuTemp) + "°" : ""),
                     "c": Theme.accent2
                 },
                 {
                     "k": "RAM",
+                    "hell": I18n.t("ДУШИ", "SOULS"),
                     "v": root.ram,
                     "t": root.ramText,
                     "c": Theme.accent4
                 },
                 {
                     "k": "VRAM",
+                    "hell": I18n.t("КОТЁЛ", "CAULDRON"),
                     "v": root.vramText ? parseFloat(root.vramText) / Math.max(1, parseFloat(root.vramText.split("/")[1])) : 0,
                     "t": root.vramText || "—",
                     "c": Theme.accent3
@@ -172,21 +177,26 @@ Item {
                     width: parent.width
                     PxText {
                         width: parent.width / 2
-                        text: r.modelData.k
-                        font.bold: true
+                        text: Theme.hell ? r.modelData.hell : r.modelData.k
+                        font.bold: !Theme.hell
+                        font.family: Theme.hell && Theme.latin(text) ? Theme.fontHell : Theme.fontBody
+                        font.pixelSize: Theme.hell && Theme.latin(text) ? Theme.hellPx(Theme.fs) : Theme.sizeBody
+                        color: Theme.hell ? Theme.hellFlame : Theme.text
                     }
                     PxText {
                         width: parent.width / 2
+                        anchors.verticalCenter: parent.verticalCenter
                         horizontalAlignment: Text.AlignRight
                         text: r.modelData.t
-                        dim: true
+                        color: Theme.hell ? Theme.hellTextDim : Theme.textDim
                     }
                 }
                 PxBox {
                     width: parent.width
                     height: Theme.u * 6
                     sunken: true
-                    color: Theme.sunken
+                    hell: Theme.hell
+                    color: Theme.hell ? Theme.hellSunken : Theme.sunken
                     Row {
                         anchors.fill: parent
                         spacing: Math.max(1, Theme.u / 2)
@@ -194,9 +204,11 @@ Item {
                             model: 16
                             Rectangle {
                                 required property int index
+                                readonly property bool lit: index < Math.round(r.modelData.v * 16)
                                 width: parent ? (parent.width - 15 * parent.spacing) / 16 : 0
                                 height: parent ? parent.height : 0
-                                color: index < Math.round(r.modelData.v * 16) ? r.modelData.c : "transparent"
+                                // hell: fire from blood to flame along the meter, the last block white-hot
+                                color: !lit ? "transparent" : !Theme.hell ? r.modelData.c : index === Math.round(r.modelData.v * 16) - 1 && index > 10 ? "#ffe98c" : index < 6 ? Theme.hellBlood : index < 11 ? Theme.hellEmber : Theme.hellFlame
                             }
                         }
                     }
@@ -207,11 +219,11 @@ Item {
             spacing: Theme.u * 6
             PxText {
                 text: "↓ " + root.human(root.rx)
-                color: Theme.ok
+                color: Theme.hell ? Theme.hellEmber : Theme.ok
             }
             PxText {
                 text: "↑ " + root.human(root.tx)
-                color: Theme.accent2
+                color: Theme.hell ? Theme.hellGold : Theme.accent2
             }
         }
     }

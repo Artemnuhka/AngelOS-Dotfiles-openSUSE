@@ -496,6 +496,12 @@ PxBox {
             spacing: Theme.u * 3
             PxButton {
                 compact: true
+                icon: "download"
+                accent: Updates.available
+                onClicked: root.act(() => Shell.openSettings("updates"))
+            }
+            PxButton {
+                compact: true
                 icon: "lock"
                 onClicked: root.act(() => Shell.lock())
             }

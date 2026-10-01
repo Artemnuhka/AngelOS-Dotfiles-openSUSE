@@ -11,6 +11,7 @@ import qs.widgets
 // scripts/audio-tap.py: pw-record of an output's monitor, a whole multichannel
 // interface or one channel pair → FIFO → cava. cava's own `source = <sink>`
 // silently fell back to the default *input*, i.e. the microphone.
+// In hell (Theme.realm) the bars are columns of fire: blood, embers, flame, a hot tip.
 // cava and the tap stop while nobody can see the desk (locked, fullscreen game),
 // and run only in a copy that is shown: the widget's face (DesktopWidgetHost) —
 // its hidden input copy would share the FIFO and the config.
@@ -103,15 +104,19 @@ Item {
                 height: root.height
                 // stacked pixel blocks, pink at the bottom fading to cyan at the top
                 Column {
+                    id: stack
+                    readonly property int count: Math.round(bar.v * 14)
                     anchors.bottom: parent.bottom
                     spacing: Math.max(1, Theme.u / 2)
                     Repeater {
-                        model: Math.round(bar.v * 14)
+                        model: stack.count
                         Rectangle {
                             required property int index
+                            // the Column stacks downwards: the first block is the top one
+                            readonly property int level: stack.count - 1 - index
                             width: bar.width
                             height: Theme.u * 2
-                            color: Theme.mix(Theme.accent2, Theme.accent, (index + 1) / 14)
+                            color: !Theme.hell ? Theme.mix(Theme.accent2, Theme.accent, (index + 1) / 14) : index === 0 && stack.count > 3 ? "#ffe98c" : level < 3 ? Theme.hellBlood : level < 7 ? Theme.hellEmber : Theme.hellFlame
                         }
                     }
                 }

@@ -52,6 +52,11 @@ Singleton {
             "run": () => Shell.openSettings("")
         },
         {
+            "label": Updates.available ? I18n.t("Обновление готово ♡", "Update available ♡") : I18n.t("Обновление", "Update"),
+            "icon": "download",
+            "run": () => Shell.openSettings("updates")
+        },
+        {
             "label": I18n.t("Внешний вид", "Appearance"),
             "icon": "palette",
             "run": () => Shell.openSettings("appearance")

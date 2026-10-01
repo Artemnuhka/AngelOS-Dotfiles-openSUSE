@@ -68,6 +68,16 @@
 - Кнопка **↻** у своего плагина в «Плагинах» перезагружает его файлы после
   ручной правки во внешнем редакторе (режим разработчика не нужен).
 
+### Рай и ад
+
+Каждый новый виджет рабочего стола мастер делает в двух измерениях: обычный
+и адский — для демоницы (`"realms": ["heaven", "hell"]`, вид по `Theme.hell`,
+см. [PLUGINS.md](PLUGINS.md#два-измерения-рай-и-ад)). Проверка требует оба и
+грузит виджет в раю и в аду. У старых своих плагинов, где ада нет, есть кнопка
+**«Адская версия»** в «Плагинах» (и **«Сделать адскую версию»** в мастере при
+доработке): ИИ дорисовывает только адский облик, остальное не трогает. Пока её
+не нажали, angelOS в аду просто перекрашивает такой виджет шейдером.
+
 ## Модель, уровень, проверка
 
 - **Модель** выбирается карточками: для Claude Code — Haiku / Sonnet / Opus / Fable,
@@ -170,6 +180,13 @@ editor (save = recheck). "Update plugin" backs the old version up to
 atomically and hot-reloads it through a fresh load path (QML caches
 components by URL). "Restore previous version" undoes it (and can redo).
 Files Studio cannot edit ride along untouched.
+
+**Heaven and hell**: every new desktop widget comes in both realms, the usual
+one and a hell look for the demon (`"realms": ["heaven", "hell"]`, drawn by
+`Theme.hell`); the check requires both and loads the widget in each. Your older
+plugins without hell get **Hell version** in Settings → Plugins (and **Make the
+hell version** while improving one): the AI adds only the hell look. Until then
+angelOS re-inks such a widget with a shader in hell.
 
 For “remaining Codex tokens,” Studio must clarify the actual metric and data
 source instead of inventing a subscription-balance API. Its own token counter

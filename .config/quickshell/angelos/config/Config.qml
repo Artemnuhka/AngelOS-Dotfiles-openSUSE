@@ -93,7 +93,7 @@ Singleton {
     // Each step is [{path, old, new}]; bookkeeping the shell does by itself
     // (counters, the angel's state, update checks) is never a step.
     readonly property var sections: ["appearance", "bar", "wallpaper", "workspaces", "alttab", "lyrics", "setup", "notifications", "osd", "launcher", "voxtype", "desktop", "lock", "idle", "sidebar", "capture", "plugins", "dotfiles", "system", "developer", "settingsUi", "y2k", "cursor", "updates", "network", "stream", "lens"]
-    readonly property var notUndoable: ["launcher.usage", "settingsUi.usage", "settingsUi.expert", "updates.lastCheck", "updates.available", "setup.complete", "lyrics.sourcesVersion", "desktop.initialized", "plugins.data", "stream.dndSet", "y2k.helperGreeted", "y2k.character", "y2k.demonSince", "y2k.pleas", "y2k.lastPlea", "y2k.pranks", "y2k.nextPrank", "y2k.seenTips", "y2k.angelSaved", "y2k.raysSeen"]
+    readonly property var notUndoable: ["launcher.usage", "settingsUi.usage", "settingsUi.expert", "updates.lastCheck", "updates.available", "setup.complete", "lyrics.sourcesVersion", "desktop.initialized", "plugins.data", "stream.dndSet", "stream.suppressed", "y2k.helperGreeted", "y2k.character", "y2k.demonSince", "y2k.pleas", "y2k.lastPlea", "y2k.pranks", "y2k.nextPrank", "y2k.seenTips", "y2k.angelSaved", "y2k.raysSeen", "cursor.beforeHell", "cursor.beforeHellSize"]
     property var undoStack: []
     readonly property bool canUndo: undoStack.length > 0
     readonly property var lastStep: undoStack.length ? undoStack[undoStack.length - 1] : null
@@ -166,6 +166,9 @@ Singleton {
         id: file
         path: root.dir + "/settings.json"
         watchChanges: true
+        // an async write re-reads what it wrote into the adapter when it finishes,
+        // undoing any change made meanwhile (an Undo right after a save): write in place
+        blockWrites: true
         onFileChanged: reload()
         // loaded from disk (start, another instance, an edit by hand): not an undo step
         onLoaded: root._snap = root.snapshot()

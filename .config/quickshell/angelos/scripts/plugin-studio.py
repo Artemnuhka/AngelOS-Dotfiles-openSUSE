@@ -589,6 +589,18 @@ def validate_files(files, directory, spec, taken, edit=False):
                 errors.append(desktop + ": missing " + prop)
         if re.search(r"\b(?:PanelWindow|PopupWindow|Window)\s*\{", source):
             errors.append(desktop + ": return content Item, not a window")
+    # heaven and hell (contract "Two realms"): a new desktop widget draws both;
+    # an edited one keeps what it declares
+    realms = manifest.get("realms")
+    if realms is not None and (not isinstance(realms, list) or any(r not in ("heaven", "hell") for r in realms)):
+        errors.append('manifest.realms must be a list of "heaven" and "hell"')
+    elif isinstance(desktop, str) and desktop in files:
+        if not edit and set(realms or []) != {"heaven", "hell"}:
+            errors.append('A desktop widget must draw both realms: add "realms": ["heaven", "hell"] to manifest.json '
+                          "and a hell look bound to Theme.hell (contract: Two realms)")
+        if "hell" in (realms or []) and not any(re.search(r"\bTheme\.(?:hell|realm)\b", t)
+                                                for n, t in files.items() if n.endswith((".qml", ".js"))):
+            errors.append('manifest.realms has "hell", but no QML reads Theme.hell or Theme.realm')
     return manifest, errors[:30]
 
 
@@ -617,18 +629,26 @@ ShellRoot {
                 console.log("CHECK-FAIL " + e.kind + " :: " + c.errorString().replace(/\\n/g, " | "));
                 continue;
             }
-            const props = {"plugin": plugin};
-            if (e.kind === "desktopWidget") { props.screenName = "CHECK-1"; props.widget = {"uid": "check", "x": 0, "y": 0, "settings": {}}; }
-            if (e.kind === "barWidget") { props.screenName = "CHECK-1"; props.barWindow = null; }
-            if (e.kind === "launcher") props.pluginId = check.id;
-            if (e.kind === "menuComponent") props.menu = {"close": () => {}};
-            if (e.kind === "sidebarWidget") props.width = 300;
-            const o = c.createObject(host, props);
-            if (!o) { console.log("CHECK-FAIL " + e.kind + " :: could not be created"); continue; }
-            if (e.kind === "launcher" && typeof o.query === "function") {
-                try { o.query("test", false); } catch (err) { console.log("CHECK-FAIL launcher :: query() threw " + err); }
+            // a desktop widget twice: made in heaven, then the realm flips under it
+            // (its bindings re-run) and a fresh one is made in hell
+            const realms = e.kind === "desktopWidget" ? ["heaven", "hell"] : [""];
+            for (const realm of realms) {
+                if (realm)
+                    Theme.realm = realm;
+                const props = {"plugin": plugin};
+                if (e.kind === "desktopWidget") { props.screenName = "CHECK-1"; props.widget = {"uid": "check", "x": 0, "y": 0, "settings": {}}; }
+                if (e.kind === "barWidget") { props.screenName = "CHECK-1"; props.barWindow = null; }
+                if (e.kind === "launcher") props.pluginId = check.id;
+                if (e.kind === "menuComponent") props.menu = {"close": () => {}};
+                if (e.kind === "sidebarWidget") props.width = 300;
+                const o = c.createObject(host, props);
+                if (!o) { console.log("CHECK-FAIL " + e.kind + (realm ? " (" + realm + ")" : "") + " :: could not be created"); continue; }
+                if (e.kind === "launcher" && typeof o.query === "function") {
+                    try { o.query("test", false); } catch (err) { console.log("CHECK-FAIL launcher :: query() threw " + err); }
+                }
+                console.log("CHECK-OK " + e.kind + " " + Math.round(o.implicitWidth) + "x" + Math.round(o.implicitHeight) + (realm ? " " + realm : ""));
             }
-            console.log("CHECK-OK " + e.kind + " " + Math.round(o.implicitWidth) + "x" + Math.round(o.implicitHeight));
+            Theme.realm = "heaven";
         }
         done.start();
     }

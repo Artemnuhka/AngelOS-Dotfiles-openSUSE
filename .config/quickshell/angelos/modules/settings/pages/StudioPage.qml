@@ -479,6 +479,15 @@ PxPage {
         Flow {
             width: parent.width
             spacing: Theme.u * 3
+            // a desktop widget that only knows heaven: the AI draws its hell
+            PxButton {
+                visible: page.editing && !page.plan && PluginStudio.needsHell(Plugins.byId(PluginStudio.target))
+                text: I18n.t("Сделать адскую версию", "Make the hell version")
+                icon: "fire"
+                accent: true
+                enabled: !PluginStudio.busy && PluginStudio.hasKey
+                onClicked: PluginStudio.makeHell()
+            }
             PxButton {
                 visible: page.editing && !page.plan
                 text: I18n.t("Сразу переделать", "Change it now")
