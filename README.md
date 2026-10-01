@@ -316,7 +316,7 @@ git pull
 ./install.sh
 ```
 
-A running angelOS keeps the previous version in memory: the installer offers to restart it, or run `angelos restart` (logging out and back in works too).
+A running angelOS keeps the previous version in memory. Once an update from Settings is done, angelOS asks whether to restart the shell now or later (windows and apps stay open); the installer run from a terminal asks the same. Later on, **Settings → Updates → Restart the shell**, `angelos restart` or logging out and back in loads the new version.
 
 ## ✧ Login screen (SDDM)
 

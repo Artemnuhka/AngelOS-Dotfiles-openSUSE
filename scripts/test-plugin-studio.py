@@ -41,7 +41,8 @@ Item {
     implicitHeight: Theme.u * 80
     PxButton {
         anchors.centerIn: parent
-        text: I18n.t("Кликов: ", "Clicks: ") + (root.plugin ? root.plugin.get("count", 0) : 0)
+        hell: Theme.hell
+        text: (Theme.hell ? I18n.t("Душ: ", "Souls: ") : I18n.t("Кликов: ", "Clicks: ")) + (root.plugin ? root.plugin.get("count", 0) : 0)
         onClicked: if (root.plugin) root.plugin.set("count", root.plugin.get("count", 0) + 1)
     }
 }
@@ -67,7 +68,7 @@ BUNDLE = {
             "id": PLAN["spec"]["id"], "name": "Counter", "version": "1.0.0",
             "description": "A themed counter", "icon": "heart",
             "enabledByDefault": False, "desktopWidget": "DesktopWidget.qml",
-            "settings": "Settings.qml", "desktopTitle": "counter.exe",
+            "settings": "Settings.qml", "desktopTitle": "counter.exe", "realms": ["heaven", "hell"],
         })},
         {"path": "DesktopWidget.qml", "content": DESKTOP},
         {"path": "Settings.qml", "content": SETTINGS},
@@ -189,6 +190,21 @@ class StudioTest(unittest.TestCase):
         fixed = self.request("generate")["session"]["draft"]
         self.assertEqual(fixed["errors"], [])
         self.assertIn("broken syntax", self.calls[-1][0].data.decode())
+
+    def test_desktop_widget_needs_both_realms(self):
+        # no "realms": the shell would only re-ink it in hell — sent back to the model
+        flat = copy.deepcopy(BUNDLE)
+        m = json.loads(flat["files"][0]["content"]); m.pop("realms"); flat["files"][0]["content"] = json.dumps(m)
+        draft = self.generate(flat)
+        self.assertTrue(any("both realms" in e for e in draft["errors"]))
+        # "hell" declared, but nothing reads Theme.hell / Theme.realm
+        fake = copy.deepcopy(BUNDLE)
+        fake["files"][1]["content"] = fake["files"][1]["content"].replace("hell: Theme.hell\n", "").replace("Theme.hell ? I18n.t(\"Душ: \", \"Souls: \") : ", "")
+        self.reply = fake
+        draft = self.request("generate")["session"]["draft"]
+        self.assertTrue(any("Theme.hell" in e for e in draft["errors"]))
+        self.reply = BUNDLE
+        self.assertEqual(self.request("generate")["session"]["draft"]["errors"], [])
 
     def test_path_traversal_duplicates_and_limits(self):
         for path in ("../escape.qml", "/tmp/escape.qml", "a/../../escape.qml",

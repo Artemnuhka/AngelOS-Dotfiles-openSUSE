@@ -919,10 +919,25 @@ summary() {
            'Шпаргалка по клавишам: Mod+Shift+Esc  (Mod = клавиша Super/Windows)')"
 }
 
+# Settings → Updates of shells older than their own restart prompt runs the
+# installer without a terminal: ask in a notification, its buttons answer.
+restart_notify() {
+  command -v notify-send >/dev/null 2>&1 && command -v setsid >/dev/null 2>&1 || return 1
+  setsid -f bash -c '[[ "$(notify-send -a angelOS -i system-software-update -u critical --wait \
+      -A restart="$2" -A later="$3" "$4" "$5" 2>/dev/null)" == restart ]] && exec "$1" restart' _ "$1" \
+    "$(_ 'Restart the shell' 'Перезагрузить оболочку')" "$(_ 'Later' 'Позже')" \
+    "$(_ 'angelOS is updated ♡' 'angelOS обновлён ♡')" \
+    "$(_ 'The previous version is still running. Restart the shell now? Windows and apps stay open.' \
+         'Работает ещё прошлая версия. Перезагрузить оболочку сейчас? Окна и программы останутся открытыми.')" \
+    </dev/null >/dev/null 2>&1
+}
+
 # A running angelOS keeps the old version in memory (it only watches its files in
 # dev mode), so an update — new settings pages included — shows up after a restart.
 restart_shell() {
   [[ "$DESKTOP_SHELL" == angelos ]] || return 0
+  # Settings → Updates: the shell asks itself once the update is done
+  [[ "${ANGELOS_RESTART:-}" == shell ]] && return 0
   local bin="$HOME_DIR/.local/bin/angelos" qs
   qs="$(command -v qs || echo "$HOME_DIR/.local/bin/qs")"
   [[ -x "$bin" && -x "$qs" ]] || return 0
@@ -932,6 +947,8 @@ restart_shell() {
                   'angelOS ещё работает на прошлой версии. Перезапустить его сейчас?')" y; then
     if "$bin" restart; then say "$(_ 'angelOS restarted' 'angelOS перезапущен')"
     else warn "$(_ 'Could not restart angelOS: run `angelos restart`' 'Не удалось перезапустить angelOS: выполните `angelos restart`')"; fi
+  elif ((!INTERACTIVE)) && [[ -n "${WAYLAND_DISPLAY:-}" ]] && restart_notify "$bin"; then
+    say "$(_ 'angelOS asks in a notification whether to restart it now' 'angelOS спросит в уведомлении, перезапустить ли его сейчас')"
   else
     warn "$(_ 'angelOS is still running the previous version: run `angelos restart` or log in again' \
               'angelOS ещё работает на прошлой версии: выполните `angelos restart` или перезайдите в систему')"
