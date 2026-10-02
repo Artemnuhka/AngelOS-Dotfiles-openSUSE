@@ -9,18 +9,27 @@ rules). This writes what the templates can't:
   ~/.local/share/angelos/terminal/realm          heaven | hell
   ~/.local/share/angelos/terminal/hell-lines.txt  her lines for a new terminal, one a line
   ~/.local/share/angelos/terminal/hell.png        kitty's scorched background (painted once)
+  ~/.local/share/angelos/terminal/fastfetch.jsonc in hell: the user's own fastfetch config
+                                                  (~/.config/fastfetch/config.jsonc) in the
+                                                  circle — its number and name and its one line
+                                                  under the title, the words for the readings
+                                                  ("CPU · жар", "RAM · души"), its colours, ⛧
+  ~/.local/share/angelos/terminal/fastfetch-logo.txt  the emblem with horns in the circle's
+                                                  colours, the circle's number and name under it
   ~/.config/fish/conf.d/angelos-realm.fish        in hell: command colours from the circle's
-                                                  palette for the session and one of her
-                                                  lines before the first prompt (only if
-                                                  fish is set up)
+                                                  palette for the session, fastfetch with the
+                                                  circle's config, and one of her lines before
+                                                  the first prompt (only if fish is set up)
 """
 import json
 import random
+import re
 import sys
 from pathlib import Path
 
 HOME = Path.home()
 OUT = HOME / ".local/share/angelos/terminal"
+FASTFETCH = HOME / ".config/fastfetch/config.jsonc"
 FISH = HOME / ".config/fish/conf.d/angelos-realm.fish"
 PAINT_VERSION = "2"
 
@@ -44,6 +53,12 @@ set -g fish_color_autosuggestion {textDim}
 set -g fish_color_comment {textDim}
 set -g fish_color_selection --background={lo}
 set -g fish_color_search_match --background={bgAlt}
+# fastfetch in the circle (the greeting runs it: CachyOS's fish config does)
+if test -f $__angelos_dir/fastfetch.jsonc
+    function fastfetch --wraps fastfetch
+        command fastfetch --config (set -q XDG_DATA_HOME; and echo $XDG_DATA_HOME; or echo $HOME/.local/share)/angelos/terminal/fastfetch.jsonc $argv
+    end
+end
 # one of her lines before the first prompt (after fastfetch)
 function __angelos_hell_line --on-event fish_prompt
     functions -e __angelos_hell_line
@@ -85,6 +100,110 @@ def fish_snippet(term):
     for k, v in cols.items():
         out = out.replace("{" + k + "}", v)
     return out
+
+
+def jsonc(text):
+    """JSON with comments (fastfetch's config.jsonc): // and /* */ outside strings, trailing commas"""
+    out, i, n, quote = [], 0, len(text), False
+    while i < n:
+        c = text[i]
+        if quote:
+            out.append(c)
+            if c == "\\" and i + 1 < n:
+                out.append(text[i + 1])
+                i += 2
+                continue
+            if c == '"':
+                quote = False
+            i += 1
+        elif c == '"':
+            quote = True
+            out.append(c)
+            i += 1
+        elif text.startswith("//", i):
+            j = text.find("\n", i)
+            i = n if j < 0 else j
+        elif text.startswith("/*", i):
+            j = text.find("*/", i + 2)
+            i = n if j < 0 else j + 2
+        else:
+            out.append(c)
+            i += 1
+    return json.loads(re.sub(r",(\s*[}\]])", r"\1", "".join(out)))
+
+
+def ansi(hex_colour, bold=False):
+    h = hex_colour.lstrip("#")
+    return "\x1b[%s38;2;%d;%d;%dm" % ("1;" if bold else "", int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
+
+
+def ff_colour(hex_colour):
+    h = hex_colour.lstrip("#")
+    return "38;2;%d;%d;%d" % (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
+
+
+def fastfetch_logo(ff, width=40, height=16):
+    """the emblem with horns in the circle's colours (two blocks an art pixel, like
+    fastfetch-logo.py), and under it the circle's number and its name"""
+    logo = ff.get("logo") or {}
+    rows, pal = logo.get("rows") or [], logo.get("palette") or {}
+    art = []
+    for row in rows:
+        line, cur = "", None
+        for ch in row:
+            col = pal.get(ch) if ch not in ". " else None
+            if col is None:
+                line += ("\x1b[0m" if cur else "") + "  "
+                cur = None
+            else:
+                if col != cur:
+                    line += ansi(col)
+                    cur = col
+                line += "██"
+        art.append(line + ("\x1b[0m" if cur else ""))
+    w = max((len(r) for r in rows), default=0) * 2
+    art = [" " * max(0, (width - w) // 2) + a for a in art]
+    head = "⛧ %s %s ⛧" % (ff.get("circleWord", "Circle").upper(), ff.get("roman", "")) if ff.get("roman") else "⛧"
+    name = str(ff.get("name", "")).upper()
+    text = [" " * max(0, (width - len(head)) // 2) + ansi(ff.get("keys", "#e2703f"), True) + head + "\x1b[0m",
+            " " * max(0, (width - len(name)) // 2) + ansi(ff.get("title", "#d9cbbd")) + name + "\x1b[0m"]
+    body = art + [""] + text
+    body = [""] * max(0, (height - len(body)) // 2) + body
+    return "\n".join(body + [""] * max(0, height - len(body))) + "\n"
+
+
+def fastfetch_config(ff, user, logo_path):
+    """the user's own config in the circle: the same modules, its words and colours"""
+    cfg = json.loads(json.dumps(user)) if isinstance(user, dict) else {"modules": ["title", "separator", "os", "kernel", "uptime", "cpu", "gpu", "memory", "break", "colors"]}
+    if ff.get("logo"):
+        logo = cfg.get("logo") if isinstance(cfg.get("logo"), dict) else {}
+        logo.update({"type": "file-raw", "source": str(logo_path), "width": 40, "height": 16})
+        logo.setdefault("padding", {"top": 1, "right": 3})
+        cfg["logo"] = logo
+    disp = cfg.setdefault("display", {})
+    disp["separator"] = " ⛧ "
+    disp["color"] = {"keys": ff_colour(ff.get("keys", "#e2703f")), "title": ff_colour(ff.get("title", "#d9cbbd")),
+                     "output": ff_colour(ff.get("title", "#d9cbbd")), "separator": ff_colour(ff.get("dim", "#9c8f85"))}
+    labels = ff.get("labels") or {}
+    words = {"cpu": ("cpu", "CPU"), "gpu": ("gpu", "GPU"), "memory": ("ram", "RAM")}
+    mods = []
+    for m in cfg.get("modules", []):
+        kind = m if isinstance(m, str) else m.get("type") if isinstance(m, dict) else None
+        if kind in words and labels.get(words[kind][0]):
+            m = dict(m) if isinstance(m, dict) else {"type": kind}
+            m["key"] = "%s · %s" % (m.get("key") or words[kind][1], labels[words[kind][0]])
+        mods.append(m)
+        # the circle under the title's line: its number and name, its one line
+        if kind == "separator" and not any(isinstance(x, dict) and x.get("angelosCircle") for x in mods):
+            circle = "%s %s · %s" % (ff.get("circleWord", "Circle"), ff.get("roman", ""), ff.get("name", "")) if ff.get("roman") else ff.get("name", "")
+            mods.append({"type": "custom", "format": "⛧ " + circle, "outputColor": ff_colour(ff.get("keys", "#e2703f")), "angelosCircle": True})
+            if ff.get("where"):
+                mods.append({"type": "custom", "format": ff["where"], "outputColor": ff_colour(ff.get("dim", "#9c8f85")), "angelosCircle": True})
+    for m in mods:
+        if isinstance(m, dict):
+            m.pop("angelosCircle", None)
+    cfg["modules"] = mods
+    return "// angelOS: fastfetch in the circle — written from ~/.config/fastfetch/config.jsonc by\n// scripts/terminal-hell.py; edits here are overwritten (edit your own config instead)\n" + json.dumps(cfg, ensure_ascii=False, indent=2) + "\n"
 
 
 def paint(path):
@@ -139,6 +258,21 @@ def main():
     ver = OUT / ".paint-version"
     if realm == "hell" and (not bg.exists() or not ver.exists() or ver.read_text().strip() != PAINT_VERSION):
         paint(bg)
+    # fastfetch in the circle: only in hell, and only next to a fastfetch config of the user's
+    ff = pal.get("fastfetch") if realm == "hell" else None
+    conf, logo = OUT / "fastfetch.jsonc", OUT / "fastfetch-logo.txt"
+    if ff and FASTFETCH.exists():
+        try:
+            user = jsonc(FASTFETCH.read_text())
+        except (OSError, ValueError):
+            user = None
+        if ff.get("logo"):
+            write(logo, fastfetch_logo(ff))
+        write(conf, fastfetch_config(ff, user, logo))
+    else:
+        for f in (conf, logo):
+            if f.exists():
+                f.unlink()
     # fish: only where fish is the user's shell (its config dir exists)
     if FISH.parent.parent.is_dir():
         write(FISH, fish_snippet(pal.get("term") or {}))

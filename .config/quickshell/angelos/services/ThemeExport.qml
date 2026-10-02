@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Io
 import qs.config
 import "AngelLines.js" as Lines
+import "../widgets/Logos.js" as Logos
 
 // Pushes the current palette to other apps through templates (kitty, foot, gtk, niri…).
 Singleton {
@@ -13,7 +14,7 @@ Singleton {
     readonly property string paletteFile: Config.cacheDir + "/palette.json"
     // the realm (the demon rules: hell's decorations for GTK and Helium) and the window
     // decoration settings re-render too
-    readonly property string signature: Config.appearance.customAccent + "|" + Theme.dark + "|" + Config.appearance.flavor + "|" + Config.appearance.themeApps + "|" + (Config.appearance.disabledTemplates || []).join(",") + "|" + Angel.demon + "|" + Config.decor.gtkButtons + "|" + Config.decor.gtkLayout + "|" + Config.y2k.hellTerminal + "|" + Config.y2k.hellApps + "|" + Config.appearance.qtStyle + "|" + I18n.english + "|" + (Angel.demon ? JSON.stringify(HellLook.palette) : "")
+    readonly property string signature: Config.appearance.customAccent + "|" + Theme.dark + "|" + Config.appearance.flavor + "|" + Config.appearance.themeApps + "|" + (Config.appearance.disabledTemplates || []).join(",") + "|" + Angel.demon + "|" + Config.decor.gtkButtons + "|" + Config.decor.gtkLayout + "|" + Config.y2k.hellTerminal + "|" + Config.y2k.hellApps + "|" + Config.appearance.qtStyle + "|" + I18n.english + "|" + (Angel.demon ? JSON.stringify(HellLook.palette) + HellLook.circle : "") + "|" + Config.bar.logoEmblem + "|" + Config.bar.logoFastfetch
     property string lastLog: ""
     property var entries: []
 
@@ -110,7 +111,46 @@ Singleton {
                 "color15": h(Theme.hellText)
             },
             "hellLines": Lines.demonTerminal.map(l => I18n.english ? l[1] : l[0]),
+            "fastfetch": fastfetchHell(),
             "kittyExtra": "# hell (Settings → Y2K → Terminal in hell): a scorched background, nothing moving\ncursor_trail 0\ncursor_blink_interval -1\nbackground_image " + bgImage + "\nbackground_image_layout scaled\nbackground_tint 0.7"
+        };
+    }
+
+    // fastfetch in hell (scripts/terminal-hell.py writes its config from the user's own): the
+    // circle — its number and name, its one line, the words for the readings ("CPU · жар") —
+    // its colours, and the emblem with horns in them (unless the logo is left to the user)
+    function fastfetchHell() {
+        const n = HellLook.number;
+        const lab = id => HellLook.look.labels && HellLook.look.labels[id] ? I18n.label(HellLook.look.labels[id]) : "";
+        const ink = Theme.mix(Theme.hellAccent, Theme.hellEdge, 0.55);
+        return {
+            "number": n,
+            "roman": n > 0 ? Theme.roman(n) : "",
+            "name": I18n.label(HellLook.title),
+            "where": I18n.label(HellLook.where),
+            "circleWord": I18n.t("Круг", "Circle"),
+            "labels": {
+                "cpu": lab("cpu"),
+                "gpu": lab("gpu"),
+                "ram": lab("ram"),
+                "vram": lab("vram")
+            },
+            "keys": h(Theme.hellAccent),
+            "title": h(Theme.hellText),
+            "dim": h(Theme.hellTextDim),
+            "logo": Config.bar.logoFastfetch === false ? null : {
+                "rows": Logos.emblem(["heart", "pill", "star", "cd", "kitty"].includes(Config.bar.logoEmblem) ? Config.bar.logoEmblem : "heart", true),
+                "palette": {
+                    "#": h(ink),
+                    "o": h(Theme.hellAccent),
+                    "x": h(Theme.hellBlood),
+                    "y": h(Theme.hellFlame),
+                    "w": h(Theme.hellText),
+                    "f": h(Theme.hellTextDim),
+                    "r": h(Theme.hellAccent),
+                    "p": h(Theme.mix(Theme.hellAccent, Theme.hellText, 0.45))
+                }
+            }
         };
     }
 

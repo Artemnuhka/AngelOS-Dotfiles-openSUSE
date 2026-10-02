@@ -1,6 +1,6 @@
 [
   { "id": "terminal-hell", "name": "Терминал в аду (фон kitty, реплика в fish)", "command": "python3 {{shellDir}}/scripts/terminal-hell.py {{paletteFile}}",
-    "writes": ["~/.local/share/angelos/terminal/{realm,hell.png,hell-lines.txt}", "~/.config/fish/conf.d/angelos-realm.fish"] },
+    "writes": ["~/.local/share/angelos/terminal/{realm,hell.png,hell-lines.txt,fastfetch.jsonc,fastfetch-logo.txt}", "~/.config/fish/conf.d/angelos-realm.fish"] },
   { "id": "kitty",     "name": "kitty",       "template": "kitty.conf",    "target": "~/.config/kitty/themes/angelos.conf", "reload": "pkill -USR1 -x kitty", "terminal": true },
   { "id": "foot",      "name": "foot",        "template": "foot.ini",      "target": "~/.config/foot/themes/angelos", "terminal": true },
   { "id": "alacritty", "name": "Alacritty",   "template": "alacritty.toml","target": "~/.config/alacritty/themes/angelos.toml", "terminal": true },
