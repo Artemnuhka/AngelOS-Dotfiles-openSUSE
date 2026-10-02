@@ -346,6 +346,7 @@ ask_profile() {
     confirm "$(_ 'angelOS is also a game played over your desktop: an angel in the corner, and a story that follows your choices. Play it? (No = plain dotfiles; `angelos game on|off` changes it later)' \
                  'angelOS — это ещё и игра поверх рабочего стола: ангел в углу и история, которая идёт за твоими выборами. Играть? (Нет — обычные дотфайлы; потом: `angelos game on|off`)')" y \
       && ANGELOS_GAME=1 || ANGELOS_GAME=0
+    # shellcheck disable=SC2034  # read through given()
     GIVEN_ANGELOS_GAME=1
   fi
   if [[ "$MODE" == 1 || "$MODE" == full ]] && ! given INSTALL_WALLPAPERS && ! given WALLPAPER_PACKS; then
