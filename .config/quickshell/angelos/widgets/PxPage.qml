@@ -27,6 +27,8 @@ PxScroll {
     // the sub-page open on this page: one of its advanced groups (PxGroup steps the others aside)
     readonly property string focusGroup: pageId === Shell.settingsPage ? Shell.settingsSub : ""
     readonly property var view: Shell.settingsView
+    // the properties view shows the section's pages and the sub-pages as its tabs
+    readonly property bool tabsOutside: !!view && view.ownsSubpages === true && pageId === Shell.settingsPage
     // the way up: from a sub-page to its page, from a section's other page to its first one
     readonly property var up: {
         if (focusGroup !== "")
@@ -44,7 +46,7 @@ PxScroll {
     }
     // the links at the top: the section's other pages, then this page's advanced groups
     readonly property var advancedGroups: Array.from(col.children).filter(c => c.advanced === true && c.title && c.shown !== false)
-    readonly property var links: focusGroup !== "" ? [] : (view && view.subpagesOf ? view.subpagesOf(pageId) : []).map(p => ({
+    readonly property var links: focusGroup !== "" || tabsOutside ? [] : (view && view.subpagesOf ? view.subpagesOf(pageId) : []).map(p => ({
                 "label": p.label,
                 "icon": p.icon,
                 "tint": view.tintOf(p.id),
@@ -110,7 +112,7 @@ PxScroll {
             // "‹ Sound": up to the page or the section this is part of
             PxText {
                 id: upLink
-                visible: !!root.up
+                visible: !!root.up && !root.tabsOutside
                 text: "‹ " + (root.up ? root.up.label : "")
                 color: upMouse.containsMouse ? Theme.accent : Theme.textDim
                 font.bold: true

@@ -331,6 +331,53 @@ IpcHandler {
     function settingsPage(page: string): void {
         Shell.openSettings(page);
     }
+    // how Settings lay the pages out: `angelos settingsView controlpanel` (no argument: which one)
+    function settingsView(view: string): string {
+        const views = ["sidebar", "controlpanel", "properties", "tiles"];
+        const v = String(view || "").trim().toLowerCase();
+        if (v === "")
+            return Config.settingsUi.view + "  (" + views.join(" | ") + ")";
+        if (!views.includes(v))
+            return "unknown view " + v + ": " + views.join(" | ");
+        Config.settingsUi.view = v;
+        return "ok";
+    }
+    // what Settings wear: `angelos settingsSkin windose` (no argument: which one)
+    function settingsSkin(skin: string): string {
+        const skins = ["classic", "windose", "stream"];
+        const s = String(skin || "").trim().toLowerCase();
+        if (s === "")
+            return Config.settingsUi.skin + "  (" + skins.join(" | ") + ")";
+        if (!skins.includes(s))
+            return "unknown skin " + s + ": " + skins.join(" | ");
+        Config.settingsUi.skin = s;
+        Config.settingsUi.skinChosen = true;
+        return "ok";
+    }
+    // a key on the open Settings window, for tests and scripts (ANGELOS_DEV only):
+    // `angelos settingsKey down` — what the view's navigation does with it
+    function settingsKey(key: string): string {
+        if (!Shell.dev)
+            return "dev only";
+        const v = Shell.settingsView;
+        if (!v)
+            return "settings not open";
+        const keys = {
+            "up": Qt.Key_Up,
+            "down": Qt.Key_Down,
+            "left": Qt.Key_Left,
+            "right": Qt.Key_Right,
+            "enter": Qt.Key_Return,
+            "home": Qt.Key_Home,
+            "end": Qt.Key_End,
+            "escape": Qt.Key_Escape,
+            "backspace": Qt.Key_Backspace
+        };
+        const k = keys[String(key).toLowerCase()];
+        if (k === undefined)
+            return "keys: " + Object.keys(keys).join(" ");
+        return v.navKeyForTest(k) ? "ok" : "not handled";
+    }
     // settings search: `angelos searchSettings "прозрачность панели"` → the best matches
     function searchSettings(text: string): string {
         SettingsSearch.load();

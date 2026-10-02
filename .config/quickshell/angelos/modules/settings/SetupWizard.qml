@@ -5,6 +5,7 @@ import Quickshell.Wayland
 import qs.config
 import qs.services
 import qs.widgets
+import "../y2k/AngelSpriteMini.js" as AngelMini
 
 FloatingWindow {
     id: root
@@ -27,6 +28,11 @@ FloatingWindow {
         {
             "label": I18n.t("Привет", "Welcome"),
             "kind": "welcome"
+        },
+        // one of the player's first choices: how Settings lay out (Config.settingsUi.view)
+        {
+            "label": I18n.t("Настройки", "Settings"),
+            "kind": "settingsLook"
         },
         {
             "label": I18n.t("Хоткеи", "Shortcuts"),
@@ -147,6 +153,7 @@ FloatingWindow {
             anchors.right: parent.right
             sourceComponent: ({
                     "welcome": welcome,
+                    "settingsLook": settingsLook,
                     "shortcuts": shortcuts,
                     "finish": finish,
                     "bar": barStep,
@@ -253,20 +260,76 @@ FloatingWindow {
                     onEdited: Config.novel.name = text.trim()
                 }
             }
-            // the settings window's look, right at the start (Config.settingsUi.skin)
+        }
+    }
+    // The angel asks how she should lay Settings out (DRAFT line — the story's texts are the
+    // author's): the view cards with their drawings, the skin cards under them. Leaving the
+    // step the first time keeps the pick as the player's first choice (settingsUi.viewPicked);
+    // functionally it is the usual setting, Appearance → Settings look changes it any time.
+    Component {
+        id: settingsLook
+        PxPage {
+            id: lookPage
+            heading: I18n.t("Как разложить настройки?", "How should Settings be laid out?")
+            subtitle: I18n.t("Страницы везде одни и те же. Сменить можно когда угодно: Внешний вид → Вид настроек.", "The pages are the same in every view. Change it any time: Appearance → Settings look.")
+            Component.onDestruction: if (!Config.settingsUi.viewPicked)
+                Config.settingsUi.viewPicked = Config.settingsUi.view
+            // her question, in a bubble next to her
+            Row {
+                spacing: Theme.u * 4
+                PxIcon {
+                    anchors.verticalCenter: parent.verticalCenter
+                    bitmap: AngelMini.up
+                    pixel: Math.max(1, Theme.u * 2)
+                    ink: Theme.dark ? Theme.text : Theme.edge
+                    body: "#ffd9c7"
+                    fill: Theme.accent
+                    fill2: "#3a1a46"
+                    fill3: Theme.dark ? "#ffe07a" : "#f5c542"
+                    light: "#ffffff"
+                    bad: "#d8203a"
+                }
+                PxBox {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: Math.min(Theme.u * 260, lookPage.innerWidth - Theme.u * 56)
+                    height: bubbleText.implicitHeight + Theme.u * 10
+                    color: Theme.menuSurface
+                    PxText {
+                        id: bubbleText
+                        x: Theme.u * 5
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: parent.width - Theme.u * 10
+                        wrapMode: Text.Wrap
+                        // DRAFT (author's approval pending)
+                        text: I18n.t("Я буду приходить сюда, когда понадобится что-то поменять. Как тебе удобнее, чтобы я раскладывала настройки?", "I'll come here whenever something needs changing. How would you like me to lay the settings out?")
+                    }
+                }
+            }
+            Flow {
+                width: lookPage.innerWidth
+                spacing: Theme.u * 4
+                Repeater {
+                    model: ["sidebar", "controlpanel", "properties", "tiles"]
+                    SettingsViewCard {
+                        required property string modelData
+                        view: modelData
+                        width: Math.min(Theme.u * 100, (lookPage.innerWidth - Theme.u * 12) / 4)
+                    }
+                }
+            }
             PxText {
-                text: I18n.t("Как будут выглядеть настройки?", "How should Settings look?")
+                text: I18n.t("И во что их одеть?", "And what should they wear?")
                 kind: "title"
             }
             Flow {
-                width: parent.width
+                width: lookPage.innerWidth
                 spacing: Theme.u * 4
                 Repeater {
                     model: ["classic", "windose", "stream"]
                     SettingsSkinCard {
                         required property string modelData
                         skin: modelData
-                        width: Math.min(Theme.u * 100, (parent.width - Theme.u * 12) / 3)
+                        width: Math.min(Theme.u * 100, (lookPage.innerWidth - Theme.u * 12) / 3)
                     }
                 }
             }

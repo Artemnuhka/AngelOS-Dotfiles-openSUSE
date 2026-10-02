@@ -18,6 +18,8 @@ import qs.widgets
 // anchors of shell.qml are the ones in use:
 //   pages     every settings page loads in each settings skin (no errors), the sidebar is
 //             always there; sub-pages (advanced groups) open on their own; ◀ ▶ history
+//   views     every settings view (sidebar, Control Panel, Properties, tiles) in each skin:
+//             its home, a page, a plugin's page, the search, the keyboard, `settings <page>`
 //   previews  every preview scene loads and plays through its frames
 //   search    settings search: 40 typical queries, average and worst time
 //   rig       the helper's pictures (SpriteRig): both figures read, sized as
@@ -343,6 +345,11 @@ Scope {
     readonly property string shots: Quickshell.env("ANGELOS_TEST_SHOTS") || ""
     property bool undoDone: false
     property int undoSteps: 0
+    // views: [view, skin] cases and where in one case the driver is
+    property var viewCases: []
+    property int viewCase: -1
+    property int viewStep: 0
+    property var viewNote: null
 
     Timer {
         id: tick
@@ -383,15 +390,116 @@ Scope {
                 settingsSkinIndex++;
                 startPages(false);
             }
-            else if (shots)
-                startSettingsShots();
             else
-                startPreviews();
+                startViews();
             return;
         }
         console.log("TEST-PAGE " + list[index]);
         Shell.settingsPage = list[index];
         started = Date.now();
+    }
+    function startViews() {
+        viewCases = [];
+        for (const v of ["sidebar", "controlpanel", "properties", "tiles"])
+            for (const skin of settingsSkins)
+                viewCases.push([v, skin]);
+        viewCase = -1;
+        phase = "views";
+        nextViewCase();
+    }
+    function nextViewCase() {
+        viewCase++;
+        viewStep = 0;
+        if (viewCase >= viewCases.length) {
+            Config.settingsUi.view = "sidebar";
+            Config.settingsUi.skin = "classic";
+            view.setQuery("");
+            if (shots)
+                startSettingsShots();
+            else
+                startPreviews();
+            return;
+        }
+        const [v, skin] = viewCases[viewCase];
+        console.log("TEST-PAGE view:" + v + ":" + skin);
+        Config.settingsUi.skin = skin;
+        Config.settingsUi.view = v;
+        Shell.settingsPage = "home";
+        Shell.settingsSub = "";
+        started = Date.now();
+    }
+    // one step of a view case; true when it is done (passed or reported)
+    function viewTick() {
+        const [v, skin] = viewCases[viewCase];
+        const name = "view:" + v + ":" + skin;
+        const d = view.diagnostics();
+        const ms = Date.now() - started;
+        const ready = d.viewStatus === Loader.Ready && d.view === v && (d.atHome || d.status === Loader.Ready);
+        const waiting = ms < 6000;
+        const next = () => {
+            viewStep++;
+            started = Date.now();
+        };
+        if (viewStep === 0) {
+            // the home: the folder / the tiles show their own, the others a page
+            if (!ready && waiting)
+                return;
+            report(name + ":home", ready && d.atHome === (v === "controlpanel" || v === "tiles"), "status " + d.viewStatus + "/" + d.status + ", at home " + d.atHome);
+            Shell.settingsPage = "sound";
+            next();
+        } else if (viewStep === 1) {
+            if ((!ready || d.page !== "sound") && waiting)
+                return;
+            const locs = view.sectionLocs.map(l => l.page + (l.sub ? "›" + l.sub : ""));
+            report(name + ":page", ready && d.page === "sound" && (v !== "properties" || locs.length >= 2), locs.join(", "));
+            const pl = Plugins.settingsPages[0];
+            viewNote = pl ? pl.id : "";
+            Shell.settingsPage = pl ? "plugin:" + pl.id : "lyrics";
+            next();
+        } else if (viewStep === 2) {
+            if ((!ready || (viewNote && d.plugin !== viewNote)) && waiting)
+                return;
+            report(name + ":plugin", ready && (!viewNote || d.plugin === viewNote), viewNote ? "plugin " + d.plugin : "no plugin pages");
+            view.setQuery("обои");
+            next();
+        } else if (viewStep === 3) {
+            if (view.results.length === 0 && waiting)
+                return;
+            const r = view.results[0];
+            report(name + ":search", !!r && !!view.viewItem && !!view.viewItem.resultsSlot, view.results.length + " results");
+            viewNote = r ? r.page : "";
+            view.openResult(r);
+            next();
+        } else if (viewStep === 4) {
+            if ((!ready || d.page !== viewNote) && waiting)
+                return;
+            report(name + ":open-result", ready && d.page === viewNote && d.query === "", "page " + d.page);
+            // the keyboard: from the home (or the account) the view's own keys move on
+            Shell.settingsPage = "home";
+            next();
+        } else if (viewStep === 5) {
+            if (!ready && waiting)
+                return;
+            const before = Shell.settingsPage + "|" + Shell.settingsSub;
+            let ok;
+            if (v === "controlpanel" || v === "tiles") {
+                ok = view.navKeyForTest(Qt.Key_Down) && view.navKeyForTest(Qt.Key_Right) && view.navKeyForTest(Qt.Key_Return);
+                ok = ok && !view.atHome;
+            } else {
+                ok = view.navKeyForTest(Qt.Key_Down);
+                ok = ok && Shell.settingsPage + "|" + Shell.settingsSub !== before;
+            }
+            report(name + ":keys", ok, before + " → " + Shell.settingsPage + "|" + Shell.settingsSub);
+            // `angelos settings lyrics`
+            Shell.settingsOpen = true;
+            Shell.openSettings("lyrics");
+            next();
+        } else if (viewStep === 6) {
+            if ((!ready || d.page !== "lyrics") && waiting)
+                return;
+            report(name + ":settings-cli", ready && d.page === "lyrics", "page " + d.page);
+            nextViewCase();
+        }
     }
     function startSettingsShots() {
         settingsShotFlavor = Config.appearance.flavor;
@@ -469,6 +577,9 @@ Scope {
             if (Config.ready && view.allPages.length > 0) {
                 report("settings-default-classic", Config.settingsUi.skin === "classic" && view.skin === "classic",
                        "saved default " + Config.settingsUi.skin + ", view " + view.skin);
+                // a settings.json from before the views (no settingsUi.view): the sidebar stays
+                report("settings-default-sidebar", Config.settingsUi.view === "sidebar" && view.viewId === "sidebar",
+                       "saved " + Config.settingsUi.view + ", shown " + view.viewId);
                 Config.settingsUi.skin = "windose";
                 report("windose-app-windows", appWindow.skin === "windose" && appWindow.windose && appWindow.settingsSkin === "windose" && appAction.settingsSkin === "windose",
                        "unconfigured app skin " + appWindow.skin);
@@ -500,6 +611,10 @@ Scope {
             if (list[index] === "home" || list[index] === "appearance")
                 report("sidebar:" + settingsSkins[settingsSkinIndex] + ":" + list[index], d.sidebarVisible === true);
             nextPage();
+            return;
+        }
+        if (phase === "views") {
+            viewTick();
             return;
         }
         if (phase === "settings-shots") {

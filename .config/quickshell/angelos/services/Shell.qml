@@ -159,8 +159,11 @@ Singleton {
 
     // with no page given Settings open where they were left, like macOS
     function openSettings(page, sub) {
+        // the views with a home of their own (a folder of icons, the tiles) open there
         if (page)
             settingsPage = page;
+        else if (!settingsOpen && ["controlpanel", "tiles"].includes(Config.settingsUi.view))
+            settingsPage = "home";
         if (sub)
             settingsSub = sub;
         settingsOpen = true;

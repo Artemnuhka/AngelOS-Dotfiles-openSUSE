@@ -99,6 +99,7 @@ angelos wallpaper random           # or a path
 angelos bar island                 # taskbar | top | island
 angelos widget cava DP-1           # toggle a desktop widget on a monitor
 angelos settings windows           # open a settings page
+angelos settingsView controlpanel  # sidebar | controlpanel | properties | tiles
 angelos tour                       # interface tips
 angelos switch noctalia            # go back to Noctalia (and `switch angelos` to return)
 ```

@@ -12,13 +12,21 @@ import qs.widgets
 // by hand (Theme.fontScript, set for this window by SettingsView). The spine sits in the
 // middle: two equal pages. Changing
 // the section turns a page: forwards when it comes later in the contents, backwards when
-// earlier. SettingsView puts its search box into `searchSlot` and its page into `pageSlot`.
+// earlier. SettingsView puts its search field into `fieldSlot`, what it finds into
+// `resultsSlot` and its page into `pageSlot`.
+// Any other settings view (`spread: false`) is written whole on one parchment page inside
+// the same cover (`viewSlot`, re-inked by SettingsView): the grimoire is hell's dress for
+// whichever layout the user picked, the spread is the sidebar's.
 Item {
     id: book
 
     required property var view              // SettingsView
+    property bool spread: true              // the sidebar as a two-page spread; else one page
     readonly property alias searchSlot: searchSlot
+    readonly property alias fieldSlot: fieldSlot
+    readonly property alias resultsSlot: resultsSlot
     readonly property alias pageSlot: pageSlot
+    readonly property alias viewSlot: viewSlot
 
     readonly property color leather: "#3a0c10"
     readonly property color leatherDark: "#1c0507"
@@ -45,7 +53,7 @@ Item {
     property bool backwards: false
     property int lastIndex: pageIndex
     onPageIndexChanged: {
-        if (visible && Shell.settingsOpen && pageIndex !== lastIndex) {
+        if (visible && spread && Shell.settingsOpen && pageIndex !== lastIndex) {
             backwards = pageIndex < lastIndex;
             turnAnim.restart();
         }
@@ -198,6 +206,7 @@ Item {
 
         Rectangle {
             id: leftPage
+            visible: book.spread
             width: spread.leftW
             height: spread.height
             gradient: Gradient {
@@ -218,6 +227,7 @@ Item {
         }
         Rectangle {
             id: rightPage
+            visible: book.spread
             x: spread.leftW
             width: spread.width - spread.leftW
             height: spread.height
@@ -250,8 +260,21 @@ Item {
                 color: Qt.alpha("#8a6a2a", 0.08)
             }
         }
+        // one page, edge to edge (every other view)
+        Rectangle {
+            id: wholePage
+            visible: !book.spread
+            anchors.fill: parent
+            color: book.paper
+            Item {
+                id: viewSlot
+                anchors.fill: parent
+                anchors.margins: Theme.u * 6
+            }
+        }
         // the spine
         Rectangle {
+            visible: book.spread
             x: spread.leftW - width / 2
             width: Theme.u * 5
             height: spread.height
@@ -275,6 +298,7 @@ Item {
         // ---- left page: the contents ----
         PxText {
             id: tocTitle
+            visible: book.spread
             x: Theme.u * 10
             y: Theme.u * 5
             width: spread.leftW - Theme.u * 20
@@ -285,14 +309,26 @@ Item {
         }
         Item {
             id: searchSlot
+            visible: book.spread
             x: Theme.u * 10
             y: tocTitle.y + tocTitle.height + Theme.u * 3
             width: spread.leftW - Theme.u * 20
             height: spread.height - y - seals.height - Theme.u * 6
+            Item {
+                id: fieldSlot
+                width: parent.width
+                height: book.view.searchFieldHeight
+            }
+            Item {
+                id: resultsSlot
+                width: parent.width
+                y: fieldSlot.height + Theme.u * 8
+                height: parent.height - y
+            }
         }
         Flickable {
             id: toc
-            visible: book.view.query.trim() === ""
+            visible: book.spread && book.view.query.trim() === ""
             x: searchSlot.x
             y: searchSlot.y + Theme.scriptPx(Theme.sizeBody) + Theme.u * 16
             width: searchSlot.width
@@ -406,6 +442,7 @@ Item {
         // wax seals at the foot of the left page: undo, the usual window for now
         Row {
             id: seals
+            visible: book.spread
             x: Theme.u * 10
             y: spread.height - height - Theme.u * 5
             spacing: Theme.u * 5
@@ -474,6 +511,7 @@ Item {
         }
         // the ribbon bookmark, down the outer edge of the right page (clear of the heading)
         Rectangle {
+            visible: book.spread
             x: rightPage.x + rightPage.width - Theme.u * 9
             y: -Theme.u * 2
             width: Theme.u * 5
@@ -491,6 +529,7 @@ Item {
         }
         // folio numbers
         PxText {
+            visible: book.spread
             anchors.horizontalCenter: rightPage.horizontalCenter
             y: spread.height - height - Theme.u * 4
             kind: "tiny"

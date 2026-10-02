@@ -9,7 +9,8 @@ PxPage {
     subtitle: I18n.t("Основная тема angelOS и дополнительные светлые и тёмные палитры.", "The original angelOS theme and additional light and dark palettes.")
     Component.onCompleted: BlurConfig.refresh()
 
-    // Layout and controls change with the selected settings theme; colours stay independent.
+    // How Settings lay the pages out (the view) and what they wear (the skin): two
+    // separate choices, any view in any skin; colours follow the theme either way.
     PxGroup {
         id: skinGroup
         title: I18n.t("Вид настроек", "Settings look")
@@ -20,7 +21,25 @@ PxPage {
             width: parent.width
             wrapMode: Text.Wrap
             dim: true
-            text: I18n.t("Классика angelOS — исходный вид настроек. Дополнительно: Windose с ярлыками рабочего стола и Стрим с панелью эфира. Все три вида подстраиваются под выбранные цвета.", "angelOS classic is the original settings look. Windose adds desktop shortcuts; Stream adds a broadcast panel. All three follow your selected colours.")
+            text: I18n.t("Как разложены разделы. Страницы везде одни и те же, поиск и клавиши (Ctrl+F, стрелки, Alt+↑) — тоже. Ещё: `angelos settingsView <вид>`.", "How the sections are laid out. The pages are the same in every view, and so are the search and the keys (Ctrl+F, arrows, Alt+↑). Also: `angelos settingsView <view>`.")
+        }
+        Flow {
+            width: parent.width
+            spacing: Theme.u * 4
+            Repeater {
+                model: ["sidebar", "controlpanel", "properties", "tiles"]
+                SettingsViewCard {
+                    required property string modelData
+                    view: modelData
+                    width: Math.min(Theme.u * 100, (skinGroup.width - Theme.u * 16) / 4)
+                }
+            }
+        }
+        PxText {
+            width: parent.width
+            wrapMode: Text.Wrap
+            dim: true
+            text: I18n.t("Оформление. Классика angelOS — исходное. Дополнительно: Windose с ярлыками рабочего стола и Стрим с панелью эфира. Подходит к любому виду и следует за выбранными цветами.", "Skin. angelOS classic is the original. Also: Windose with desktop shortcuts, Stream with a broadcast panel. Fits any view and follows your colours.")
         }
         Flow {
             width: parent.width
