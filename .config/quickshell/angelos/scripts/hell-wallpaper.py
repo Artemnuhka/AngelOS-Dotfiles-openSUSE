@@ -6,12 +6,14 @@
       prints JSON {"ok", "files": {"WxH": path}, "source": "pack" | "drawn"}
 
 Paintings first: the Hell pack of the wallpapers repo — pixel hell made from
-public-domain paintings (Martin, Doré, Bosch). It is looked for in every --pack
-dir (the installer puts it into ~/Pictures/Hell), then in --cache; if neither has
-it, the Hell folder of --repo is downloaded into --cache once. Every screen size
-gets a picture of its own orientation (portrait screens: the tall ones): one of the
---prefer names when the pack has it (the circle's own painting, story/circles.json →
-backdrop.pictures: "hell-pandemonium"…), a random one otherwise.
+public-domain paintings (Martin, Doré, Bosch; each circle its own pair from Doré's
+Inferno). It is looked for in every --pack dir (the installer puts it into
+~/Pictures/Hell) and in --cache, all of them together; if none has it, the Hell folder
+of --repo is downloaded into --cache once. Every screen size gets a picture of its own
+orientation (portrait screens: the tall ones): one of the --prefer names (the circle's
+own pair, story/circles.json → backdrop.pictures: "hell-limbo", "hell-limbo-portrait"…)
+— a preferred one an older pack lacks is fetched alone into --cache (not more often than
+once a day while it can't be had) — or a random one otherwise.
 
 Drawn, with --drawn or when there is no pack and no network: drawn at 1/6 of the
 size and scaled up without smoothing — a dithered night sky, a cracked
@@ -161,22 +163,46 @@ PICTURE = (".png", ".jpg", ".jpeg", ".webp")
 
 
 def pack_pictures(dirs):
-    """(path, portrait) for every picture in the pack folders"""
-    found = []
+    """(path, portrait) for every picture in the pack folders together (a name in an
+    earlier folder wins: the installed pack before the cache)"""
+    found, seen = [], set()
     for d in dirs:
         d = Path(d).expanduser()
         if not d.is_dir():
             continue
         for f in sorted(d.iterdir()):
-            if f.suffix.lower() in PICTURE:
+            if f.suffix.lower() in PICTURE and f.stem not in seen:
                 try:
                     with Image.open(f) as im:
                         found.append((str(f), im.height > im.width))
+                        seen.add(f.stem)
                 except OSError:
                     pass
-        if found:
-            return found
     return found
+
+
+def fetch_named(repo, cache, names):
+    """the circle's own pictures an older pack lacks: fetched alone into the cache; a name
+    that can't be had now (offline, not in the repo) is tried again a day later"""
+    import time
+    import urllib.request
+    cache = Path(cache).expanduser()
+    cache.mkdir(parents=True, exist_ok=True)
+    got = False
+    for name in names:
+        dst, miss = cache / (name + ".png"), cache / (".missing-" + name)
+        if dst.exists() or (miss.exists() and time.time() - miss.stat().st_mtime < 86400):
+            continue
+        try:
+            url = f"https://raw.githubusercontent.com/{repo}/main/Hell/{name}.png"
+            with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "angelOS"}), timeout=15) as r:
+                tmp = dst.with_suffix(".png.part")
+                tmp.write_bytes(r.read())
+                tmp.replace(dst)
+                got = True
+        except Exception:
+            miss.touch()
+    return got
 
 
 def fetch_pack(repo, cache):
@@ -230,6 +256,10 @@ def main():
             except Exception:
                 pass
             pics = pack_pictures(dirs)
+        names = {Path(p).stem for p, _ in pics}
+        if pics and cache and prefer and not all(n in names for n in prefer):
+            if fetch_named(repo, cache, [n for n in prefer if n not in names]):
+                pics = pack_pictures(dirs)
         if pics:
             made = {}
             for s in sizes:

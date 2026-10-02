@@ -136,8 +136,8 @@
       "tint": "#0c0c0d",
       "ambient": "fog",
       "pictures": [
-        "hell-fallen-city",
-        "hell-bosch-portrait"
+        "hell-limbo",
+        "hell-limbo-portrait"
       ]
     },
     "breakage": [
@@ -222,8 +222,8 @@
       "tint": "#0d0710",
       "ambient": "wind",
       "pictures": [
-        "hell-great-day",
-        "hell-bosch-portrait"
+        "hell-lust",
+        "hell-lust-portrait"
       ]
     },
     "breakage": [
@@ -308,8 +308,8 @@
       "tint": "#0a0c08",
       "ambient": "rain",
       "pictures": [
-        "hell-ash-and-fire",
-        "hell-bosch-portrait"
+        "hell-gluttony",
+        "hell-gluttony-portrait"
       ]
     },
     "breakage": [
@@ -394,8 +394,8 @@
       "tint": "#0c0a07",
       "ambient": "dust",
       "pictures": [
-        "hell-pandemonium",
-        "hell-bosch-portrait"
+        "hell-greed",
+        "hell-greed-portrait"
       ]
     },
     "breakage": [
@@ -480,8 +480,8 @@
       "tint": "#060b0a",
       "ambient": "ripple",
       "pictures": [
-        "hell-great-day",
-        "hell-bosch-portrait"
+        "hell-wrath",
+        "hell-wrath-portrait"
       ]
     },
     "breakage": [
@@ -566,8 +566,8 @@
       "tint": "#0b0807",
       "ambient": "embers",
       "pictures": [
-        "hell-fallen-city",
-        "hell-bosch-portrait"
+        "hell-heresy",
+        "hell-heresy-portrait"
       ]
     },
     "breakage": [
@@ -652,8 +652,8 @@
       "tint": "#0d0606",
       "ambient": "sand",
       "pictures": [
-        "hell-ash-and-fire",
-        "hell-bosch-portrait"
+        "hell-violence",
+        "hell-violence-portrait"
       ]
     },
     "breakage": [
@@ -738,8 +738,8 @@
       "tint": "#060606",
       "ambient": "pitch",
       "pictures": [
-        "hell-pandemonium",
-        "hell-bosch-portrait"
+        "hell-fraud",
+        "hell-fraud-portrait"
       ]
     },
     "breakage": [
@@ -824,8 +824,8 @@
       "tint": "#070a0e",
       "ambient": "ice",
       "pictures": [
-        "hell-lucifer",
-        "hell-lucifer-portrait"
+        "hell-treachery",
+        "hell-treachery-portrait"
       ]
     },
     "breakage": [
