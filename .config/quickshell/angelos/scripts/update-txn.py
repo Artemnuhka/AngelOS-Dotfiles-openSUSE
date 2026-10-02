@@ -133,7 +133,7 @@ def braces(s):
 
 def template_targets(text, home):
     """what a templates.json renders: each entry's "target", and the files its
-    "command" writes, declared in "writes" (gtk-live's themes, Helium's theme) —
+    "command" writes, declared in "writes" (gtk-live's themes, the browsers' themes) —
     a file the snapshot doesn't know survives a restore"""
     try:
         data = json.loads(text)

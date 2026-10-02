@@ -36,7 +36,7 @@ BASE = HOME / ".local/share/angelos/telegram"
 THEME = BASE / "angelOS.tdesktop-theme"
 STATE = BASE / "applied.json"
 
-# hell's colours, the same as scripts/helium-theme.py and Theme.hell*
+# hell's colours, the same as scripts/browser-theme.py and Theme.hell*
 HELL = {
     "body": "#160609", "face": "#2a0b10", "faceAlt": "#3d1016", "sunken": "#0c0305",
     "edge": "#050102", "hi": "#6e1a21", "blood": "#b3142b", "ember": "#ff6a1a",

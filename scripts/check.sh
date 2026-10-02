@@ -65,6 +65,13 @@ else
   fail "cava's audio tap: no hangs"
 fi
 
+if python3 "$ROOT/.config/quickshell/angelos/tests/browsers/test_browser_theme.py" >"$WORK/browsers.log" 2>&1; then
+  pass "browser themes: profile edits, undo, gentle restart (stand-in browsers)"
+else
+  sed 's/^/    /' "$WORK/browsers.log" >&2
+  fail "browser themes: tests/browsers/test_browser_theme.py"
+fi
+
 if command -v shellcheck >/dev/null 2>&1; then
   if shellcheck -S warning "$ROOT/install.sh" "$ROOT/scripts/check.sh" "$ROOT/scripts/test-update.sh" "$ROOT/scripts/ci-local.sh" \
        "$ROOT/.config/quickshell/angelos/scripts/dotfiles-update.sh" "$ROOT/.config/quickshell/angelos/tests/updates/run.sh" &&

@@ -18,7 +18,7 @@ PxPage {
 
     heading: I18n.t("Окна", "Windows")
     subtitle: I18n.t("niri располагает окна в прокручиваемых колонках. Изменения сохраняются с бэкапом и проверкой.", "niri arranges windows in scrolling columns. Changes are backed up and validated.")
-    // window decorations: angelOS title bars (modules/decor), GTK's buttons (scripts/gtk-live.py), Helium
+    // window decorations: angelOS title bars (modules/decor), GTK's buttons (scripts/gtk-live.py), browsers
     PxGroup {
         id: decorGroup
         width: parent.width
@@ -109,75 +109,165 @@ PxPage {
                 onActivated: v => Config.decor.gtkLayout = v
             }
         }
-        // Helium (scripts/helium-theme.py): live through GTK, or a theme extension read at start
-        SettingRow {
-            id: heliumRow
-            visible: heliumStatus.info.installed === true
-            label: "Helium"
-            property bool copied: false
-            hint: heliumStatus.info.gtkMode ? (Angel.hellShown ? I18n.t("в режиме «GTK»: цвета и кнопки окна angelOS, рай и ад — сразу", "In GTK mode: angelOS colours and window buttons, heaven and hell at once") : I18n.t("в режиме «GTK»: цвета и кнопки окна angelOS — сразу", "In GTK mode: angelOS colours and window buttons at once")) : heliumStatus.info.themeLoaded ? (Angel.hellShown ? I18n.t("тема-расширение angelOS загружена: цвета рая или ада подхватываются при каждом запуске Helium. Для смены на лету — Настройки Helium → Внешний вид → Тема → GTK", "The angelOS theme extension is loaded: heaven's or hell's colours apply each time Helium starts. To switch live: Helium settings → Appearance → Theme → GTK") : I18n.t("тема-расширение angelOS загружена: её цвета подхватываются при каждом запуске Helium. Для смены на лету — Настройки Helium → Внешний вид → Тема → GTK", "The angelOS theme extension is loaded: its colours apply each time Helium starts. To switch live: Helium settings → Appearance → Theme → GTK")) : heliumStatus.info.pending ? I18n.t("закрой Helium — я сама переключу его тему на «GTK», и дальше он меняет цвета вместе с angelOS", "Close Helium and I'll switch its theme to “GTK”; from then on it changes colours with angelOS") : I18n.t("«Следовать теме angelOS» — и Helium меняет цвета вместе с системой (режим «GTK»; если Helium открыт — переключу, как закроешь). Или тема-расширение: helium://extensions → Режим разработчика → «Загрузить распакованное» → папка ниже (цвета обновляются при запуске)", "“Follow angelOS's theme” and Helium changes colours with the system (its “GTK” mode; if Helium is open, I switch it when it closes). Or the theme extension: helium://extensions → Developer mode → “Load unpacked” → the folder below (colours refresh at start)")
-            Column {
-                width: parent.width
-                spacing: Theme.u * 2
-                PxText {
-                    width: parent.width
-                    elide: Text.ElideMiddle
-                    text: heliumStatus.info.theme || ""
-                    kind: "tiny"
-                    dim: true
+        // browsers (scripts/browser-theme.py): Helium and Chromium follow GTK live (their theme
+        // "GTK") or read a theme extension at start; Firefox follows GTK by itself and gets the
+        // palette from userChrome.css. Profiles change only by these buttons, with a copy and undo
+        Repeater {
+            model: browserStatus.list
+            SettingRow {
+                id: browserRow
+                required property var modelData
+                readonly property var b: modelData
+                readonly property bool chromium: b.kind === "chromium"
+                readonly property bool asking: browserAct.ask === b.id
+                readonly property string failed: browserAct.errorFor === b.id ? browserAct.error : ""
+                property bool copied: false
+                label: b.name
+                hint: {
+                    const n = b.name;
+                    let s;
+                    if (asking)
+                        s = I18n.t(n + " открыт, а тему он читает только при запуске. «Перезапустить сейчас» — закрою и открою снова, вкладки вернутся. «Когда закрою» — переключу сама, как только закроешь", n + " is open, and it reads its theme only at start. “Restart now”: I close it and open it again, the tabs come back. “When I close it”: I switch it myself as soon as you do");
+                    else if (!b.profile)
+                        s = I18n.t("запусти " + n + " один раз — профиля ещё нет", "Start " + n + " once: there's no profile yet");
+                    else if (!chromium)
+                        s = (b.static ? I18n.t("тема angelOS включена (userChrome.css): панели и вкладки в цветах рая или ада, Firefox читает их при запуске." + (b.running ? " Перезапусти Firefox, чтобы увидеть" : ""), "angelOS's theme is on (userChrome.css): toolbars and tabs in heaven's or hell's colours, read when Firefox starts." + (b.running ? " Restart Firefox to see it" : "")) : I18n.t("«Включить тему angelOS» — панели и вкладки Firefox в цветах рая или ада (userChrome.css в профиле, с копией и откатом; читается при запуске). Меню и кнопки окна и так следуют GTK на лету", "“Turn on angelOS's theme”: Firefox's toolbars and tabs in heaven's or hell's colours (userChrome.css in the profile, with a copy and undo; read at start). Menus and window buttons follow GTK live anyway")) + (b.live ? "" : I18n.t(". Сейчас у Firefox своя тема: чтобы он следовал GTK — about:addons → Темы → «Системная тема — авто»", ". Firefox has a theme of its own now: to follow GTK, about:addons → Themes → “System theme — auto”"));
+                    else if (b.live)
+                        s = Angel.hellShown ? I18n.t("в режиме «GTK»: цвета и кнопки окна angelOS, рай и ад — сразу", "In GTK mode: angelOS colours and window buttons, heaven and hell at once") : I18n.t("в режиме «GTK»: цвета и кнопки окна angelOS — сразу", "In GTK mode: angelOS colours and window buttons at once");
+                    else if (b.pending)
+                        s = I18n.t("включу, как закроешь " + n + ". Или «Перезапустить сейчас» — вкладки вернутся", "On as soon as you close " + n + ". Or “Restart now”: the tabs come back");
+                    else if (b.static)
+                        s = I18n.t("тема-расширение angelOS загружена: цвета подхватываются при каждом запуске. Чтобы рай и ад менялись на лету — «Следовать теме angelOS»", "The angelOS theme extension is loaded: its colours apply each time it starts. For heaven and hell to switch live: “Follow angelOS's theme”");
+                    else
+                        s = I18n.t("«Следовать теме angelOS» — " + n + " меняет цвета вместе с системой (его тема «GTK»; профиль правлю только по кнопке, с копией и откатом). Или тема-расширение: " + (b.id === "helium" ? "helium" : "chrome") + "://extensions → Режим разработчика → «Загрузить распакованное» → папка ниже (цвета обновляются при запуске)", "“Follow angelOS's theme”: " + n + " changes colours with the system (its “GTK” theme; I edit the profile only by this button, with a copy and undo). Or the theme extension: " + (b.id === "helium" ? "helium" : "chrome") + "://extensions → Developer mode → “Load unpacked” → the folder below (colours refresh at start)");
+                    return failed ? s + I18n.t(". Не вышло: ", ". Didn't work: ") + failed : s;
                 }
-                Flow {
+                Column {
                     width: parent.width
                     spacing: Theme.u * 2
-                    // one click: Helium's theme → GTK, it follows angelOS live (helium-theme.py follow)
-                    PxButton {
-                        visible: !heliumStatus.info.gtkMode
-                        compact: true
-                        accent: true
-                        icon: "sparkle"
-                        text: heliumStatus.info.pending ? I18n.t("Включу, как закроешь Helium…", "On as soon as Helium closes…") : I18n.t("Следовать теме angelOS", "Follow angelOS's theme")
-                        onClicked: heliumFollow.running = true
+                    PxText {
+                        visible: browserRow.chromium
+                        width: parent.width
+                        elide: Text.ElideMiddle
+                        text: browserRow.b.theme || ""
+                        kind: "tiny"
+                        dim: true
                     }
-                    PxButton {
-                        compact: true
-                        icon: "folder"
-                        text: I18n.t("Папка темы", "Theme folder")
-                        onClicked: Quickshell.execDetached(["xdg-open", heliumStatus.info.theme || ""])
-                    }
-                    PxButton {
-                        compact: true
-                        icon: "document"
-                        text: heliumRow.copied ? I18n.t("Скопировано ♡", "Copied ♡") : I18n.t("Копировать путь", "Copy path")
-                        onClicked: {
-                            Quickshell.execDetached(["wl-copy", heliumStatus.info.theme || ""]);
-                            heliumRow.copied = true;
+                    Flow {
+                        width: parent.width
+                        spacing: Theme.u * 2
+                        PxButton {
+                            visible: !browserRow.asking && !!browserRow.b.profile && (browserRow.chromium ? !browserRow.b.live && !browserRow.b.pending : !browserRow.b.static)
+                            compact: true
+                            accent: true
+                            icon: "sparkle"
+                            text: browserRow.chromium ? I18n.t("Следовать теме angelOS", "Follow angelOS's theme") : I18n.t("Включить тему angelOS", "Turn on angelOS's theme")
+                            onClicked: browserAct.go(browserRow.b.id, "apply", "")
                         }
-                    }
-                    PxButton {
-                        compact: true
-                        flat: true
-                        icon: "refresh"
-                        text: I18n.t("Проверить", "Check")
-                        onClicked: heliumStatus.running = true
+                        PxButton {
+                            visible: browserRow.asking || (browserRow.chromium && browserRow.b.pending)
+                            compact: true
+                            accent: true
+                            icon: "refresh"
+                            text: I18n.t("Перезапустить сейчас", "Restart now")
+                            onClicked: browserAct.go(browserRow.b.id, browserRow.asking ? browserAct.askVerb : "apply", "restart")
+                        }
+                        PxButton {
+                            visible: browserRow.asking
+                            compact: true
+                            icon: "check"
+                            text: I18n.t("Когда закрою", "When I close it")
+                            onClicked: browserAct.go(browserRow.b.id, browserAct.askVerb, "wait")
+                        }
+                        PxButton {
+                            visible: browserRow.asking
+                            compact: true
+                            flat: true
+                            icon: "close"
+                            text: I18n.t("Отмена", "Cancel")
+                            onClicked: browserAct.ask = ""
+                        }
+                        PxButton {
+                            visible: !browserRow.asking && (browserRow.b.undo || (!browserRow.chromium && browserRow.b.static))
+                            compact: true
+                            flat: true
+                            icon: "arrowLeft"
+                            text: I18n.t("Вернуть как было", "Put it back")
+                            onClicked: browserAct.go(browserRow.b.id, "revert", "")
+                        }
+                        PxButton {
+                            visible: browserRow.chromium && !browserRow.asking
+                            compact: true
+                            icon: "folder"
+                            text: I18n.t("Папка темы", "Theme folder")
+                            onClicked: Quickshell.execDetached(["xdg-open", browserRow.b.theme || ""])
+                        }
+                        PxButton {
+                            visible: browserRow.chromium && !browserRow.asking
+                            compact: true
+                            icon: "document"
+                            text: browserRow.copied ? I18n.t("Скопировано ♡", "Copied ♡") : I18n.t("Копировать путь", "Copy path")
+                            onClicked: {
+                                Quickshell.execDetached(["wl-copy", browserRow.b.theme || ""]);
+                                browserRow.copied = true;
+                            }
+                        }
+                        PxButton {
+                            visible: !browserRow.asking
+                            compact: true
+                            flat: true
+                            icon: "refresh"
+                            text: I18n.t("Проверить", "Check")
+                            onClicked: browserStatus.running = true
+                        }
                     }
                 }
             }
-            Process {
-                id: heliumFollow
-                command: ["python3", Quickshell.shellDir + "/scripts/helium-theme.py", "follow"]
-                onExited: heliumStatus.running = true
+        }
+        Process {
+            id: browserStatus
+            property var list: []
+            running: true
+            command: ["python3", Quickshell.shellDir + "/scripts/browser-theme.py", "status"]
+            stdout: StdioCollector {
+                onStreamFinished: {
+                    try {
+                        browserStatus.list = JSON.parse(text).browsers || [];
+                    } catch (e) {}
+                }
             }
-            Process {
-                id: heliumStatus
-                property var info: ({})
-                running: true
-                command: ["python3", Quickshell.shellDir + "/scripts/helium-theme.py", "status"]
-                stdout: StdioCollector {
-                    onStreamFinished: {
-                        try {
-                            heliumStatus.info = JSON.parse(text);
-                        } catch (e) {}
+        }
+        Process {
+            id: browserAct
+            property string ask: ""         // an open browser: restart it now, or wait until it closes?
+            property string askVerb: ""
+            property string lastId: ""
+            property string lastVerb: ""
+            property string error: ""
+            property string errorFor: ""
+            function go(id, verb, mode) {
+                if (running)
+                    return;
+                ask = "";
+                error = "";
+                lastId = id;
+                lastVerb = verb;
+                command = ["python3", Quickshell.shellDir + "/scripts/browser-theme.py", verb, id].concat(mode ? ["--" + mode] : []);
+                running = true;
+            }
+            stdout: StdioCollector {
+                onStreamFinished: {
+                    let r = {};
+                    try {
+                        r = JSON.parse(text);
+                    } catch (e) {}
+                    if (r.ok && r.running && !r.done && !r.pending) {
+                        browserAct.ask = browserAct.lastId;
+                        browserAct.askVerb = browserAct.lastVerb;
                     }
+                    browserAct.error = r.ok === false ? String(r.error || "") : "";
+                    browserAct.errorFor = browserAct.lastId;
+                    browserStatus.running = true;
                 }
             }
         }
