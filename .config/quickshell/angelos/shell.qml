@@ -56,7 +56,6 @@ ShellRoot {
     AngelHelper {}
     NovelHost {}
     HeavenRays {}
-    ScreenCracks {}
     ScreenQuake {}
     HellFxOverlay {}
     CircleTransition {}

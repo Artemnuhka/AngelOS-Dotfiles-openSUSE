@@ -10,7 +10,8 @@ import qs.modules.y2k
 import qs.widgets
 
 // Two background-layer surfaces per screen:
-//   angelos-wallpaper — the picture and the desktop widgets' faces; niri keeps it
+//   angelos-wallpaper — the picture, the desktop widgets' faces and the demon's broken
+//                       glass (ScreenCracks); niri keeps it
 //                       in the backdrop (layer-rule place-within-backdrop): it
 //                       does not slide with workspaces and shows once in the
 //                       overview, but gets no input
@@ -57,6 +58,12 @@ Variants {
                         area: faceArea
                     }
                 }
+            }
+
+            // her glass, where her fist landed: pinned like the wallpaper
+            ScreenCracks {
+                anchors.fill: parent
+                screenName: scope.modelData.name
             }
 
             RightClickGuard {}

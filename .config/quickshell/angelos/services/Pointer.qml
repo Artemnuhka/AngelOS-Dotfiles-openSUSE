@@ -7,7 +7,7 @@ import Quickshell
 // pointer position, so the shell's own surfaces report it while the pointer is
 // over them (the desktop under the windows, the taskbar), in screen coordinates.
 // Over an app window the last known spot stays and `over` turns false.
-// Used by the demon's cracked glass (ScreenCracks): it clears up as you come near.
+// Used by the demon's cracked glass (modules/y2k/ScreenCracks): it clears up as you come near.
 Singleton {
     id: root
 

@@ -21,7 +21,7 @@ import "Intents.js" as Intents
 //           angel undoes the pranks and gives the wallpaper back.
 // Who rules and what came with her is the player's save (Story.player), not a setting.
 // Effects: heaven() — sun rays and a choir (HeavenRays), punched() — the
-// demon's broken glass (ScreenCracks), quake() — the swap shakes the screen
+// demon's broken glass (services/Cracks), quake() — the swap shakes the screen
 // (ScreenQuake). The demon arrives: shake with her 8-bit rocks, then the screen
 // breaks and her cracks appear. The angel returns: the demon's glass breaks and
 // falls out (shattered()), then the screen shakes — no rocks, they are hers. Nothing of it on
@@ -665,7 +665,7 @@ Singleton {
         interval: 450
         onTriggered: root.effect()
     }
-    // the angel is back: her glass has fallen out (ScreenCracks, 450 ms), now the shake
+    // the angel is back: her glass has fallen out (services/Cracks, 450 ms), now the shake
     Timer {
         id: afterGlass
         interval: 480
@@ -698,7 +698,8 @@ Singleton {
     }
     onPresentChanged: if (present && !transition)
         appear.restart()
-    // she moved (the main screen changed, a monitor came or went): her cracks come along, silently
+    // she moved: her cracks stay where her fist landed (services/Cracks) — unless that
+    // monitor is gone, then they come along, silently
     onScreenNameChanged: if (demon && present && !transition && screenName)
         moved.restart()
     property string _crackedOn: ""            // where her cracks were put last
@@ -706,7 +707,7 @@ Singleton {
     Timer {
         id: moved
         interval: 300
-        onTriggered: if (root.demon && !appear.running && root._crackedOn && root._crackedOn !== root.screenName && root.fxHere() && Config.y2k.cracks !== "off")
+        onTriggered: if (root.demon && !appear.running && root._crackedOn && !Shell.screenByName(root._crackedOn) && root.fxHere() && Config.y2k.cracks !== "off")
             root.punched(root.screenName, "")
     }
     Timer {
