@@ -195,12 +195,14 @@ PxPage {
 
     PxGroup {
         id: editPick
-        visible: page.userPlugins.length > 0 && !(page.editing && page.userPlugins.length === 1)
+        // a sub-page while a conversation is open (`shown` then, PxGroup), a plain group before
+        readonly property bool any: page.userPlugins.length > 0 && !(page.editing && page.userPlugins.length === 1)
+        visible: any
+        shown: any
         title: page.editing ? I18n.t("Доработать другой плагин", "Improve another plugin") : I18n.t("Доработать готовый плагин", "Improve an installed plugin")
         icon: "plug"
         width: parent.width
         advanced: page.editing || page.messages.length > 0
-        open: page.pendingEdit !== ""
         PxText {
             width: parent.width
             wrapMode: Text.Wrap

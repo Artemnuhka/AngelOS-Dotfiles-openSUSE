@@ -62,10 +62,12 @@ text = "\n".join(lines).rstrip()
 text = text.replace("import qs.widgets", "import qs.widgets\nimport qs.tests.ui", 1)
 print(text[:text.rfind("}")] + "    Driver {}\n}")
 PY
-# quiet, offline settings: no OBS, no sounds, no first-run jobs
+# quiet, offline settings: no OBS, no sounds, no first-run jobs; developer mode on, so its
+# pages (Plugin Studio) load with the rest — a page nobody opens in CI breaks unseen
 cat >"$T/home/.config/angelos/settings.json" <<'JSON'
 {"setup": {"complete": true}, "stream": {"auto": false}, "y2k": {"sounds": false, "helper": false, "boot": false},
- "bar": {"metaTap": false}, "updates": {"autoCheck": false}, "system": {"nautilusDefaults": true}}
+ "bar": {"metaTap": false}, "updates": {"autoCheck": false}, "system": {"nautilusDefaults": true},
+ "developer": {"enabled": true}}
 JSON
 log="${ANGELOS_TEST_LOG:-$T/qs.log}"
 runner=()
