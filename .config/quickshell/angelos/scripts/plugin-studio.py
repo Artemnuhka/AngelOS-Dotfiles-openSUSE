@@ -865,7 +865,8 @@ class Studio:
             (home / ".config/angelos").mkdir(parents=True)
             run.mkdir(mode=0o700)
             imports, binds = [], []
-            for sub in ("config", "services", "widgets", "modules", "plugins", "scripts", "shaders", "templates", "bin"):
+            # every folder the shell's QML reaches into (novel/: NovelCore.js, data/: fonts)
+            for sub in ("config", "services", "widgets", "modules", "plugins", "scripts", "shaders", "templates", "bin", "novel", "data"):
                 if not (ROOT / sub).is_dir():
                     continue
                 (root / sub).mkdir(parents=True)
