@@ -22,7 +22,8 @@ Singleton {
     readonly property bool dark: Config.appearance.mode === "dark" || (Config.appearance.mode === "auto" && autoDark)
 
     function generated(isDark) {
-        const seed = Qt.color(Config.appearance.customAccent || "#c77dff");
+        // the accent "from the wallpaper" is the realm's own (C2): hell's picture has its own
+        const seed = Qt.color((root.hell && Config.appearance.flavor === "wallpaper" && Config.appearance.customAccentHell) || Config.appearance.customAccent || "#c77dff");
         const floor = Qt.color(isDark ? "#12141a" : "#fffdf8");
         const ink = Qt.color(isDark ? "#fafafa" : "#202126");
         const a = isDark ? mix(seed, Qt.color("#ffffff"), 0.25) : mix(seed, Qt.color("#161820"), 0.32);

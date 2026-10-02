@@ -59,9 +59,11 @@ Singleton {
         process.running = true;
     }
     property bool _switch: false
+    // heaven's accent and hell's are kept apart (C2): hell's picture never recolours heaven
     function apply(accent, switchFlavor) {
-        if (Config.appearance.customAccent !== accent)
-            Config.appearance.customAccent = accent;
+        const key = Wallpapers.hellOn ? "customAccentHell" : "customAccent";
+        if (Config.appearance[key] !== accent)
+            Config.appearance[key] = accent;
         if (switchFlavor)
             Config.appearance.flavor = "wallpaper";
     }

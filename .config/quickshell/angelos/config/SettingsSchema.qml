@@ -7,6 +7,7 @@ import Quickshell.Io
 JsonAdapter {
     property JsonObject appearance: JsonObject {
         property string customAccent: "#c77dff"
+        property string customAccentHell: ""  // hell's accent from its wallpaper ("From wallpaper"); heaven's stays customAccent
         property string language: "ru"
         property string mode: "dark"        // light | dark | auto
         property int lightFrom: 8           // auto: light theme from this hour

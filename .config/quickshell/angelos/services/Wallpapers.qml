@@ -7,10 +7,27 @@ import Quickshell.Io
 import qs.config
 
 // Resolves which wallpaper a screen shows (per workspace > per output > fallback).
+// Heaven and hell have wallpapers of their own (C2): heaven's is Config.wallpaper and is never
+// touched while the demon rules; hell's is the player's save (Story.player.hellWall) — the
+// circle's painting (services/Angel puts it up), or what the player picked in this circle,
+// gone with the next circle. Every setter here writes to the realm that is shown, and in hell
+// only hell's pictures are offered.
 Singleton {
     id: root
 
-    property var images: []
+    property var images: []                  // heaven's pictures (Config.wallpaper.dir, not the Hell pack)
+    property var hellImages: []              // hell's: the Hell pack, its cache, the drawn hells
+    readonly property bool hellOn: Angel.demon
+    readonly property var hellWall: Story.player.hellWall || null
+    // what the screens show: hell's once it is painted (until then the last picture stays)
+    readonly property var shown: hellOn && hellWall ? hellWall : Config.wallpaper
+    readonly property string stateKey: JSON.stringify([shown.fallback, shown.outputs, shown.workspaces])
+    readonly property var list: hellOn ? hellImages : images
+    readonly property string hellPack: Config.home + "/Pictures/Hell"
+    readonly property string hellCache: Config.home + "/.local/share/angelos/hell-pack"
+    readonly property string hellDrawn: Config.home + "/.local/share/angelos/hell"
+    // the paintings are there (installed or fetched once), or only the drawn hells
+    readonly property bool hellPackHere: hellImages.some(p => !p.startsWith(hellDrawn + "/"))
     // pixel transitions of shaders/pixel_transition.frag, in shader order
     readonly property var transitions: [
         { "id": "mosaic-dither", "label": I18n.t("Мозаика + дизер", "Mosaic + dither"), "hint": I18n.t("пиксели укрупняются и рассыпаются в новую картинку", "Pixels grow and dither into the new picture") },
@@ -30,30 +47,56 @@ Singleton {
             return Math.floor(Math.random() * transitions.length);
         return transitions.findIndex(t => t.id === id);
     }
-    readonly property string dir: Config.expand(Config.wallpaper.dir)
+    readonly property string dir: hellOn ? hellPack : Config.expand(Config.wallpaper.dir)
+    readonly property string heavenDir: Config.expand(Config.wallpaper.dir)
 
     function key(output, idx) {
         return output + ":" + idx;
     }
 
     function resolve(output, idx) {
-        const w = Config.wallpaper;
-        const p = (w.workspaces || {})[key(output, idx)] || (w.outputs || {})[output] || w.fallback || images[0] || "";
+        const w = shown;
+        const p = (w.workspaces || {})[key(output, idx)] || (w.outputs || {})[output] || w.fallback || (shown === Config.wallpaper ? images[0] : "") || "";
         return Config.expand(p);
     }
 
+    // a pick in hell: hell's wallpaper for this circle only (the next circle puts its own)
+    function _hellEdit(fn) {
+        const w = JSON.parse(JSON.stringify(hellWall || {
+            "fallback": "",
+            "outputs": {},
+            "workspaces": {}
+        }));
+        w.outputs = w.outputs || {};
+        w.workspaces = w.workspaces || {};
+        fn(w);
+        w.circle = Story.circle;
+        w.picked = true;
+        Story.player.hellWall = w;
+    }
     function setForOutput(output, path) {
+        if (hellOn)
+            return _hellEdit(w => path ? w.outputs[output] = path : delete w.outputs[output]);
         Config.setIn(Config.wallpaper, "outputs", output, path);
     }
     function setForWorkspace(output, idx, path) {
+        if (hellOn)
+            return _hellEdit(w => path ? w.workspaces[key(output, idx)] = path : delete w.workspaces[key(output, idx)]);
         Config.setIn(Config.wallpaper, "workspaces", key(output, idx), path);
     }
     function setEverywhere(path) {
+        if (hellOn)
+            return _hellEdit(w => {
+                w.fallback = path;
+                w.outputs = {};
+                w.workspaces = {};
+            });
         Config.wallpaper.fallback = path;
         Config.wallpaper.outputs = ({});
         Config.wallpaper.workspaces = ({});
     }
     function random(output) {
+        const images = list;
         if (images.length === 0)
             return;
         const p = images[Math.floor(Math.random() * images.length)];
@@ -66,12 +109,13 @@ Singleton {
     // next / random picture for the screen's current workspace: a workspace that has
     // its own wallpaper gets a new one, otherwise the whole monitor does
     function _setLike(output, idx, path) {
-        if ((Config.wallpaper.workspaces || {})[key(output, idx)])
+        if ((shown.workspaces || {})[key(output, idx)])
             setForWorkspace(output, idx, path);
         else
             setForOutput(output, path);
     }
     function next(output, idx, step) {
+        const images = list;
         if (images.length === 0)
             return;
         const cur = resolve(output, idx);
@@ -80,6 +124,7 @@ Singleton {
         _setLike(output, idx, images[((i < 0 ? -1 : i) + (step || 1) + n) % n]);
     }
     function shuffle(output, idx) {
+        const images = list;
         if (images.length === 0)
             return;
         const cur = resolve(output, idx);
@@ -115,10 +160,31 @@ Singleton {
     function scan() {
         scanner.running = false;
         scanner.running = true;
+        hellScanner.running = false;
+        hellScanner.running = true;
     }
 
-    onDirChanged: scan()
+    onHeavenDirChanged: scan()
+    onHellOnChanged: scan()
     Component.onCompleted: scan()
+
+    // no Hell pack yet: fetch it once (scripts/hell-wallpaper.py downloads the Hell folder of
+    // the wallpapers repo into its cache, like the installer would into ~/Pictures/Hell)
+    property bool fetching: false
+    function fetchHell() {
+        if (fetching)
+            return;
+        fetching = true;
+        fetcher.running = true;
+    }
+    Process {
+        id: fetcher
+        command: ["python3", Quickshell.shellDir + "/scripts/hell-wallpaper.py", root.hellDrawn, "--pack", root.hellPack, "--cache", root.hellCache, "1920x1080"]
+        onExited: {
+            root.fetching = false;
+            root.scan();
+        }
+    }
 
     Process {
         id: fitter
@@ -142,9 +208,18 @@ Singleton {
 
     Process {
         id: scanner
-        command: ["find", "-L", root.dir, "-maxdepth", "3", "-type", "f", "(", "-iname", "*.png", "-o", "-iname", "*.jpg", "-o", "-iname", "*.jpeg", "-o", "-iname", "*.webp", "-o", "-iname", "*.gif", "-o", "-iname", "*.bmp", ")", "-not", "-path", "*/Screenshots/*"]
+        // heaven's pictures: the Hell pack is hell's (C2: no picking the wrong realm by accident)
+        command: ["find", "-L", root.heavenDir, "-maxdepth", "3", "-type", "f", "(", "-iname", "*.png", "-o", "-iname", "*.jpg", "-o", "-iname", "*.jpeg", "-o", "-iname", "*.webp", "-o", "-iname", "*.gif", "-o", "-iname", "*.bmp", ")", "-not", "-path", "*/Screenshots/*", "-not", "-path", root.hellPack + "/*"]
         stdout: StdioCollector {
             onStreamFinished: root.images = text.split("\n").filter(l => l !== "").sort()
+        }
+    }
+    Process {
+        id: hellScanner
+        // the pack (installed, else its fetched copy — the same names), then the drawn hells
+        command: ["sh", "-c", 'for d in "$1" "$2"; do ls "$d"/*.png 2>/dev/null && break; done; ls "$3"/hell-*.png 2>/dev/null; true', "sh", root.hellPack, root.hellCache, root.hellDrawn]
+        stdout: StdioCollector {
+            onStreamFinished: root.hellImages = text.split("\n").filter(l => l !== "")
         }
     }
 }

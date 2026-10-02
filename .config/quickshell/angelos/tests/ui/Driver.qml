@@ -43,6 +43,8 @@ import "../../services/Intents.js" as Intents
 //             pleas are understood in any wording, with typos and the wrong layout
 //   pace      into hell through the portal shows the circle; back and forth within
 //             story/game.json's pace.quickSwitch is instant, later the whole show again (C1)
+//   walls     heaven's wallpaper stays as it is in hell, a pick in hell lasts for its circle,
+//             an older save is untangled, hell's accent is its own (C2)
 //   cava      the cava widget (over a stand-in cava) starts, and starts again after it was
 //             hidden and shown with the same config (B4: the lock, sleep, a fullscreen game)
 //   rmb       a right-click menu opens where the button went down (B2); a right click into
@@ -1175,6 +1177,53 @@ Scope {
             if ((Angel.transition || DesktopWidgets.burning) && Date.now() - started < 10000)
                 return;
             report("pace-slow", paceSlow && !Angel.demon && Theme.realm === "heaven", "a switch " + (Story.quickSwitchMs / 1000 + 1) + " s after the last: the full show " + paceSlow + ", heaven again " + (Theme.realm === "heaven"));
+            Story.reset();
+            phase = "walls";
+            return;
+        }
+        // C2: heaven's wallpaper is never touched in hell; a pick in hell lasts for its circle
+        if (phase === "walls") {
+            const heaven = "/tmp/selftest-heaven.png", hellPic = "/tmp/selftest-hell.png", pickPic = "/tmp/selftest-pick.png";
+            const keep = [Config.wallpaper.fallback, Config.wallpaper.outputs, Config.wallpaper.workspaces, Config.y2k.hellPicture, Config.appearance.customAccent];
+            Wallpapers.setEverywhere(heaven);
+            Config.y2k.hellPicture = hellPic;
+            Story.player.character = "demon";
+            Story.fell("greed");
+            Angel.hellLook(true);
+            const inHell = Wallpapers.resolve("S", 1) === hellPic && Config.wallpaper.fallback === heaven;
+            Wallpapers.setForOutput("S", pickPic);
+            const picked = Wallpapers.resolve("S", 1) === pickPic && Config.wallpaper.fallback === heaven && !(Config.wallpaper.outputs || {}).S;
+            Story.setCircle("wrath");
+            const nextCircle = Wallpapers.resolve("S", 1) === hellPic;
+            const accent0 = Config.appearance.customAccent;
+            PaletteGenerator.apply("#123456", false);
+            const accents = Config.appearance.customAccent === accent0 && Config.appearance.customAccentHell === "#123456";
+            Angel.hellLook(false);
+            Story.player.character = "angel";
+            const back = Wallpapers.resolve("S", 1) === heaven && !Story.player.hellWall;
+            report("walls-apart", inHell && picked && nextCircle && back, "in hell " + inHell + ", a pick changes hell only " + picked + ", the next circle puts its own " + nextCircle + ", heaven's back " + back);
+            report("walls-accent", accents, "hell's accent from its picture kept apart from heaven's " + accents);
+            // an older save: hell sat in Config.wallpaper, heaven's in angelSaved
+            Story.player.character = "demon";
+            Story.player.angelSaved = {
+                "fallback": heaven,
+                "outputs": {},
+                "workspaces": {},
+                "mode": "light"
+            };
+            Config.wallpaper.fallback = "/tmp/selftest-old-hell.png";
+            Angel.untangleWall();
+            const untangled = Config.wallpaper.fallback === heaven && !!Story.player.hellWall && Story.player.hellWall.fallback === "/tmp/selftest-old-hell.png" && Story.player.angelSaved.mode === "light" && Story.player.angelSaved.fallback === undefined;
+            report("walls-old-save", untangled, "heaven's wallpaper given back " + (Config.wallpaper.fallback === heaven) + ", the old hell kept as hell's " + !!Story.player.hellWall);
+            Story.player.character = "angel";
+            Story.player.hellWall = null;
+            Story.player.angelSaved = null;
+            Config.wallpaper.fallback = keep[0];
+            Config.wallpaper.outputs = keep[1];
+            Config.wallpaper.workspaces = keep[2];
+            Config.y2k.hellPicture = keep[3];
+            Config.appearance.customAccent = keep[4];
+            Config.appearance.customAccentHell = "";
             Story.reset();
             cavaStage.active = true;
             started = Date.now();

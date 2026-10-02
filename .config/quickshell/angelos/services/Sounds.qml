@@ -323,7 +323,7 @@ Singleton {
     function quietWallpaper(ms) {
         wallpaperQuietUntil = Date.now() + ms;
     }
-    readonly property string wallpaperKey: JSON.stringify([Config.wallpaper.fallback, Config.wallpaper.outputs, Config.wallpaper.workspaces])
+    readonly property string wallpaperKey: Wallpapers.stateKey
     onWallpaperKeyChanged: if (settled() && Date.now() > wallpaperQuietUntil)
         wallpaperDebounce.restart()
     Timer {

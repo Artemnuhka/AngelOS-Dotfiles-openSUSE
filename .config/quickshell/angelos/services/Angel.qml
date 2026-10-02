@@ -703,14 +703,11 @@ Singleton {
         onTriggered: root.effect(true)
     }
 
-    // ---- the demon's wallpaper: hell while she rules — always; yours with the angel ----
-    // Whatever wallpaper is picked while she rules (Settings, the right-click menu,
-    // `angelos wallpaper`, a hotkey), hell goes back up at once; the pick is kept in
-    // Story.player.angelSaved and the angel puts it up when she comes back.
-    readonly property string wallKey: JSON.stringify([Config.wallpaper.fallback, Config.wallpaper.outputs, Config.wallpaper.workspaces])
-    property string hellKey: ""              // the wallpaper hell put up last
-    property var hellState: null             // …the same as an object, to put it back
-    property bool _wallBusy: false           // hell is being put up right now: not the user's doing
+    // ---- the demon's wallpaper: hell while she rules; heaven's is left alone (C2) ----
+    // Heaven's wallpaper (Config.wallpaper) is never touched in hell: the screens show hell's,
+    // Story.player.hellWall (services/Wallpapers) — the circle's painting, put up here, or
+    // what the player picked in this circle (the next circle puts its own). Only the theme
+    // mode waits in Story.player.angelSaved for the angel.
     property bool _hellPending: false        // scripts/hell-wallpaper.py is still painting
     function wallState() {
         return {
@@ -719,59 +716,60 @@ Singleton {
             "workspaces": JSON.parse(JSON.stringify(Config.wallpaper.workspaces || {}))
         };
     }
+    // hell's picture for this circle (not a pick)
     function applyWall(st) {
-        _wallBusy = true;
         Sounds.quietWallpaper(4000);
-        Config.wallpaper.fallback = st.fallback || "";
-        Config.wallpaper.outputs = st.outputs || ({});
-        Config.wallpaper.workspaces = st.workspaces || ({});
-        hellKey = wallKey;
-        hellState = st;
-        _wallBusy = false;
+        Story.player.hellWall = {
+            "circle": Story.circle,
+            "picked": false,
+            "fallback": st.fallback || "",
+            "outputs": st.outputs || ({}),
+            "workspaces": st.workspaces || ({})
+        };
     }
-    function hellLook(on) {
-        if (on) {
-            if (!Story.player.angelSaved) {
-                Story.player.angelSaved = Object.assign(wallState(), {
-                    "mode": Config.appearance.mode
-                });
-                Config.appearance.mode = "dark";
-            }
-            putHell();
-            return;
-        }
+    // an older angelOS put hell into Config.wallpaper and kept heaven's in angelSaved: give
+    // heaven its wallpaper back, and what was up becomes hell's
+    function untangleWall() {
         const s = Story.player.angelSaved;
-        hellKey = "";
-        hellState = null;
-        if (!s)
+        if (!s || s.fallback === undefined)
             return;
-        _wallBusy = true;
+        if (demon && !Story.player.hellWall)
+            Story.player.hellWall = Object.assign({
+                "circle": Story.circle,
+                "picked": false
+            }, wallState());
         Sounds.quietWallpaper(4000);
         Config.wallpaper.fallback = s.fallback || "";
         Config.wallpaper.outputs = s.outputs || ({});
         Config.wallpaper.workspaces = s.workspaces || ({});
-        if (s.mode)
+        Story.player.angelSaved = s.mode ? {
+            "mode": s.mode
+        } : null;
+    }
+    function hellLook(on) {
+        untangleWall();
+        if (on) {
+            if (!Story.player.angelSaved) {
+                Story.player.angelSaved = {
+                    "mode": Config.appearance.mode
+                };
+                Config.appearance.mode = "dark";
+            }
+            if (!hellUp() && !_hellPending)
+                putHell();
+            return;
+        }
+        const s = Story.player.angelSaved;
+        Sounds.quietWallpaper(4000);
+        Story.player.hellWall = null;
+        if (s && s.mode)
             Config.appearance.mode = s.mode;
         Story.player.angelSaved = null;
-        _wallBusy = false;
     }
-    // the user picked a wallpaper while she rules: it waits for the angel, hell stays
-    onWallKeyChanged: {
-        if (!demon || transition || _wallBusy || !Config.ready || !Story.player.angelSaved || (!hellKey && !_hellPending) || wallKey === hellKey)
-            return;
-        Story.player.angelSaved = Object.assign({}, Story.player.angelSaved, wallState());
-        Qt.callLater(rehell);
-    }
-    function rehell() {
-        // still painting: its result goes up when it is ready
-        if (!demon || !hellState || wallKey === hellKey || _hellPending)
-            return;
-        applyWall(hellState);
-        say(tr(pick(Lines.demonWallpaper, "dwall")), {
-            "label": I18n.t("Когда вернётся моё?", "When do I get mine back?"),
-            "icon": "chat",
-            "run": () => root.say(I18n.t("Когда вернётся ангел. Твоя картинка у неё — она её и повесит. Проси красиво: моё меню → «Спросить…».", "When the angel's back. She's got your picture and she'll put it up. Beg nicely: my menu → “Ask…”."))
-        }, 9000);
+    // hell's wallpaper is up for the circle the player is in
+    function hellUp() {
+        const w = Story.player.hellWall;
+        return !!w && (w.circle || "") === (Story.circle || "") && !!(w.fallback || Object.keys(w.outputs || {}).length);
     }
     // the hell picture itself: your own (Y2K → hell picture), or a painting from the
     // Hell pack / the drawn hell (scripts/hell-wallpaper.py) sized for every screen
@@ -838,8 +836,7 @@ Singleton {
             root.newHell();
         }
     }
-    // the shell starts while she rules: hell must be up (an older angelOS could leave
-    // the user's wallpaper under her), and what is up now is hers
+    // the shell starts: an older save is untangled; while she rules hell must be up
     Connections {
         target: Config
         function onReadyChanged() {
@@ -851,21 +848,18 @@ Singleton {
         id: wakeHell
         interval: 1500
         onTriggered: {
-            if (!root.demon || root.transition)
+            if (!Story.ready || root.transition)
                 return;
-            if (!Story.player.angelSaved)
+            root.untangleWall();
+            if (root.demon)
                 root.hellLook(true);
-            else if (!root.hellState) {
-                root.hellState = root.wallState();
-                root.hellKey = root.wallKey;
-            }
         }
     }
     Component.onCompleted: if (Config.ready)
         wakeHell.restart()
-    // another hell picture now (the style changed; `angelos helper hellwall`)
+    // another hell picture now (a new circle, the style changed; `angelos helper hellwall`)
     function newHell() {
-        if (!demon || transition || !Story.player.angelSaved)
+        if (!demon || transition)
             return false;
         putHell();
         return true;

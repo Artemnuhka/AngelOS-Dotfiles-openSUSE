@@ -107,7 +107,8 @@ const demonPageTips = {
     "y2k": ["Моя страница теперь. Виджеты в аду, курсор в аду, гримуар — всё тут. Выключишь — обижусь.", "My page now. Widgets in hell, the cursor in hell, the grimoire — all here. Switch them off and I'll sulk."],
     "cursor": ["Внизу шесть адских курсоров. Вилы — мои любимые.", "Six hell cursors down there. The pitchfork is my favourite."],
     "widgets": ["Виджеты сгорели красиво, скажи? Новые — с огоньком.", "The widgets burned beautifully, didn't they? The new ones have some fire in them."],
-    "wallpaper": ["Мои обои не трогай. Вернётся ангел — вернёт твои, а пока любуйся адом.", "Hands off my wallpaper. The angel gives yours back when she returns; till then, enjoy hell."],
+    // ЧЕРНОВИК (C2: hell's wallpaper is its own now, heaven's waits untouched)
+    "wallpaper": ["Здесь висит мой ад. Перевешивай, если хочешь, — до следующего круга. Твои райские картинки я не трогаю.", "This is my hell on the walls. Rehang it if you like — until the next circle. Your heaven pictures I leave alone."],
     "deskmenu": ["Пентаграмма — лучший стиль меню. Остальные для ангелочков.", "The pentagram is the best menu style. The rest are for little angels."],
     "sfx": ["Хочешь выключить мой голос? Здесь, внизу. Только попробуй.", "Want to mute my voice? Down here. Just try it."],
     "studio": ["Мастер теперь рисует виджеты и для ада. Проверь, как они горят.", "Studio draws widgets for hell now too. Go see how they burn."],

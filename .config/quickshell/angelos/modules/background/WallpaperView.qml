@@ -40,7 +40,7 @@ Item {
 
     // pixel transition only when the picture itself is changed (settings / IPC);
     // switching workspaces swaps instantly, even with per-workspace wallpapers
-    readonly property string configKey: JSON.stringify([Config.wallpaper.fallback, Config.wallpaper.outputs, Config.wallpaper.workspaces])
+    readonly property string configKey: Wallpapers.stateKey
     property bool configChanged: false
     onConfigKeyChanged: configChanged = true
 

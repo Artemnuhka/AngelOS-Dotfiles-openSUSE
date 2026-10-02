@@ -178,7 +178,7 @@ PopupWindow {
         {
             "label": I18n.t("Обновить список", "Rescan pictures"),
             "icon": "refresh",
-            "hint": Wallpapers.images.length ? String(Wallpapers.images.length) : "",
+            "hint": Wallpapers.list.length ? String(Wallpapers.list.length) : "",
             "run": () => {
                 Wallpapers.scan();
                 Plugins.reload();

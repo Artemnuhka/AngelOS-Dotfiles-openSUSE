@@ -21,7 +21,8 @@ JsonAdapter {
         property var pranks: []             // the demon's pranks this fall [{id, key, old, new, at, undone}]
         property double nextPrank: 0        // ms; not before
         property int returns: 0             // times the angel came back from hell; 3 open the portal
-        property var angelSaved: null       // wallpaper + theme mode kept while the demon rules
+        property var angelSaved: null       // the theme mode kept while the demon rules ({mode}; older saves: heaven's wallpaper too)
+        property var hellWall: null         // hell's wallpaper {circle, picked, fallback, outputs, workspaces}: the circle's painting or the player's pick in it (C2)
     }
 
     // the story's variables: the sins the player's choices weigh (limbo lust gluttony greed

@@ -18,13 +18,19 @@ PxPage {
     readonly property int perPage: 24
     readonly property var folders: {
         const set = {};
-        for (const p of Wallpapers.images)
+        for (const p of Wallpapers.list)
             set[p.slice(0, p.lastIndexOf("/"))] = true;
         return Object.keys(set).sort();
     }
-    readonly property var filtered: folder ? Wallpapers.images.filter(p => p.slice(0, p.lastIndexOf("/")) === folder) : Wallpapers.images
+    readonly property var filtered: folder ? Wallpapers.list.filter(p => p.slice(0, p.lastIndexOf("/")) === folder) : Wallpapers.list
     readonly property int pages: Math.max(1, Math.ceil(filtered.length / perPage))
     onFolderChanged: pageNo = 0
+    // heaven ⇄ hell: another set of pictures, start from the top
+    readonly property bool hell: Wallpapers.hellOn
+    onHellChanged: {
+        folder = "";
+        pageNo = 0;
+    }
     property string output: Shell.focusedScreen ? Shell.focusedScreen.name : ""
     property int wsIdx: {
         const w = Niri.activeWorkspace(output);
@@ -40,7 +46,7 @@ PxPage {
             Wallpapers.setForWorkspace(output, wsIdx, path);
     }
 
-    // hell's wallpaper stays while the demon rules (services/Angel: rehell)
+    // in hell: hell's own wallpaper, heaven's waits untouched (C2)
     PxBox {
         visible: Angel.demon
         width: parent.width
@@ -58,9 +64,19 @@ PxPage {
             }
             PxText {
                 id: hellNote
-                width: parent.width - Theme.u * 20
+                width: parent.width - Theme.u * 20 - (Wallpapers.hellPackHere ? 0 : Theme.u * 40)
                 wrapMode: Text.Wrap
-                text: I18n.t("Сейчас правит демоница: на экранах всегда ад. Выбирай — картинка дождётся ангела, она её и повесит.", "The demon rules now: the screens always show hell. Pick anyway — the picture waits for the angel, she'll hang it.")
+                text: (I18n.t("Это обои Ада: здесь только адские картины, обои Рая не меняются и вернутся с ангелом. Выбранная картина держится до следующего круга.", "These are hell's wallpapers: only hell's pictures here; heaven's stay as they are and come back with the angel. A picked one stays until the next circle.") + (Wallpapers.hellPackHere ? "" : " " + I18n.t("Адский набор картин не скачан — пока только нарисованные.", "Hell's painting pack isn't downloaded — only the drawn hells for now.")))
+            }
+            PxButton {
+                visible: !Wallpapers.hellPackHere
+                compact: true
+                hell: true
+                icon: "download"
+                enabled: !Wallpapers.fetching
+                text: Wallpapers.fetching ? I18n.t("Скачиваю…", "Downloading…") : I18n.t("Скачать", "Download")
+                anchors.verticalCenter: parent.verticalCenter
+                onClicked: Wallpapers.fetchHell()
             }
         }
     }
@@ -115,6 +131,8 @@ PxPage {
             }
         }
         SettingRow {
+            // hell's pictures have their own place (the Hell pack, the drawn hells)
+            visible: !page.hell
             label: I18n.t("Папка", "Folder")
             Row {
                 spacing: Theme.u * 3
