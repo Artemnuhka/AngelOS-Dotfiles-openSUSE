@@ -435,15 +435,21 @@ Singleton {
     readonly property color hellRim: HellLook.palette.rim
     readonly property color hellAccent: HellLook.palette.accent
     readonly property color hellPanel: Qt.alpha(hellBody, Math.max(0.82, panelAlpha))
-    // Jacquard 24, a pixel blackletter (OFL, data/fonts): Latin only — Cyrillic falls
-    // back to the body font. Crisp at 24 px and its multiples (Theme.hellPx).
+    // Jacquard 12 Hell (OFL, data/fonts): Jacquard 12, a pixel blackletter, with the Cyrillic
+    // drawn for angelOS on its own grid (sources and the build: data/fonts/src/jacquard12-hell).
+    // Hell's headings, crisp at 21 px and its multiples (Theme.hellPx).
     readonly property string fontHell: hellFont.status === FontLoader.Ready ? hellFont.name : fontTitle
     function hellPx(n) {
-        return 24 * Math.max(1, Math.round(n || 1));
+        return 21 * Math.max(1, Math.round(n || 1));
     }
-    // Jacquard has Latin only: use it for text that is all ASCII, the title font otherwise
+    // what the blackletter can write: Latin, Cyrillic and the usual punctuation (symbols
+    // and emoji go in the hell text font). The old name stays for plugins: "latin" meant
+    // "Jacquard can draw it" when it had no Cyrillic.
+    function hellCovers(text) {
+        return /^[\x20-\x7E\u00A0-\u00FF\u0401\u0410-\u044F\u0451\u2013\u2014\u2018\u2019\u201C\u201D\u2022\u2026\u2116]*$/.test(String(text));
+    }
     function latin(text) {
-        return /^[\x00-\x7F]*$/.test(String(text));
+        return hellCovers(text);
     }
     function roman(n) {
         n = Math.floor(n);
@@ -460,16 +466,19 @@ Singleton {
     }
     FontLoader {
         id: hellFont
-        source: Qt.resolvedUrl("../data/fonts/Jacquard24-Regular.ttf")
+        source: Qt.resolvedUrl("../data/fonts/Jacquard12Hell-Regular.ttf")
     }
-
-    // Rubik Burned (OFL, data/fonts; Latin and Cyrillic): hell's lyrics on the bar — bold
-    // letters with burnt holes (BarLyrics while the demon rules, Y2K → Lyrics in hell)
-    readonly property string fontLyricsHell: lyricsHellFont.status === FontLoader.Ready ? lyricsHellFont.name : fontTitle
+    // Departure Mono (OFL, data/fonts): hell's text — labels, values, her lines. 11 px grid.
+    readonly property string fontHellText: hellTextFont.status === FontLoader.Ready ? hellTextFont.name : fontBody
+    function hellTextPx(n) {
+        return 11 * Math.max(1, Math.round(n || 1));
+    }
     FontLoader {
-        id: lyricsHellFont
-        source: Qt.resolvedUrl("../data/fonts/RubikBurned-Regular.ttf")
+        id: hellTextFont
+        source: Qt.resolvedUrl("../data/fonts/DepartureMono-Regular.otf")
     }
+    // (hell's lyrics used to have a font of their own; now the headings' — kept for plugins)
+    readonly property string fontLyricsHell: fontHell
 
     // ---- the grimoire's handwriting ----
     // Caveat (OFL, data/fonts; Latin and Cyrillic): while Settings are the demon's book

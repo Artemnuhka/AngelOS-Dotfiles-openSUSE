@@ -401,7 +401,7 @@ PxPage {
         SettingRow {
             visible: Angel.hellShown
             label: I18n.t("«Пуск» в аду", "Start in hell")
-            hint: I18n.t("кнопка «Пуск» становится адской (обсидиан, рога, надпись Hell, пламя), а меню — адской версией твоего вида «Пуска» с огнём по краю. «Своё адское» — отдельное меню: «Призвать» программы, гримуар, мольба об ангеле, портал", "The Start button turns hellish (obsidian, horns, the Hell wordmark, flames) and the menu becomes a hell version of your Start look, fire along its edge. “Hell's own” is a menu of its own: summon apps, the grimoire, begging for the angel, the portal")
+            hint: I18n.t("кнопка «Пуск» и меню перекрашиваются в цвета круга: тёмная основа, костяной текст, один приглушённый акцент. «Своё адское» — отдельное меню: «Призвать» программы, гримуар, мольба об ангеле, портал", "The Start button and menu take the circle's colours: a dark base, bone text, one dulled accent. “Hell's own” is a menu of its own: summon apps, the grimoire, begging for the angel, the portal")
             PxSegmented {
                 model: [
                     {
@@ -424,7 +424,7 @@ PxPage {
         SettingRow {
             visible: Angel.hellShown
             label: I18n.t("Alt+Tab в аду", "Alt+Tab in hell")
-            hint: I18n.t("«Своё адское» — окно inferno.exe: обсидиан, пламя, выбранное окно горит над пентаграммой, столы — круги ада. «Адская версия» — твой стиль Alt+Tab в адских красках с огнём по краю", "“Hell's own” is an inferno.exe window: obsidian and flames, the pick burns over a pentagram, desks are hell's circles. “Hell version” is your Alt+Tab style in hell's colours with fire along its edge")
+            hint: I18n.t("«Своё адское» — окно inferno.exe: выбранное окно над пентаграммой, столы — круги ада. «Адская версия» — твой стиль Alt+Tab в цветах круга", "“Hell's own” is an inferno.exe window: the pick over a pentagram, desks are hell's circles. “Hell version” is your Alt+Tab style in the circle's colours")
             Flow {
                 width: parent.width
                 spacing: Theme.u * 4
@@ -457,7 +457,7 @@ PxPage {
         SettingRow {
             visible: Angel.hellShown
             label: I18n.t("Терминал в аду", "Terminal in hell")
-            hint: I18n.t("kitty, foot и Alacritty в адских красках: обсидиан, кровь, угли и сера; в kitty — тлеющий шлейф за курсором и обугленный фон с пентаграммой; в fish команды подсвечиваются огнём, а при открытии демоница говорит пару слов", "kitty, foot and Alacritty in hell's colours: obsidian, blood, embers and brimstone; kitty gets an ember trail behind the cursor and a charred background with a pentagram; fish lights your commands on fire and she has a word for you in every new terminal")
+            hint: I18n.t("kitty, foot и Alacritty в цветах круга: почти чёрный фон, костяной текст, приглушённые цвета вывода; в kitty — выжженный фон с едва заметной пентаграммой; в fish команды подсвечиваются цветами круга, а при открытии демоница говорит пару слов", "kitty, foot and Alacritty in the circle's colours: a near-black background, bone text, dulled output colours; kitty gets a scorched background with a pentagram barely there; fish colours your commands in the circle's ink and she has a word for you in every new terminal")
             PxToggle {
                 checked: Config.y2k.hellTerminal
                 onToggled: c => Config.y2k.hellTerminal = c
@@ -475,7 +475,7 @@ PxPage {
         SettingRow {
             visible: Angel.hellShown
             label: I18n.t("Панель в аду", "Bar in hell")
-            hint: I18n.t("у каждого вида своя адская версия: таскбар — раскалённая плита с лавой и пламенем, полоса — камень с клыками и цепями, остров — горящая сера, капсулы — надгробия на цепях, Windose — Hellose с кровью; док остаётся обычным", "The styles have hell versions of their own: the taskbar a hot slab of lava and flames, the strip rock with fangs and chains, the island burning brimstone, the capsules tombstones on chains, Windose turns Hellose, with blood; the dock stays as it is")
+            hint: I18n.t("у каждого вида адская версия: камень круга по краям и в пустых местах, под значками и текстом — спокойная тёмная подложка, тонкая кромка сверху; док остаётся обычным", "Each style has a hell version: the circle's stone along the edges and in the empty spaces, a calm dark plate under icons and text, a thin rim on top; the dock stays as it is")
             PxToggle {
                 checked: Config.y2k.hellBar
                 onToggled: c => Config.y2k.hellBar = c
@@ -484,7 +484,7 @@ PxPage {
         SettingRow {
             visible: Angel.hellShown
             label: I18n.t("Лирика в аду", "Lyrics in hell")
-            hint: I18n.t("строка на панели — жирным обугленным шрифтом: поднимается из языков пламени, старая чернеет и осыпается пеплом, а когда песня кончилась — из лирики бьёт адский салют: угли, искры, черепа, пентаграммы и сердца с рожками", "The bar's line in a bold charred font: it rises out of the flames, the old one blackens and crumbles to ash, and when the song ends hell's salute bursts out of the lyrics: embers, sparks, skulls, pentagrams and horned hearts")
+            hint: I18n.t("строка на панели — адской готикой (Jacquard 12 Hell) в цвете круга, без печатной машинки и анимаций: следующая строка просто появляется", "The bar's line in hell's blackletter (Jacquard 12 Hell) in the circle's colour, no typewriter and no animation: the next line is simply there")
             Flow {
                 width: parent.width
                 spacing: Theme.u * 4

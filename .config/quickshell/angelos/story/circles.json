@@ -1,32 +1,73 @@
 {
-  "_comment": "How hell looks: one entry per circle (config/HellLook.qml). 'base' is the hell before any circle and the defaults every circle starts from — a circle lists only what it changes. palette: the hell tokens (Theme.hell*); bar: the stone behind the bar (shaders/hell_texture.frag); edge: the rim of windows and widgets.",
+  "_comment": "How hell looks: one entry per circle (config/HellLook.qml). 'base' is the hell before any circle and the defaults every circle starts from — a circle lists only what it changes. palette: the hell tokens (Theme.hell*); bar: the stone behind the bar (shaders/hell_texture.frag); edge: the rim of windows and widgets (shaders/hell_edge.frag); backdrop: the dark laid over the wallpaper (shaders/hell_backdrop.frag: dim, desat, vignette 0..1, tint); labels: the word after a reading on hell's widgets.",
   "base": {
-    "name": { "ru": "Ад", "en": "Hell" },
+    "name": {
+      "ru": "Ад",
+      "en": "Hell"
+    },
     "palette": {
-      "body": "#160609",
-      "plate": "#0e0406",
-      "face": "#2a0b10",
-      "faceAlt": "#3d1016",
-      "sunken": "#0c0305",
-      "edge": "#050102",
-      "hi": "#6e1a21",
-      "lo": "#0a0204",
-      "rim": "#4a1a1c",
-      "text": "#f3d9c0",
-      "textDim": "#b8988a",
-      "accent": "#f06a3a",
-      "blood": "#b3142b",
-      "ember": "#ff6a1a",
-      "flame": "#ffb02e",
-      "gold": "#d9a441"
+      "body": "#0b0809",
+      "plate": "#0f0a0b",
+      "face": "#16100f",
+      "faceAlt": "#1f1716",
+      "sunken": "#070505",
+      "edge": "#040303",
+      "hi": "#2c211f",
+      "lo": "#060404",
+      "rim": "#3b2a26",
+      "text": "#d9cbbd",
+      "textDim": "#9c8f85",
+      "accent": "#e2703f",
+      "blood": "#6b2420",
+      "ember": "#e2703f",
+      "flame": "#c99a5e",
+      "gold": "#8a7444"
     },
     "bar": {
       "texture": "stone",
-      "colors": ["#120708", "#1a0b0d", "#2a0e10", "#5a1814"],
+      "colors": [
+        "#0c0909",
+        "#110d0d",
+        "#1a1413",
+        "#33201b"
+      ],
       "scale": 10,
-      "crack": 0.5,
-      "glow": 0.25,
+      "crack": 0.35,
+      "glow": 0.12,
       "seed": 3
+    },
+    "edge": {
+      "kind": "scorch",
+      "colors": [
+        "#040303",
+        "#3b2a26",
+        "#e2703f",
+        "#24130f"
+      ]
+    },
+    "backdrop": {
+      "dim": 0.5,
+      "desat": 0.35,
+      "vignette": 0.6,
+      "tint": "#0b0809"
+    },
+    "labels": {
+      "cpu": {
+        "ru": "жар",
+        "en": "heat"
+      },
+      "gpu": {
+        "ru": "пекло",
+        "en": "inferno"
+      },
+      "ram": {
+        "ru": "души",
+        "en": "souls"
+      },
+      "vram": {
+        "ru": "котёл",
+        "en": "cauldron"
+      }
     }
   }
 }

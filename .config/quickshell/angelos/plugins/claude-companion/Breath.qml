@@ -42,19 +42,21 @@ Item {
     }
 
     // the demon rules: horns where the halo was (on the bar too); on the desktop in
-    // hell (Theme.hell) the whole face goes obsidian, gold and ember
+    // hell (Theme.hell) a mask in the circle's colours — the state shows only as a faint
+    // tint and in the two embers of its eyes
     property bool horns: Angel.demon || Theme.hell
     property bool hellLook: Theme.hell
 
     PxIcon {
         id: face
-        name: root.horns ? "botHorns" : "bot"
+        name: root.hellLook ? "botHell" : root.horns ? "botHorns" : "bot"
         pixel: root.pixel
-        ink: root.hellLook ? Theme.hellGold : (Theme.dark ? Theme.text : Theme.edge)
-        body: root.hellLook ? Theme.mix(Theme.hellFaceAlt, Pulse.hellColorFor(root.state, Theme), 0.45) : Pulse.colorFor(root.state, Theme)
-        fill: root.hellLook ? Theme.hellEmber : Theme.accent
+        ink: root.hellLook ? Theme.hellRim : (Theme.dark ? Theme.text : Theme.edge)
+        body: root.hellLook ? Theme.mix(Theme.hellFace, Pulse.hellColorFor(root.state, Theme), 0.2) : Pulse.colorFor(root.state, Theme)
+        fill: root.hellLook ? Theme.hellBlood : Theme.accent
         fill3: root.state === "none" ? Theme.textDim : Theme.accent3
-        bad: root.hellLook ? Theme.hellEmber : "#e0203a"
+        light: root.hellLook ? (root.state === "none" || root.state === "idle" ? Theme.hellRim : Theme.hellAccent) : "#ffffff"
+        bad: root.hellLook ? Theme.hellTextDim : "#e0203a"
         opacity: root.state === "none" ? 0.6 : root.glow
     }
 }

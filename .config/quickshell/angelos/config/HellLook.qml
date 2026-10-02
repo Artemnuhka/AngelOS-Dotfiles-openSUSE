@@ -20,30 +20,70 @@ Singleton {
                 "en": "Hell"
             },
             "palette": {
-                "body": "#160609",
-                "plate": "#0e0406",
-                "face": "#2a0b10",
-                "faceAlt": "#3d1016",
-                "sunken": "#0c0305",
-                "edge": "#050102",
-                "hi": "#6e1a21",
-                "lo": "#0a0204",
-                "rim": "#4a1a1c",
-                "text": "#f3d9c0",
-                "textDim": "#b8988a",
-                "accent": "#f06a3a",
-                "blood": "#b3142b",
-                "ember": "#ff6a1a",
-                "flame": "#ffb02e",
-                "gold": "#d9a441"
+                "body": "#0b0809",
+                "plate": "#0f0a0b",
+                "face": "#16100f",
+                "faceAlt": "#1f1716",
+                "sunken": "#070505",
+                "edge": "#040303",
+                "hi": "#2c211f",
+                "lo": "#060404",
+                "rim": "#3b2a26",
+                "text": "#d9cbbd",
+                "textDim": "#9c8f85",
+                "accent": "#e2703f",
+                "blood": "#6b2420",
+                "ember": "#e2703f",
+                "flame": "#c99a5e",
+                "gold": "#8a7444"
             },
             "bar": {
                 "texture": "stone",
-                "colors": ["#120708", "#1a0b0d", "#2a0e10", "#5a1814"],
+                "colors": [
+                    "#0c0909",
+                    "#110d0d",
+                    "#1a1413",
+                    "#33201b"
+                ],
                 "scale": 10,
-                "crack": 0.5,
-                "glow": 0.25,
+                "crack": 0.35,
+                "glow": 0.12,
                 "seed": 3
+            },
+            "edge": {
+                "kind": "scorch",
+                "colors": [
+                    "#040303",
+                    "#3b2a26",
+                    "#e2703f",
+                    "#24130f"
+                ]
+            },
+            // the dark laid over the wallpaper (shaders/hell_backdrop.frag)
+            "backdrop": {
+                "dim": 0.5,
+                "desat": 0.35,
+                "vignette": 0.6,
+                "tint": "#0b0809"
+            },
+            // the word after a reading on hell's widgets: "CPU · жар" — the metric first, always
+            "labels": {
+                "cpu": {
+                    "ru": "жар",
+                    "en": "heat"
+                },
+                "gpu": {
+                    "ru": "пекло",
+                    "en": "inferno"
+                },
+                "ram": {
+                    "ru": "души",
+                    "en": "souls"
+                },
+                "vram": {
+                    "ru": "котёл",
+                    "en": "cauldron"
+                }
             }
         })
     // a circle's entry over "base" over the fallback, objects merged key by key
@@ -62,6 +102,18 @@ Singleton {
     readonly property var look: merged(fallback, looks.base, circle !== "base" ? looks[circle] : null)
     readonly property var palette: look.palette
     readonly property var bar: look.bar
+    readonly property var edge: look.edge
+    readonly property var backdrop: look.backdrop
+    // "CPU · жар": the circle's word for a reading, after its plain name
+    function label(id, plain) {
+        const w = look.labels ? look.labels[id] : null;
+        return w ? plain + " · " + I18n.label(w) : plain;
+    }
+
+    // the rare thing seen from the corner of an eye (services/HellAmbient drives it): 0 → 1 → 0
+    // over a few seconds, on the windows whose seed matches `eventTarget` — one at a time
+    property real event: 0
+    property int eventTarget: -1
     readonly property var ids: Object.keys(looks).filter(k => k !== "_comment")
 
     // WCAG contrast of two "#rrggbb" colours (tests check every circle's text roles)

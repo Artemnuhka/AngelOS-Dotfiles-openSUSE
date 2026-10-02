@@ -671,6 +671,20 @@ const icons = {
         ".#######.",
         "..#...#.."
     ],
+    // in hell itself: a mask, not a face — hollow eyes with an ember in each, a shut slit
+    // for a mouth, the horns grown longer (claude.exe on hell's desktop)
+    botHell: [
+        "r.......r",
+        "rr.....rr",
+        ".r#####r.",
+        "#fffffff#",
+        "#f##f##f#",
+        "#fw#f#wf#",
+        "#fffffff#",
+        "#ff###ff#",
+        ".#######.",
+        "..#...#.."
+    ],
     gauge: [
         "...#####...",
         ".##ooyxx##.",

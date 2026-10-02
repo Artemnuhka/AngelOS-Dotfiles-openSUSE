@@ -146,5 +146,19 @@ Item {
         property size resolution: Qt.size(width, height)
         property color accent: Theme.accent
         fragmentShader: Qt.resolvedUrl("../../shaders/pixel_transition.frag.qsb")
+        // in hell the circle lays its dark over the picture (HellLook.backdrop); heaven
+        // draws the wallpaper untouched
+        layer.enabled: Theme.hell
+        layer.smooth: false
+        layer.effect: ShaderEffect {
+            readonly property var b: HellLook.backdrop || ({})
+            property real dim: b.dim !== undefined ? b.dim : 0.5
+            property real desat: b.desat !== undefined ? b.desat : 0.3
+            property real vignette: b.vignette !== undefined ? b.vignette : 0.6
+            property real cell: Theme.u * 2 * root.dpr
+            property size resolution: Qt.size(root.width * root.dpr, root.height * root.dpr)
+            property color tint: b.tint || Theme.hellBody
+            fragmentShader: Qt.resolvedUrl("../../shaders/hell_backdrop.frag.qsb")
+        }
     }
 }

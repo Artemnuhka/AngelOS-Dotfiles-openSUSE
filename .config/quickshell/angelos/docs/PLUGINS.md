@@ -120,8 +120,11 @@ QtObject {
   акцент. Цвета задаёт текущий вид ада (`story/circles.json`, `HellLook`), они могут
   меняться на ходу — привязывайся к токенам, не копируй значения. `hellText`,
   `hellTextDim` и `hellAccent` всегда читаются на `hellPlate` (контраст ≥ 4.5:1);
-- шрифт `Theme.fontHell` — Jacquard 24, пиксельная готика, только латиница:
-  проверяй `Theme.latin(text)`, чётко в `Theme.hellPx(n)` = 24·n px;
+- шрифты ада: заголовки — `Theme.fontHell` (Jacquard 12 Hell, пиксельная готика с
+  латиницей и кириллицей), чётко в `Theme.hellPx(n)` = 21·n px; символы и эмодзи она не
+  пишет — проверяй `Theme.hellCovers(text)` (старое имя `Theme.latin(text)` работает так же);
+  текст — `Theme.fontHellText` (Departure Mono), чётко в `Theme.hellTextPx(n)` = 11·n px;
+  `Theme.roman(n)` — римские цифры;
 - контролы: `PxBox { hell: Theme.hell }`, `PxButton { hell: Theme.hell }`;
   иконки `skull`, `pentagram`, `fire`.
 

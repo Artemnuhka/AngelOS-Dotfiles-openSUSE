@@ -63,9 +63,7 @@ Item {
             text: Theme.roman(clock.hours) + " : " + Theme.roman(clock.minutes) + (root.seconds ? " : " + Theme.roman(clock.seconds) : "")
             font.family: Theme.fontHell
             font.pixelSize: Theme.hellPx(2 * Theme.fs)
-            color: Theme.hellFlame
-            style: Text.Outline
-            styleColor: Theme.hellBlood
+            color: Theme.hellText
         }
         Row {
             anchors.horizontalCenter: parent.horizontalCenter
@@ -73,23 +71,23 @@ Item {
             PxIcon {
                 anchors.verticalCenter: parent.verticalCenter
                 name: "pentagram"
-                ink: Theme.hellGold
-                fill: Theme.hellBlood
+                ink: Theme.hellRim
+                fill: Theme.hellFace
             }
             PxText {
                 readonly property bool witching: clock.hours === 3
                 // "d MMMM" keeps the month's genitive in Russian; the day becomes Roman
                 text: witching ? "hora diaboli" : Qt.locale(I18n.english ? "en_US" : "ru_RU").toString(clock.date, "dddd, d MMMM").replace(/\d+/, Theme.roman(clock.date.getDate()))
                 kind: "title"
-                font.family: Theme.latin(text) ? Theme.fontHell : Theme.fontTitle
-                font.pixelSize: Theme.latin(text) ? Theme.hellPx(Theme.fs) : Theme.sizeTitle
-                color: witching ? Theme.hellEmber : Theme.hellTextDim
+                font.family: Theme.hellCovers(text) ? Theme.fontHell : Theme.fontHellText
+                font.pixelSize: Theme.hellCovers(text) ? Theme.hellPx(Theme.fs) : Theme.hellTextPx(Theme.fs)
+                color: witching ? Theme.hellAccent : Theme.hellTextDim
             }
             PxIcon {
                 anchors.verticalCenter: parent.verticalCenter
                 name: "pentagram"
-                ink: Theme.hellGold
-                fill: Theme.hellBlood
+                ink: Theme.hellRim
+                fill: Theme.hellFace
             }
         }
     }

@@ -14,7 +14,7 @@ import qs.widgets
 // screen; Spotlight — a search pill centred in the upper third. All of them animate
 // through `reveal` (0 → 1) and share the body interface: closeRequested, current,
 // reset(), setQuery(text), key(event). While the demon rules: each of them in a hell
-// version (re-inked, flames along the edge), or hell's own (StartHell).
+// version (re-inked, the circle's rim on its edges), or hell's own (StartHell).
 Variants {
     model: Shell.screens
 
@@ -25,7 +25,7 @@ Variants {
         readonly property string screenName: modelData.name
         readonly property bool open: Shell.startScreen === screenName
         // while the demon rules Start goes to hell (Y2K → Angel or demon → Start in hell):
-        // "skin" — your look in a hell version (re-inked, shaders/hell_ink.frag, with flames),
+        // "skin" — your look in a hell version (re-inked, shaders/hell_ink.frag, the circle's rim),
         // "hell" — hell's own menu (StartHell), "" — untouched
         readonly property bool hellish: Angel.demon && Config.y2k.hellStart === "hell"
         readonly property bool hellSkin: Angel.demon && Config.y2k.hellStart === "skin"
@@ -181,6 +181,11 @@ Variants {
             layer.effect: ShaderEffect {
                 fragmentShader: Qt.resolvedUrl("../../shaders/hell_ink.frag.qsb")
                 property real keep: 0.3
+                property color plate: Theme.hellPlate
+                property color face: Theme.mix(Theme.hellRim, Theme.hellFace, 0.4)
+                property color dim: Theme.hellTextDim
+                property color text: Theme.hellText
+                property color accent: Theme.hellAccent
             }
             onLoaded: {
                 item.closeRequested.connect(Shell.closeStart);
@@ -193,27 +198,15 @@ Variants {
                 z: -1
             }
         }
-        // hell's version: flames lick the menu's top edge (or the screen's foot for the
-        // full-screen looks), stepped like the hell windows' trim
-        ShaderEffect {
-            id: hellFlames
-            visible: win.hellSkin && win.shown && !!body.item
-            readonly property int rows: win.full ? 14 : 7
-            x: win.full ? 0 : body.x
-            y: win.full ? win.height - height : body.y - height + Theme.u
-            width: win.full ? win.width : body.width * body.scale
-            height: Theme.u * rows
-            opacity: win.full ? 0.9 * win.reveal : body.opacity
-            property real time: 0
-            property real seed: 3.33
-            property size cells: Qt.size(Math.max(1, Math.round(width / Theme.u)), rows)
-            fragmentShader: Qt.resolvedUrl("../../shaders/hell_flames.frag.qsb")
-            Timer {
-                interval: 140
-                repeat: true
-                running: hellFlames.visible
-                onTriggered: hellFlames.time += 0.14
-            }
+        // hell's version: the circle's rim on the menu's edges (still; HellAmbient may stir it)
+        HellEdge {
+            visible: win.hellSkin && win.shown && !!body.item && !win.full
+            x: body.x
+            y: body.y
+            width: body.width * body.scale
+            height: body.height * body.scale
+            opacity: body.opacity
+            seed: 5
         }
         Component {
             id: classicComp

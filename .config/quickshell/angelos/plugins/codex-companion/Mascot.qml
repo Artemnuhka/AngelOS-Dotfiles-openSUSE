@@ -10,7 +10,7 @@ Item {
     property int pixel: Theme.u
     property string state: CodexState.state
     // the demon rules: two little horns on the bubble (on the bar too); on the desktop
-    // in hell (Theme.hell) obsidian and embers
+    // in hell (Theme.hell) the circle's dark colours, the state in its one accent
     property bool horns: Angel.demon || Theme.hell
     property bool hellLook: Theme.hell
     readonly property var rows: horns ? hornRows : haloRows
@@ -57,10 +57,10 @@ Item {
         y: root.bob * root.pixel
         bitmap: root.rows
         pixel: root.pixel
-        ink: root.hellLook ? Theme.hellGold : (Theme.dark ? Theme.text : Theme.edge)
+        ink: root.hellLook ? Theme.hellRim : (Theme.dark ? Theme.text : Theme.edge)
         fill2: root.hellLook ? CodexState.hellStateColor(root.state, Theme) : root.state === "none" ? Theme.textDim : CodexState.stateColor(root.state, Theme)
         light: root.hellLook ? Theme.hellFaceAlt : Theme.dark ? Theme.face : "#ffffff"
-        bad: root.hellLook ? Theme.hellEmber : "#e0203a"
+        bad: root.hellLook ? Theme.hellTextDim : "#e0203a"
         opacity: root.state === "none" ? 0.7 : 1
     }
 }

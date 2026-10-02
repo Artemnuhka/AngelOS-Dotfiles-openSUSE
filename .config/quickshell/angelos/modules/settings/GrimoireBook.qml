@@ -28,9 +28,10 @@ Item {
     readonly property alias pageSlot: pageSlot
     readonly property alias viewSlot: viewSlot
 
-    readonly property color leather: "#3a0c10"
-    readonly property color leatherDark: "#1c0507"
-    readonly property color gold: "#d9a441"
+    // the binding takes the circle's colours (HellLook); the pages stay parchment and ink, to be read
+    readonly property color leather: Theme.mix(Theme.hellFace, Theme.hellBlood, 0.45)
+    readonly property color leatherDark: Theme.hellBody
+    readonly property color gold: Theme.hellGold
     readonly property color paper: "#ecdcb0"
     readonly property color paperShade: "#cdb682"
     readonly property color ink: "#3b2415"
@@ -166,7 +167,7 @@ Item {
             width: Theme.u * 11
             height: width
             radius: width / 2
-            color: claspMouse.containsMouse ? "#f0c060" : book.gold
+            color: claspMouse.containsMouse ? Theme.mix(book.gold, Theme.hellText, 0.35) : book.gold
             border.width: Math.max(1, Theme.u / 2)
             border.color: "#7a4a12"
             PxIcon {

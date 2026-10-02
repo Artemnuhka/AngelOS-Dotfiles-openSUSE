@@ -45,15 +45,15 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             bitmap: root.emblemRows
             pixel: root.pixel
-            ink: root.hell ? "#1a0508" : Theme.dark ? Theme.mix(Theme.accent, Theme.edge, 0.55) : Theme.edge
+            ink: root.hell ? Theme.hellEdge : Theme.dark ? Theme.mix(Theme.accent, Theme.edge, 0.55) : Theme.edge
             fill: root.hell ? Theme.hellBlood : Theme.accent
-            fill2: root.hell ? Theme.hellEmber : Theme.accent2
+            fill2: root.hell ? Theme.hellRim : Theme.accent2
             light: root.hell ? Theme.hellText : "#ffffff"
-            fill3: root.hell ? Theme.hellFlame : root.redStar ? "#e0203a" : Theme.mix(Theme.accent3, Qt.color("#ffd84a"), 0.6)
-            bad: "#e0203a"
+            fill3: root.hell ? Theme.hellTextDim : root.redStar ? "#e0203a" : Theme.mix(Theme.accent3, Qt.color("#ffd84a"), 0.6)
+            bad: root.hell ? Theme.hellAccent : "#e0203a"
             palette: root.hell ? ({
-                    "p": Theme.hex(Theme.hellEmber),
-                    "x": "#7a0a1e"
+                    "p": Theme.hex(Theme.hellTextDim),
+                    "x": Theme.hex(Theme.hellBlood)
                 }) : ({
                     "p": Theme.hex(Theme.mix(Theme.accent, "#ffffff", 0.45)),
                     "x": Theme.hex(root.redStar ? Qt.color("#7a0a1e") : Theme.accent2)
@@ -73,7 +73,13 @@ Item {
             fill3: Theme.mix(Theme.accent3, Qt.color("#ffd84a"), 0.6)
             light: "#ffffff"
             body: Theme.mix(Theme.accent2, "#ffffff", 0.55)
-            palette: root.variant === "hell" ? {
+            // the Hell wordmark: its loud red in heaven (portal open), the circle's quiet ink in hell
+            palette: root.variant === "hell" && root.hell ? {
+                "r": Theme.hex(Theme.hellText),
+                "d": Theme.hex(Theme.hellRim),
+                "k": Theme.hex(Theme.hellEdge),
+                "e": Theme.hex(Theme.hellTextDim)
+            } : root.variant === "hell" ? {
                 "r": "#e0203a",
                 "d": "#7a0a1e",
                 "k": "#1a0508",

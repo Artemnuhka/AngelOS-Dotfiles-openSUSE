@@ -141,28 +141,28 @@ Item {
             model: [
                 {
                     "k": "CPU",
-                    "hell": I18n.t("ЖАР", "HEAT"),
+                    "id": "cpu",
                     "v": root.cpu,
                     "t": Math.round(root.cpu * 100) + "%" + (root.cpuTemp > 0 ? "  " + Math.round(root.cpuTemp) + "°" : ""),
                     "c": Theme.accent
                 },
                 {
                     "k": "GPU",
-                    "hell": I18n.t("ПЕКЛО", "INFERNO"),
+                    "id": "gpu",
                     "v": Math.max(0, root.gpu),
                     "t": root.gpu < 0 ? "—" : Math.round(root.gpu * 100) + "%" + (root.gpuTemp > 0 ? "  " + Math.round(root.gpuTemp) + "°" : ""),
                     "c": Theme.accent2
                 },
                 {
                     "k": "RAM",
-                    "hell": I18n.t("ДУШИ", "SOULS"),
+                    "id": "ram",
                     "v": root.ram,
                     "t": root.ramText,
                     "c": Theme.accent4
                 },
                 {
                     "k": "VRAM",
-                    "hell": I18n.t("КОТЁЛ", "CAULDRON"),
+                    "id": "vram",
                     "v": root.vramText ? parseFloat(root.vramText) / Math.max(1, parseFloat(root.vramText.split("/")[1])) : 0,
                     "t": root.vramText || "—",
                     "c": Theme.accent3
@@ -175,20 +175,24 @@ Item {
                 spacing: Theme.u
                 Row {
                     width: parent.width
+                    // hell: the reading's plain name first, the circle's word after it (HellLook.label)
                     PxText {
                         width: parent.width / 2
-                        text: Theme.hell ? r.modelData.hell : r.modelData.k
+                        text: Theme.hell ? HellLook.label(r.modelData.id, r.modelData.k) : r.modelData.k
                         font.bold: !Theme.hell
-                        font.family: Theme.hell && Theme.latin(text) ? Theme.fontHell : Theme.fontBody
-                        font.pixelSize: Theme.hell && Theme.latin(text) ? Theme.hellPx(Theme.fs) : Theme.sizeBody
-                        color: Theme.hell ? Theme.hellFlame : Theme.text
+                        font.family: Theme.hell ? Theme.fontHellText : Theme.fontBody
+                        font.pixelSize: Theme.hell ? Theme.hellTextPx(Theme.fs) : Theme.sizeBody
+                        color: Theme.hell ? Theme.hellTextDim : Theme.text
+                        elide: Text.ElideRight
                     }
                     PxText {
                         width: parent.width / 2
                         anchors.verticalCenter: parent.verticalCenter
                         horizontalAlignment: Text.AlignRight
                         text: r.modelData.t
-                        color: Theme.hell ? Theme.hellTextDim : Theme.textDim
+                        font.family: Theme.hell ? Theme.fontHellText : Theme.fontBody
+                        font.pixelSize: Theme.hell ? Theme.hellTextPx(Theme.fs) : Theme.sizeBody
+                        color: Theme.hell ? Theme.hellText : Theme.textDim
                     }
                 }
                 PxBox {
@@ -207,8 +211,8 @@ Item {
                                 readonly property bool lit: index < Math.round(r.modelData.v * 16)
                                 width: parent ? (parent.width - 15 * parent.spacing) / 16 : 0
                                 height: parent ? parent.height : 0
-                                // hell: fire from blood to flame along the meter, the last block white-hot
-                                color: !lit ? "transparent" : !Theme.hell ? r.modelData.c : index === Math.round(r.modelData.v * 16) - 1 && index > 10 ? "#ffe98c" : index < 6 ? Theme.hellBlood : index < 11 ? Theme.hellEmber : Theme.hellFlame
+                                // hell: dried blood along the meter; past 80 % its last block is the one accent
+                                color: !lit ? "transparent" : !Theme.hell ? r.modelData.c : index === Math.round(r.modelData.v * 16) - 1 && r.modelData.v > 0.8 ? Theme.hellAccent : Theme.hellBlood
                             }
                         }
                     }
@@ -219,11 +223,15 @@ Item {
             spacing: Theme.u * 6
             PxText {
                 text: "↓ " + root.human(root.rx)
-                color: Theme.hell ? Theme.hellEmber : Theme.ok
+                font.family: Theme.hell ? Theme.fontHellText : Theme.fontBody
+                font.pixelSize: Theme.hell ? Theme.hellTextPx(Theme.fs) : Theme.sizeBody
+                color: Theme.hell ? Theme.hellTextDim : Theme.ok
             }
             PxText {
                 text: "↑ " + root.human(root.tx)
-                color: Theme.hell ? Theme.hellGold : Theme.accent2
+                font.family: Theme.hell ? Theme.fontHellText : Theme.fontBody
+                font.pixelSize: Theme.hell ? Theme.hellTextPx(Theme.fs) : Theme.sizeBody
+                color: Theme.hell ? Theme.hellTextDim : Theme.accent2
             }
         }
     }

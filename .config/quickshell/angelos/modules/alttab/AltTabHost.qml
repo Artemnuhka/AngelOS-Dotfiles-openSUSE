@@ -80,10 +80,10 @@ Scope {
 
             // while the demon rules (Y2K → Angel or demon → Alt+Tab in hell): "hell" — hell's
             // own switcher (AltTabHell), "skin" — the chosen style re-inked in hell's palette
-            // (shaders/hell_ink.frag) with flames along its top, "" — untouched
+            // (shaders/hell_ink.frag) with the circle's rim, "" — untouched
             readonly property bool hellOwn: Angel.demon && Config.y2k.hellAltTab === "hell"
             readonly property bool hellSkin: Angel.demon && Config.y2k.hellAltTab === "skin"
-            readonly property int skinPad: hellSkin ? Theme.u * 7 : 0
+            readonly property int skinPad: 0
 
             Item {
                 id: stage
@@ -116,27 +116,18 @@ Scope {
                     layer.effect: ShaderEffect {
                         property real keep: 0.35
                         fragmentShader: Qt.resolvedUrl("../../shaders/hell_ink.frag.qsb")
+                        property color plate: Theme.hellPlate
+                        property color face: Theme.mix(Theme.hellRim, Theme.hellFace, 0.4)
+                        property color dim: Theme.hellTextDim
+                        property color text: Theme.hellText
+                        property color accent: Theme.hellAccent
                     }
                 }
-                // the hell version's flames, licking up from the switcher's top edge
-                ShaderEffect {
-                    id: skinFlames
+                // the hell version: the circle's rim on the switcher's edges
+                HellEdge {
                     visible: win.hellSkin
-                    readonly property int rows: 7
-                    x: Theme.u * 4
-                    width: parent.width - Theme.u * 8
-                    height: Theme.u * rows
-                    y: win.skinPad - height + Theme.u * 3
-                    property real time: 0
-                    property real seed: 3.3
-                    property size cells: Qt.size(Math.max(1, Math.round(width / Theme.u)), rows)
-                    fragmentShader: Qt.resolvedUrl("../../shaders/hell_flames.frag.qsb")
-                    Timer {
-                        interval: 140
-                        repeat: true
-                        running: skinFlames.visible
-                        onTriggered: skinFlames.time += 0.14
-                    }
+                    anchors.fill: view
+                    seed: 4
                 }
             }
             Component {

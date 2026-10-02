@@ -7,10 +7,9 @@ import qs.services
 import qs.widgets
 
 // Alt+Tab while the demon rules (Y2K → Angel or demon → Alt+Tab in hell: "hell's own"):
-// an obsidian "inferno.exe" window licked by flames, blood dripping off its foot. The
-// windows are slabs of obsidian; the pick burns — flames rise from its foot, its rim
-// glows, little horns sit on its corner — and a pentagram draws itself under it and
-// follows it around. Workspaces are hell's circles: "circle III".
+// a dark "inferno.exe" window in the circle's colours with its rim (PxWindow.hell). The
+// windows are dark slabs; the pick is the one outlined in the accent, a dim pentagram
+// draws itself under it and follows it around. Workspaces are hell's circles: "circle III".
 Item {
     id: root
 
@@ -18,9 +17,8 @@ Item {
     readonly property int s: Theme.u
     readonly property int cell: s * 46
     readonly property int perRow: Math.max(1, Math.min(AltTab.items.length, Math.floor(((host.screen ? host.screen.width : 1920) * 0.8) / (cell + s * 4))))
-    // the window's flames above and its drips below need room inside the surface
-    readonly property int above: s * 8
-    readonly property int below: s * 9
+    readonly property int above: s * 2
+    readonly property int below: s * 2
     implicitWidth: frame.implicitWidth
     implicitHeight: frame.implicitHeight + above + below
 
@@ -31,13 +29,6 @@ Item {
         to: 1
         duration: 520
         easing.type: Easing.OutCubic
-    }
-    property real flameTime: 0
-    Timer {
-        interval: 140
-        repeat: true
-        running: root.visible
-        onTriggered: root.flameTime += 0.14
     }
 
     function label(w) {
@@ -103,8 +94,8 @@ Item {
                     property real star: d * 0.34
                     property real ring: d * 0.44
                     property real u: root.s
-                    property color blood: Theme.hellBlood
-                    property color ember: Theme.hellEmber
+                    property color blood: Theme.hellRim
+                    property color ember: Theme.hellBlood
                     fragmentShader: Qt.resolvedUrl("../../shaders/pentagram.frag.qsb")
                 }
                 QtObject {
@@ -132,27 +123,9 @@ Item {
                                 sunken: !card.picked
                                 outline: card.picked || mouse.containsMouse
                                 color: card.picked ? Qt.alpha(Theme.hellFaceAlt, 0.72) : mouse.containsMouse ? Qt.alpha(Theme.hellFace, 0.85) : Qt.alpha(Theme.hellSunken, 0.78)
-                                edgeColor: card.picked ? Theme.hellEmber : Theme.hellEdge
-                                hiColor: card.picked ? Theme.hellBlood : Theme.hellHi
+                                edgeColor: card.picked ? Theme.hellAccent : Theme.hellEdge
+                                hiColor: card.picked ? Theme.hellRim : Theme.hellHi
                                 loColor: Theme.hellLo
-                            }
-                            // the pick burns: flames rise from its foot, inside the slab
-                            Item {
-                                anchors.fill: parent
-                                anchors.margins: root.s * 2
-                                clip: true
-                                visible: card.picked
-                                ShaderEffect {
-                                    readonly property int rows: 9
-                                    width: parent.width
-                                    height: root.s * rows
-                                    y: parent.height - height
-                                    opacity: 0.9
-                                    property real time: root.flameTime
-                                    property real seed: card.index * 1.7
-                                    property size cells: Qt.size(Math.max(1, Math.round(width / root.s)), rows)
-                                    fragmentShader: Qt.resolvedUrl("../../shaders/hell_flames.frag.qsb")
-                                }
                             }
                             AppIcon {
                                 anchors.horizontalCenter: parent.horizontalCenter
@@ -177,21 +150,7 @@ Item {
                                 text: root.label(card.modelData)
                                 kind: "tiny"
                                 font.bold: card.picked
-                                color: card.picked ? Theme.hellFlame : Theme.hellTextDim
-                                // readable over the flames
-                                style: card.picked ? Text.Outline : Text.Normal
-                                styleColor: Theme.hellEdge
-                            }
-                            // little horns on the pick's corner
-                            PxIcon {
-                                visible: card.picked
-                                anchors.right: parent.right
-                                anchors.top: parent.top
-                                anchors.margins: root.s * 2
-                                pixel: root.s
-                                bitmap: ["#.....#", "o#...#o", "oo#.#oo", ".ooooo."]
-                                ink: Theme.hellEdge
-                                fill: Theme.hellBlood
+                                color: card.picked ? Theme.hellText : Theme.hellTextDim
                             }
                             MouseArea {
                                 id: mouse
@@ -218,9 +177,10 @@ Item {
                     width: parent.width
                     horizontalAlignment: Text.AlignHCenter
                     elide: Text.ElideMiddle
-                    text: "⛧ " + t
-                    font.bold: true
-                    color: Theme.hellFlame
+                    text: t
+                    font.family: Theme.hellCovers(t) ? Theme.fontHell : Theme.fontHellText
+                    font.pixelSize: Theme.hellCovers(t) ? Theme.hellPx(Theme.fs) : Theme.hellTextPx(Theme.fs)
+                    color: Theme.hellText
                 }
                 PxText {
                     width: parent.width

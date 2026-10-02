@@ -8,10 +8,10 @@ import qs.widgets
 // The box is as wide as the song's longest line (up to maxWidth), so it stays
 // put during a song; a line that still doesn't fit glides sideways instead of
 // being cut. Left click: Lyrics settings, right click: pause / play.
-// In hell (the demon rules, Y2K → Lyrics in hell): Rubik Burned a size larger, each
-// line burns up out of the flames and the one before chars and crumbles to ash
-// (shaders/lyrics_burn.frag), and when the song ends a salute bursts from here
-// (HellFx.fireworks → modules/y2k/HellFxOverlay).
+// In hell (the demon rules, Y2K → Lyrics in hell): hell's blackletter (Theme.fontHell,
+// crisp at 21 px), no typewriter, no slide — the next line is simply there, the way
+// things are in hell; the bar's ink gives it the circle's text colour. The salute when a
+// song ends is gone with the old loud hell (HellFx.fireworks stays for the button).
 Item {
     id: root
 
@@ -23,8 +23,8 @@ Item {
     readonly property string line: Lyrics.current !== "" ? Lyrics.current : "♪ ~ ♪"
     readonly property real chrome: note.width + Theme.u * 6
     readonly property bool hell: Angel.demon && Config.y2k.hellLyrics
-    readonly property string fontFamily: hell ? Theme.fontLyricsHell : Theme.fontBody
-    readonly property int fontPx: hell ? Math.min(Math.round(Theme.sizeBody * 1.5), Theme.u * 11) : Theme.sizeBody
+    readonly property string fontFamily: hell ? Theme.fontHell : Theme.fontBody
+    readonly property int fontPx: hell ? Theme.hellPx(Theme.fs) : Theme.sizeBody
 
     // widest line of the current song, measured once per song
     property real songText: 0
@@ -77,13 +77,12 @@ Item {
         glide.stop();
         scrollX = 0;
         if (hell) {
-            // no typewriter in hell: the whole line burns up at once
-            notePoint();
+            // no typewriter and no slide in hell: the line is just there
             typer.stop();
             typed = shown.length;
-            burnIn = 0;
-            burnOut = 0;
-            hellSlide.restart();
+            burnIn = 1;
+            burnOut = 1;
+            old.opacity = 0;
             startGlide();
             return;
         }
@@ -120,10 +119,10 @@ Item {
     property real fxTime: 0
     readonly property bool burning: burnIn < 1 || burnOut < 1
     Timer {
-        // fast while it burns, slow smoulder afterwards
-        interval: root.burning ? 42 : 250
+        // only while something burns (nothing does in today's hell: the lines just change)
+        interval: 42
         repeat: true
-        running: root.hell && root.visible && (root.burning || Lyrics.playing)
+        running: root.hell && root.visible && root.burning
         onTriggered: root.fxTime += interval / 1000
     }
     ParallelAnimation {
@@ -204,8 +203,9 @@ Item {
                 lastPoint = p;
         }
     }
+    property bool saluteOnEnd: false        // the old loud hell fired a salute at a song's end
     function salute() {
-        if (!hell || !(visible || Date.now() - hiddenAt < 2500))
+        if (!saluteOnEnd || !hell || !(visible || Date.now() - hiddenAt < 2500))
             return;
         const pt = (visible ? screenPoint() : null) || lastPoint;
         if (pt)
@@ -314,7 +314,7 @@ Item {
             color: root.hell ? "white" : Theme.textDim
             font.family: root.fontFamily
             font.pixelSize: root.fontPx
-            renderType: root.hell ? Text.QtRendering : Text.NativeRendering
+            renderType: Text.NativeRendering
             opacity: 0
             layer.enabled: root.hell && root.burnOut < 1
             layer.effect: ShaderEffect {
@@ -333,8 +333,8 @@ Item {
             height: root.hell ? parent.height : implicitHeight
             font.family: root.fontFamily
             font.pixelSize: root.fontPx
-            renderType: root.hell ? Text.QtRendering : Text.NativeRendering
-            layer.enabled: root.hell
+            renderType: Text.NativeRendering
+            layer.enabled: root.hell && root.burnIn < 1
             layer.effect: ShaderEffect {
                 property real progress: root.burnIn
                 property real time: root.fxTime

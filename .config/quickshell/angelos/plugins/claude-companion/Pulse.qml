@@ -31,14 +31,15 @@ Singleton {
             "idle": I18n.t("отдыхает", "Resting"),
             "none": I18n.t("нет сессий", "No sessions")
         })
-    // hell (Theme.hell, the demon's realm): the same states, her words
+    // hell (Theme.hell, the demon's realm): the same states, plainer and colder — what it
+    // does must still be clear at a glance
     readonly property var hellWords: ({
-            "needs_attention": I18n.t("призывает тебя!", "Summons you!"),
-            "error": I18n.t("проклятие", "Cursed"),
-            "tool_start": I18n.t("колдует", "Conjuring"),
-            "turn_start": I18n.t("замышляет", "Scheming"),
-            "text": I18n.t("пишет кровью", "Writing in blood"),
-            "turn_end": I18n.t("готово 😈", "Done 😈"),
+            "needs_attention": I18n.t("ждёт тебя", "Waiting for you"),
+            "error": I18n.t("ошибка", "Error"),
+            "tool_start": I18n.t("работает", "Working"),
+            "turn_start": I18n.t("думает", "Thinking"),
+            "text": I18n.t("пишет", "Writing"),
+            "turn_end": I18n.t("готово", "Done"),
             "idle": I18n.t("тлеет", "Smouldering"),
             "none": I18n.t("ни души", "No souls")
         })
@@ -100,7 +101,8 @@ Singleton {
         return (hell ? hellWords[state] : words[state]) || state;
     }
     function hellColorFor(s, theme) {
-        return s === "needs_attention" ? theme.hellFlame : s === "error" ? theme.hellBlood : s === "tool_start" ? theme.hellGold : s === "turn_start" || s === "text" ? theme.hellEmber : s === "turn_end" ? "#ffe98c" : theme.hellTextDim;
+        // the circle's text roles only (readable on its plates); the one accent when it wants you
+        return s === "needs_attention" || s === "error" ? theme.hellAccent : s === "idle" || s === "none" ? theme.hellTextDim : theme.hellText;
     }
     function colorFor(s, theme) {
         return s === "needs_attention" || s === "error" ? theme.danger : s === "tool_start" ? theme.accent3 : s === "turn_start" || s === "text" ? theme.accent : s === "turn_end" ? theme.ok : s === "idle" ? theme.accent4 : theme.textDim;

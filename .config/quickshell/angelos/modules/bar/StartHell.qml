@@ -5,8 +5,8 @@ import qs.config
 import qs.services
 import qs.widgets
 
-// Start while the demon rules (Y2K → Angel or demon → Start in hell): an obsidian slab
-// licked by flames at its top edge, the Hell wordmark, a pentagram drawing itself behind
+// Start while the demon rules (Y2K → Angel or demon → Start in hell): a dark slab in the
+// circle's colours with its rim (HellEdge), the Hell wordmark, a dim pentagram drawing itself behind
 // the list as it opens (shaders/pentagram.frag). Left: "Summon" — the pinned and most
 // used apps. Right: the grimoire (Settings), the wallpaper she guards, begging her to
 // bring the angel back (Angel.plea, counted like in her menu), the portal once it is open,
@@ -144,22 +144,11 @@ PxBox {
     flat: true
     shadow: Config.appearance.shadows
 
-    // flames over the top edge
-    ShaderEffect {
-        id: flames
-        width: root.width
-        height: root.u * 8
-        y: -height + root.u
-        property real time: 0
-        property real seed: 6.66
-        property size cells: Qt.size(Math.max(1, Math.round(width / root.u)), 8)
-        fragmentShader: Qt.resolvedUrl("../../shaders/hell_flames.frag.qsb")
-        Timer {
-            interval: 140
-            repeat: true
-            running: root.visible
-            onTriggered: flames.time += 0.14
-        }
+    // the circle's rim on the slab's edges, over everything (no input)
+    HellEdge {
+        anchors.fill: parent
+        z: 10
+        seed: 6
     }
 
     // the pentagram behind the lists, drawing itself as the menu opens
@@ -175,8 +164,8 @@ PxBox {
         property real star: d * 0.34
         property real ring: d * 0.44
         property real u: root.u
-        property color blood: Theme.hellBlood
-        property color ember: Theme.hellEmber
+        property color blood: Theme.hellRim
+        property color ember: Theme.hellBlood
         fragmentShader: Qt.resolvedUrl("../../shaders/pentagram.frag.qsb")
     }
 
@@ -230,7 +219,7 @@ PxBox {
             visible: entry.lit
             color: Qt.alpha(Theme.hellBlood, 0.55)
             border.width: Math.max(1, root.u / 2)
-            border.color: Theme.hellEmber
+            border.color: Theme.hellAccent
         }
         // an ember glows at the start of the lit row
         Rectangle {
@@ -239,7 +228,7 @@ PxBox {
             anchors.verticalCenter: parent.verticalCenter
             width: root.u
             height: parent.height - root.u * 4
-            color: Theme.hellFlame
+            color: Theme.hellText
         }
         Row {
             x: root.u * 4
@@ -257,16 +246,16 @@ PxBox {
                 anchors.verticalCenter: parent.verticalCenter
                 name: entry.modelData.icon || "fire"
                 ink: Theme.hellEdge
-                fill: entry.lit ? Theme.hellFlame : Theme.hellEmber
+                fill: entry.lit ? Theme.hellText : Theme.hellTextDim
                 fill2: Theme.hellBlood
-                fill3: Theme.hellFlame
+                fill3: Theme.hellTextDim
                 light: Theme.hellText
             }
             PxText {
                 anchors.verticalCenter: parent.verticalCenter
                 width: entry.width - root.u * 22
                 elide: Text.ElideRight
-                color: entry.lit ? Theme.hellFlame : Theme.hellText
+                color: entry.lit ? Theme.hellText : Theme.hellTextDim
                 text: entry.modelData.text
             }
         }
@@ -297,7 +286,7 @@ PxBox {
                 height: implicitHeight + root.u * 3
                 font.family: Theme.latin(text) ? Theme.fontHell : Theme.fontTitle
                 font.pixelSize: Theme.latin(text) ? Theme.hellPx(1) : Theme.sizeBody
-                color: Theme.hellGold
+                color: Theme.hellTextDim
                 text: I18n.t("Призвать", "Summon")
             }
             Repeater {
@@ -321,7 +310,7 @@ PxBox {
                 height: implicitHeight + root.u * 3
                 font.family: Theme.latin(text) ? Theme.fontHell : Theme.fontTitle
                 font.pixelSize: Theme.latin(text) ? Theme.hellPx(1) : Theme.sizeBody
-                color: Theme.hellGold
+                color: Theme.hellTextDim
                 text: I18n.t("Её владения", "Her domain")
             }
             Repeater {

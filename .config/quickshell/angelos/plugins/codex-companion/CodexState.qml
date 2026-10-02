@@ -84,14 +84,14 @@ Singleton {
             "done": I18n.t("готово ♡", "Ready ♡"),
             "none": I18n.t("нет сессий", "No sessions")
         })
-    // hell (Theme.hell): the demon's words and fire colours
+    // hell (Theme.hell): plainer words in the circle's text colours (readable on its plates)
     readonly property var hellWords: ({
-            "working": I18n.t("варит зелье", "Brewing"),
-            "done": I18n.t("сделка заключена", "Deal sealed"),
+            "working": I18n.t("работает", "Working"),
+            "done": I18n.t("готово", "Done"),
             "none": I18n.t("ни души", "No souls")
         })
     function hellStateColor(s, theme) {
-        return s === "working" ? theme.hellEmber : s === "done" ? theme.hellFlame : theme.hellTextDim;
+        return s === "working" ? theme.hellText : s === "done" ? theme.hellAccent : theme.hellTextDim;
     }
 
     function refresh() {

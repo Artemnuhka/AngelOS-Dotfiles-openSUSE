@@ -33,7 +33,7 @@ Item {
     PxText {
         visible: !root.p || !Lyrics.title
         anchors.centerIn: parent
-        text: Theme.hell ? I18n.t("тишина… даже черти молчат", "silence… even the devils hush") : I18n.t("ничего не играет ♡", "nothing is playing ♡")
+        text: Theme.hell ? I18n.t("тишина", "silence") : I18n.t("ничего не играет ♡", "nothing is playing ♡")
         color: Theme.hell ? Theme.hellTextDim : Theme.textDim
     }
 
@@ -66,8 +66,9 @@ Item {
             }
 
             // ---- hell: the record ----
-            // Drawn art pixel by art pixel: grooves, a glint that steps round while it
-            // plays, and a clear hole where the cover shows through as the label.
+            // Drawn art pixel by art pixel in the circle's palette: grooves, a dull glint that
+            // moves an eighth of a turn every few seconds while it plays (hell is slow), and a
+            // clear hole where the cover shows through as the label.
             Canvas {
                 id: vinyl
                 visible: Theme.hell
@@ -90,45 +91,27 @@ Item {
                             const dx = x - c, dy = y - c, r = Math.sqrt(dx * dx + dy * dy);
                             if (r > R || r <= L)
                                 continue;
-                            let col = "#0c0305";
+                            let col = String(Theme.hellSunken);
                             if (r > R - 1)
-                                col = "#3d1016";
+                                col = String(Theme.hellFaceAlt);
                             else if (Math.round(r) % 3 === 0)
-                                col = "#22080c";
+                                col = String(Theme.hellFace);
                             // the glint: a short arc that moves an eighth of a turn a step
                             let a = Math.atan2(dy, dx) - glint;
                             a = Math.atan2(Math.sin(a), Math.cos(a));
                             if (Math.abs(a) < 0.28 && r > L + 1 && r < R - 1)
-                                col = "#6e1a21";
+                                col = String(Theme.hellRim);
                             if (r <= L + 1)
-                                col = "#b3142b";
+                                col = String(Theme.hellBlood);
                             ctx.fillStyle = col;
                             ctx.fillRect(Math.round(x * u), Math.round(y * u), Math.ceil(u), Math.ceil(u));
                         }
                 }
                 Timer {
-                    interval: 220
+                    interval: 6000
                     repeat: true
                     running: vinyl.visible && root.playing && root.live
                     onTriggered: vinyl.step = (vinyl.step + 1) % 8
-                }
-            }
-            ShaderEffect {
-                id: flames
-                visible: Theme.hell && root.playing
-                width: parent.width
-                height: Theme.u * 8
-                anchors.bottom: parent.bottom
-                anchors.bottomMargin: -Theme.u * 2
-                property real time: 0
-                readonly property real seed: 4.2
-                readonly property size cells: Qt.size(Math.max(1, Math.round(width / Theme.u)), 8)
-                fragmentShader: Qt.resolvedUrl("../../../shaders/hell_flames.frag.qsb")
-                Timer {
-                    interval: 140
-                    repeat: true
-                    running: flames.visible && root.live
-                    onTriggered: flames.time += 0.14
                 }
             }
         }
@@ -139,13 +122,17 @@ Item {
             PxText {
                 width: parent.width
                 text: Lyrics.title
-                font.bold: true
-                color: Theme.hell ? Theme.hellFlame : Theme.text
+                font.bold: !Theme.hell
+                font.family: Theme.hell ? Theme.fontHellText : Theme.fontBody
+                font.pixelSize: Theme.hell ? Theme.hellTextPx(Theme.fs) : Theme.sizeBody
+                color: Theme.hell ? Theme.hellText : Theme.text
                 elide: Text.ElideRight
             }
             PxText {
                 width: parent.width
                 text: Lyrics.artist
+                font.family: Theme.hell ? Theme.fontHellText : Theme.fontBody
+                font.pixelSize: Theme.hell ? Theme.hellTextPx(Theme.fs) : Theme.sizeBody
                 color: Theme.hell ? Theme.hellTextDim : Theme.textDim
                 elide: Text.ElideRight
             }
@@ -158,7 +145,7 @@ Item {
                 Rectangle {
                     height: parent.height
                     width: root.p && root.p.length > 0 ? parent.width * Math.min(1, root.pos / root.p.length) : 0
-                    color: Theme.hell ? Theme.hellEmber : Theme.accent
+                    color: Theme.hell ? Theme.hellBlood : Theme.accent
                 }
             }
             Row {

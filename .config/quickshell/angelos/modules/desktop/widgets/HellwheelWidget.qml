@@ -30,14 +30,15 @@ Item {
             "cursed": I18n.t("Проклятый курсор", "Cursed cursor"),
             "dud": I18n.t("Пустышка", "A dud")
         })
+    // the sectors in the circle's few colours: the pleas stand out in the one accent
     readonly property var colours: ({
-            "plea": "#d9a441",
-            "punish": "#b3142b",
-            "newHell": "#4a1426",
-            "cerberus": "#ff6a1a",
-            "quake": "#6e5044",
-            "cursed": "#5b3a9e",
-            "dud": "#2a0b10"
+            "plea": String(Theme.hellAccent),
+            "punish": String(Theme.hellBlood),
+            "newHell": String(Theme.hellFaceAlt),
+            "cerberus": String(Theme.hellRim),
+            "quake": String(Theme.hellFace),
+            "cursed": String(Theme.hellHi),
+            "dud": String(Theme.hellSunken)
         })
     readonly property var icons: ({
             "plea": "heart",
@@ -66,12 +67,12 @@ Item {
     implicitWidth: Math.max(wheelBox.width, foot.implicitWidth) + Theme.u * 8
     implicitHeight: col.implicitHeight + Theme.u * 2
 
-    // the rim's lights: a slow alternating blink at rest, a chase while it spins
+    // the rim's lights: dark at rest (hell is still), a chase only while it spins
     property int blink: 0
     Timer {
-        interval: Angel.wheelSpinning ? 70 : 600
+        interval: 70
         repeat: true
-        running: root.visible && !Shell.hiddenScreen(root.screenName)
+        running: Angel.wheelSpinning && root.visible && !Shell.hiddenScreen(root.screenName)
         onTriggered: root.blink++
     }
 
@@ -130,7 +131,7 @@ Item {
                                     else if (r > R - 4)
                                         col = Theme.hellFace;
                                     else if (r < 7.5)
-                                        col = r > 6.4 ? Theme.hellGold : Theme.hellBody;
+                                        col = r > 6.4 ? Theme.hellRim : Theme.hellBody;
                                     else if (local < 0.9 || local > 44.1)
                                         col = Theme.hellEdge;
                                     else if (r > R - 5.2)
@@ -153,12 +154,12 @@ Item {
                             pixel: 1
                             name: root.icons[sid]
                             ink: Theme.hellEdge
-                            light: sid === "plea" ? "#fff3e6" : Theme.hellText
+                            light: Theme.hellText
                             body: Theme.hellFace
-                            fill: sid === "plea" ? Theme.hellBlood : sid === "cursed" ? "#c9b6ff" : Theme.hellEmber
-                            fill2: Theme.hellFlame
-                            fill3: Theme.hellFlame
-                            bad: Theme.hellFlame
+                            fill: Theme.hellTextDim
+                            fill2: Theme.hellTextDim
+                            fill3: Theme.hellTextDim
+                            bad: Theme.hellText
                             x: root.d / 2 + Math.sin(a * Math.PI / 180) * 22 - width / 2
                             y: root.d / 2 - Math.cos(a * Math.PI / 180) * 22 - height / 2
                             rotation: a
@@ -171,12 +172,12 @@ Item {
                         Rectangle {
                             required property int index
                             readonly property real a: index * 22.5 + 11.25
-                            readonly property bool on: Angel.wheelSpinning ? (index + root.blink) % 4 === 0 : (index + root.blink) % 2 === 0
+                            readonly property bool on: Angel.wheelSpinning && (index + root.blink) % 4 === 0
                             width: 2
                             height: 2
                             x: Math.round(root.d / 2 + Math.sin(a * Math.PI / 180) * (root.d / 2 - 3.6) - 1)
                             y: Math.round(root.d / 2 - Math.cos(a * Math.PI / 180) * (root.d / 2 - 3.6) - 1)
-                            color: on ? Theme.hellFlame : Theme.hellHi
+                            color: on ? Theme.hellAccent : Theme.hellRim
                         }
                     }
                     PxIcon {
@@ -184,7 +185,7 @@ Item {
                         name: "pentagram"
                         pixel: 1
                         ink: Theme.hellEdge
-                        fill: Theme.hellEmber
+                        fill: Theme.hellRim
                         smooth: false
                     }
                 }
@@ -196,7 +197,7 @@ Item {
                     pixel: 1
                     bitmap: ["...#...", "..#y#..", "..#y#..", "#######", "#y#y#y#", "#y#y#y#", ".#.#.#.", "..#.#.."]
                     ink: Theme.hellEdge
-                    fill3: Theme.hellGold
+                    fill3: Theme.hellTextDim
                     transformOrigin: Item.Top
                     readonly property real local: (((-Angel.wheelAngle % 360) + 360 + 22.5) % 45)
                     rotation: Angel.wheelSpinning && local < 9 ? -16 * (1 - local / 9) : 0
@@ -225,7 +226,7 @@ Item {
             PxText {
                 anchors.horizontalCenter: parent.horizontalCenter
                 kind: "tiny"
-                color: root.showLast ? Theme.hellFlame : Theme.hellTextDim
+                color: root.showLast ? Theme.hellAccent : Theme.hellTextDim
                 text: root.showLast ? "» " + (root.labels[Angel.wheelLast] || "") + " «" : Angel.wheelSpinning ? I18n.t("ставки сделаны", "the bets are placed") : root.ready ? I18n.t("крути, грешник", "spin it, sinner") : I18n.t("остывает: ещё ", "cooling down: ") + root.minutesLeft + I18n.t(" мин", " min")
             }
         }

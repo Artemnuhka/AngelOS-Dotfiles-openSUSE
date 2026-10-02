@@ -2,8 +2,9 @@ import QtQuick
 import qs.config
 
 // NGO-style window: bevelled frame, gradient title bar, pixel buttons.
-// `hell` (Theme.realm, desktop widgets): obsidian frame, blackletter title,
-// pixel flames licking up from the top edge and blood dripping off the bottom.
+// `hell` (Theme.realm, desktop widgets): the circle's dark frame, a blackletter title, and
+// on its edges what the circle did to them (HellEdge: burnt, rimed, rusted…), still — now
+// and then one slow thing happens there (HellAmbient).
 Item {
     id: root
 
@@ -14,8 +15,8 @@ Item {
     readonly property bool windose: skin === "windose" && !hell
     readonly property bool streamSkin: skin === "stream" && !hell
     readonly property string settingsSkin: windose ? "windose" : streamSkin ? "stream" : "classic"
-    property bool flamesLive: true         // the flames move (off while nobody sees them)
-    property bool trim: true               // flames and drips (a copy drawn over its twin leaves them to it)
+    property bool flamesLive: true         // (kept for plugins: hell's rim is still now, HellAmbient moves it)
+    property bool trim: true               // hell's rim (a copy drawn over its twin leaves it to it)
 
     property string title: ""
     property string icon: "heart"
@@ -51,62 +52,13 @@ Item {
         shadow: root.shadow
     }
 
-    // ---- hell's trim ----
-    ShaderEffect {
-        id: flames
-        visible: root.hell && root.trim
-        readonly property int rows: 7
-        width: root.width
-        height: Theme.u * rows
-        y: -height + Theme.u
-        property real time: 0
-        readonly property real seed: (root.title.length * 3.17) % 11
-        readonly property size cells: Qt.size(Math.max(1, Math.round(width / Theme.u)), rows)
-        fragmentShader: Qt.resolvedUrl("../shaders/hell_flames.frag.qsb")
-        Timer {
-            interval: 140
-            repeat: true
-            running: flames.visible && root.flamesLive && root.visible
-            onTriggered: flames.time += 0.14
-        }
-    }
-    // blood dripping off the bottom edge, at fixed spots
-    Repeater {
-        model: root.hell && root.trim ? [[0.11, 3], [0.24, 5], [0.43, 2], [0.6, 4], [0.78, 2], [0.9, 6]] : []
-        Item {
-            id: drip
-            required property var modelData
-            x: Math.round(root.width * modelData[0] / Theme.u) * Theme.u
-            y: root.height - Theme.u
-            width: Theme.u * 2
-            height: Theme.u * (modelData[1] + 2)
-            Rectangle {
-                x: Theme.u / 2
-                width: Theme.u
-                height: Theme.u * drip.modelData[1]
-                color: Theme.hellBlood
-            }
-            Rectangle {
-                y: Theme.u * drip.modelData[1]
-                width: Theme.u * 2
-                height: Theme.u * 2
-                color: Theme.hellBlood
-                Rectangle {
-                    width: Theme.u
-                    height: Theme.u
-                    color: "#e8404f"
-                }
-            }
-        }
-    }
-
     Rectangle {
         id: bar
         x: frame.inset + Theme.u
         y: frame.inset + Theme.u
         width: root.width - 2 * x
         height: root.titleHeight
-        color: root.windose ? Theme.windoseRose : root.streamSkin ? Theme.streamPanel : root.hell ? (root.active ? Theme.mix(Theme.hellFaceAlt, Theme.hellBlood, 0.35) : Theme.hellFace) : root.active ? Theme.menuHeader : Theme.faceAlt
+        color: root.windose ? Theme.windoseRose : root.streamSkin ? Theme.streamPanel : root.hell ? (root.active ? Theme.mix(Theme.hellFaceAlt, Theme.hellRim, 0.25) : Theme.hellFace) : root.active ? Theme.menuHeader : Theme.faceAlt
         // Windose: the candy gradient from pink to lilac
         gradient: root.windose ? candy : null
         Gradient {
@@ -138,11 +90,11 @@ Item {
                 name: root.icon
                 anchors.verticalCenter: parent.verticalCenter
                 ink: root.hell ? Theme.hellEdge : root.windose ? Theme.windoseInk : Theme.edge
-                fill: root.hell ? Theme.hellFlame : root.windose ? Theme.windoseSticker : "#ffffff"
+                fill: root.hell ? Theme.hellTextDim : root.windose ? Theme.windoseSticker : "#ffffff"
                 light: root.hell ? Theme.hellText : root.windose ? Theme.windoseLavender : Theme.accent3
-                fill2: root.hell ? Theme.hellEmber : root.windose ? Theme.windoseRose : "#ffffff"
+                fill2: root.hell ? Theme.hellRim : root.windose ? Theme.windoseRose : "#ffffff"
                 body: root.hell ? Theme.hellFace : root.windose ? Theme.windoseSticker : "#ffffff"
-                bad: root.hell ? Theme.hellEmber : Theme.danger
+                bad: root.hell ? Theme.hellAccent : Theme.danger
             }
             // stream: the red LIVE pill before the title
             Rectangle {
@@ -168,7 +120,7 @@ Item {
                 font.family: gothic ? Theme.fontHell : root.compact ? Theme.fontBody : Theme.fontTitle
                 font.pixelSize: gothic ? Theme.hellPx(Theme.fs) : root.compact ? Theme.sizeBody : Theme.sizeTitle
                 font.bold: root.windose
-                color: root.windose ? Theme.text : root.streamSkin ? Theme.streamText : root.hell ? Theme.hellFlame : Theme.text
+                color: root.windose ? Theme.text : root.streamSkin ? Theme.streamText : root.hell ? Theme.hellText : Theme.text
                 style: Text.Normal
                 styleColor: Qt.alpha(Theme.edge, 0.55)
                 anchors.verticalCenter: parent.verticalCenter
@@ -283,5 +235,13 @@ Item {
         width: bar.width - Theme.u * 2
         height: root.height - y - frame.inset - Theme.u
         z: 2
+    }
+
+    // ---- hell's rim: over the frame and the title, no input ----
+    HellEdge {
+        visible: root.hell && root.trim
+        anchors.fill: parent
+        z: 3
+        seed: (root.title.length * 7 + root.title.charCodeAt(0)) || 1
     }
 }

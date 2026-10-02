@@ -6,8 +6,9 @@ import "."
 import "Frames.js" as Frames
 
 // Animated cat: idle below walk threshold, walks, then runs faster with load.
-// While the demon rules it is a puppy Cerberus (Frames.cerberus*): three heads, red
-// eyes, a flame on its tail — asleep, walking and running the same way.
+// While the demon rules it is a puppy Cerberus (Frames.cerberus*): three heads, ember
+// eyes, in the circle's colours — walking and running the same way; asleep he lies still
+// (no zzz blinking: in hell things move rarely).
 Item {
     id: root
 
@@ -32,9 +33,9 @@ Item {
         onTriggered: root.frame = (root.frame + 1) % 5
     }
     Timer {
-        // slow zzz blink while asleep
+        // slow zzz blink while asleep (the Cerberus sleeps without it)
         interval: 700
-        running: root.pace === "idle" && root.visible
+        running: root.pace === "idle" && root.visible && !root.hell
         repeat: true
         onTriggered: root.frame = (root.frame + 1) % 2
     }

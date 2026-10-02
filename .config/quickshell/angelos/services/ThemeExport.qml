@@ -13,7 +13,7 @@ Singleton {
     readonly property string paletteFile: Config.cacheDir + "/palette.json"
     // the realm (the demon rules: hell's decorations for GTK and Helium) and the window
     // decoration settings re-render too
-    readonly property string signature: Config.appearance.customAccent + "|" + Theme.dark + "|" + Config.appearance.flavor + "|" + Config.appearance.themeApps + "|" + (Config.appearance.disabledTemplates || []).join(",") + "|" + Angel.demon + "|" + Config.decor.gtkButtons + "|" + Config.decor.gtkLayout + "|" + Config.y2k.hellTerminal + "|" + Config.y2k.hellApps + "|" + Config.appearance.qtStyle + "|" + I18n.english
+    readonly property string signature: Config.appearance.customAccent + "|" + Theme.dark + "|" + Config.appearance.flavor + "|" + Config.appearance.themeApps + "|" + (Config.appearance.disabledTemplates || []).join(",") + "|" + Angel.demon + "|" + Config.decor.gtkButtons + "|" + Config.decor.gtkLayout + "|" + Config.y2k.hellTerminal + "|" + Config.y2k.hellApps + "|" + Config.appearance.qtStyle + "|" + I18n.english + "|" + (Angel.demon ? JSON.stringify(HellLook.palette) : "")
     property string lastLog: ""
     property var entries: []
 
@@ -58,10 +58,19 @@ Singleton {
     }
 
     // the terminals (kitty, foot, Alacritty: templates with "terminal": true) while the demon
-    // rules (Y2K → Terminal in hell): `term` overrides their colours with hell's — obsidian,
-    // bone, blood, embers, brimstone — `kittyExtra` adds an ember cursor trail and a charred
-    // background (scripts/terminal-hell.py paints it, writes the realm for the fish greeting)
+    // rules (Y2K → Terminal in hell): `term` overrides their colours with the circle's
+    // (HellLook via Theme.hell*): its dark, its bone text, its one accent; the 16 colours keep
+    // their hues (red still means an error) but dulled into the ash. `kittyExtra` lays a
+    // scorched background behind kitty (scripts/terminal-hell.py paints it, writes the realm
+    // for the fish greeting). No cursor trail and no blinking: in hell things keep still.
     readonly property bool terminalHell: Angel.demon && Config.y2k.hellTerminal
+    function h(c) {
+        return Theme.hex(c);
+    }
+    // a terminal colour in the circle: the hue kept, pulled `k` of the way into its dim ink
+    function ash(c, k) {
+        return h(Theme.mix(Qt.color(c), Theme.hellTextDim, k));
+    }
     function terminalPalette() {
         const bgImage = Config.home + "/.local/share/angelos/terminal/hell.png";
         if (!terminalHell)
@@ -75,38 +84,38 @@ Singleton {
             "termRealm": "hell",
             "term": {
                 "mode": "dark",
-                "bg": "#0e0306",
-                "fg": "#f3d9c0",
-                "bgAlt": "#2a0b10",
-                "accent": "#ff6a1a",
-                "accent2": "#ffb02e",
-                "selectText": "#160609",
-                "textDim": "#a8857a",
-                "lo": "#3d1016",
-                "color0": "#160609",
-                "color1": "#b3142b",
-                "color2": "#7d9b32",
-                "color3": "#d9a441",
-                "color4": "#6c4ab6",
-                "color5": "#c2185b",
-                "color6": "#4fb3a9",
-                "color7": "#c9a99a",
-                "color8": "#5a2a2f",
-                "color9": "#e8404f",
-                "color10": "#b5d44c",
-                "color11": "#ffb02e",
-                "color12": "#9b7bf0",
-                "color13": "#ff4f8b",
-                "color14": "#8ae0d4",
-                "color15": "#f3d9c0"
+                "bg": h(Theme.hellBody),
+                "fg": h(Theme.hellText),
+                "bgAlt": h(Theme.hellFace),
+                "accent": h(Theme.hellAccent),
+                "accent2": h(Theme.hellFlame),
+                "selectText": h(Theme.hellBody),
+                "textDim": h(Theme.hellTextDim),
+                "lo": h(Theme.hellFaceAlt),
+                "color0": h(Theme.hellSunken),
+                "color1": ash("#c0392b", 0.3),
+                "color2": ash("#6f8f3a", 0.35),
+                "color3": ash("#c9963a", 0.3),
+                "color4": ash("#4a6aa8", 0.35),
+                "color5": ash("#8e3a6e", 0.35),
+                "color6": ash("#3f8f88", 0.35),
+                "color7": h(Theme.hellTextDim),
+                "color8": h(Theme.hellRim),
+                "color9": ash("#e0533f", 0.25),
+                "color10": ash("#93b552", 0.3),
+                "color11": ash("#e2b45a", 0.25),
+                "color12": ash("#7390d6", 0.3),
+                "color13": ash("#b8568f", 0.3),
+                "color14": ash("#64b8ae", 0.3),
+                "color15": h(Theme.hellText)
             },
             "hellLines": Lines.demonTerminal.map(l => I18n.english ? l[1] : l[0]),
-            "kittyExtra": "# hell (Settings → Y2K → Terminal in hell): embers trail the cursor, a charred background\ncursor_trail 3\ncursor_trail_decay 0.08 0.35\ncursor_trail_start_threshold 1\ncursor_blink_interval 0.6 ease-in-out\nbackground_image " + bgImage + "\nbackground_image_layout scaled\nbackground_tint 0.55"
+            "kittyExtra": "# hell (Settings → Y2K → Terminal in hell): a scorched background, nothing moving\ncursor_trail 0\ncursor_blink_interval -1\nbackground_image " + bgImage + "\nbackground_image_layout scaled\nbackground_tint 0.7"
         };
     }
 
     // GTK and Qt apps (templates with "apps": true, scripts/qt-theme.py) while the demon
-    // rules (Y2K → Apps in hell): the whole app in hell's colours, not only its title bar
+    // rules (Y2K → Apps in hell): the whole app in the circle's colours, not only its title bar
     readonly property bool appsHell: Angel.demon && Config.y2k.hellApps
     function appsPalette() {
         return {
@@ -114,23 +123,23 @@ Singleton {
             "qtStyle": Config.appearance.qtStyle ? "1" : "",
             "apps": !appsHell ? ({}) : {
                 "mode": "dark",
-                "bg": "#160609",
-                "bgAlt": "#2a0b10",
-                "fg": "#f3d9c0",
-                "textDim": "#a8857a",
-                "accent": "#d63a24",
-                "accent2": "#ff6a1a",
-                "accent3": "#ffb02e",
-                "selectText": "#fff3e6",
-                "danger": "#ff2a3d",
-                "ok": "#7d9b32",
-                "face": "#2a0b10",
-                "faceAlt": "#3d1016",
-                "sunken": "#0c0305",
-                "hi": "#6e1a21",
-                "lo": "#0a0204",
-                "edge": "#050102",
-                "select": "#b3142b"
+                "bg": h(Theme.hellFace),
+                "bgAlt": h(Theme.hellFaceAlt),
+                "fg": h(Theme.hellText),
+                "textDim": h(Theme.hellTextDim),
+                "accent": h(Theme.hellAccent),
+                "accent2": h(Theme.hellFlame),
+                "accent3": h(Theme.hellGold),
+                "selectText": h(Theme.hellText),
+                "danger": h(Theme.hellAccent),
+                "ok": ash("#6f8f3a", 0.35),
+                "face": h(Theme.hellFace),
+                "faceAlt": h(Theme.hellFaceAlt),
+                "sunken": h(Theme.hellSunken),
+                "hi": h(Theme.hellHi),
+                "lo": h(Theme.hellLo),
+                "edge": h(Theme.hellEdge),
+                "select": h(Theme.mix(Theme.hellRim, Theme.hellBlood, 0.5))
             }
         };
     }

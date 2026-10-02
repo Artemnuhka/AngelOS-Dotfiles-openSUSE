@@ -50,9 +50,9 @@ Item {
                 width: pillRow.implicitWidth + Theme.u * 8
                 height: Math.round(Theme.u * 14 * root.menu.k)
                 radius: root.hell ? 0 : Theme.u * 2
-                color: root.hell ? (pill.sel || pillMouse.containsMouse ? "#5a0c16" : Qt.alpha("#12040a", 0.94)) : (pill.sel || pillMouse.containsMouse ? Theme.mix(Theme.face, Theme.accent, 0.4) : Qt.alpha(Theme.menuSurface, Math.max(0.9, Theme.panelAlpha)))
+                color: root.hell ? (pill.sel || pillMouse.containsMouse ? Theme.hellFaceAlt : Qt.alpha(Theme.hellPlate, 0.96)) : (pill.sel || pillMouse.containsMouse ? Theme.mix(Theme.face, Theme.accent, 0.4) : Qt.alpha(Theme.menuSurface, Math.max(0.9, Theme.panelAlpha)))
                 border.width: Math.max(1, Theme.u / 2)
-                border.color: root.hell ? (pill.sel || pillMouse.containsMouse ? "#ff5a3c" : "#7a0a1e") : Theme.menuBorder
+                border.color: root.hell ? (pill.sel || pillMouse.containsMouse ? Theme.hellAccent : Theme.hellRim) : Theme.menuBorder
                 opacity: pill.modelData.enabled === false ? 0.5 : 1
                 Row {
                     id: pillRow
@@ -63,21 +63,24 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         visible: !!pill.modelData.icon || pill.modelData.checkable
                         name: pill.modelData.checkable ? (pill.checked ? "check" : "minus") : pill.modelData.icon || "heart"
-                        ink: root.hell ? "#ffb08a" : (Theme.dark ? Theme.text : Theme.edge)
-                        fill: root.hell ? "#e0203a" : pill.checked ? Theme.ok : Theme.accent
+                        ink: root.hell ? Theme.hellText : (Theme.dark ? Theme.text : Theme.edge)
+                        fill: root.hell ? Theme.hellBlood : pill.checked ? Theme.ok : Theme.accent
+                        fill2: root.hell ? Theme.hellRim : Theme.accent2
+                        fill3: root.hell ? Theme.hellTextDim : Theme.accent3
+                        body: root.hell ? Theme.hellFaceAlt : (Theme.dark ? Theme.faceAlt : Theme.sunken)
                     }
                     PxText {
                         anchors.verticalCenter: parent.verticalCenter
                         text: I18n.label(pill.modelData.label || "")
                         font.bold: pill.sel
-                        color: root.hell ? "#ffd0b8" : Theme.text
+                        color: root.hell ? Theme.hellText : Theme.text
                     }
                     PxText {
                         visible: !!pill.modelData.hint
                         anchors.verticalCenter: parent.verticalCenter
                         text: pill.modelData.hint || ""
                         kind: "tiny"
-                        color: root.hell ? "#c0707a" : Theme.textDim
+                        color: root.hell ? Theme.hellTextDim : Theme.textDim
                     }
                 }
             }
@@ -98,14 +101,14 @@ Item {
         y: root.menu.cy + Math.sin(root.angle) * root.radius - height / 2
         width: emptyText.implicitWidth + Theme.u * 8
         height: emptyText.implicitHeight + Theme.u * 4
-        color: root.hell ? "#12040a" : Qt.alpha(Theme.menuSurface, 0.92)
+        color: root.hell ? Theme.hellPlate : Qt.alpha(Theme.menuSurface, 0.92)
         border.width: Math.max(1, Theme.u / 2)
-        border.color: root.hell ? "#7a0a1e" : Theme.menuBorder
+        border.color: root.hell ? Theme.hellRim : Theme.menuBorder
         PxText {
             id: emptyText
             anchors.centerIn: parent
             kind: "tiny"
-            color: root.hell ? "#c0707a" : Theme.textDim
+            color: root.hell ? Theme.hellTextDim : Theme.textDim
             text: I18n.t("пусто", "empty")
         }
     }

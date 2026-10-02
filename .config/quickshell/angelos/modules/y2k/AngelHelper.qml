@@ -57,16 +57,39 @@ Scope {
             }
 
             // ---- 8 fps clock: wings, bobbing, blinking, talking ----
+            // The demon keeps still: in hell the clock runs only while she talks, is held,
+            // swaps, or stirs — once every few minutes, for a moment (the thing seen from the
+            // corner of an eye). The rest of the time nothing ticks at all.
             property int tick: 0
+            readonly property bool still: demonArt && !Angel.transition
+            property bool stirring: false
+            readonly property bool clockOn: win.visible && !Shell.hiddenScreen(Angel.screenName) && (!still || stirring || Angel.talking || Angel.menuOpen || grab.held || Novel.wantsClick)
             Timer {
                 interval: 125
-                running: win.visible && !Shell.hiddenScreen(Angel.screenName)
+                running: win.clockOn
                 repeat: true
                 onTriggered: win.tick++
             }
+            Timer {
+                id: stirWait
+                running: win.still && win.visible && !win.stirring && !Config.game.calm
+                interval: (100 + Math.random() * 200) * 1000
+                onTriggered: {
+                    win.stirring = true;
+                    stirEnd.restart();
+                }
+            }
+            Timer {
+                id: stirEnd
+                interval: 2600
+                onTriggered: {
+                    win.stirring = false;
+                    stirWait.interval = (100 + Math.random() * 200) * 1000;
+                }
+            }
             // the swap flips the sprite halfway through (Angel.becomeDemon/becomeAngel)
             readonly property bool demonArt: Angel.demon
-            readonly property bool blinking: tick % 29 === 0
+            readonly property bool blinking: clockOn && tick % 29 === 0
             readonly property bool mouthOpen: Angel.talking && typer.shown < Angel.text.length && tick % 2 === 0
             // Settings → Y2K → Looks, each of them apart: glitch (the cracked-halo angel /
             // the sleepless neon demon, SpriteRig), chibi (the first pictures), adult (the
@@ -86,7 +109,7 @@ Scope {
                     return art.blink;
                 return Math.floor(tick / 3) % 2 ? art.down : art.up;
             }
-            readonly property int bob: Angel.transition ? 0 : [0, 1, 2, 2, 1, 0, -1, -1][tick % 8]
+            readonly property int bob: Angel.transition || (still && !stirring) ? 0 : [0, 1, 2, 2, 1, 0, -1, -1][tick % 8]
             // swap motion: the leaving one hops and drops through the floor, the new one
             // climbs out of the flames (demon) or comes down from the sky (angel)
             readonly property real swapY: {
@@ -164,8 +187,8 @@ Scope {
                                 text: Angel.text
                                 shown: typer.shown
                                 shake: 1
-                                // Y2K → Text tremble: off | light | strong; the demon twitches a bit more
-                                twitch: Config.y2k.textShake === "off" ? 0 : (Config.y2k.textShake === "strong" ? 0.18 : 0.05) * (Angel.demon ? 1.6 : 1)
+                                // Y2K → Text tremble: off | light | strong; the demon's words barely move
+                                twitch: Config.y2k.textShake === "off" || Config.game.calm ? 0 : (Config.y2k.textShake === "strong" ? 0.18 : 0.05) * (Angel.demon ? 0.5 : 1)
                             }
                             PxText {
                                 visible: Angel.menuOpen
@@ -517,6 +540,22 @@ Scope {
                             variant: win.look === "glitch" ? "glitch" : ""
                             // one screen pixel per art pixel at the default size (~120 px tall)
                             px: Math.max(1, Theme.u / 2) * win.zoom
+
+                            // in hell: her own pictures in the circle's few colours, the dark
+                            // rising from her feet (shaders/hell_shade.frag) — no neon
+                            layer.enabled: win.demonArt && width > 0
+                            layer.smooth: false
+                            layer.effect: ShaderEffect {
+                                readonly property real artPx: sprite.ready ? sprite.px : pixelArt.pixel
+                                readonly property size cells: Qt.size(Math.max(1, Math.round(sprite.width / artPx)), Math.max(1, Math.round(sprite.height / artPx)))
+                                readonly property real shadow: 0.38
+                                readonly property color cEdge: Theme.hellEdge
+                                readonly property color cRim: Theme.hellRim
+                                readonly property color cDim: Theme.hellTextDim
+                                readonly property color cText: Theme.hellText
+                                readonly property color cAccent: Theme.hellAccent
+                                fragmentShader: Qt.resolvedUrl("../../shaders/hell_shade.frag.qsb")
+                            }
 
                             // without the pictures: the 30×40 pixel sprite, 3 screen
                             // pixels each at the default size; the mini ones 4 each

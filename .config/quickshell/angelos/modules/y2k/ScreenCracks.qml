@@ -223,6 +223,10 @@ Scope {
                 property real weak: root.weak ? 1 : 0
                 property real ix: root.impact.x
                 property real iy: root.impact.y
+                property color cEdge: Theme.hellEdge
+                property color cRim: Theme.hellRim
+                property color cDim: Theme.hellTextDim
+                property color cAccent: Theme.hellAccent
             }
             Canvas {
                 id: canvas
@@ -292,6 +296,9 @@ Scope {
                 readonly property int step: Math.floor(root.grow * 12)
                 onStepChanged: requestPaint()
                 onSegmentsChanged: requestPaint()
+                // the circle's colours change (a new circle): the glass is redrawn in them
+                readonly property color tone: Theme.hellTextDim
+                onToneChanged: requestPaint()
                 onPaint: {
                     const ctx = getContext("2d");
                     ctx.clearRect(0, 0, width, height);
@@ -323,13 +330,13 @@ Scope {
                     };
                     for (const s of segments)
                         if (s[4] <= g)
-                            line(s[0], s[1], s[2], s[3], Qt.rgba(0.05, 0.02, 0.06, 0.55), 1, 1);
+                            line(s[0], s[1], s[2], s[3], Qt.alpha(Theme.hellEdge, 0.7), 1, 1);
                     for (const s of segments)
                         if (s[4] <= g)
-                            line(s[0], s[1], s[2], s[3], Qt.rgba(1, 1, 1, 0.85), 0, 0);
+                            line(s[0], s[1], s[2], s[3], Qt.alpha(Theme.hellTextDim, 0.8), 0, 0);
                     // the impact: crushed glass
                     const cx = Math.round(width * root.impact.x), cy = Math.round(height * root.impact.y);
-                    ctx.fillStyle = Qt.rgba(1, 1, 1, 0.9);
+                    ctx.fillStyle = Qt.alpha(Theme.hellText, 0.85);
                     for (const d of [[0, 0], [1, 0], [0, 1], [-1, 0], [0, -1], [2, -1], [-1, 2], [1, 1], [-2, -1]])
                         ctx.fillRect(cx + d[0], cy + d[1], 1, 1);
                 }

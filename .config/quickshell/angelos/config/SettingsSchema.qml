@@ -325,14 +325,21 @@ JsonAdapter {
         property string hellSettings: "grimoire" // Settings while the demon rules: grimoire (a book) | "" (the usual window)
         property string hellStart: "skin"   // Start while the demon rules: skin (your look, hell version + a hell Start button) | hell (StartHell) | "" (untouched)
         property bool hellWidgets: true     // desktop widgets burn over to their hell look while the demon rules
-        property string hellAltTab: "hell"  // Alt+Tab while the demon rules: hell (AltTabHell, hell's own) | skin (your style re-inked, flames) | "" (untouched)
-        property bool hellTerminal: true    // kitty / foot / Alacritty in hell's colours while the demon rules (+ kitty: ember cursor trail, charred background; fish: her line and fiery commands)
+        property string hellAltTab: "hell"  // Alt+Tab while the demon rules: hell (AltTabHell, hell's own) | skin (your style re-inked in the circle's colours) | "" (untouched)
+        property bool hellTerminal: true    // kitty / foot / Alacritty in the circle's colours while the demon rules (+ kitty: a scorched background; fish: her line and the circle's command colours)
         property bool hellApps: true        // GTK and Qt apps in hell's colours while the demon rules (gtk-live.py, qt-theme.py)
-        property bool hellBar: true         // the bar while the demon rules: each style's hell version (a lava slab, fangs and chains, brimstone, tombstones on chains, Hellose; the dock stays as it is)
-        property bool hellLyrics: true      // the bar's lyrics while the demon rules: Rubik Burned, each line burns up out of flames, the old one crumbles to ash, a salute when the song ends (HellFxOverlay)
+        property bool hellBar: true         // the bar while the demon rules: each style's hell version (HellBarFrame: the circle's stone at the edges, calm plates under the content; the dock stays as it is)
+        property bool hellLyrics: true      // the bar's lyrics while the demon rules: hell's blackletter in the circle's colour, no typewriter, no animation
         property string angelLook: "glitch" // glitch (cracked halo, pictures) | chibi (the first pictures) | adult (30×40 pixels) | mini (the first 20×21)
         property string demonLook: "glitch" // the same for the demon (glitch: the sleepless neon one)
         property real helperScale: 1.0      // 1.00–1.15: Ctrl + mouse wheel over her, 5 % a notch (Y2K → Helper → Size)
+    }
+
+    // the game: angelOS is a story played over the real desktop (services/Game, story/).
+    // The player's save is its own file (~/.config/angelos/save.json), not here.
+    property JsonObject game: JsonObject {
+        property bool enabled: true         // false: plain dotfiles — no angel, demon, novel or hell (installer ANGELOS_GAME=0, the setup wizard, `angelos game off`)
+        property bool calm: false           // accessibility: no flashes, no shaking, no sudden loud sounds
     }
 
     // the novel (services/Novel, ~/AngelOs-Nov): chapters the angel plays out on the desktop

@@ -21,8 +21,8 @@ import qs.widgets
 // Dragged by the title bar, double click on the title toggles edit mode, Ctrl +
 // wheel (or the wheel in edit mode) resizes it, a right click on a bare spot
 // opens the desktop menu.
-// Heaven and hell (Theme.realm): in hell the frame is obsidian with flames
-// (PxWindow.hell) and the built-in widgets draw their own hell look; a plugin
+// Heaven and hell (Theme.realm): in hell the frame is the circle's, with its rim
+// (PxWindow.hell, HellEdge) and the built-in widgets draw their own hell look; a plugin
 // that doesn't ("realms" in its manifest) is re-inked by shaders/hell_widget.
 // Going over, the widget burns (into hell) or turns to ash (back to heaven) —
 // not on streamed screens, where it simply changes.
@@ -293,8 +293,8 @@ Item {
         }
     }
 
-    // room around the frame for its shadow, the drips under a hell frame and the
-    // burn; the frame itself sits at the host's (0, 0)
+    // room around the frame for its shadow and the burn; the frame itself sits at the
+    // host's (0, 0)
     Item {
         id: canvas
         readonly property int pad: Theme.u * 12
@@ -311,6 +311,11 @@ Item {
             readonly property real seed: (host.uid.length * 7.31) % 13
             readonly property size cell: Qt.size(Theme.u * host.zoom / Math.max(1, canvas.width), Theme.u * host.zoom / Math.max(1, canvas.height))
             readonly property rect box: Qt.rect(canvas.pad / canvas.width, canvas.pad / canvas.height, (canvas.pad + host.width) / canvas.width, (canvas.pad + host.height) / canvas.height)
+            readonly property color cDark: Theme.hellBody
+            readonly property color cBlood: Theme.hellBlood
+            readonly property color cAccent: Theme.hellAccent
+            readonly property color cFlame: Theme.hellFlame
+            readonly property color cBone: Theme.hellText
             fragmentShader: Qt.resolvedUrl("../../shaders/hell_widget.frag.qsb")
         }
 

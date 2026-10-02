@@ -1,7 +1,8 @@
 #version 440
 // Desktop widgets between heaven and hell (DesktopWidgetHost).
-//   recolor  a plugin that doesn't draw hell itself is re-inked in hell's palette:
-//            light → bone, mid → ember/blood, dark → obsidian; its rim smoulders.
+//   recolor  a plugin that doesn't draw hell itself is re-inked in the circle's palette
+//            (uniforms from Theme.hell*): light → bone, mid → blood, dark → the body,
+//            saturated → the one accent — a few flat colours, like the bar's content.
 //   burn     0 → 1 the widget goes over (DesktopWidgets.burn); the realm flips at 0.5.
 //            mode 0, into hell: the old look burns from the edges in behind a glowing
 //            front, then the new one re-forms from the middle out, still glowing.
@@ -20,6 +21,11 @@ layout(std140, binding = 0) uniform buf {
     float seed;
     vec2 cell;      // one art pixel in uv
     vec4 box;       // the window frame in uv: x0, y0, x1, y1 (the rest is shadow / trim)
+    vec4 cDark;     // the circle's palette (Theme.hellBody, hellBlood, hellAccent, hellFlame, hellText)
+    vec4 cBlood;
+    vec4 cAccent;
+    vec4 cFlame;
+    vec4 cBone;
 };
 layout(binding = 1) uniform sampler2D source;
 
@@ -34,20 +40,23 @@ float blobs(vec2 p) {
     return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
 }
 
-const vec3 OBSIDIAN = vec3(0.055, 0.016, 0.024);
-const vec3 BLOOD = vec3(0.55, 0.06, 0.11);
-const vec3 EMBER = vec3(1.0, 0.42, 0.10);
-const vec3 FLAME = vec3(1.0, 0.69, 0.18);
-const vec3 BONE = vec3(0.95, 0.85, 0.75);
+#define OBSIDIAN cDark.rgb
+#define BLOOD cBlood.rgb
+#define EMBER cAccent.rgb
+#define FLAME cFlame.rgb
+#define BONE cBone.rgb
 
+// stepped, like the bar's content: a few flat colours, no gradients
 vec3 hellMap(vec3 rgb) {
     float l = dot(rgb, vec3(0.299, 0.587, 0.114));
     float sat = max(rgb.r, max(rgb.g, rgb.b)) - min(rgb.r, min(rgb.g, rgb.b));
-    vec3 o = mix(OBSIDIAN, BLOOD, smoothstep(0.08, 0.38, l));
-    o = mix(o, EMBER, smoothstep(0.38, 0.62, l));
-    o = mix(o, BONE, smoothstep(0.66, 0.92, l));
-    // saturated colours (an accent, a meter) catch fire
-    return mix(o, mix(EMBER, FLAME, smoothstep(0.5, 0.85, l)), smoothstep(0.25, 0.6, sat) * 0.75);
+    if (sat > 0.32 && l > 0.16)
+        return EMBER;
+    if (l < 0.2)
+        return OBSIDIAN;
+    if (l < 0.6)
+        return BLOOD;
+    return BONE;
 }
 
 vec4 sampleAt(vec2 uv) {
@@ -65,10 +74,6 @@ void main() {
     float edge = clamp(min(min(q.x, 1.0 - q.x), min(q.y, 1.0 - q.y)) * 2.0, 0.0, 1.0);
     float n = hash(g);
     vec4 c = sampleAt(uv);
-
-    // a re-inked plugin: its rim smoulders, a pixel here and there
-    if (recolor > 0.0 && burn >= 1.0 && c.a > 0.5 && edge < 0.035 && n > 0.86)
-        c.rgb = mix(EMBER, FLAME, step(0.95, n)) * c.a;
 
     if (burn < 1.0) {
         if (mode < 0.5) {

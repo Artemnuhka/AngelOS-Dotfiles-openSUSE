@@ -43,7 +43,7 @@ PxPage {
             Rectangle {
                 width: parent.width
                 height: Theme.u * 22
-                color: card.hell ? "#1a0508" : Theme.dark ? "#1b1d24" : "#e9e3ec"
+                color: card.hell ? Theme.hellBody : Theme.dark ? "#1b1d24" : "#e9e3ec"
                 border.width: Math.max(1, Theme.u / 2)
                 border.color: Theme.lo
                 Image {

@@ -6,18 +6,19 @@ import qs.services
 import qs.widgets
 
 // Hell's look of RadialMenu (while the demon rules, or picked by hand): a pentagram that
-// draws itself in glowing red around the pointer. The first five entries sit on its points,
-// the rest are runes on the outer circle between them; candles burn at the points, embers
-// rise; flyouts open as a FlyColumn in hell's colours. The middle (horned logo) closes.
+// draws itself around the pointer in the circle's colours (HellLook via Theme.hell*). The
+// first five entries sit on its points, the rest are runes on the outer circle between
+// them; an unlit candle stands at each point; flyouts open as a FlyColumn in hell's
+// colours. The middle (horned logo) closes. Only the drawing moves — hell is still.
 Item {
     id: look
 
     required property var menu
     readonly property real k: menu.k
-    readonly property color blood: "#e0203a"
-    readonly property color ember: "#ff7a2a"
-    readonly property color bone: "#ffd9c2"
-    readonly property color pit: "#12040a"
+    readonly property color blood: Theme.hellRim
+    readonly property color ember: Theme.hellAccent
+    readonly property color bone: Theme.hellText
+    readonly property color pit: Theme.hellPlate
     readonly property real slotSize: Math.round(Theme.u * 22 * k)
     readonly property real runeSize: Math.round(Theme.u * 16 * k)
     readonly property real labelRoom: menu.labels ? Theme.sizeTiny + Theme.u * 3 : 0
@@ -44,14 +45,14 @@ Item {
     }
     anchors.fill: parent
 
-    // a red glow in the pit
+    // the dark of the pit under it
     Rectangle {
         x: look.menu.cx - width / 2
         y: look.menu.cy - height / 2
         width: (look.ring + look.runeSize) * 2 * Math.max(0.3, look.menu.reveal)
         height: width
         radius: width / 2
-        color: Qt.alpha("#3a0610", 0.55 * look.menu.reveal)
+        color: Qt.alpha(Theme.hellBody, 0.7 * look.menu.reveal)
         border.width: Math.max(1, Theme.u / 2)
         border.color: Qt.alpha(look.blood, 0.35 * look.menu.reveal)
     }
@@ -75,30 +76,6 @@ Item {
         fragmentShader: Qt.resolvedUrl("../../shaders/pentagram.frag.qsb")
     }
 
-    // embers rising through it (made once; they only move while the menu is open)
-    Repeater {
-        model: 14
-        Rectangle {
-            id: spark
-            required property int index
-            readonly property real seed: (index * 7919 % 97) / 97
-            width: Math.max(2, Theme.u * (seed > 0.6 ? 1.5 : 1))
-            height: width
-            color: seed > 0.5 ? look.ember : "#ffd23f"
-            x: look.menu.cx + (seed - 0.5) * look.ring * 1.8
-            property real rise: 0
-            y: look.menu.cy + look.ring * 0.9 - rise * look.ring * 2
-            opacity: (1 - rise) * look.menu.reveal
-            NumberAnimation on rise {
-                from: 0
-                to: 1
-                duration: 1800 + spark.seed * 1600
-                loops: Animation.Infinite
-                running: look.menu.visible
-            }
-        }
-    }
-
     // the middle: the (horned) logo; closes
     Rectangle {
         id: hub
@@ -108,12 +85,13 @@ Item {
         height: width
         radius: width / 2
         scale: look.menu.reveal
-        color: hubMouse.containsMouse ? "#5a0c16" : look.pit
+        color: hubMouse.containsMouse ? Theme.hellFaceAlt : look.pit
         border.width: Math.max(1, Theme.u)
         border.color: look.blood
         AngelLogo {
             anchors.centerIn: parent
             emblemOnly: true
+            hell: true
             pixel: Math.max(1, Math.round(Theme.u * look.k * 0.75))
         }
         MouseArea {
@@ -180,7 +158,7 @@ Item {
                         duration: 90
                     }
                 }
-                color: slot.sel || slot.open ? "#5a0c16" : look.pit
+                color: slot.sel || slot.open ? Theme.hellFaceAlt : look.pit
                 border.width: Math.max(1, Theme.u / 2)
                 border.color: slot.sel || slot.open ? look.ember : look.blood
             }
@@ -188,29 +166,25 @@ Item {
                 anchors.centerIn: tile
                 name: slot.e ? slot.e.icon : "heart"
                 pixel: Math.max(1, Math.round(Theme.u * look.k * (slot.ray ? 1 : 0.75)))
+                // bone and the dim ink; the one you're on takes the accent
                 ink: look.bone
-                fill: look.blood
-                fill3: look.ember
+                fill: slot.sel || slot.open ? look.ember : Theme.hellTextDim
+                fill2: look.blood
+                fill3: Theme.hellTextDim
+                body: Theme.hellFaceAlt
                 light: look.bone
+                bad: look.ember
             }
-            // a candle outside each point
+            // a candle outside each point: a stub of wax, a wick, one ember — lit only by the one you're on
             PxIcon {
                 visible: slot.ray
-                name: "fire"
+                bitmap: ["..y..", "..#..", ".###.", ".#w#.", ".#w#.", ".###."]
                 pixel: Math.max(1, Math.round(Theme.u * 0.75))
-                fill3: "#ffd23f"
-                bad: look.ember
-                light: "#fff3b0"
+                ink: Theme.hellEdge
+                light: Theme.hellTextDim
+                fill3: slot.sel || slot.open ? look.ember : Theme.hellRim
                 x: tile.width / 2 + Math.cos(slot.a) * (slot.size * 0.95) - width / 2
-                y: tile.height / 2 + Math.sin(slot.a) * (slot.size * 0.95) - height / 2 - (candleFlicker.on ? Theme.u / 2 : 0)
-                Timer {
-                    id: candleFlicker
-                    property bool on: false
-                    interval: 160 + slot.index * 37
-                    repeat: true
-                    running: look.menu.visible
-                    onTriggered: on = !on
-                }
+                y: tile.height / 2 + Math.sin(slot.a) * (slot.size * 0.95) - height / 2
             }
             PxText {
                 visible: look.menu.labels

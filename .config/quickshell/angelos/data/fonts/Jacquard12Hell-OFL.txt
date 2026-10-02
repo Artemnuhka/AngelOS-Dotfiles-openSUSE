@@ -1,8 +1,12 @@
-Copyright 2020 The Rubik Filtered Project Authors (https://https://github.com/NaN-xyz/Rubik-Filtered)
+Copyright 2023 The Soft Type Project Authors (https://github.com/scfried/soft-type-jacquard)
+Cyrillic (data/fonts/src/jacquard12-hell): Copyright 2026 the angelOS contributors
+
+"Jacquard 12 Hell" is a modified version of Jacquard 12 with Cyrillic added;
+Jacquard declares no Reserved Font Name.
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:
-https://scripts.sil.org/OFL
+https://openfontlicense.org
 
 
 -----------------------------------------------------------

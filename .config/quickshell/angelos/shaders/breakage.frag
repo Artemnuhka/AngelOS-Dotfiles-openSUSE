@@ -8,6 +8,8 @@
 //   kind 4  a sigil: a pentagram with runes burnt into the glass, drawing itself, smouldering
 // All of it on a pixel grid (one cell = Theme.u·2 screen pixels) and stepped in time like
 // the sprites. grow 0 → 1: the mark appears; fall 0 → 1: the angel is back and it goes.
+// Drawn in the circle's few colours at the end (cEdge → cRim → cDim by brightness, the
+// hottest pixels in its one accent): the mark belongs to the circle, not to a cartoon.
 // No constant arrays (the GL 1.20 variant of qsb has none).
 layout(location = 0) in vec2 qt_TexCoord0;
 layout(location = 0) out vec4 fragColor;
@@ -23,6 +25,10 @@ layout(std140, binding = 0) uniform buf {
     float weak;      // 1: the cracks are set to "weak": smaller
     float ix;        // where her fist landed, 0..1 of the square
     float iy;
+    vec4 cEdge;      // the circle's palette (Theme.hellEdge, hellRim, hellTextDim, hellAccent)
+    vec4 cRim;
+    vec4 cDim;
+    vec4 cAccent;
 };
 
 const float PI = 3.14159265;
@@ -280,5 +286,14 @@ void main() {
         c = claws(p, I, st, g, size);
     else
         c = sigil(p, I, st, g, size);
+    if (c.a > 0.001) {
+        vec3 rgb = c.rgb / c.a;
+        float l = dot(rgb, vec3(0.299, 0.587, 0.114));
+        float sat = max(rgb.r, max(rgb.g, rgb.b)) - min(rgb.r, min(rgb.g, rgb.b));
+        vec3 o = l < 0.2 ? cEdge.rgb : l < 0.5 ? cRim.rgb : cDim.rgb;
+        if (sat > 0.5 && l > 0.45)
+            o = mix(cRim.rgb, cAccent.rgb, 0.65);
+        c = vec4(o * c.a, c.a);
+    }
     fragColor = c * qt_Opacity * (1.0 - fall);
 }
