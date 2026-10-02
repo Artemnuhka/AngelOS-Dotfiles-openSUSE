@@ -1024,8 +1024,12 @@ Scope {
         if (phase === "hell-burn") {
             if ((DesktopWidgets.burning || Theme.realm !== "heaven") && Date.now() - started < DesktopWidgets.burnMs * 2 + 2500)
                 return;
+            // six hell cursors and one for each circle (story/circles.json → cursor), their mood
+            // variations hidden from the lists
             const hellCursors = Cursors.hellish.length;
-            report("hell-burn", !DesktopWidgets.burning && Theme.realm === "heaven" && hellCursors === 6, "burnt over and back in " + (Date.now() - started) + " ms, " + hellCursors + " hell cursors");
+            const circleCursors = Cursors.catalog.filter(c => !!c.circle && !c.hidden).length;
+            const moods = Cursors.catalog.filter(c => !!c.circle && c.hidden).length;
+            report("hell-burn", !DesktopWidgets.burning && Theme.realm === "heaven" && hellCursors === 6 + circleCursors && circleCursors === 9 && moods === 18, "burnt over and back in " + (Date.now() - started) + " ms, " + hellCursors + " hell cursors (" + circleCursors + " circles', " + moods + " mood variations)");
             phase = "game";
             started = Date.now();
             return;

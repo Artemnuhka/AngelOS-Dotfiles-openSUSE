@@ -7,10 +7,14 @@ import qs.config
 
 // Cursor theme: one theme everywhere (niri, GTK, Qt, X11/XWayland, Steam, Flatpak).
 // scripts/cursors.py downloads/builds the themes and writes every config.
-// Hell: while the demon rules the pointer is Config.cursor.hell (one of the six
-// hell themes, built on first use); the angel brings yours back. Your own pick
-// stays in Config.cursor.theme the whole time. If you never picked one, the
-// cursor that was there before (niri's) is kept in Config.cursor.beforeHell.
+// Hell: while the demon rules the pointer is Config.cursor.hell — "circle" (the default): the
+// circle's own (story/circles.json → cursor, angelOS-Circle-<Circle>), changing as she takes you
+// from circle to circle, in the variation of the mood (`mood`: "" | "tip" | "alive" — set by
+// the game, closer is livelier); or one hell theme always. Built on first use, put on only
+// when it changes (a new circle, a new mood step: cursors.py apply rewrites niri, GTK, X11…).
+// The angel brings yours back. Your own pick stays in Config.cursor.theme the whole time. If
+// you never picked one, the cursor that was there before (niri's) is kept in
+// Config.cursor.beforeHell.
 Singleton {
     id: root
 
@@ -18,10 +22,23 @@ Singleton {
     readonly property int size: Config.cursor.theme || hellOn ? Config.cursor.size : (parseInt(Quickshell.env("XCURSOR_SIZE")) || 24)
     // the theme on screen right now: the demon's while she rules
     readonly property bool hellOn: Config.ready && Angel.demon && !!Config.cursor.hell
-    readonly property string active: hellOn ? Config.cursor.hell : theme
+    // the mood's variation of the circle's cursor: "" (as it is) | "tip" | "alive"
+    property string mood: ""
+    readonly property bool byCircle: Config.cursor.hell === "circle"
+    // the circle's own theme now (hell before any circle: angelOS Hell)
+    readonly property string circleTheme: {
+        const c = HellLook.circle;
+        if (!c || c === "base" || !catalog.some(e => e.circle === c))
+            return "angelOS-Hell";
+        const base = "angelOS-Circle-" + c.charAt(0).toUpperCase() + c.slice(1);
+        return base + (mood === "tip" ? "-Tip" : mood === "alive" ? "-Alive" : "");
+    }
+    readonly property string hellTheme: byCircle ? circleTheme : Config.cursor.hell
+    readonly property string active: hellOn ? hellTheme : theme
     property var catalog: []
     readonly property var heavenly: catalog.filter(c => c.realm !== "hell")
-    readonly property var hellish: catalog.filter(c => c.realm === "hell")
+    // the hell themes one can pick: the six and the circles' own (not their mood variations)
+    readonly property var hellish: catalog.filter(c => c.realm === "hell" && !c.hidden)
     property var other: []              // cursor themes found on the system
     property var status: ({})           // where which theme is set
     property string log: ""
@@ -66,11 +83,14 @@ Singleton {
         }
         put(themeName, sz);
     }
-    // the theme the demon puts on (Settings → Cursor → Hell); "" = she leaves the cursor alone
+    // the theme the demon puts on (Settings → Cursor → Hell): "circle" = the circle's own,
+    // a theme = always that one, "" = she leaves the cursor alone
     function setHell(themeName) {
         Config.cursor.hell = themeName;
+        if (themeName && themeName !== "circle")
+            Config.cursor.hellPick = themeName;
         _attempt = "";
-        const e = entryOf(themeName);
+        const e = entryOf(themeName === "circle" ? circleTheme : themeName);
         // not built yet: now (on at once if she's here, otherwise ready for when she comes)
         if (e && !e.installed && !worker.running)
             install(e.id, hellOn);
@@ -102,10 +122,33 @@ Singleton {
         _attempt = "";
         Qt.callLater(sync);
     }
+    // a new circle, a new mood step: the circle's cursor changes — only then
+    onHellThemeChanged: if (hellOn) {
+        _attempt = "";
+        Qt.callLater(sync);
+    }
+    // older settings: "angelOS-Hell" was the default before the circles had their own — it
+    // becomes "circle" once (a later pick is the player's own and stays). A beat after Config
+    // is ready: the file's values land just after `ready`
+    Timer {
+        id: migrateSoon
+        interval: 400
+        onTriggered: {
+            if (!Config.ready || Config.cursor.hellByCircle)
+                return;
+            if (Config.cursor.hell === "angelOS-Hell")
+                Config.cursor.hell = "circle";
+            Config.cursor.hellByCircle = true;
+        }
+    }
+    Component.onCompleted: if (Config.ready)
+        migrateSoon.restart()
     Connections {
         target: Config
         function onReadyChanged() {
             Qt.callLater(root.sync);
+            if (Config.ready)
+                migrateSoon.restart();
         }
     }
     function isHell(themeName) {
@@ -116,7 +159,7 @@ Singleton {
         const sz = Config.cursor.size || 24;
         if (hellOn)
             return {
-                "theme": Config.cursor.hell,
+                "theme": hellTheme,
                 "size": sz
             };
         const now = status.niri ? status.niri[0] : "";
@@ -199,7 +242,7 @@ Singleton {
                 else if (r.theme && worker.after) {
                     // freshly built: apply it (a size nudge makes niri reload the same theme name)
                     const t = r.theme, sz = Config.cursor.size || 24;
-                    const hell = root.hellOn && t === Config.cursor.hell;
+                    const hell = root.hellOn && t === root.hellTheme;
                     Qt.callLater(() => {
                         if (Shell.dev)
                             return;

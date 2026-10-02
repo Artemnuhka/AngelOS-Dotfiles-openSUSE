@@ -528,7 +528,7 @@ PxPage {
         SettingRow {
             visible: Angel.hellShown
             label: I18n.t("Курсор в аду", "Cursor in hell")
-            hint: Config.cursor.hell ? I18n.t("пока правит демоница, курсор — ", "While the demon rules the pointer is ") + ((Cursors.entryOf(Config.cursor.hell) || {}).name || Config.cursor.hell) + I18n.t("; шесть адских тем — на странице «Курсор»", "; six hell themes are on the Cursor page") : I18n.t("демоница не трогает курсор", "The demon leaves the cursor alone")
+            hint: Cursors.byCircle ? I18n.t("пока правит демоница, у каждого круга свой курсор; выбрать одну тему — на странице «Курсор»", "While the demon rules each circle has its own pointer; one theme for all — on the Cursor page") : Config.cursor.hell ? I18n.t("пока правит демоница, курсор — ", "While the demon rules the pointer is ") + ((Cursors.entryOf(Config.cursor.hell) || {}).name || Config.cursor.hell) + I18n.t("; адские темы — на странице «Курсор»", "; the hell themes are on the Cursor page") : I18n.t("демоница не трогает курсор", "The demon leaves the cursor alone")
             PxButton {
                 compact: true
                 icon: "cursor"

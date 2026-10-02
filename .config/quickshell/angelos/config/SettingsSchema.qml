@@ -261,7 +261,9 @@ JsonAdapter {
         property bool shake: true           // shake the mouse to find the pointer: it grows for a moment (macOS)
         property string shakeSensitivity: "normal" // low | normal | high — how hard a shake has to be
         property real shakeScale: 4         // how big it grows, × the cursor size
-        property string hell: "angelOS-Hell" // the demon's cursor while she rules (a hell theme), "" = she leaves it alone
+        property string hell: "circle"      // the demon's cursor while she rules: circle (the circle's own, scripts/cursors.py) | a hell theme | "" = she leaves it alone
+        property string hellPick: "angelOS-Hell" // the hell theme last picked by hand (Settings → Cursor → Hell → One theme)
+        property bool hellByCircle: false   // the old default "angelOS-Hell" became "circle" once (services/Cursors)
         property string beforeHell: ""      // never picked one: the cursor she replaced, put back by the angel
         property int beforeHellSize: 0
     }

@@ -999,9 +999,9 @@ Singleton {
         onTriggered: if (!root.prank())
             root.joke()
     }
-    // the cursed cursor: another of the six hell cursors for an hour, then hers again
+    // the cursed cursor: another hell cursor for an hour (not the one on now), then hers again
     function curseCursor() {
-        const pool = Cursors.hellish.filter(c => c.theme && c.theme !== Config.cursor.hell);
+        const pool = Cursors.hellish.filter(c => c.theme && c.theme !== Cursors.hellTheme && !c.theme.startsWith(Cursors.hellTheme));
         if (!pool.length)
             return false;
         if (!Story.player.cursedUntil)

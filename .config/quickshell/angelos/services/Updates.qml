@@ -315,7 +315,7 @@ Singleton {
                 // the installer ships default binds / cursor: put the user's choices back
                 WorkspaceAnim.reapply();
                 if (Cursors.hellOn)
-                    Cursors.put(Config.cursor.hell, Config.cursor.size);
+                    Cursors.put(Cursors.hellTheme, Config.cursor.size);
                 else if (Config.cursor.theme)
                     Cursors.apply(Config.cursor.theme, Config.cursor.size);
                 // also after a "nothing new" run while an earlier update still waits

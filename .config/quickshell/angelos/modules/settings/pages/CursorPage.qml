@@ -23,7 +23,7 @@ PxPage {
         property bool hell: false
         property int columns: 1
         property real gap: 0
-        readonly property bool current: hell ? Config.cursor.hell === modelData.theme : Cursors.theme === modelData.theme
+        readonly property bool current: hell ? (Cursors.byCircle ? Cursors.circleTheme.startsWith(modelData.theme) && !!modelData.circle : Config.cursor.hell === modelData.theme) : Cursors.theme === modelData.theme
         readonly property bool working: Cursors.busy && (Cursors.working === modelData.id || Cursors.working === modelData.theme)
         width: (parent.width - (columns - 1) * gap) / columns
         height: cardCol.implicitHeight + Theme.u * 8
@@ -162,10 +162,29 @@ PxPage {
         width: parent.width
         SettingRow {
             label: I18n.t("Демоница меняет курсор", "The demon changes the cursor")
-            hint: Cursors.hellOn ? I18n.t("сейчас она тут — курсор адский; твой вернётся вместе с ангелом", "she's here now, so the cursor is hers; yours comes back with the angel") : I18n.t("пока она правит, курсор — одна из адских тем ниже; ангел вернёт твой", "while she rules the pointer is one of the hell themes below; the angel gives yours back")
+            hint: Cursors.hellOn ? I18n.t("сейчас она тут — курсор адский; твой вернётся вместе с ангелом", "she's here now, so the cursor is hers; yours comes back with the angel") : I18n.t("пока она правит, курсор адский; ангел вернёт твой", "while she rules the pointer is hers; the angel gives yours back")
             PxToggle {
                 checked: !!Config.cursor.hell
-                onToggled: c => Cursors.setHell(c ? "angelOS-Hell" : "")
+                onToggled: c => Cursors.setHell(c ? "circle" : "")
+            }
+        }
+        SettingRow {
+            visible: !!Config.cursor.hell
+            label: I18n.t("Какой", "Which")
+            hint: Cursors.byCircle ? I18n.t("у каждого круга свой: пепельный в Лимбе, с каплей масла в Чревоугодии, золотой в Жадности, ледяной в Предательстве… Меняется вместе с кругом", "each circle its own: ash in Limbo, dripping oil in Gluttony, gold in Greed, ice in Treachery… It changes with the circle") : I18n.t("всегда одна тема — выбери ниже", "always one theme — pick it below")
+            PxSegmented {
+                model: [
+                    {
+                        "label": I18n.t("По кругу", "By circle"),
+                        "value": "circle"
+                    },
+                    {
+                        "label": I18n.t("Одна тема", "One theme"),
+                        "value": "one"
+                    }
+                ]
+                currentValue: Cursors.byCircle ? "circle" : "one"
+                onActivated: v => Cursors.setHell(v === "circle" ? "circle" : (Config.cursor.hellPick || "angelOS-Hell"))
             }
         }
         Grid {

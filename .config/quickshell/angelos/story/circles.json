@@ -1,5 +1,5 @@
 {
-  "_comment": "How hell looks: one entry per circle (config/HellLook.qml). 'base' is hell before any circle and the defaults every circle starts from — a circle lists only what it changes. n: the circle's number (1 at the top, 9 at the bottom); name, where: its title and one line about it; sin: the story variable that leads a fall here (services/Game); voice: how the demon talks here (story/voices.json); palette: the hell tokens (Theme.hell*); bar: the stone behind the bar (shaders/hell_texture.frag: stone ash water ice iron sand pitch whirl); edge: the rim of windows and widgets (shaders/hell_edge.frag); backdrop: the dark laid over the wallpaper (shaders/hell_backdrop.frag: dim, desat, vignette 0..1, tint), its paintings from the Hell pack (pictures: landscape and portrait names — scripts/hell-wallpaper.py --prefer) and its ambient — fog wind rain dust ripple embers sand pitch ice, still but for a rare event; labels: the word after a reading on hell's widgets; breakage: what the demon's fist breaks in this circle (Config.y2k.breakage \"circle\": one of these each punch — widgets/BreakageArt, shaders/breakage.frag: glass tv burn claws sigil fog whirl ooze coin ripple spatter pitch frost); palette may also set the hell bar's roles barIcon, barHover, barActive, sprite, spriteHi (config/HellLook.qml barRoles).",
+  "_comment": "How hell looks: one entry per circle (config/HellLook.qml). 'base' is hell before any circle and the defaults every circle starts from — a circle lists only what it changes. n: the circle's number (1 at the top, 9 at the bottom); name, where: its title and one line about it; sin: the story variable that leads a fall here (services/Game); voice: how the demon talks here (story/voices.json); palette: the hell tokens (Theme.hell*); bar: the stone behind the bar (shaders/hell_texture.frag: stone ash water ice iron sand pitch whirl); edge: the rim of windows and widgets (shaders/hell_edge.frag); backdrop: the dark laid over the wallpaper (shaders/hell_backdrop.frag: dim, desat, vignette 0..1, tint), its paintings from the Hell pack (pictures: landscape and portrait names — scripts/hell-wallpaper.py --prefer) and its ambient — fog wind rain dust ripple embers sand pitch ice, still but for a rare event; labels: the word after a reading on hell's widgets; cursor: the pointer while the demon rules (Config.cursor.hell \"circle\": scripts/cursors.py builds angelOS-Circle-<Circle> from its palette — primary fill, secondary shade, border — its shapes and its rare animation fx in the cursor's own frames: fog wisp drip glint boil embers blink, fxColour; still: false plays it always); breakage: what the demon's fist breaks in this circle (Config.y2k.breakage \"circle\": one of these each punch — widgets/BreakageArt, shaders/breakage.frag: glass tv burn claws sigil fog whirl ooze coin ripple spatter pitch frost); palette may also set the hell bar's roles barIcon, barHover, barActive, sprite, spriteHi (config/HellLook.qml barRoles).",
   "base": {
     "name": {
       "ru": "Ад",
@@ -144,6 +144,19 @@
       "fog",
       "glass"
     ],
+    "cursor": {
+      "palette": {
+        "primary": "#d0d0cf",
+        "secondary": "#7a7a7c",
+        "border": "#101011"
+      },
+      "fx": "fog",
+      "fxColour": "#9a9a9a",
+      "about": {
+        "ru": "пепельный; изредка тает в тумане",
+        "en": "ash grey; now and then it thins into the fog"
+      }
+    },
     "labels": {
       "cpu": {
         "ru": "туман",
@@ -230,6 +243,19 @@
       "whirl",
       "claws"
     ],
+    "cursor": {
+      "palette": {
+        "primary": "#ecbfe2",
+        "secondary": "#9b3f86",
+        "border": "#1a0b1e"
+      },
+      "fx": "wisp",
+      "fxColour": "#cf78b9",
+      "about": {
+        "ru": "тёмный пурпур; ветер треплет его хвост",
+        "en": "dark purple; the wind tugs at its tail"
+      }
+    },
     "labels": {
       "cpu": {
         "ru": "вихрь",
@@ -316,6 +342,20 @@
       "ooze",
       "glass"
     ],
+    "cursor": {
+      "palette": {
+        "primary": "#c9d39a",
+        "secondary": "#6d7a33",
+        "border": "#0d100b"
+      },
+      "fx": "drip",
+      "fxColour": "#b0861c",
+      "still": false,
+      "about": {
+        "ru": "гнилая зелень; с него капает масло",
+        "en": "rotten green; oil drips off it"
+      }
+    },
     "labels": {
       "cpu": {
         "ru": "голод",
@@ -402,6 +442,19 @@
       "coin",
       "glass"
     ],
+    "cursor": {
+      "palette": {
+        "primary": "#f3d36b",
+        "secondary": "#b8862a",
+        "border": "#2a1a06"
+      },
+      "fx": "glint",
+      "fxColour": "#fff6c8",
+      "about": {
+        "ru": "золотой; по нему пробегает блик",
+        "en": "gold; a glint runs down it"
+      }
+    },
     "labels": {
       "cpu": {
         "ru": "груз",
@@ -488,6 +541,19 @@
       "ripple",
       "tv"
     ],
+    "cursor": {
+      "palette": {
+        "primary": "#a4d9c8",
+        "secondary": "#2f6f60",
+        "border": "#06100e"
+      },
+      "fx": "boil",
+      "fxColour": "#1d4a40",
+      "about": {
+        "ru": "вода Стикса; в нём поднимается пузырь",
+        "en": "Styx water; a bubble rises in it"
+      }
+    },
     "labels": {
       "cpu": {
         "ru": "ярость",
@@ -574,6 +640,18 @@
       "burn",
       "sigil"
     ],
+    "cursor": {
+      "palette": {
+        "primary": "#ddd0c6",
+        "secondary": "#7a5a4c",
+        "border": "#0f0b0a"
+      },
+      "fx": "embers",
+      "about": {
+        "ru": "железо Дита; от него летят искры",
+        "en": "the iron of Dis; sparks fly off it"
+      }
+    },
     "labels": {
       "cpu": {
         "ru": "жар",
@@ -660,6 +738,24 @@
       "spatter",
       "claws"
     ],
+    "cursor": {
+      "palette": {
+        "primary": "#f2cdc5",
+        "secondary": "#a3241c",
+        "border": "#140404"
+      },
+      "fx": "drip",
+      "fxColour": "#c4231b",
+      "shapes": {
+        "hand-pointing": "claw",
+        "hand-open": "claw-open",
+        "hand-closed": "claw-closed"
+      },
+      "about": {
+        "ru": "кровь; руки — когти, с кончика капает",
+        "en": "blood; the hands are claws, drops fall off the tip"
+      }
+    },
     "labels": {
       "cpu": {
         "ru": "кровь",
@@ -746,6 +842,19 @@
       "pitch",
       "sigil"
     ],
+    "cursor": {
+      "palette": {
+        "primary": "#2a2622",
+        "secondary": "#8a7a48",
+        "border": "#d4bf68"
+      },
+      "fx": "blink",
+      "fxColour": "#ffd84a",
+      "about": {
+        "ru": "смола в золотом контуре; в ней открываются глаза",
+        "en": "pitch in a gold outline; eyes open in it"
+      }
+    },
     "labels": {
       "cpu": {
         "ru": "смола",
@@ -832,6 +941,19 @@
       "frost",
       "glass"
     ],
+    "cursor": {
+      "palette": {
+        "primary": "#e8f3ff",
+        "secondary": "#85bbea",
+        "border": "#0a1a2a"
+      },
+      "fx": "glint",
+      "fxColour": "#4f86c6",
+      "about": {
+        "ru": "лёд Коцита; по нему ползёт иней",
+        "en": "the ice of Cocytus; frost creeps down it"
+      }
+    },
     "labels": {
       "cpu": {
         "ru": "лёд",
