@@ -243,6 +243,7 @@ Scope {
             color: Theme.desk
             WlrLayershell.namespace: "angelos-lock-preview"
             WlrLayershell.layer: WlrLayer.Overlay
+            // takes input: the lock screen
             WlrLayershell.keyboardFocus: Shell.dev ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.Exclusive
 
             LockScreen {

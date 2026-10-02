@@ -23,6 +23,7 @@ PanelWindow {
     color: Qt.alpha(Theme.shadow, 0.35)
     WlrLayershell.namespace: "angelos-session"
     WlrLayershell.layer: WlrLayer.Overlay
+    // takes input: the power menu: a click beside it closes it
     WlrLayershell.keyboardFocus: visible ? (Shell.dev ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.Exclusive) : WlrKeyboardFocus.None
 
     property int current: 0

@@ -24,6 +24,7 @@ PanelWindow {
     color: Qt.alpha(Theme.shadow, 0.35)
     WlrLayershell.namespace: "angelos-update"
     WlrLayershell.layer: WlrLayer.Overlay
+    // takes input: asks to restart: a click beside it means later
     WlrLayershell.keyboardFocus: visible ? (Shell.dev ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.Exclusive) : WlrKeyboardFocus.None
 
     property int current: 1                 // 0 later, 1 restart

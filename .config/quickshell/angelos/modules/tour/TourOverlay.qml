@@ -26,6 +26,7 @@ PanelWindow {
     color: "transparent"
     WlrLayershell.namespace: "angelos-tour"
     WlrLayershell.layer: WlrLayer.Overlay
+    // takes input: interface tips: a click goes on
     WlrLayershell.keyboardFocus: visible ? (Shell.dev ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.Exclusive) : WlrKeyboardFocus.None
 
     // target rect in screen coordinates

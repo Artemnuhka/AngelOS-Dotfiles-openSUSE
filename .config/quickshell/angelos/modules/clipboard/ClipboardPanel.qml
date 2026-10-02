@@ -24,6 +24,7 @@ PanelWindow {
     color: Qt.alpha(Theme.shadow, 0.25)
     WlrLayershell.namespace: "angelos-clipboard"
     WlrLayershell.layer: WlrLayer.Overlay
+    // takes input: the clipboard history: a click beside it closes it
     WlrLayershell.keyboardFocus: visible ? (Shell.dev ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.Exclusive) : WlrKeyboardFocus.None
 
     property string query: ""

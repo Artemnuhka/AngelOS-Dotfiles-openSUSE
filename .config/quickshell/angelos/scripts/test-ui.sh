@@ -33,6 +33,16 @@ while IFS= read -r f; do
 done < <(grep -rlE '^\s*(PanelWindow|FloatingWindow|PopupWindow)\s*\{' --include='*.qml' "$DIR" | grep -v '/tests/')
 ((fail)) || ok "every window has a RightClickGuard"
 
+# a full-screen overlay takes every click under it unless it has an input mask: effects
+# (the shake cursor, B3) must let input through; the ones that are meant to take it
+# say why with a "// takes input:" line
+while IFS= read -r f; do
+  if (( $(grep -cE '^\s*(left|right|top|bottom): true' "$f") >= 4 )) && ! grep -qE '^\s*mask:' "$f" && ! grep -q '// takes input:' "$f"; then
+    bad "${f#"$DIR"/}: a full-screen overlay without an input mask takes every click (add mask: Region {…}, or say why with // takes input:)"
+  fi
+done < <(grep -rlE 'WlrLayer\.Overlay' --include='*.qml' "$DIR" | grep -v '/tests/')
+((fail)) || ok "full-screen overlays let input through (or say why they take it)"
+
 # python helpers at least compile
 if out=$(python3 -m py_compile "$DIR"/scripts/*.py 2>&1); then ok "scripts/*.py compile"; else bad "python: $out"; fi
 find "$DIR/scripts" -name __pycache__ -type d -exec rm -rf {} + 2>/dev/null

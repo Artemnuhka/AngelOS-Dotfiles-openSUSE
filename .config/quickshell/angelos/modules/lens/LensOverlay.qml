@@ -30,6 +30,7 @@ Scope {
             exclusionMode: ExclusionMode.Ignore
             color: "transparent"
             WlrLayershell.layer: WlrLayer.Overlay
+            // takes input: the snapshot lens: a click puts it away
             WlrLayershell.namespace: "angelos-lens"
             WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
 

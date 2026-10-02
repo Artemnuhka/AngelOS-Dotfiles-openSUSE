@@ -23,6 +23,7 @@ PanelWindow {
     color: Qt.alpha(Theme.shadow, 0.25)
     WlrLayershell.namespace: "angelos-launcher"
     WlrLayershell.layer: WlrLayer.Overlay
+    // takes input: the launcher: a click beside it closes it
     WlrLayershell.keyboardFocus: visible && !focusKick ? (Shell.dev ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.Exclusive) : WlrKeyboardFocus.None
     // opened while a menu's grab was ending (issue #22): if the keyboard did not
     // arrive, ask niri again — the interactivity goes None and back

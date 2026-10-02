@@ -79,6 +79,7 @@ Scope {
             exclusionMode: ExclusionMode.Ignore
             color: "#0c0710"
             WlrLayershell.layer: WlrLayer.Overlay
+            // takes input: the boot screen: a click skips it
             WlrLayershell.namespace: "angelos-boot"
             WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 

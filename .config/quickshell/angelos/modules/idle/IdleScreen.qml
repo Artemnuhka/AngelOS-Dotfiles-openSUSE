@@ -30,6 +30,7 @@ Variants {
         color: bg
         WlrLayershell.namespace: "angelos-idle"
         WlrLayershell.layer: WlrLayer.Overlay
+        // takes input: the screensaver: any key or click ends it
         WlrLayershell.keyboardFocus: primary ? (Shell.dev ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.Exclusive) : WlrKeyboardFocus.None
 
         // mouse jitter while the surfaces map would end it immediately
