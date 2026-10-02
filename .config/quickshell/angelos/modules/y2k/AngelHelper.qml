@@ -561,6 +561,8 @@ Scope {
                             flutter: grab.held
                             use: win.look === "chibi" || win.look === "glitch"
                             variant: win.look === "glitch" ? "glitch" : ""
+                            // the circle's own demon, once her pictures are cut (sprite-rig.py skins)
+                            skin: win.demonArt && Story.inHell ? HellLook.circle : ""
                             // one screen pixel per art pixel at the default size (~120 px tall)
                             px: Math.max(1, Theme.u / 2) * win.zoom
 

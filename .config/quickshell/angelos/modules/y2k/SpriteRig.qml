@@ -9,12 +9,16 @@ import Quickshell.Io
 // clock. rig.json holds the layout in art pixels; `px` screen pixels each.
 // `variant`: which pictures — "" the chibi ones (sprites/<who>/), "glitch" the
 // cracked-halo angel and the sleepless neon demon (sprites/<who>-glitch/).
+// `skin`: the demon of a circle of hell (sprites/demon-<skin>/, cut by
+// scripts/sprite-rig.py skins from the author's sheets) — until a circle has one, the
+// demon of `variant` stands in.
 // `ready` stays false without the pictures: the helper keeps her pixel sprite.
 Item {
     id: root
 
     property string who: "angel"
     property string variant: ""
+    property string skin: ""
     property int tick: 0
     property bool blink: false
     property bool talk: false
@@ -24,8 +28,9 @@ Item {
     // false: Settings → Y2K → Looks picked a pixel version, the helper draws that instead
     property bool use: true
 
-    // both figures are read up front: the swap flips between them at once
-    readonly property RigFile file: variant === "glitch" ? (who === "demon" ? demonGlitchRig : angelGlitchRig) : (who === "demon" ? demonRig : angelRig)
+    // both figures are read up front: the swap flips between them at once; the circle's
+    // demon when her pictures are there
+    readonly property RigFile file: who === "demon" ? (skin && skinRig.rig ? skinRig : demonRig) : angelRig
     readonly property var rig: file.rig
     readonly property bool ready: use && !!rig
     // where the body is inside the rig (the figure without wings and tail)
@@ -43,7 +48,7 @@ Item {
         required property string name
         readonly property string dir: Quickshell.shellDir + "/modules/y2k/sprites/" + name + "/"
         property var rig: null
-        path: dir + "rig.json"
+        path: name ? dir + "rig.json" : ""
         printErrors: false
         // read at once: no frame of the pixel sprite before the pictures
         blockLoading: true
@@ -59,19 +64,15 @@ Item {
     }
     RigFile {
         id: angelRig
-        name: "angel"
+        name: root.variant === "glitch" ? "angel-glitch" : "angel"
     }
     RigFile {
         id: demonRig
-        name: "demon"
+        name: root.variant === "glitch" ? "demon-glitch" : "demon"
     }
     RigFile {
-        id: angelGlitchRig
-        name: "angel-glitch"
-    }
-    RigFile {
-        id: demonGlitchRig
-        name: "demon-glitch"
+        id: skinRig
+        name: root.skin ? "demon-" + root.skin : ""
     }
     // the parts of one layer; each carries its own picture, so the old figure's
     // parts never look into the new one's folder while the swap swaps them

@@ -4,7 +4,7 @@
 #   angelos settingsView sidebar|controlpanel|properties|tiles | settingsSkin classic|windose|stream
 #   angelos theme light|dark|auto|toggle | wallpaper <path|random> | bar taskbar|top|island
 #   angelos startMenu | sidebar | idle | lockPreview | fontPreset arcade|soft|block|angelos
-#   angelos ws <n|up|down|prev> | alttab next|prev|cancel | lens in|out|close|toggle | start | restart | stop | run | status | log | report | switch angelos|noctalia
+#   angelos ws <n|up|down|prev> | alttab next|prev|cancel | lens in|out|close|toggle | start | restart | stop | run | status | log | report | sprites | switch angelos|noctalia
 #   angelOS is also a game played over your desktop (an angel, a demon, a story that follows
 #   your choices). Out of it at once, any time: `angelos game off` or Mod+Ctrl+Shift+Escape;
 #   back: `angelos game on`. `angelos game status | reset` (the save, ~/.config/angelos/save.json).
@@ -179,6 +179,8 @@ case "$1" in
     exit 0 ;;
   log)     exec qs -c angelos log -f ;;
   report)  shift; exec python3 "$SHELL_DIR/scripts/report.py" "$@" ;;
+  # the circles' demons from the author's sheets (~/Pictures/angelos-sprites/<circle>/)
+  sprites) shift; [ $# -gt 0 ] || set -- skins; exec python3 "$SHELL_DIR/scripts/sprite-rig.py" "$@" ;;
   switch)  shift; exec python3 "$SHELL_DIR/scripts/switch.py" "$@" ;;
   settings) exec qs -c angelos ipc call angelos settings "${2:-}" ;;
   ws)
