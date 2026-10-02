@@ -79,10 +79,29 @@ cat >"$T/home/.config/angelos/settings.json" <<'JSON'
  "bar": {"metaTap": false}, "updates": {"autoCheck": false}, "system": {"nautilusDefaults": true},
  "developer": {"enabled": true}}
 JSON
+# a stand-in cava for the cava widget's check: like the real one it prints 30 frames a
+# second whether sound comes through its FIFO or not (the tap behind it finds no PipeWire)
+mkdir -p "$T/bin"
+cat >"$T/bin/cava" <<'CAVA'
+#!/usr/bin/env python3
+import os, re, sys, threading, time
+conf = open(sys.argv[sys.argv.index("-p") + 1]).read()
+fifo = re.search(r"source = (.*)", conf).group(1).strip()
+def drain():
+    fd = os.open(fifo, os.O_RDONLY)
+    while True:
+        if not os.read(fd, 4096):
+            time.sleep(0.01)
+threading.Thread(target=drain, daemon=True).start()
+while True:
+    print("0;" * 32, flush=True)
+    time.sleep(1 / 30)
+CAVA
+chmod +x "$T/bin/cava"
 log="${ANGELOS_TEST_LOG:-$T/qs.log}"
 runner=()
 command -v dbus-run-session >/dev/null && runner=(dbus-run-session --)
-env -i PATH="$PATH" LANG=C.UTF-8 HOME="$T/home" USER="${USER:-angel}" \
+env -i PATH="$T/bin:$PATH" LANG=C.UTF-8 HOME="$T/home" USER="${USER:-angel}" \
   XDG_CONFIG_HOME="$T/home/.config" XDG_STATE_HOME="$T/home/.local/state" \
   XDG_CACHE_HOME="$T/home/.cache" XDG_DATA_HOME="$T/home/.local/share" XDG_RUNTIME_DIR="$T/rt" \
   QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME= LD_LIBRARY_PATH="$LIB" QML_IMPORT_PATH="$QML" \

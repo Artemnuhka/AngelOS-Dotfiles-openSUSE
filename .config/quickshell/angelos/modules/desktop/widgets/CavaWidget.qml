@@ -14,7 +14,8 @@ import qs.widgets
 // In hell (Theme.realm) the bars are dried blood; a loud one's top block is the one accent.
 // cava and the tap stop while nobody can see the desk (locked, fullscreen game),
 // and run only in a copy that is shown: the widget's face (DesktopWidgetHost) —
-// its hidden input copy would share the FIFO and the config.
+// its hidden input copy would share the FIFO and the config. A watchdog restarts a
+// cava that stopped printing frames (B4).
 Item {
     id: root
 
@@ -51,11 +52,20 @@ Item {
         onSaved: proc.running = root.live
     }
     property bool ready: false
+    property string written: ""
     function writeConf() {
         if (!ready || !live)
             return;
         proc.running = false;
-        confFile.setText(["[general]", "bars = " + bars, "framerate = 30", "sensitivity = 70", "autosens = 1", "[input]", "method = fifo", "source = " + root.fifo, "sample_rate = 22050", "sample_bits = 16", "[output]", "method = raw", "raw_target = /dev/stdout", "data_format = ascii", "ascii_max_range = 100", "bar_delimiter = 59", "frame_delimiter = 10", "channels = mono", "[smoothing]", "noise_reduction = 60", ""].join("\n"));
+        const text = ["[general]", "bars = " + bars, "framerate = 30", "sensitivity = 70", "autosens = 1", "[input]", "method = fifo", "source = " + root.fifo, "sample_rate = 22050", "sample_bits = 16", "[output]", "method = raw", "raw_target = /dev/stdout", "data_format = ascii", "ascii_max_range = 100", "bar_delimiter = 59", "frame_delimiter = 10", "channels = mono", "[smoothing]", "noise_reduction = 60", ""].join("\n");
+        // the same text again (back from the lock, sleep, a fullscreen game): FileView writes
+        // nothing and sends no `saved`, so cava never came back (B4) — start it right away
+        if (text === written) {
+            proc.running = true;
+            return;
+        }
+        written = text;
+        confFile.setText(text);
     }
     Component.onCompleted: {
         ready = true;
@@ -64,11 +74,20 @@ Item {
     onBarsChanged: writeConf()
     onSourceChanged: writeConf()
 
+    property double lastFrame: 0
+    property int starts: 0                   // the self-test counts them
     Process {
         id: proc
         command: ["python3", Quickshell.shellDir + "/scripts/audio-tap.py", "run", "--conf", root.conf, "--fifo", root.fifo, root.source]
+        onStarted: {
+            root.starts++;
+            root.lastFrame = Date.now();
+        }
         stdout: SplitParser {
-            onRead: line => root.levels = line.split(";").filter(s => s !== "").map(n => parseInt(n) / 100)
+            onRead: line => {
+                root.lastFrame = Date.now();
+                root.levels = line.split(";").filter(s => s !== "").map(n => parseInt(n) / 100);
+            }
         }
         onExited: code => {
             if (code === 127)
@@ -80,7 +99,24 @@ Item {
     Timer {
         id: restart
         interval: 2000
-        onTriggered: proc.running = true
+        onTriggered: proc.running = root.live
+    }
+    // the watchdog: a running cava prints 30 frames a second, silence included — 6 s without
+    // one is a hang (a stuck tap, a stuck cava): start over. And whatever path forgot to
+    // start it while the desk is shown, this does
+    readonly property int stallMs: 6000
+    Timer {
+        interval: 2000
+        repeat: true
+        running: root.live && !root.missing
+        onTriggered: {
+            if (proc.running && Date.now() - root.lastFrame > root.stallMs) {
+                console.warn("cava widget " + (root.widget ? root.widget.uid : "") + ": no frames for " + Math.round((Date.now() - root.lastFrame) / 1000) + " s, restarting");
+                proc.running = false;
+            } else if (!proc.running && !restart.running && root.written !== "") {
+                proc.running = true;
+            }
+        }
     }
 
     PxText {

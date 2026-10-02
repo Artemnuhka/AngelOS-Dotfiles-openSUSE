@@ -59,6 +59,12 @@ else
   fail "Plugin Studio: offline integration tests"
 fi
 
+if python3 "$ROOT/.config/quickshell/angelos/tests/audio/test_audio_tap.py"; then
+  pass "cava's audio tap: no hangs (stand-ins for cava and pw-record)"
+else
+  fail "cava's audio tap: no hangs"
+fi
+
 if command -v shellcheck >/dev/null 2>&1; then
   if shellcheck -S warning "$ROOT/install.sh" "$ROOT/scripts/check.sh" "$ROOT/scripts/test-update.sh" "$ROOT/scripts/ci-local.sh" \
        "$ROOT/.config/quickshell/angelos/scripts/dotfiles-update.sh" "$ROOT/.config/quickshell/angelos/tests/updates/run.sh" &&

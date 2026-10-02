@@ -41,6 +41,8 @@ import "../../services/Intents.js" as Intents
 //             the future, a scene that no longer exists, limbo across a restart, a player
 //             stuck under the old rules (a broken plea counter) — none blocks the way out;
 //             pleas are understood in any wording, with typos and the wrong layout
+//   cava      the cava widget (over a stand-in cava) starts, and starts again after it was
+//             hidden and shown with the same config (B4: the lock, sleep, a fullscreen game)
 //   rmb       a right-click menu opens where the button went down (B2); a right click into
 //             the window's corner pixel does not crash Qt
 // Prints "TEST <name> PASS|FAIL [detail]" and "TEST-PAGE <id>" markers (the
@@ -234,6 +236,22 @@ Scope {
             active: kind !== "" && kind !== "frame"
             source: active ? Quickshell.shellDir + "/modules/desktop/widgets/" + kind + "Widget.qml" : ""
         }
+        // the cava widget for real, over test-ui.sh's stand-in cava (it prints frames like
+        // the real one): hidden and shown again it must come back (B4)
+        Loader {
+            id: cavaStage
+            active: false
+            width: 200
+            height: 100
+            source: Quickshell.shellDir + "/modules/desktop/widgets/CavaWidget.qml"
+            onLoaded: {
+                item.screenName = "selftest";
+                item.widget = {
+                    "uid": "selftest",
+                    "settings": {}
+                };
+            }
+        }
         Loader {
             id: frameStage
             active: hellStage.kind === "frame"
@@ -366,6 +384,7 @@ Scope {
     property string altTabShot: ""
     readonly property string shots: Quickshell.env("ANGELOS_TEST_SHOTS") || ""
     property bool undoDone: false
+    property int cavaFirst: 0
     property int undoSteps: 0
     // views: [view, skin] cases and where in one case the driver is
     property var viewCases: []
@@ -1121,6 +1140,43 @@ Scope {
             report("exit-amnesty", !Story.inHell && !Story.hell.amnesty && Story.player.returns === 1 && (Story.hell.outcomes || []).some(o => o.kind === "amnesty"), "let out in " + (Date.now() - started) + " ms, returns " + Story.player.returns);
             Story.clockShift = 0;
             Story.reset();
+            cavaStage.active = true;
+            started = Date.now();
+            phase = "cava";
+            return;
+        }
+        // B4: cava started, hidden (the lock, sleep, a fullscreen game), shown again with the
+        // same config — it must start again and print frames
+        if (phase === "cava") {
+            const w = cavaStage.item;
+            if ((!w || w.starts < 1 || Date.now() - w.lastFrame > 500) && Date.now() - started < 8000)
+                return;
+            if (!w) {
+                report("cava-back", false, "the cava widget did not load");
+                phase = "rmb";
+                return;
+            }
+            cavaFirst = w.starts;
+            w.visible = false;
+            started = Date.now();
+            phase = "cava-hidden";
+            return;
+        }
+        if (phase === "cava-hidden") {
+            if (Date.now() - started < 600)
+                return;
+            cavaStage.item.visible = true;
+            started = Date.now();
+            phase = "cava-back";
+            return;
+        }
+        if (phase === "cava-back") {
+            const w = cavaStage.item;
+            const back = w.starts > cavaFirst && Date.now() - w.lastFrame < 500;
+            if (!back && Date.now() - started < 6000)
+                return;
+            report("cava-back", back && !w.missing, "started " + cavaFirst + "×, hidden and shown → " + w.starts + "×, frames " + (back ? "again" : "stopped") + " after " + (Date.now() - started) + " ms" + (w.missing ? " (cava missing)" : ""));
+            cavaStage.active = false;
             phase = "rmb";
             return;
         }
