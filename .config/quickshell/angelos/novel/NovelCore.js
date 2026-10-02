@@ -1,8 +1,9 @@
 .pragma library
 
 // angelOS novel — the rules both sides share: the engine in the shell (services/Novel.qml)
-// and the dialogue editor in the browser (novel/editor, served by nov-editor.py with the
-// pragma line cut off). One file, so the editor's play-test does exactly what the shell does.
+// and the dialogue editor in the browser (the author's tool, owner/novel-editor — not shipped;
+// served by nov-editor.py with the pragma line cut off). One file, so the editor's play-test
+// does exactly what the shell does.
 //
 // A story (one chapter) is JSON:
 //   { id, title, with: "angel"|"demon"|"any", start: nodeId, vars: {name: default},

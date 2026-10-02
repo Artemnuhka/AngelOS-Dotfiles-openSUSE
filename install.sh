@@ -41,6 +41,11 @@
 #                                  passes 0 and validates itself, after wiring the shell
 #   DOTFILES_STAMP=YYYYMMDD-HHMMSS suffix of this run's *.bak.<stamp> backups (default: now);
 #                                  Settings → Updates passes the stamp of its snapshot
+#   GITHUB_LOGIN=0|1               angelOS: log in to GitHub (gh) and fetch the author's tools
+#                                  (the chapter editor) if this account can see the author's
+#                                  private repository. Only the author has use for it; for
+#                                  everyone else nothing changes. Asked interactively (default
+#                                  no), unattended: 0. Later: `angelos author login`
 #
 # Every file that gets replaced is first moved to  name.bak.YYYYMMDD-HHMMSS.
 # Re-running the installer is safe: unchanged files are left alone.
@@ -63,7 +68,7 @@ VOXTYPE_FORCE="${VOXTYPE_FORCE:-0}"
 # asks about the rest.
 is_set() { [[ -n "${!1+x}" ]]; }
 for v in DOTFILES_MODE DESKTOP_SHELL NOCTALIA KB_LAYOUTS KB_TOGGLE INSTALL_VOXTYPE DOWNLOAD_VOXTYPE_MODEL \
-         INSTALL_WALLPAPERS WALLPAPER_PACKS INSTALL_SDDM NOCTALIA_RESET_SETTINGS ANGELOS_GAME; do
+         INSTALL_WALLPAPERS WALLPAPER_PACKS INSTALL_SDDM NOCTALIA_RESET_SETTINGS ANGELOS_GAME GITHUB_LOGIN; do
   is_set "$v" && declare -r "GIVEN_$v=1"
 done
 given() { local n="GIVEN_$1"; [[ -n "${!n:-}" ]]; }
@@ -143,6 +148,7 @@ confirm() {
 
 [[ "$STAMP" =~ ^[0-9]{8}-[0-9]{6}(-[0-9]+)?$ ]] || die "DOTFILES_STAMP must look like 20260101-120000 (got: $STAMP)"
 [[ "$VALIDATE_NIRI" == 0 || "$VALIDATE_NIRI" == 1 ]] || die "VALIDATE_NIRI must be 0 or 1"
+[[ -z "${GITHUB_LOGIN:-}" || "$GITHUB_LOGIN" == 0 || "$GITHUB_LOGIN" == 1 ]] || die "GITHUB_LOGIN must be 0 or 1"
 
 # ── Keyboard layouts ─────────────────────────────────────────────────────────
 
@@ -1005,6 +1011,47 @@ restart_shell() {
   fi
 }
 
+# ── The author's tools (optional) ───────────────────────────────────────────
+
+# Only the author of angelOS has use for this: when the GitHub account logged in through gh
+# can see the author's private repository, the chapter editor (and the owner's Dotfiles
+# tools) are fetched into the shell's owner/ folder (scripts/author-tools.sh). GitHub
+# decides — the repository is private; for everyone else nothing is fetched and nothing
+# changes. angelOS keeps no token: gh keeps its own login, with its usual permissions.
+offer_author_tools() {
+  [[ "$DESKTOP_SHELL" == angelos ]] || return 0
+  local script="$HOME_DIR/.config/quickshell/angelos/scripts/author-tools.sh" want="${GITHUB_LOGIN:-}"
+  [[ -f "$script" ]] || return 0
+  if [[ -z "$want" ]]; then
+    ((INTERACTIVE)) || return 0
+    hr
+    say "$(_ 'Optional: log in to GitHub.' 'Необязательно: войти в GitHub.')"
+    say "$(_ '  It is only for the author of angelOS: their own tools (the chapter editor) live in a' \
+             '  Это нужно только автору angelOS: его инструменты (редактор глав) лежат в закрытом')"
+    say "$(_ '  private repository and are fetched only for an account GitHub lets in. For anyone' \
+             '  репозитории и скачиваются, только если GitHub пускает туда этот аккаунт. Для всех')"
+    say "$(_ '  else nothing changes — skipping loses nothing. angelOS stores no token: gh does.' \
+             '  остальных ничего не меняется — пропустив, вы ничего не теряете. Токен хранит gh, не angelOS.')"
+    if confirm "$(_ 'Log in to GitHub now?' 'Войти в GitHub сейчас?')" n; then want=1; else want=0; fi
+  fi
+  [[ "$want" == 1 ]] || return 0
+  if ! command -v gh >/dev/null 2>&1; then
+    warn "$(_ 'gh (github-cli) is not installed: install it, then run `angelos author login`' \
+              'gh (github-cli) не установлен: поставьте его и выполните `angelos author login`')"
+    return 0
+  fi
+  if ! gh auth status >/dev/null 2>&1; then
+    if ! ((INTERACTIVE)); then
+      warn "$(_ 'No gh login, and no terminal to log in: `angelos author login` later' \
+                'gh не залогинен, а войти без терминала нельзя: позже `angelos author login`')"
+      return 0
+    fi
+    gh auth login --hostname github.com --git-protocol https --web ||
+      { warn "$(_ 'GitHub login did not finish' 'Вход в GitHub не завершился')"; return 0; }
+  fi
+  sh "$script" fetch || true
+}
+
 # ── Main ─────────────────────────────────────────────────────────────────────
 
 ask_profile
@@ -1026,6 +1073,7 @@ install_flatpak
 install_sddm
 enable_services
 validate
+offer_author_tools
 summary
 ((NIRI_INVALID == 0)) || die "$(_ 'Niri config failed validation; see: niri validate -c ~/.config/niri/config.kdl' \
                                    'Конфиг Niri не прошёл проверку; смотрите: niri validate -c ~/.config/niri/config.kdl')"

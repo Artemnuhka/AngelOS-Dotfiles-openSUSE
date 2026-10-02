@@ -630,7 +630,7 @@ PxPage {
         icon: "document"
         SettingRow {
             label: I18n.t("Истории ангела", "The angel's stories")
-            hint: I18n.t("главы из папки ", "Chapters from ") + Novel.dir + I18n.t(": записки на обоях после сна, вопросы с вариантами ответа («?» над ней — нажми), её записки про тебя. Пишутся в редакторе диалогов", ": notes on the wallpaper after sleep, questions with answers to pick (a “?” over her — click), her notes about you. Written in the dialogue editor")
+            hint: I18n.t("главы из папки ", "Chapters from ") + Novel.dir + I18n.t(": записки на обоях после сна, вопросы с вариантами ответа («?» над ней — нажми), её записки про тебя", ": notes on the wallpaper after sleep, questions with answers to pick (a “?” over her — click), her notes about you")
             PxToggle {
                 checked: Config.novel.enabled
                 onToggled: c => Config.novel.enabled = c
@@ -643,7 +643,7 @@ PxPage {
                 const s = Novel.state;
                 const st = Novel.stories[s.chapter];
                 if (!Object.keys(Novel.stories).length)
-                    return I18n.t("глав нет — открой редактор", "No chapters yet — open the editor");
+                    return Novel.editorHere ? I18n.t("глав нет — открой редактор", "No chapters yet — open the editor") : I18n.t("глав пока нет", "No chapters yet");
                 if (!s.chapter)
                     return I18n.t("ещё не началась: первая глава ждёт выхода компьютера из сна (или «Начать сейчас»)", "Not started: the first chapter waits for the computer to wake from sleep (or “Start now”)");
                 return (st ? st.title || s.chapter : s.chapter) + (s.main.node ? " · " + s.main.node + (s.main.wait ? " (" + s.main.wait.replace(/^at:\d+/, I18n.t("ждёт времени", "waits for its time")) + ")" : "") : (s.done[s.chapter] ? I18n.t(" · главная линия пройдена", " · main line done") : "")) + (s.free ? I18n.t(" · вопросы и записки приходят сами", " · questions and notes come by themselves") : "");
@@ -651,7 +651,9 @@ PxPage {
             Flow {
                 width: parent.width
                 spacing: Theme.u * 2
+                // the author's tool (E): only where it was fetched (`angelos author`)
                 PxButton {
+                    visible: Novel.editorHere
                     compact: true
                     accent: true
                     icon: "document"

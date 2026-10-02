@@ -10,6 +10,8 @@
 #   back: `angelos game on`. `angelos game status | reset` (the save, ~/.config/angelos/save.json).
 #   angelos motion full|calm|off — how much moves: calm = no flashes, shaking or sudden loud
 #   sounds; off = no animations at all (the shell, niri, hell), an optimisation mode
+#   angelos author status|fetch|login — the author's own tools (the chapter editor), only for
+#   the GitHub account with access to the author's private repository; gh keeps the login
 SHELL_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/angelos"
 CONF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/angelos"
 RUN_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/angelos"
@@ -204,11 +206,21 @@ case "$1" in
     [ "$dir" = cancel ] || exec niri msg action focus-window-previous
     ;;
   novel)
-    # the novel's dialogue editor runs without the shell; the rest goes over IPC
-    if [ "${2:-}" = edit ]; then exec python3 "$SHELL_DIR/novel/editor/nov-editor.py"; fi
+    # the novel's dialogue editor runs without the shell (the author's tool: owner/, see
+    # `angelos author`); the rest goes over IPC
+    if [ "${2:-}" = edit ]; then
+      [ -f "$SHELL_DIR/owner/novel-editor/nov-editor.py" ] && exec python3 "$SHELL_DIR/owner/novel-editor/nov-editor.py"
+      echo "the chapter editor is the author's tool, not part of angelOS (angelos author)" >&2
+      exit 1
+    fi
     shift
     exec qs -c angelos ipc call angelos novel "$*" ;;
   motion) exec qs -c angelos ipc call angelos motion "${2:-status}" ;;
+  author)
+    # the author's tools (the chapter editor, owner/): status | fetch | login — only for a
+    # GitHub account that can see the author's private repository; nothing for anyone else
+    shift
+    exec sh "$SHELL_DIR/scripts/author-tools.sh" "$@" ;;
   game)
     # the game: off | on | calm on|off | status | reset (+ dev: circle, scene, sin, outcome, try)
     shift

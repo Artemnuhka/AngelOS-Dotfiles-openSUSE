@@ -348,7 +348,7 @@ JsonAdapter {
     // the novel (services/Novel, ~/AngelOs-Nov): chapters the angel plays out on the desktop
     property JsonObject novel: JsonObject {
         property bool enabled: true
-        property string dir: "~/AngelOs-Nov"   // story/*.json and sprites/<who>/*.png (the editor: `angelos novel edit`)
+        property string dir: "~/AngelOs-Nov"   // story/*.json and sprites/<who>/*.png (the author's editor: `angelos novel edit`)
         property string gender: ""          // from the setup wizard: m | f | "" (not said) — she still asks
         property string name: ""            // how she calls you ({name}); "" = the login name
     }

@@ -7,7 +7,8 @@ import qs.config
 import "../novel/NovelCore.js" as Core
 
 // The novel: chapters the angel (or the demon) plays out on the desktop, written in the
-// dialogue editor (`angelos novel edit`, novel/editor) into ~/AngelOs-Nov/story/*.json.
+// dialogue editor (`angelos novel edit` — the author's tool in owner/novel-editor, fetched by
+// `angelos author`) into ~/AngelOs-Nov/story/*.json.
 // The rules — node types, templates, conditions — are novel/NovelCore.js, shared with the
 // editor's play-test. Shown by modules/novel (the dialogue box next to her, the crumpled
 // paper on the desk, the unfolded note) and AngelHelper ("?" over her head).
@@ -694,8 +695,20 @@ Singleton {
         state = s;
         tick();
     }
+    // the dialogue editor is the author's tool (owner/, `angelos author`): there only for them
+    readonly property string editorPath: Quickshell.shellDir + "/owner/novel-editor/nov-editor.py"
+    property bool editorHere: false
+    FileView {
+        path: root.editorPath
+        printErrors: false
+        watchChanges: true
+        onLoaded: root.editorHere = true
+        onLoadFailed: root.editorHere = false
+        onFileChanged: reload()
+    }
     function edit() {
-        Quickshell.execDetached(["python3", Quickshell.shellDir + "/novel/editor/nov-editor.py", "--dir", dir]);
+        if (editorHere)
+            Quickshell.execDetached(["python3", editorPath, "--dir", dir]);
     }
 
     // ---- the game's scenes (services/Story) ----

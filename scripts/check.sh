@@ -72,10 +72,25 @@ else
   fail "browser themes: tests/browsers/test_browser_theme.py"
 fi
 
+if bash "$ROOT/.config/quickshell/angelos/tests/author/run.sh" >"$WORK/author.log" 2>&1; then
+  pass "author's tools: only for an account GitHub lets in (stand-in gh)"
+else
+  sed 's/^/    /' "$WORK/author.log" >&2
+  fail "author's tools: tests/author/run.sh"
+fi
+
+# the author's tools never ship (E): the chapter editor and owner/ live in the private repo
+if [[ -e "$ROOT/.config/quickshell/angelos/novel/editor" || -e "$ROOT/.config/quickshell/angelos/owner" ]] ||
+   search 'novel/editor/nov-editor\.py' -g '!scripts/check.sh' >/dev/null 2>&1; then
+  fail "the author's tools (novel/editor, owner/) are in the public tree"
+else
+  pass "the author's tools stay out of the public tree"
+fi
+
 if command -v shellcheck >/dev/null 2>&1; then
   if shellcheck -S warning "$ROOT/install.sh" "$ROOT/scripts/check.sh" "$ROOT/scripts/test-update.sh" "$ROOT/scripts/ci-local.sh" \
        "$ROOT/.config/quickshell/angelos/scripts/dotfiles-update.sh" "$ROOT/.config/quickshell/angelos/tests/updates/run.sh" &&
-     shellcheck -s sh -S warning "$ROOT/.config/quickshell/angelos/bin/angelos"; then
+     shellcheck -s sh -S warning "$ROOT/.config/quickshell/angelos/bin/angelos" "$ROOT/.config/quickshell/angelos/scripts/author-tools.sh"; then
     pass "shellcheck"
   else
     fail "shellcheck"
@@ -409,7 +424,7 @@ else
   fi
 
   # Bad input must be refused, not written into the config.
-  for bad in "KB_LAYOUTS=us zz9" "KB_TOGGLE=nonsense" "DOTFILES_MODE=nope" "NOCTALIA=2"; do
+  for bad in "KB_LAYOUTS=us zz9" "KB_TOGGLE=nonsense" "DOTFILES_MODE=nope" "NOCTALIA=2" "GITHUB_LOGIN=2"; do
     if install_case bad "$bad"; then fail "installer rejects: $bad"; else pass "installer rejects: $bad"; fi
     rm -rf "${WORK:?}/bad"
   done
