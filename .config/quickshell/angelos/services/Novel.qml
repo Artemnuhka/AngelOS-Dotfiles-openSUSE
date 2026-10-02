@@ -412,6 +412,20 @@ Singleton {
             }
         return false;
     }
+    // a paper shown unfolded at once, outside any story ("What did I sign?": Story.contractPaper);
+    // folding it leads nowhere. Never over a story's own paper — that one waits to be read
+    function showPaper(title, text, from) {
+        if (paper !== null)
+            return false;
+        paper = {
+            "from": from || "angel",
+            "title": title || "",
+            "text": text || "",
+            "thread": ""
+        };
+        noteOpen = true;
+        return true;
+    }
     // the paper was unfolded and folded again
     function noteRead() {
         const p = paper;

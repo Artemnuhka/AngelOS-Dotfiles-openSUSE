@@ -45,7 +45,7 @@ Singleton {
     readonly property var vars: save.vars || ({})
     readonly property var novelState: save.novel
 
-    // ---- the rules and the voices (story/game.json, story/voices.json) ----
+    // ---- the rules and the voices (story/game.json, story/voices.json, story/contract.json) ----
     property var rules: ({})
     property var voices: ({})
     readonly property var order: rules.order && rules.order.length ? rules.order : ["limbo", "lust", "gluttony", "greed", "wrath", "heresy", "violence", "fraud", "treachery"]
@@ -262,6 +262,18 @@ Singleton {
                 root.voices = JSON.parse(text());
             } catch (e) {
                 console.warn("story/voices.json: " + e);
+            }
+        }
+    }
+    FileView {
+        path: Quickshell.shellDir + "/story/contract.json"
+        watchChanges: true
+        onFileChanged: reload()
+        onLoaded: {
+            try {
+                root.contractText = JSON.parse(text());
+            } catch (e) {
+                console.warn("story/contract.json: " + e);
             }
         }
     }
@@ -518,6 +530,71 @@ Singleton {
             return false;
         Angel.getOut("limbo");
         return true;
+    }
+
+    // ---- "What did I sign?" (D2): the pact on paper, and the way out as it stands ----
+    property var contractText: ({})       // story/contract.json (draft texts)
+    // signed: in force · washed: signed once, washed off on the way to the stars · none
+    function pactState() {
+        if (hell.pact)
+            return "signed";
+        return (hell.outcomes || []).some(o => o.kind === "pact") ? "washed" : "none";
+    }
+    function contractPaper() {
+        const st = pactState();
+        const c = contractText[st] || {};
+        const signed = (hell.outcomes || []).filter(o => o.kind === "pact").pop();
+        const where = signed && order.includes(signed.circle) ? Theme.roman(circleN(signed.circle)) + " — " + circleName(signed.circle) : I18n.t("портал", "the portal");
+        const fill = s => render(s || "").replace(/%circle/g, where).replace(/%date/g, signed ? dateText(signed.at) : "");
+        let text = fill(c.text);
+        const terms = exitTerms();
+        if (terms.length)
+            text += "\n\n" + I18n.t("Условия выхода", "The way out") + "\n" + terms.map(l => "· " + l).join("\n");
+        return {
+            "state": st,
+            "title": fill(c.title) || I18n.t("Договор", "The pact"),
+            "text": text
+        };
+    }
+    // her words as she hands it over (contract.json → say.angel|demon.<state>)
+    function contractLine(who, st) {
+        const list = ((contractText.say || {})[who] || {})[st] || [];
+        if (!list.length)
+            return "";
+        const l = list[Math.floor(Math.random() * list.length)];
+        return render(Array.isArray(l) ? (I18n.english ? l[1] : l[0]) : l);
+    }
+    function dateText(ms) {
+        const d = new Date(ms);
+        const ru = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
+        const en = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        return I18n.english ? d.getDate() + " " + en[d.getMonth()] + " " + d.getFullYear() : d.getDate() + " " + ru[d.getMonth()] + " " + d.getFullYear();
+    }
+    // the way out in numbers — where, when the next try is, how far the pact and limbo
+    // are; never which answers lead down (issue #31: the player saw none of it)
+    function exitTerms() {
+        if (!enabled || !inHell)
+            return [];
+        if (hell.limbo)
+            return [I18n.t("Лимб. Здесь никого нет. Отойди от компьютера — заблокируй экран минут на " + limboReturnMinutes + ", и ангел тебя найдёт", "Limbo. Nobody is here. Step away from the computer — lock the screen for " + limboReturnMinutes + " minutes, and the angel will find you")];
+        const n = circleN(circle), a = hell.attempts || 0;
+        const left = Math.ceil((nextTry - now()) / 60000);
+        const ahead = order.slice(Math.max(0, order.indexOf(circle)) + 1).filter(id => !(hell.path || []).includes(id)).length;
+        const toPact = pactAfter - a, toLimbo = limboAfter - (hell.silences || 0);
+        const word = (v, one, few, many) => v % 10 === 1 && v % 100 !== 11 ? one : v % 10 >= 2 && v % 10 <= 4 && (v % 100 < 12 || v % 100 > 14) ? few : many;
+        const out = [];
+        out.push(I18n.t("Круг " + Theme.roman(n) + " из IX — " + circleName(circle), "Circle " + Theme.roman(n) + " of IX — " + circleName(circle)));
+        out.push(I18n.t("Выход — вниз, через дно: впереди " + ahead + " " + word(ahead, "круг", "круга", "кругов"), "The way out is down, through the bottom: " + ahead + " " + (ahead === 1 ? "circle" : "circles") + " ahead"));
+        out.push(left > 0 ? I18n.t("Следующая попытка — через " + left + " мин («Искать выход»)", "Next try in " + left + " min (“Seek the way out”)") : I18n.t("Следующая попытка — сейчас («Искать выход»)", "Next try: now (“Seek the way out”)"));
+        out.push(I18n.t("Попыток в этом круге: " + a, "Tries in this circle: " + a));
+        if (hell.pact)
+            out.push(I18n.t("Договор подписан — короткого пути больше нет", "The pact is signed — there's no shorter way left"));
+        else if (toPact > 0)
+            out.push(toPact === 1 ? I18n.t("Короткий путь (договор) предложат на следующей попытке", "The short way (the pact) comes up at the next try") : I18n.t("Короткий путь (договор) предложат на " + toPact + "-й попытке в этом круге", "The short way (the pact) comes up at try " + toPact + " from now, in this circle"));
+        else
+            out.push(I18n.t("Короткий путь (договор) предлагают на каждой попытке — можно отказаться", "The short way (the pact) is offered at every try — you can refuse"));
+        out.push(toLimbo > 0 ? I18n.t("Лимб — если промолчать ещё " + toLimbo + " " + word(toLimbo, "раз", "раза", "раз"), "Limbo — if you say nothing " + toLimbo + " more " + (toLimbo === 1 ? "time" : "times")) : I18n.t("Ещё одно молчание — и лимб", "One more silence and it's limbo"));
+        return out;
     }
 
     // ---- the demon's voice in this circle (story/voices.json) ----

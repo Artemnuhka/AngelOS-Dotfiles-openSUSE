@@ -22,6 +22,17 @@ const intents = {
         "weak": ["выход*", "выйт*", "выйд*", "выпус*", "назад", "обратн*", "домой", "уйди", "уйдешь", "уходи", "уйти", "уберись", "прогон*", "прогна*", "свобод*", "пожалуйст*", "прошу", "хватит", "отстань",
             "back", "out", "home", "away", "leave", "free", "please", "save", "stop", "beg*"],
         "not": ["верно", "верный", "верная", "верное", "верные", "вернее", "вернейший", "вера", "веры", "верю", "веришь", "верить", "верит", "верх"]
+    },
+    // "What did I sign?" (D2): the pact, its terms, what the player agreed to — the one in
+    // the corner shows the paper. Bare words where a stem would catch everyday ones
+    // ("сделк*" would take "сделать", "sign*" — "sing"). The weak words are only the
+    // question ("покажи", "what"): they break a tie with a plea, never count alone
+    "signed": {
+        "strong": ["подпис*", "подпиш*", "договор*", "контракт*", "соглас*", "услови*", "пакт*", "расписк*", "сделка", "сделку", "сделки", "сделке",
+            "sign", "signed", "signing", "signature*", "contract*", "agree*", "terms", "pact*", "bargain*", "covenant*"],
+        "weak": ["покаж*", "показ*", "что", "чо", "чего", "какие", "какой", "какая", "каком", "где", "прочит*", "прочти", "читать",
+            "what", "whats", "show*", "which", "where", "read"],
+        "not": ["подписка", "подписки", "подписку", "подпиской", "подписок", "подписке", "подписчик", "подписчики", "подписчиков", "подписаться", "подпишись", "подпишитесь"]
     }
 };
 
@@ -139,6 +150,13 @@ function score(text, id) {
             best = r;
     }
     return best;
+}
+// is `a` what the text means rather than `b`: more of a's strong words, or as many and a
+// question of a's ("покажи договор с ангелом" is about the pact, "отпусти, я не
+// подписывал" and "верни ангела, я ничего не подписывал" are pleas)
+function stronger(text, a, b) {
+    const x = score(text, a), y = score(text, b);
+    return x.strong > y.strong || (x.strong > 0 && x.strong === y.strong && x.weak > 0);
 }
 function strong(text, id) {
     return score(text, id).strong > 0;

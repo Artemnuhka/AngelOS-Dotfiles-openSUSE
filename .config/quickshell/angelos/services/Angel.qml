@@ -231,6 +231,10 @@ Singleton {
         // typos and the wrong keyboard layout too (services/Intents.js, issue #31); the
         // weak words ("назад", "please") only when it isn't a settings question
         const settingsIntent = intents.find(it => it.re.test(s));
+        // "What did I sign?" (D2), in any wording, typos and the wrong layout too — unless
+        // wanting out is the stronger wish in the same words
+        if (Intents.stronger(s, "signed", "plea"))
+            return showContract();
         if (demon && (Intents.strong(s, "plea") || (!settingsIntent && Intents.weak(s, "plea"))))
             return plea();
         if (/^(привет|здравств|хай|хей|ку\b|добр|hello|hi\b|hey|yo\b)/.test(s))
@@ -389,6 +393,14 @@ Singleton {
         hush();
         Story.attempt(false);
         now = Date.now();
+    }
+    // "What did I sign?" (D2): the one in the corner hands the paper over — the pact, or that
+    // there is none, and in hell the way out as it stands (Story.contractPaper)
+    function showContract() {
+        const p = Story.contractPaper();
+        if (!Novel.showPaper(p.title, p.text, demon ? "demon" : "angel"))
+            return say(I18n.t("Сначала прочти записку, что уже лежит.", "Read the note that's already there first."));
+        say(Story.contractLine(demon ? "demon" : "angel", p.state) || p.title, null, 5000);
     }
     // the way out was found (Story.outcome): stars — the bottom passed; pact — signed, out
     // now; limbo — the angel found the player in the grey. A line, then the swap back.

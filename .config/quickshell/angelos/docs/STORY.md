@@ -110,6 +110,7 @@ IX Коцит, верный ответ → «И вышли мы вновь уз�
 | правила (числа, действия → грехи) | `story/game.json` |
 | вид кругов | `story/circles.json` → `config/HellLook.qml` → `Theme.hell*` |
 | голоса демоницы по кругам | `story/voices.json` |
+| «Что я подписал?» — договор на бумаге и «Условия выхода» | `story/contract.json` (черновик) — `Story.contractPaper`, вопрос — `services/Intents.js → signed` |
 | сцены | `story/scenes/*.json` — движок новеллы (`services/Novel.qml`, поток `game`) |
 | переход между кругами | `services/CircleFx.qml` + `modules/y2k/CircleTransition.qml` |
 | редкое событие (кромка окна или погода) | `services/HellAmbient.qml` |

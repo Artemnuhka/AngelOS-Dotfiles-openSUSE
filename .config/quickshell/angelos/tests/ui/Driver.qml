@@ -1114,6 +1114,33 @@ Scope {
             const typed = Novel.sceneBusy;
             Novel.stopScene();
             report("exit-words", missed.length === 0 && typed, missed.length ? "misread: " + missed.join("; ") : pleas.length + " pleas and " + notPleas.length + " other questions read right; typed → the trial " + typed);
+            // D2: "What did I sign?" in any wording; the paper with the way out in numbers; a
+            // signed pact on it; a plea that mentions signing stays a plea
+            const asks = ["что я подписал", "Что я подписала?", "покажи договор", "какие условия выхода", "на что я согласился", "what did I sign", "show me the contract", "what are the terms", "покожи договр", "xnj z gjlgbcfk", "покажи договор с ангелом"];
+            const notAsks = ["расскажи шутку", "сделай громче", "как сделать обои", "sing me a song", "подписка на youtube", "верни ангела, я ничего не подписывал", "отпусти, я не подписывал"];
+            const misreadSign = asks.filter(s => !Intents.stronger(s, "signed", "plea")).concat(notAsks.filter(s => Intents.stronger(s, "signed", "plea")).map(s => "not: " + s));
+            Novel.stopScene();
+            Angel.answer("Что я подписал?");
+            const p0 = Novel.paper;
+            const terms = !!p0 && Novel.noteOpen && p0.text.indexOf(I18n.t("Условия выхода", "The way out")) >= 0 && p0.text.indexOf(Story.circleName(Story.circle)) >= 0 && Story.pactState() === "none";
+            Novel.noteRead();
+            Story.hell.outcomes = (Story.hell.outcomes || []).concat([{
+                        "kind": "pact",
+                        "circle": "greed",
+                        "at": Story.now()
+                    }]);
+            Story.hell.pact = true;
+            Angel.answer("what did i sign");
+            const p1 = Novel.paper;
+            const signedPaper = !!p1 && p1.text.indexOf(Story.circleName("greed")) >= 0 && p1.text.indexOf(Story.dateText(Story.now())) >= 0;
+            Novel.noteRead();
+            Story.hell.pact = false;
+            Story.hell.outcomes = Story.hell.outcomes.filter(o => o.kind !== "pact");
+            Story.clockShift += 11 * 60000;
+            Angel.answer("отпусти, я не подписывал");
+            const stillPlea = Novel.sceneBusy && !Novel.paper;
+            Novel.stopScene();
+            report("contract", misreadSign.length === 0 && terms && signedPaper && stillPlea, misreadSign.length ? "misread: " + misreadSign.join("; ") : asks.length + " questions and " + notAsks.length + " others read right; the paper with the way out " + terms + ", a signed pact with its circle and date " + signedPaper + ", a plea about signing stays a plea " + stillPlea);
             // limbo across a restart: the angel finds the player once enough time has passed
             Story.outcome("limbo");
             Story.hell.limboSince = Story.now() - 11 * 60000;
@@ -1179,6 +1206,11 @@ Scope {
             if ((Angel.transition || DesktopWidgets.burning) && Date.now() - started < 10000)
                 return;
             report("pace-slow", paceSlow && !Angel.demon && Theme.realm === "heaven", "a switch " + (Story.quickSwitchMs / 1000 + 1) + " s after the last: the full show " + paceSlow + ", heaven again " + (Theme.realm === "heaven"));
+            // D2 in heaven: the angel shows the paper, no way out to list
+            Angel.answer("покажи договор");
+            const hp = Novel.paper;
+            report("contract-heaven", !!hp && Novel.noteOpen && hp.text.indexOf(I18n.t("Условия выхода", "The way out")) < 0 && Story.exitTerms().length === 0, "the angel's paper: " + (hp ? hp.title : "none"));
+            Novel.noteRead();
             Story.reset();
             phase = "walls";
             return;
