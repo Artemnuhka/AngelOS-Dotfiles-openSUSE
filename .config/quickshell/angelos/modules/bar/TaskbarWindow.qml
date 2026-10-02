@@ -8,9 +8,8 @@ import qs.widgets
 // Win98 taskbar at the bottom. Auto-hide (Bar → Auto-hide): the bar slides down
 // leaving a thin line at the screen edge, windows get the whole screen; the
 // pointer at the bottom edge, Start or a bar menu bring it back.
-// In hell (BarLayout.hell): a hot slab of obsidian with lava in its cracks and flames
-// licking up along its top edge — above the bar, in headroom that takes no input and
-// no room from the windows.
+// In hell (BarLayout.hell): the circle's ground with calm plates under the widgets and a
+// thin rim along the top (HellBarFrame) — nothing above the bar, nothing over its buttons.
 PanelWindow {
     id: win
 
@@ -53,7 +52,7 @@ PanelWindow {
 
     readonly property bool hell: BarLayout.hell
     readonly property int barHeight: Theme.u * 20
-    readonly property int headroom: hell ? Theme.u * 8 : 0
+    readonly property int headroom: 0
 
     screen: modelData
     anchors {
@@ -110,27 +109,19 @@ PanelWindow {
             y: -box.inset
             color: Theme.hi
         }
-        // hell: the slab under everything, the flames over its top edge
-        HellSlab {
+        // hell: the ground, the plates under the widgets, the rim on top
+        HellBarFrame {
             visible: win.hell
             x: -box.inset
             y: -box.inset
             width: box.width
             height: box.height
-            look: "lava"
-            live: !Shell.fullscreenOn(win.modelData.name)
-        }
-        HellFlames {
-            visible: win.hell
-            x: -box.inset
-            y: -box.inset - height + Theme.u
-            width: box.width
-            rows: 8
-            seed: 4
-            live: !Shell.fullscreenOn(win.modelData.name)
+            content: taskbarContent
+            rim: "top"
         }
 
         BarContent {
+            id: taskbarContent
             anchors.fill: parent
             anchors.leftMargin: Theme.u
             anchors.rightMargin: Theme.u

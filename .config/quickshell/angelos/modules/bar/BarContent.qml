@@ -7,8 +7,10 @@ import qs.widgets
 // Left / center / right sections from BarLayout. `inline` packs everything in one row (island,
 // dock). Capsules: the full-width layout, each section as wide as it needs (the window draws
 // a capsule behind each: leftBox / centerBox / rightBox give their places). In hell
-// (BarLayout.hell) the whole content is re-inked in hell's palette (shaders/hell_ink.frag);
-// the frame around it is each window's own. The dock stays as it is in hell.
+// (BarLayout.hell) every pixel of the content takes one of four colours of the circle's
+// palette (shaders/hell_bar_ink.frag: face, dim, text, accent — each checked against the
+// plate), and `hellPlates` tells the window's HellBarFrame where the runs of widgets are,
+// so they sit on a calm plate and never on the pattern. The dock stays as it is in hell.
 Item {
     id: root
 
@@ -27,8 +29,52 @@ Item {
     readonly property bool hellInk: BarLayout.hell && style !== "dock"
     layer.enabled: hellInk
     layer.effect: ShaderEffect {
-        fragmentShader: Qt.resolvedUrl("../../shaders/hell_ink.frag.qsb")
-        property real keep: 0.32
+        fragmentShader: Qt.resolvedUrl("../../shaders/hell_bar_ink.frag.qsb")
+        property color plate: Theme.hellPlate
+        property color face: Theme.mix(Theme.hellRim, Theme.hellFace, 0.4)
+        property color dim: Theme.hellTextDim
+        property color text: Theme.hellText
+        property color accent: Theme.hellAccent
+    }
+    // where a section's widgets really are, in its own coordinates: [from, to] or null (a
+    // stretched "Windows" counts as wide as its buttons)
+    function usedRange(sec) {
+        let a = Infinity, b = -Infinity;
+        for (const c of sec.children) {
+            if (c.wid === undefined || !c.visible || c.width <= 0)
+                continue;
+            const w = c.wid === "tasks" && c.item && c.item.naturalWidth !== undefined ? Math.min(c.width, c.item.naturalWidth) : c.width;
+            if (w <= 0)
+                continue;
+            a = Math.min(a, c.x);
+            b = Math.max(b, c.x + w);
+        }
+        return a < b ? [a, b] : null;
+    }
+    // the runs of widgets in hell, in this item's coordinates: [{x, y, w, h}]
+    readonly property var hellPlates: {
+        if (!hellInk)
+            return [];
+        const out = [];
+        const pad = Theme.u * 2;
+        const h = itemHeight + Theme.u * 2;
+        const y = Math.round((height - h) / 2);
+        const secs = inline ? [[inlineRow.children[0], inlineRow], [inlineRow.children[1], inlineRow], [inlineRow.children[2], inlineRow]] : [[left, full], [center, full], [right, full]];
+        for (const [sec, holder] of secs) {
+            if (!sec || !sec.visible)
+                continue;
+            const r = usedRange(sec);
+            if (!r)
+                continue;
+            const x0 = holder.x + sec.x + r[0] - pad;
+            out.push({
+                "x": x0,
+                "y": y,
+                "w": r[1] - r[0] + pad * 2,
+                "h": h
+            });
+        }
+        return out;
     }
     readonly property var layout: BarLayout.effective
     readonly property bool lyricsShown: BarLayout.has("lyrics") && Config.lyrics.enabled && Lyrics.visibleToggle && Lyrics.hasLyrics && (!Config.lyrics.screens.length || Config.lyrics.screens.includes(screenName))
@@ -116,6 +162,7 @@ Item {
 
     // ---- full width (taskbar / top) ----
     Item {
+        id: full
         anchors.fill: parent
         visible: !root.inline
 
@@ -127,7 +174,7 @@ Item {
 
         // sunken Win98 notification area behind the right side of the taskbar
         PxBox {
-            visible: (root.style === "taskbar") && right.implicitWidth > 0
+            visible: (root.style === "taskbar") && right.implicitWidth > 0 && !root.hellInk
             x: right.x - Theme.u * 4
             width: right.width + Theme.u * 6
             height: root.itemHeight

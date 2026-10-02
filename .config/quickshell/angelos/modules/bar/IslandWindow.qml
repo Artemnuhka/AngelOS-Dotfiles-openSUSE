@@ -8,8 +8,8 @@ import qs.widgets
 // Floating island at the top centre. The surface keeps the screen's width and
 // the island grows and shrinks inside it, animated: resizing the layer surface
 // on every change of its content went in jerks (issue #14). Input and blur
-// only cover the island. In hell (BarLayout.hell): a floating chunk of brimstone,
-// sulphur in its cracks, with a fire burning under it (headroom below, no input there).
+// only cover the island. In hell (BarLayout.hell): the circle's ground with plates and a rim
+// (HellBarFrame) around the content, nothing under it.
 PanelWindow {
     id: win
 
@@ -22,7 +22,7 @@ PanelWindow {
     implicitWidth: modelData.width - Theme.u * 8
     readonly property bool hell: BarLayout.hell
     readonly property int barHeight: Theme.u * 20
-    implicitHeight: barHeight + (hell ? Theme.u * 9 : 0)
+    implicitHeight: barHeight
     mask: Region {
         item: box
     }
@@ -60,15 +60,14 @@ PanelWindow {
             height: Theme.u * 2
             color: Theme.menuHeader
         }
-        HellSlab {
+        HellBarFrame {
             visible: win.hell
             x: -box.inset
             y: -box.inset
             width: box.width
             height: box.height
-            look: "brimstone"
-            seed: 7
-            live: !Shell.fullscreenOn(win.modelData.name)
+            content: row
+            rim: "all"
         }
 
         // the content shows through the growing island, not over its edges
@@ -87,19 +86,6 @@ PanelWindow {
                 itemHeight: Theme.u * 13
             }
         }
-    }
-
-    // the brimstone's underside burning, flames hanging from it, a little narrower than it
-    HellFlames {
-        visible: win.hell
-        width: Math.max(Theme.u * 20, box.width - Theme.u * 16)
-        x: box.x + (box.width - width) / 2 + Theme.u
-        y: box.y + box.height - Theme.u
-        rows: 8
-        seed: 9
-        down: true
-        live: !Shell.fullscreenOn(win.modelData.name)
-        z: -1
     }
 
     RightClickGuard {}

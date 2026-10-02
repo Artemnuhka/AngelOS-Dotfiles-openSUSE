@@ -10,8 +10,8 @@ import qs.widgets
 // Capsules (Settings → Bar → Style → Capsules): three floating pills at the top — the
 // left, the centre and the right of the bar, each as wide as it needs (BarContent "capsules"
 // lays the sections out, this draws a capsule behind each and takes input only there).
-// In hell (BarLayout.hell): three tombstones hanging on chains from the screen's top edge,
-// swaying a little, runes cut along their rims.
+// In hell (BarLayout.hell): three plain plates of the circle's colour with its rim around
+// them — the content on calm ground, nothing hanging, nothing swaying.
 PanelWindow {
     id: win
 
@@ -19,7 +19,7 @@ PanelWindow {
     readonly property bool compact: Config.bar.compactOnVertical && modelData.width < 1300
     readonly property bool hell: BarLayout.hell
     readonly property int capHeight: Theme.u * 15
-    readonly property int drop: hell ? Theme.u * 10 : Theme.u * 3       // from the screen's edge to a capsule
+    readonly property int drop: Theme.u * 3                             // from the screen's edge to a capsule
     readonly property int pad: Theme.u * 5                              // a capsule around its section
     readonly property bool fxLive: !Shell.fullscreenOn(modelData.name)
 
@@ -57,16 +57,6 @@ PanelWindow {
             item: win.cap2
         }
     }
-
-    // the sway of the tombstones: a pixel either way, all together
-    property real t: 0
-    Timer {
-        interval: 160
-        repeat: true
-        running: win.hell && win.fxLive
-        onTriggered: win.t += 0.16
-    }
-    readonly property real sway: hell ? Math.round(Math.sin(t * 1.3)) * Theme.u : 0
 
     // the three capsules: where BarContent put the sections, a pad around them
     property Item cap0: null
@@ -121,78 +111,12 @@ PanelWindow {
                 }
             }
 
-            // hell: a tombstone on two chains
-            Item {
+            // hell: a plate with the circle's rim
+            HellBarFrame {
                 visible: win.hell
-                width: parent.width
-                height: parent.height
-                x: win.sway
-                Repeater {
-                    model: [Theme.u * 6, cap.width - Theme.u * 11]
-                    HellChain {
-                        required property var modelData
-                        x: modelData
-                        y: -win.drop
-                        links: Math.max(1, Math.ceil(win.drop / (Theme.u * 7)))
-                        rotation: -win.sway / Theme.u * 3
-                    }
-                }
-                Canvas {
-                    id: tomb
-                    width: Math.ceil(parent.width / Theme.u)
-                    height: Math.ceil(parent.height / Theme.u)
-                    scale: Theme.u
-                    transformOrigin: Item.TopLeft
-                    smooth: false
-                    antialiasing: false
-                    renderTarget: Canvas.Image
-                    onWidthChanged: requestPaint()
-                    onVisibleChanged: if (visible)
-                        requestPaint()
-                    onPaint: {
-                        const ctx = getContext("2d");
-                        ctx.clearRect(0, 0, width, height);
-                        const W = width, H = height;
-                        let s = 4241 + cap.index * 977;
-                        const rnd = () => {
-                            s = (s * 16807) % 2147483647;
-                            return (s - 1) / 2147483646;
-                        };
-                        const px = (x, y, c) => {
-                            ctx.fillStyle = c;
-                            ctx.fillRect(x, y, 1, 1);
-                        };
-                        // the arch: the top corners cut round
-                        const cut = y => y === 0 ? 3 : y === 1 ? 2 : y === 2 ? 1 : 0;
-                        for (let y = 0; y < H; y++)
-                            for (let x = cut(y); x < W - cut(y); x++) {
-                                const edge = y === 0 || y === H - 1 || x === cut(y) || x === W - 1 - cut(y);
-                                const g = rnd();
-                                const c = edge ? "#141014" : y === 1 || x === cut(y) + 1 ? "#77727a" : y >= H - 2 ? "#2c282e" : g < 0.12 ? "#4c4850" : g > 0.9 ? "#6a656e" : "#5b5760";
-                                px(x, y, c);
-                            }
-                        // hairline cracks
-                        for (let k = 0; k < Math.max(2, W / 30); k++) {
-                            let x = 4 + Math.floor(rnd() * (W - 8)), y = 2 + Math.floor(rnd() * (H - 4));
-                            for (let n = 0; n < 4 + rnd() * 5; n++) {
-                                px(x, y, "#262228");
-                                x += rnd() < 0.5 ? 1 : -1;
-                                y += rnd() < 0.6 ? 1 : 0;
-                                if (y >= H - 2)
-                                    break;
-                            }
-                        }
-                        // runes cut along the top rim, glowing faintly red
-                        const runes = [["#.#", "##.", "#.#"], [".#.", "###", ".#."], ["##.", "#.#", "##."], ["#.#", ".#.", "#.#"], ["###", "..#", "###"], ["#..", "###", "..#"]];
-                        for (let x = 6, i = 0; x < W - 8; x += 7, i++) {
-                            const r = runes[(i + cap.index * 2) % runes.length];
-                            for (let yy = 0; yy < 3; yy++)
-                                for (let xx = 0; xx < 3; xx++)
-                                    if (r[yy][xx] === "#")
-                                        px(x + xx, H - 5 + yy, i % 3 === 0 ? "#b3142b" : "#3a1418");
-                        }
-                    }
-                }
+                anchors.fill: parent
+                texture: false
+                rim: "all"
             }
         }
     }

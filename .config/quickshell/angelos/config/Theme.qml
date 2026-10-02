@@ -416,20 +416,24 @@ Singleton {
     // Plugins declare that they draw both in manifest.json: "realms": ["heaven", "hell"].
     property string realm: "heaven"
     readonly property bool hell: realm === "hell"
-    // hell's palette: obsidian, blood, embers and grimoire gold (fixed, not from the flavour)
-    readonly property color hellBody: "#160609"
-    readonly property color hellFace: "#2a0b10"
-    readonly property color hellFaceAlt: "#3d1016"
-    readonly property color hellSunken: "#0c0305"
-    readonly property color hellEdge: "#050102"
-    readonly property color hellHi: "#6e1a21"
-    readonly property color hellLo: "#0a0204"
-    readonly property color hellBlood: "#b3142b"
-    readonly property color hellEmber: "#ff6a1a"
-    readonly property color hellFlame: "#ffb02e"
-    readonly property color hellGold: "#d9a441"
-    readonly property color hellText: "#f3d9c0"
-    readonly property color hellTextDim: "#a8857a"
+    // hell's palette: the circle's (config/HellLook.qml, story/circles.json), not the flavour's
+    readonly property color hellBody: HellLook.palette.body
+    readonly property color hellFace: HellLook.palette.face
+    readonly property color hellFaceAlt: HellLook.palette.faceAlt
+    readonly property color hellSunken: HellLook.palette.sunken
+    readonly property color hellEdge: HellLook.palette.edge
+    readonly property color hellHi: HellLook.palette.hi
+    readonly property color hellLo: HellLook.palette.lo
+    readonly property color hellBlood: HellLook.palette.blood
+    readonly property color hellEmber: HellLook.palette.ember
+    readonly property color hellFlame: HellLook.palette.flame
+    readonly property color hellGold: HellLook.palette.gold
+    readonly property color hellText: HellLook.palette.text
+    readonly property color hellTextDim: HellLook.palette.textDim
+    // calm ground under text and icons, the thin rim of hell's frames, the one accent
+    readonly property color hellPlate: HellLook.palette.plate
+    readonly property color hellRim: HellLook.palette.rim
+    readonly property color hellAccent: HellLook.palette.accent
     readonly property color hellPanel: Qt.alpha(hellBody, Math.max(0.82, panelAlpha))
     // Jacquard 24, a pixel blackletter (OFL, data/fonts): Latin only — Cyrillic falls
     // back to the body font. Crisp at 24 px and its multiples (Theme.hellPx).

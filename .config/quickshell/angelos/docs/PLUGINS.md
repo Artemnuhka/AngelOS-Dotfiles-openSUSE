@@ -113,9 +113,13 @@ QtObject {
 - ад — не перекраска, а своя версия с теми же данными и кнопками на тех же
   местах: часы римскими цифрами (`Theme.roman(n)`), CPU — «Жар», обложка —
   горящая пластинка, счётчики — «души». Размер почти тот же (±20 %);
-- палитра ада (постоянная): `Theme.hellBody / hellFace / hellFaceAlt / hellSunken`
+- палитра ада: `Theme.hellBody / hellFace / hellFaceAlt / hellSunken`
   (обсидиан), `hellEdge / hellHi / hellLo` (фаски), `hellBlood`, `hellEmber`,
-  `hellFlame`, `hellGold`, `hellText` (кость), `hellTextDim`;
+  `hellFlame`, `hellGold`, `hellText` (кость), `hellTextDim`, а ещё `hellPlate` —
+  спокойная подложка под текстом, `hellRim` — кромка рамок, `hellAccent` — единственный
+  акцент. Цвета задаёт текущий вид ада (`story/circles.json`, `HellLook`), они могут
+  меняться на ходу — привязывайся к токенам, не копируй значения. `hellText`,
+  `hellTextDim` и `hellAccent` всегда читаются на `hellPlate` (контраст ≥ 4.5:1);
 - шрифт `Theme.fontHell` — Jacquard 24, пиксельная готика, только латиница:
   проверяй `Theme.latin(text)`, чётко в `Theme.hellPx(n)` = 24·n px;
 - контролы: `PxBox { hell: Theme.hell }`, `PxButton { hell: Theme.hell }`;

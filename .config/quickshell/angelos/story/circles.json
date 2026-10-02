@@ -1,0 +1,32 @@
+{
+  "_comment": "How hell looks: one entry per circle (config/HellLook.qml). 'base' is the hell before any circle and the defaults every circle starts from — a circle lists only what it changes. palette: the hell tokens (Theme.hell*); bar: the stone behind the bar (shaders/hell_texture.frag); edge: the rim of windows and widgets.",
+  "base": {
+    "name": { "ru": "Ад", "en": "Hell" },
+    "palette": {
+      "body": "#160609",
+      "plate": "#0e0406",
+      "face": "#2a0b10",
+      "faceAlt": "#3d1016",
+      "sunken": "#0c0305",
+      "edge": "#050102",
+      "hi": "#6e1a21",
+      "lo": "#0a0204",
+      "rim": "#4a1a1c",
+      "text": "#f3d9c0",
+      "textDim": "#b8988a",
+      "accent": "#f06a3a",
+      "blood": "#b3142b",
+      "ember": "#ff6a1a",
+      "flame": "#ffb02e",
+      "gold": "#d9a441"
+    },
+    "bar": {
+      "texture": "stone",
+      "colors": ["#120708", "#1a0b0d", "#2a0e10", "#5a1814"],
+      "scale": 10,
+      "crack": 0.5,
+      "glow": 0.25,
+      "seed": 3
+    }
+  }
+}
