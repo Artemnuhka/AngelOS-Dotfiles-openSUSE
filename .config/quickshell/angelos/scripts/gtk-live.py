@@ -17,6 +17,9 @@ would outrank the theme with stale colours). GTK 4 / libadwaita ignores themes: 
 Off: gtk-theme goes back to adw-gtk3(-dark), the stub and the GTK 4 file are emptied.
 Also sets the title bar buttons (org.gnome.desktop.wm.preferences button-layout) to
 decorButtons, e.g. "maximize,close" (niri has no minimizing).
+Always (on or off): the pixel frames the palette CSS draws its buttons, fields and menus with
+(templates/gtk3.css, gtk4.css → assets/frame-raised.svg, frame-sunken.svg next to each CSS):
+the outline in the palette's edge colour with stepped corners, and the bevel.
 """
 import json
 import re
@@ -58,6 +61,61 @@ def svg(rows, color):
             'shape-rendering="crispEdges">%s</svg>\n') % (w * 2, h * 2, w, h, body)
 
 
+def frame(edge, sunken):
+    """A 12×12 nine-slice (4 px slices) of the angelOS pixel box: a 2 px outline whose corners
+    step in by one 2 px art pixel, a 2 px bevel inside it — white and black at low alpha, so it
+    shades whatever colour the widget paints under it (hover, accent, danger)."""
+    hi, lo = ("#000000", "0.35"), ("#ffffff", "0.16")
+    if not sunken:
+        hi, lo = ("#ffffff", "0.18"), ("#000000", "0.35")
+    cells = []
+    for y in range(12):
+        for x in range(12):
+            cx = x if x < 4 else (11 - x if x >= 8 else None)
+            cy = y if y < 4 else (11 - y if y >= 8 else None)
+            if cx is not None and cy is not None:      # a corner: only the step
+                if 2 <= cx < 4 and 2 <= cy < 4:
+                    cells.append((x, y, edge, "1"))
+                continue
+            if y < 2 or y >= 10 or x < 2 or x >= 10:   # the outline
+                cells.append((x, y, edge, "1"))
+            elif y < 4 or x < 4:                       # the bevel: top and left …
+                cells.append((x, y) + hi)
+            elif y >= 8 or x >= 8:                     # … bottom and right
+                cells.append((x, y) + lo)
+    body = "".join('<rect x="%d" y="%d" width="1" height="1" fill="%s" fill-opacity="%s"/>' % c for c in cells)
+    return ('<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" '
+            'shape-rendering="crispEdges">%s</svg>\n') % body
+
+
+def _rgb(c):
+    c = c.lstrip("#")
+    return [int(c[i:i + 2], 16) for i in (0, 2, 4)]
+
+
+def _lum(c):
+    v = [x / 255 for x in _rgb(c)]
+    v = [x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4 for x in v]
+    return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
+
+
+def frame_line(pal):
+    """The outline: the palette's edge where it stands out from the window, else (dark
+    palettes: edge ≈ background) a dim line of the text colour — like the shell's own boxes
+    read in the dark. The same rule in scripts/qt-theme.py."""
+    bg, edge, fg = pal.get("bg", "#000000"), pal.get("edge", "#000000"), pal.get("fg", "#ffffff")
+    a, b = sorted((_lum(bg), _lum(edge)))
+    if (b + 0.05) / (a + 0.05) >= 1.6:
+        return edge
+    return "#%02x%02x%02x" % tuple(round(x + (y - x) * 0.26) for x, y in zip(_rgb(bg), _rgb(fg)))
+
+
+def frames(folder, pal):
+    line = frame_line(pal)
+    write(folder / "assets" / "frame-raised.svg", frame(line, False))
+    write(folder / "assets" / "frame-sunken.svg", frame(line, True))
+
+
 def write(path, text):
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists() and path.read_text() == text:
@@ -90,6 +148,10 @@ def main():
     base_dir = next((d / base for d in (HOME / ".local/share/themes", HOME / ".themes", Path("/usr/share/themes")) if (d / base / "gtk-3.0/gtk.css").exists()), None)
     current = gsettings("org.gnome.desktop.interface", "gtk-theme")
     on = bool(pal.get("decorGtk"))
+    # the palette CSS's frames, next to it, in the apps' colours (hell's while the demon rules)
+    apps = dict(pal, **(pal.get("apps") or {}))
+    frames(GTK3, apps)
+    frames(GTK4, apps)
 
     if not on or base_dir is None:
         # back to the plain theme; the user's palette CSS comes back with the next render
@@ -126,6 +188,8 @@ def main():
         write(d / "gtk-4.0/gtk.css", css4)
         assets(d / "gtk-3.0", pal)
         assets(d / "gtk-4.0", pal)
+        frames(d / "gtk-3.0", apps)
+        frames(d / "gtk-4.0", apps)
         if palette_css:
             gsettings("org.gnome.desktop.interface", "gtk-theme", name)
         print(json.dumps({"live": True, "theme": name, "changed": True}))

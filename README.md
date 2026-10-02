@@ -417,7 +417,7 @@ Later, change layouts in angelOS (Settings → Keyboard & mouse) or edit `input.
 
 - **Mouse**: pointer speed and acceleration start at libinput defaults, because every mouse is different. Tune them in Settings → Keyboard & mouse, or with a `mouse { accel-profile "adaptive"; accel-speed 0.4 }` block in `input.kdl`.
 - **Focus indicator**: the focused window gets a thin outline in the angelOS accent colour, and it follows the theme. Windows stay fully opaque, with no blur and no inactive dimming.
-- **Square decorations**: windows and popups use zero corner radius. GTK 3/4 window frames, title bars, menus and dialogs follow the same angular style through the angelOS theme templates.
+- **Pixel corners**: every window is rounded by 4 px in niri (angelOS's own windows stay pixel boxes). Inside, GTK 3, GTK 4 / libadwaita and Qt (qt6ct) draw the same pixel frame as angelOS itself: a 2 px outline whose corners step in by one art pixel, with a 2 px bevel — on buttons, fields, lists, menus and tooltips, in heaven's colours or the circle's in hell. The frames are small images the theme scripts draw from the palette.
 - **Monitors**: `~/.config/niri/monitor.kdl` is created empty, so Niri auto-detects your outputs. Set resolution, refresh rate, scale, rotation and position in Settings → Monitor (drag the screens into place); it writes that file with a backup, and the installer never overwrites it.
 
 ### After installation

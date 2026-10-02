@@ -6,8 +6,11 @@ usage: qt-theme.py PALETTE.json
 
 On (palette key qtStyle): qt6ct carries the look — a colour scheme from the palette
 (~/.config/qt6ct/colors/angelos.conf: heaven's, or hell's while the demon rules, the
-palette's "apps" overrides), a pixel stylesheet (~/.config/qt6ct/qss/angelos.qss: square
-corners, bevelled buttons and fields, the accent for selections) and Fusion underneath.
+palette's "apps" overrides), a pixel stylesheet (~/.config/qt6ct/qss/angelos.qss: the angelOS
+pixel frame on buttons and fields — a 2 px outline with corners stepped in by one art pixel and
+a 2 px bevel, the same frame GTK gets (templates/gtk3.css); the accent for selections) and
+Fusion underneath. The frames are small nine-slice PNGs next to the stylesheet; the stylesheet
+names a hash of them, so new frames change its text and qt6ct reloads it.
 qt6ct watches its folder, so running Qt apps change on the fly, heaven ↔ hell included.
 Apps only use qt6ct with QT_QPA_PLATFORMTHEME=qt6ct: this sets it in niri's environment
 block (cfg/misc.kdl, the old value kept in a comment), in systemd's user manager and
@@ -16,12 +19,15 @@ angelOS get qt6ct right away (Shell.childEnv). Off: everything back as it was.
 The first change of qt6ct.conf keeps a copy in ~/.local/state/angelos/backups/.
 """
 import configparser
+import hashlib
 import json
 import os
 import re
+import struct
 import subprocess
 import sys
 import time
+import zlib
 from pathlib import Path
 
 HOME = Path.home()
@@ -51,6 +57,74 @@ def mix(a, b, t):
     return "#%02x%02x%02x" % tuple(round(x + (y - x) * t) for x, y in zip(ca, cb))
 
 
+def _rgb(c):
+    c = c.lstrip("#")
+    return [int(c[i:i + 2], 16) for i in (0, 2, 4)]
+
+
+def _lum(c):
+    v = [x / 255 for x in _rgb(c)]
+    v = [x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4 for x in v]
+    return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
+
+
+def frame_line(p):
+    """The outline: the palette's edge where it stands out from the window, else a dim line of
+    the text colour (dark palettes) — the same rule as scripts/gtk-live.py."""
+    bg, edge, fg = p.get("bg", "#000000"), p.get("edge", "#000000"), p.get("fg", "#ffffff")
+    a, b = sorted((_lum(bg), _lum(edge)))
+    return edge if (b + 0.05) / (a + 0.05) >= 1.6 else mix(bg, fg, 0.26)
+
+
+def frame_png(line, outside, sunken):
+    """A 12×12 nine-slice (4 px slices): outside the stepped corner the window colour (Qt paints
+    the button's background under its whole border, so the corner is cut by painting the window
+    over it), the 2 px outline with its step, a 2 px bevel at low alpha (it shades whatever
+    background the state paints — hover, pressed, default), the middle clear."""
+    top, bottom = ((0, 0, 0, 90), (255, 255, 255, 40)) if sunken else ((255, 255, 255, 46), (0, 0, 0, 90))
+    ln, out = tuple(_rgb(line)) + (255,), tuple(_rgb(outside)) + (255,)
+    rows = b""
+    for y in range(12):
+        row = b"\0"
+        for x in range(12):
+            cx = x if x < 4 else (11 - x if x >= 8 else None)
+            cy = y if y < 4 else (11 - y if y >= 8 else None)
+            if cx is not None and cy is not None:
+                px = ln if 2 <= cx < 4 and 2 <= cy < 4 else out if cx < 2 or cy < 2 else top if (x < 4 and y < 4) else bottom if (x >= 8 and y >= 8) else (0, 0, 0, 0)
+            elif y < 2 or y >= 10 or x < 2 or x >= 10:
+                px = ln
+            elif y < 4 or x < 4:
+                px = top
+            elif y >= 8 or x >= 8:
+                px = bottom
+            else:
+                px = (0, 0, 0, 0)
+            row += bytes(px)
+        rows += row
+
+    def chunk(tag, body):
+        return struct.pack(">I", len(body)) + tag + body + struct.pack(">I", zlib.crc32(tag + body) & 0xFFFFFFFF)
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", 12, 12, 8, 6, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(rows, 9)) + chunk(b"IEND", b""))
+
+
+def frames(p):
+    """the frame PNGs for this palette: {kind: path, "hash": of all four}"""
+    line, accent, bg = frame_line(p), p.get("select", p["accent"]), p["bg"]
+    want = {"raised": (line, False), "sunken": (line, True), "default": (accent, False), "focus": (accent, True)}
+    out, h = {}, hashlib.sha1()
+    for kind, (ln, sunken) in want.items():
+        data = frame_png(ln, bg, sunken)
+        f = QSS.parent / ("angelos-frame-%s.png" % kind)
+        if not f.exists() or f.read_bytes() != data:
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_bytes(data)
+        out[kind] = f
+        h.update(data)
+    out["hash"] = h.hexdigest()[:12]
+    return out
+
+
 def colours(p):
     fg, bg, alt = p["fg"], p["bg"], p.get("bgAlt", p["bg"])
     face = p.get("face", alt)
@@ -72,7 +146,8 @@ def colours(p):
         p.get("appsRealm", "heaven"), ", ".join(active), ", ".join(disabled), ", ".join(inactive))
 
 
-def stylesheet(p):
+def stylesheet(p, frame=None):
+    frame = frame or {}
     c = {
         "fg": p["fg"], "bg": p["bg"], "face": p.get("face", p.get("bgAlt", p["bg"])),
         "faceAlt": p.get("faceAlt", p.get("bgAlt", p["bg"])), "sunken": p.get("sunken", p["bg"]),
@@ -80,28 +155,36 @@ def stylesheet(p):
         "accent": p.get("select", p["accent"]), "sel": p.get("selectText", "#ffffff"), "dim": p.get("textDim", p["fg"]),
     }
     c["hover"] = mix(c["face"], c["accent"], 0.18)
-    css = """/* angelOS pixel style for Qt (scripts/qt-theme.py, %(realm)s) — generated */
-QPushButton, QToolButton[popupMode="1"], QComboBox, QAbstractSpinBox::up-button, QAbstractSpinBox::down-button {
+    for kind in ("raised", "sunken", "default", "focus"):
+        c["frame_" + kind] = ("border-image: url(%s) 4 4 4 4 stretch stretch;" % frame[kind]) if kind in frame else ""
+    c["frames"] = frame.get("hash", "")
+    css = """/* angelOS pixel style for Qt (scripts/qt-theme.py, %(realm)s) — generated; frames %(frames)s */
+QPushButton, QToolButton[popupMode="1"], QComboBox {
     background: %(face)s; color: %(fg)s;
+    border: 4px solid %(edge)s; %(frame_raised)s
+    border-radius: 0px;
+}
+QAbstractSpinBox::up-button, QAbstractSpinBox::down-button {
+    background: %(face)s;
     border: 2px solid; border-color: %(hi)s %(lo)s %(lo)s %(hi)s;
     border-radius: 0px;
 }
-QPushButton { padding: 4px 12px; min-height: 18px; }
+QPushButton { padding: 2px 10px; min-height: 18px; }
 QPushButton:hover, QComboBox:hover { background: %(hover)s; }
 QPushButton:pressed, QPushButton:checked, QComboBox:on {
-    background: %(sunken)s; border-color: %(lo)s %(hi)s %(hi)s %(lo)s;
+    background: %(sunken)s; %(frame_sunken)s
 }
-QPushButton:default { border: 2px solid %(accent)s; }
+QPushButton:default { %(frame_default)s }
 QPushButton:disabled { color: %(dim)s; }
-QComboBox { padding: 3px 8px; }
+QComboBox { padding: 1px 6px; }
 QComboBox QAbstractItemView { background: %(face)s; border: 2px solid %(edge)s; selection-background-color: %(accent)s; selection-color: %(sel)s; }
 QLineEdit, QTextEdit, QPlainTextEdit, QAbstractSpinBox {
     background: %(sunken)s; color: %(fg)s;
-    border: 2px solid; border-color: %(lo)s %(hi)s %(hi)s %(lo)s;
-    border-radius: 0px; padding: 3px;
+    border: 4px solid %(edge)s; %(frame_sunken)s
+    border-radius: 0px; padding: 1px;
     selection-background-color: %(accent)s; selection-color: %(sel)s;
 }
-QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QAbstractSpinBox:focus { border-color: %(accent)s; }
+QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QAbstractSpinBox:focus { %(frame_focus)s }
 QMenu { background: %(face)s; color: %(fg)s; border: 2px solid %(edge)s; padding: 2px; }
 QMenu::item { padding: 4px 22px 4px 22px; }
 QMenu::item:selected, QMenuBar::item:selected { background: %(accent)s; color: %(sel)s; }
@@ -272,7 +355,7 @@ def main():
         return
     p = dict(pal, **(pal.get("apps") or {}))
     write(SCHEME, colours(p))
-    write(QSS, stylesheet(p))
+    write(QSS, stylesheet(p, frames(p)))
     set_conf(True)
     if niri_env(True) == "set":
         session_env("qt6ct")
