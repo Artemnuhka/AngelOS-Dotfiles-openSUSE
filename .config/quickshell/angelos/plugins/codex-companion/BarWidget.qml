@@ -1,5 +1,6 @@
 import QtQuick
 import qs.config
+import qs.services
 import qs.widgets
 import qs.modules.bar
 import "."
@@ -56,7 +57,7 @@ Item {
         id: popup
         panelId: "codex"
         anchorItem: root
-        above: Config.bar.style === "taskbar"
+        above: BarLayout.bottom
         title: "codex.exe"
         icon: "terminal"
         contentWidth: Theme.u * 190

@@ -219,6 +219,40 @@ FloatingWindow {
                 wrapMode: Text.Wrap
                 text: I18n.t("Панель и рабочий стол запускаются на всех подключённых экранах. Параметры мониторов и ввода меняются только по твоему действию.", "The bar and desktop run on every connected display. Monitor and input settings change only when you edit them.")
             }
+            // for the angel's novel (services/Novel): how she speaks to you. Optional — she
+            // asks herself one day anyway, and the story remembers what was said here
+            SettingRow {
+                label: I18n.t("Кто ты?", "Who are you?")
+                hint: I18n.t("чтобы ангел правильно к тебе обращалась (хотел / хотела). Можно не указывать — она однажды спросит сама", "So the angel addresses you right. You can leave it — one day she asks herself")
+                PxSegmented {
+                    model: [
+                        {
+                            "label": I18n.t("Парень", "A guy"),
+                            "value": "m"
+                        },
+                        {
+                            "label": I18n.t("Девушка", "A girl"),
+                            "value": "f"
+                        },
+                        {
+                            "label": I18n.t("Не указывать", "Rather not say"),
+                            "value": ""
+                        }
+                    ]
+                    currentValue: Config.novel.gender || ""
+                    onActivated: v => Config.novel.gender = v
+                }
+            }
+            SettingRow {
+                label: I18n.t("Как тебя зовут?", "Your name")
+                hint: I18n.t("так ангел будет к тебе обращаться; пусто — имя пользователя", "What the angel calls you; empty — your login name")
+                PxField {
+                    width: Math.min(parent.width, Theme.u * 120)
+                    text: Config.novel.name || ""
+                    placeholder: StartApps.userName
+                    onEdited: Config.novel.name = text.trim()
+                }
+            }
             // the settings window's look, right at the start (Config.settingsUi.skin)
             PxText {
                 text: I18n.t("Как будут выглядеть настройки?", "How should Settings look?")
@@ -361,7 +395,8 @@ FloatingWindow {
                 width: parent.width
                 SettingRow {
                     label: I18n.t("Стиль", "Style")
-                    PxSegmented {
+                    PxCombo {
+                        width: Math.min(parent.width, Theme.u * 140)
                         model: [
                             {
                                 "label": I18n.t("Таскбар", "Taskbar"),
@@ -374,6 +409,18 @@ FloatingWindow {
                             {
                                 "label": I18n.t("Остров", "Island"),
                                 "value": "island"
+                            },
+                            {
+                                "label": I18n.t("Док", "Dock"),
+                                "value": "dock"
+                            },
+                            {
+                                "label": I18n.t("Капсулы", "Capsules"),
+                                "value": "capsules"
+                            },
+                            {
+                                "label": "Windose",
+                                "value": "windose"
                             }
                         ]
                         currentValue: Config.bar.style

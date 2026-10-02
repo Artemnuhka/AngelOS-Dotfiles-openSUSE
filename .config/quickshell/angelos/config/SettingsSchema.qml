@@ -19,6 +19,7 @@ JsonAdapter {
         property bool shadows: true         // hard pixel drop shadows
         property bool themeApps: true       // render templates for kitty/foot/gtk/niri
         property var disabledTemplates: []
+        property bool qtStyle: false        // Qt apps in angelOS colours and a pixel style through qt6ct (scripts/qt-theme.py switches QT_QPA_PLATFORMTHEME for apps)
         property string fontTitle: ""       // "" = Pixeloid Sans
         property string fontBody: ""        // "" = CozetteVector
         property string fontMono: ""        // "" = Pixeloid Mono
@@ -27,7 +28,7 @@ JsonAdapter {
     }
 
     property JsonObject bar: JsonObject {
-        property string style: "taskbar"    // taskbar | top | island
+        property string style: "taskbar"    // taskbar | top | island | dock | capsules | windose (BarLayout.styles)
         property bool autoHide: false       // taskbar: slides away below the screen edge, back on the pointer at the edge
         property int autoHideMs: 700        // how long it waits after the pointer leaves
         property var screens: []            // empty = every screen
@@ -247,6 +248,7 @@ JsonAdapter {
         property string monitorPlace: "center" // center | corner (bottom-right, next to the tray)
         property bool nautilusDefaults: false // angelOS Nautilus extensions + prefs applied once
         property string primaryScreen: ""   // the main screen (widgets, the angel, the lock…); "" = the widest
+        property var screenTune: ({})       // Monitor → Brightness and colour: {output: {brightness 0.3–1 (gamma), saturation −1…1 (NVIDIA vibrance)}} (services/ScreenTune)
     }
 
     property JsonObject cursor: JsonObject {
@@ -301,10 +303,14 @@ JsonAdapter {
         property double demonSince: 0       // ms; the demon arrived
         property var pleas: []              // ms of the lucky "come back, angel" pleas; 3 within 2 h bring her back
         property double lastPlea: 0         // pleas count once per 10 minutes
+        property double wheelAt: 0          // the Wheel of Hell's last spin (one per 20 minutes)
+        property double cursedUntil: 0      // the wheel's cursed cursor: another hell cursor until then
+        property string cursedWas: ""       // the hell cursor it replaced
         property var pranks: []             // the demon's pranks this round [{id, key, old, new, at, undone}]; each shows off a feature
         property var seenTips: []           // settings pages whose first-visit tip the angel already told
         property double nextPrank: 0        // ms; not before
         property string cracks: "full"      // the demon's broken screen corner: full | weak | off
+        property string breakage: "glass"   // what her fist breaks there: glass | tv | burn | claws | sigil | random
         property bool heavenFx: true        // sun rays and a choir when the angel comes back
         property bool raysSeen: false       // the rays played when she first appeared; not again on every start
         property string textShake: "light"  // the helper's letters twitch now and then: off | light | strong
@@ -317,14 +323,29 @@ JsonAdapter {
         property bool jokes: true           // she jokes now and then, not only tips
         property string hellMenu: "pentagram" // the right-click menu while the demon rules ("" = the usual one)
         property string hellSettings: "grimoire" // Settings while the demon rules: grimoire (a book) | "" (the usual window)
+        property string hellStart: "skin"   // Start while the demon rules: skin (your look, hell version + a hell Start button) | hell (StartHell) | "" (untouched)
         property bool hellWidgets: true     // desktop widgets burn over to their hell look while the demon rules
+        property string hellAltTab: "hell"  // Alt+Tab while the demon rules: hell (AltTabHell, hell's own) | skin (your style re-inked, flames) | "" (untouched)
+        property bool hellTerminal: true    // kitty / foot / Alacritty in hell's colours while the demon rules (+ kitty: ember cursor trail, charred background; fish: her line and fiery commands)
+        property bool hellApps: true        // GTK and Qt apps in hell's colours while the demon rules (gtk-live.py, qt-theme.py)
+        property bool hellBar: true         // the bar while the demon rules: each style's hell version (a lava slab, fangs and chains, brimstone, tombstones on chains, Hellose; the dock stays as it is)
+        property bool hellLyrics: true      // the bar's lyrics while the demon rules: Rubik Burned, each line burns up out of flames, the old one crumbles to ash, a salute when the song ends (HellFxOverlay)
         property string angelLook: "glitch" // glitch (cracked halo, pictures) | chibi (the first pictures) | adult (30×40 pixels) | mini (the first 20×21)
         property string demonLook: "glitch" // the same for the demon (glitch: the sleepless neon one)
         property real helperScale: 1.0      // 1.00–1.15: Ctrl + mouse wheel over her, 5 % a notch (Y2K → Helper → Size)
     }
 
+    // the novel (services/Novel, ~/AngelOs-Nov): chapters the angel plays out on the desktop
+    property JsonObject novel: JsonObject {
+        property bool enabled: true
+        property string dir: "~/AngelOs-Nov"   // story/*.json and sprites/<who>/*.png (the editor: `angelos novel edit`)
+        property string gender: ""          // from the setup wizard: m | f | "" (not said) — she still asks
+        property string name: ""            // how she calls you ({name}); "" = the login name
+    }
+
     // the lens at the pointer (services/Lens, Settings → Keyboard and mouse → Lens)
     property JsonObject lens: JsonObject {
+        property string mode: "live"        // live: a glass beside the pointer, frame by frame (extras/lens-live) | snapshot: on the pointer, a picture of the screen
         property real zoom: 2               // how much a fresh lens magnifies
         property int size: 300              // its diameter (or side), px
         property string shape: "circle"     // circle | square

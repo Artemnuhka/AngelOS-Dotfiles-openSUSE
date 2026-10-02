@@ -49,6 +49,9 @@ PxPage {
                 Image {
                     anchors.centerIn: parent
                     visible: !!card.modelData.installed && source !== ""
+                    // in the grimoire: an engraving the right way round, not a negative
+                    layer.enabled: Theme.scriptWindow !== null && Window.window === Theme.scriptWindow
+                    layer.effect: GrimoirePhoto {}
                     source: card.modelData.preview ? "file://" + card.modelData.preview + "?" + Cursors.catalog.length : ""
                     cache: false
                     smooth: false
@@ -130,7 +133,9 @@ PxPage {
         }
     }
 
+    // in hell the pointer is hers (Cursors.hellOn): only hell's themes are offered
     PxGroup {
+        visible: !(Angel.demon && !!Config.cursor.hell)
         title: I18n.t("Пиксельные темы", "Pixel themes")
         icon: "cursor"
         width: parent.width
@@ -182,6 +187,7 @@ PxPage {
 
     PxGroup {
         title: I18n.t("Найти курсор встряхиванием", "Shake to find the pointer")
+        advanced: true
         icon: "search"
         width: parent.width
         SettingRow {
@@ -244,6 +250,7 @@ PxPage {
 
     PxGroup {
         title: I18n.t("Размер и совместимость", "Size and compatibility")
+        advanced: true
         icon: "gear"
         width: parent.width
         SettingRow {

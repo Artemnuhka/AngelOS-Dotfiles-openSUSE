@@ -95,6 +95,7 @@ PxPage {
     PxGroup {
         id: glowGroup
         title: I18n.t("Яркость от громкости", "Brightness follows the volume")
+        advanced: true
         icon: "sun"
         width: parent.width
         SettingRow {
@@ -199,6 +200,7 @@ PxPage {
 
     PxGroup {
         title: I18n.t("Источники", "Sources")
+        advanced: true
         icon: "search"
         width: parent.width
         PxText {

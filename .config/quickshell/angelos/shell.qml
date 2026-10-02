@@ -26,6 +26,7 @@ import qs.modules.alttab
 import qs.modules.cursor
 import qs.modules.lens
 import qs.modules.decor
+import qs.modules.novel
 import qs.widgets
 
 // angelOS — pixel pink shell for niri.
@@ -53,9 +54,11 @@ ShellRoot {
     TourOverlay {}
     PluginHost {}
     AngelHelper {}
+    NovelHost {}
     HeavenRays {}
     ScreenCracks {}
     ScreenQuake {}
+    HellFxOverlay {}
     BootScreen {}
     AltTabHost {}
     ShakeCursor {}
@@ -91,6 +94,10 @@ ShellRoot {
         id: previewTypeAnchor
         PxPreview {}
     }
+    Component {
+        id: grimoirePhotoTypeAnchor
+        GrimoirePhoto {}
+    }
 
     Component.onCompleted: {
         ThemeExport.signature; // wake the template exporter
@@ -109,5 +116,6 @@ ShellRoot {
         InputConfig.numlock; // NumLock on login: checked once per login (scripts/numlock.py)
         FastfetchLogo.signature; // fastfetch draws the chosen emblem (Settings → Bar → Logo)
         CursorShake.status; // shake the mouse to find the pointer (Settings → Cursor)
+        Novel.loaded; // the novel (~/AngelOs-Nov): chapters, the notes, her questions
     }
 }

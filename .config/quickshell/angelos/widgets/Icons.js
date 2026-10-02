@@ -5,6 +5,16 @@
 //   'y' accent3 (yellow)   'w' white highlight   'f' face / body
 //   'r' danger             '.' transparent
 const icons = {
+    camera: [
+        "...###...",
+        "#########",
+        "#fffffoo#",
+        "#ff###ff#",
+        "#f#www#f#",
+        "#f#www#f#",
+        "#ff###ff#",
+        "#########"
+    ],
     document: [
         "#######..",
         "#wwwww##.",
@@ -77,6 +87,19 @@ const icons = {
         ".#oo#oo#.",
         "..#o#o#..",
         "...#.#...",
+        "....#...."
+    ],
+    // a heart with the demon's horns (hell's salute at the end of a song)
+    heartHorns: [
+        "r.......r",
+        "rr.....rr",
+        ".r##.##r.",
+        "#wo#.#oo#",
+        "#ooo#ooo#",
+        "#ooooooo#",
+        ".#ooooo#.",
+        "..#ooo#..",
+        "...#o#...",
         "....#...."
     ],
     heartSmall: [

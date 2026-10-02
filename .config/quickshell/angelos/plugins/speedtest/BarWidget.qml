@@ -1,5 +1,6 @@
 import QtQuick
 import qs.config
+import qs.services
 import qs.widgets
 import qs.modules.bar
 import "."
@@ -22,7 +23,7 @@ PxButton {
         id: popup
         panelId: "speedtest"
         anchorItem: root
-        above: Config.bar.style === "taskbar"
+        above: BarLayout.bottom
         title: "speedtest.exe"
         icon: "gauge"
         contentWidth: Theme.u * 150

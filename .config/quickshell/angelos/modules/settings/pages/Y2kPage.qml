@@ -15,8 +15,9 @@ import "../../y2k/DemonSpriteMini.js" as DemonMini
 PxPage {
     id: page
 
-    heading: "Y2K ✧"
-    subtitle: I18n.t("Немного 2000-х: ангелочек-помощник, блёстки, звуки и загрузка как у игры с диска.", "A bit of the 2000s: a helper angel, glitter, sounds and a loading screen like a game on a disc.")
+    heading: Angel.demon ? I18n.t("Демоница ⛧", "The demon ⛧") : I18n.t("Ангелочек ✧", "The angel ✧")
+    // in hell the angel's own things step aside: the page is about the demon (Angel.demon)
+    subtitle: Angel.demon ? I18n.t("Немного 2000-х: демоница в углу экрана, блёстки, звуки и загрузка как у игры с диска.", "A bit of the 2000s: the demon in the corner, glitter, sounds and a loading screen like a game on a disc.") : I18n.t("Немного 2000-х: ангелочек-помощник, блёстки, звуки и загрузка как у игры с диска.", "A bit of the 2000s: a helper angel, glitter, sounds and a loading screen like a game on a disc.")
 
     readonly property var screenNames: Quickshell.screens.map(s => s.name)
     function toggleIn(list, name, on) {
@@ -26,11 +27,11 @@ PxPage {
 
     PxGroup {
         width: parent.width
-        title: I18n.t("Ангелочек-помощник", "Helper angel")
-        icon: "heart"
+        title: Angel.demon ? I18n.t("Демоница в углу", "The demon in the corner") : I18n.t("Ангелочек-помощник", "Helper angel")
+        icon: Angel.demon ? "fire" : "heart"
         SettingRow {
             label: I18n.t("Показывать", "Show her")
-            hint: I18n.t("живёт в правом нижнем углу, подсказывает и радуется вместе с тобой; клик по ней — меню", "Lives in the bottom-right corner, gives tips and cheers you on; click her for a menu")
+            hint: Angel.demon ? I18n.t("сидит в правом нижнем углу, язвит, болтает и пакостит; клик по ней — меню", "Sits in the bottom-right corner, teases, chats and plays pranks; click her for a menu") : I18n.t("живёт в правом нижнем углу, подсказывает и радуется вместе с тобой; клик по ней — меню", "Lives in the bottom-right corner, gives tips and cheers you on; click her for a menu")
             PxToggle {
                 checked: Config.y2k.helper
                 onToggled: c => Config.y2k.helper = c
@@ -72,7 +73,7 @@ PxPage {
             }
         }
         SettingRow {
-            label: I18n.t("Советы сами по себе", "Tips on her own")
+            label: Angel.demon ? I18n.t("Болтает сама", "Talks on her own") : I18n.t("Советы сами по себе", "Tips on her own")
             PxSegmented {
                 model: [
                     {
@@ -105,6 +106,7 @@ PxPage {
             spacing: Theme.u * 3
             // she comes by herself too; this calls her now (and sends the demon off)
             PxButton {
+                visible: !Angel.demon
                 icon: "heart"
                 enabled: !Angel.transition
                 text: Angel.demon ? I18n.t("Призвать ангела (прогнать демоницу)", "Call the angel (send the demon off)") : I18n.t("Позвать ангела", "Call the angel")
@@ -208,9 +210,10 @@ PxPage {
             width: parent.width
             wrapMode: Text.Wrap
             dim: true
-            text: Angel.hellShown ? I18n.t("Нынешние глитч-девочки (ангел с треснувшим нимбом и неоновая демоница), прошлые чиби, взрослые пиксельные 30×40 или самые первые малышки 20×21. Ангел и демоница выбираются отдельно.", "Today's glitch girls (the cracked-halo angel and the neon demon), the earlier chibi, the adult 30×40 pixel ones or the very first 20×21 minis. The angel and the demon are picked apart.") : I18n.t("Нынешняя глитч-девочка (ангел с треснувшим нимбом), прошлая чиби, взрослая пиксельная 30×40 или самая первая малышка 20×21.", "Today's glitch girl (the cracked-halo angel), the earlier chibi, the adult 30×40 pixel one or the very first 20×21 mini.")
+            text: Angel.demon ? I18n.t("Нынешняя неоновая демоница без сна, прошлая чиби, суккуб 30×40 или чертёнок 20×21.", "Today's sleepless neon demon, the earlier chibi, a 30×40 succubus or a 20×21 imp.") : Angel.hellShown ? I18n.t("Нынешние глитч-девочки (ангел с треснувшим нимбом и неоновая демоница), прошлые чиби, взрослые пиксельные 30×40 или самые первые малышки 20×21. Ангел и демоница выбираются отдельно.", "Today's glitch girls (the cracked-halo angel and the neon demon), the earlier chibi, the adult 30×40 pixel ones or the very first 20×21 minis. The angel and the demon are picked apart.") : I18n.t("Нынешняя глитч-девочка (ангел с треснувшим нимбом), прошлая чиби, взрослая пиксельная 30×40 или самая первая малышка 20×21.", "Today's glitch girl (the cracked-halo angel), the earlier chibi, the adult 30×40 pixel one or the very first 20×21 mini.")
         }
         SettingRow {
+            visible: !Angel.demon
             label: I18n.t("Ангел", "Angel")
             Flow {
                 width: parent.width
@@ -298,6 +301,53 @@ PxPage {
             }
         }
         SettingRow {
+            label: I18n.t("Дрожание текста", "Text tremble")
+            hint: I18n.t("буквы в её репликах иногда подёргиваются на пиксель, как в Undertale", "Now and then a letter in her lines twitches by a pixel, like in Undertale")
+            PxSegmented {
+                model: [
+                    {
+                        "label": I18n.t("Нет", "Off"),
+                        "value": "off"
+                    },
+                    {
+                        "label": I18n.t("Слегка", "Light"),
+                        "value": "light"
+                    },
+                    {
+                        "label": I18n.t("Сильно", "Strong"),
+                        "value": "strong"
+                    }
+                ]
+                currentValue: Config.y2k.textShake
+                onActivated: v => Config.y2k.textShake = v
+            }
+        }
+        SettingRow {
+            label: I18n.t("Тряска экрана", "Screen shake")
+            hint: Angel.hellShown ? I18n.t("когда ангел и демоница меняются, экран трясётся и бьётся стекло; с демоницей ещё сыплются 8-битные камни", "When the angel and the demon swap the screen shakes and the glass breaks; with the demon 8-bit rocks tumble down too") : I18n.t("когда ангел уходит через портал или возвращается, экран трясётся и бьётся стекло", "When the angel leaves through the portal or comes back the screen shakes and the glass breaks")
+            PxToggle {
+                checked: Config.y2k.shake
+                onToggled: c => Config.y2k.shake = c
+            }
+        }
+        SettingRow {
+            label: I18n.t("Лучи и хор ангела", "The angel's rays and choir")
+            hint: I18n.t("когда она возвращается из ада: полторы секунды солнца справа (при запуске — только самый первый раз)", "When she comes back from hell: a second and a half of sunshine on the right (at start-up only the very first time)")
+            PxToggle {
+                checked: Config.y2k.heavenFx
+                onToggled: c => Config.y2k.heavenFx = c
+            }
+        }
+    }
+
+    // hell's versions of everything, a sub-page of its own (only while the demon is about)
+    PxGroup {
+        width: parent.width
+        title: I18n.t("Ад", "Hell")
+        icon: "pentagram"
+        advanced: true
+        shown: Angel.hellShown
+        SettingRow {
             visible: Angel.hellShown
             label: I18n.t("ПКМ в аду", "Right-click menu in hell")
             hint: I18n.t("пока правит демоница; вернётся ангел — снова твоё меню", "while the demon rules; the angel brings your own menu back")
@@ -350,6 +400,124 @@ PxPage {
         }
         SettingRow {
             visible: Angel.hellShown
+            label: I18n.t("«Пуск» в аду", "Start in hell")
+            hint: I18n.t("кнопка «Пуск» становится адской (обсидиан, рога, надпись Hell, пламя), а меню — адской версией твоего вида «Пуска» с огнём по краю. «Своё адское» — отдельное меню: «Призвать» программы, гримуар, мольба об ангеле, портал", "The Start button turns hellish (obsidian, horns, the Hell wordmark, flames) and the menu becomes a hell version of your Start look, fire along its edge. “Hell's own” is a menu of its own: summon apps, the grimoire, begging for the angel, the portal")
+            PxSegmented {
+                model: [
+                    {
+                        "label": I18n.t("Адская версия", "Hell version"),
+                        "value": "skin"
+                    },
+                    {
+                        "label": I18n.t("Своё адское", "Hell's own"),
+                        "value": "hell"
+                    },
+                    {
+                        "label": I18n.t("Как обычно", "As usual"),
+                        "value": ""
+                    }
+                ]
+                currentValue: Config.y2k.hellStart || ""
+                onActivated: v => Config.y2k.hellStart = v
+            }
+        }
+        SettingRow {
+            visible: Angel.hellShown
+            label: I18n.t("Alt+Tab в аду", "Alt+Tab in hell")
+            hint: I18n.t("«Своё адское» — окно inferno.exe: обсидиан, пламя, выбранное окно горит над пентаграммой, столы — круги ада. «Адская версия» — твой стиль Alt+Tab в адских красках с огнём по краю", "“Hell's own” is an inferno.exe window: obsidian and flames, the pick burns over a pentagram, desks are hell's circles. “Hell version” is your Alt+Tab style in hell's colours with fire along its edge")
+            Flow {
+                width: parent.width
+                spacing: Theme.u * 4
+                PxSegmented {
+                    model: [
+                        {
+                            "label": I18n.t("Своё адское", "Hell's own"),
+                            "value": "hell"
+                        },
+                        {
+                            "label": I18n.t("Адская версия", "Hell version"),
+                            "value": "skin"
+                        },
+                        {
+                            "label": I18n.t("Как обычно", "As usual"),
+                            "value": ""
+                        }
+                    ]
+                    currentValue: Config.y2k.hellAltTab || ""
+                    onActivated: v => Config.y2k.hellAltTab = v
+                }
+                PxButton {
+                    compact: true
+                    icon: "play"
+                    text: I18n.t("Попробовать", "Try it")
+                    onClicked: AltTab.tryIt("")
+                }
+            }
+        }
+        SettingRow {
+            visible: Angel.hellShown
+            label: I18n.t("Терминал в аду", "Terminal in hell")
+            hint: I18n.t("kitty, foot и Alacritty в адских красках: обсидиан, кровь, угли и сера; в kitty — тлеющий шлейф за курсором и обугленный фон с пентаграммой; в fish команды подсвечиваются огнём, а при открытии демоница говорит пару слов", "kitty, foot and Alacritty in hell's colours: obsidian, blood, embers and brimstone; kitty gets an ember trail behind the cursor and a charred background with a pentagram; fish lights your commands on fire and she has a word for you in every new terminal")
+            PxToggle {
+                checked: Config.y2k.hellTerminal
+                onToggled: c => Config.y2k.hellTerminal = c
+            }
+        }
+        SettingRow {
+            visible: Angel.hellShown
+            label: I18n.t("Приложения в аду", "Apps in hell")
+            hint: I18n.t("GTK-программы (Nautilus, настройки GNOME…) целиком в адских цветах, а не только заголовки; Qt — тоже, если включён стиль angelOS для Qt во «Внешнем виде»", "GTK apps (Nautilus, GNOME settings…) wholly in hell's colours, not just their title bars; Qt ones too when the angelOS Qt look is on in Appearance")
+            PxToggle {
+                checked: Config.y2k.hellApps
+                onToggled: c => Config.y2k.hellApps = c
+            }
+        }
+        SettingRow {
+            visible: Angel.hellShown
+            label: I18n.t("Панель в аду", "Bar in hell")
+            hint: I18n.t("у каждого вида своя адская версия: таскбар — раскалённая плита с лавой и пламенем, полоса — камень с клыками и цепями, остров — горящая сера, капсулы — надгробия на цепях, Windose — Hellose с кровью; док остаётся обычным", "The styles have hell versions of their own: the taskbar a hot slab of lava and flames, the strip rock with fangs and chains, the island burning brimstone, the capsules tombstones on chains, Windose turns Hellose, with blood; the dock stays as it is")
+            PxToggle {
+                checked: Config.y2k.hellBar
+                onToggled: c => Config.y2k.hellBar = c
+            }
+        }
+        SettingRow {
+            visible: Angel.hellShown
+            label: I18n.t("Лирика в аду", "Lyrics in hell")
+            hint: I18n.t("строка на панели — жирным обугленным шрифтом: поднимается из языков пламени, старая чернеет и осыпается пеплом, а когда песня кончилась — из лирики бьёт адский салют: угли, искры, черепа, пентаграммы и сердца с рожками", "The bar's line in a bold charred font: it rises out of the flames, the old one blackens and crumbles to ash, and when the song ends hell's salute bursts out of the lyrics: embers, sparks, skulls, pentagrams and horned hearts")
+            Flow {
+                width: parent.width
+                spacing: Theme.u * 4
+                PxToggle {
+                    checked: Config.y2k.hellLyrics
+                    onToggled: c => Config.y2k.hellLyrics = c
+                }
+                PxButton {
+                    compact: true
+                    icon: "fire"
+                    text: I18n.t("Салют", "Salute")
+                    onClicked: {
+                        const sc = Shell.primaryScreen || Shell.screens[0];
+                        if (sc)
+                            HellFx.fireworks(sc.name, sc.width / 2, BarLayout.bottom ? sc.height - Theme.u * 12 : Theme.u * 12, !BarLayout.bottom);
+                    }
+                }
+            }
+        }
+        SettingRow {
+            visible: Angel.hellShown
+            label: I18n.t("Колесо Ада", "Wheel of Hell")
+            hint: I18n.t("её виджет на стол, только в аду: раз в 20 минут крутишь — две мольбы за ангела, наказание, новый ад, цербер, землетрясение, проклятый курсор на час или пустышка", "Her desktop widget, hell only: a spin every 20 minutes — two pleas for the angel, a punishment, a new hell, Cerberus, an earthquake, a cursed cursor for an hour or a dud")
+            PxButton {
+                compact: true
+                icon: "pentagram"
+                text: DesktopWidgets.widgets.some(w => w.type === "hellwheel") ? I18n.t("Уже на столе", "On the desk") : I18n.t("Поставить на стол", "Put it on the desk")
+                enabled: !DesktopWidgets.widgets.some(w => w.type === "hellwheel")
+                onClicked: DesktopWidgets.add("hellwheel", Shell.primaryName)
+            }
+        }
+        SettingRow {
+            visible: Angel.hellShown
             label: I18n.t("Виджеты в аду", "Widgets in hell")
             hint: I18n.t("когда бьётся стекло, виджеты сгорают и встают адскими: обсидиан, пламя, римские часы, огненные столбы; с ангелом пепел сдувает ветром. Свои плагины без адской версии перекрашиваются", "When the glass breaks the widgets burn and rise from hell: obsidian, flames, a Roman clock, columns of fire; with the angel the wind blows the ash away. Plugins without a hell look of their own are re-inked")
             PxToggle {
@@ -366,28 +534,6 @@ PxPage {
                 icon: "cursor"
                 text: I18n.t("Выбрать", "Choose")
                 onClicked: Shell.settingsPage = "cursor"
-            }
-        }
-        SettingRow {
-            label: I18n.t("Дрожание текста", "Text tremble")
-            hint: I18n.t("буквы в её репликах иногда подёргиваются на пиксель, как в Undertale", "Now and then a letter in her lines twitches by a pixel, like in Undertale")
-            PxSegmented {
-                model: [
-                    {
-                        "label": I18n.t("Нет", "Off"),
-                        "value": "off"
-                    },
-                    {
-                        "label": I18n.t("Слегка", "Light"),
-                        "value": "light"
-                    },
-                    {
-                        "label": I18n.t("Сильно", "Strong"),
-                        "value": "strong"
-                    }
-                ]
-                currentValue: Config.y2k.textShake
-                onActivated: v => Config.y2k.textShake = v
             }
         }
         SettingRow {
@@ -433,19 +579,146 @@ PxPage {
             }
         }
         SettingRow {
-            label: I18n.t("Тряска экрана", "Screen shake")
-            hint: Angel.hellShown ? I18n.t("когда ангел и демоница меняются, экран трясётся и бьётся стекло; с демоницей ещё сыплются 8-битные камни", "When the angel and the demon swap the screen shakes and the glass breaks; with the demon 8-bit rocks tumble down too") : I18n.t("когда ангел уходит через портал или возвращается, экран трясётся и бьётся стекло", "When the angel leaves through the portal or comes back the screen shakes and the glass breaks")
+            visible: Angel.hellShown && Config.y2k.cracks !== "off"
+            label: I18n.t("Что она ломает", "What she breaks")
+            hint: I18n.t("куда приходится её кулак: стекло трескается; телевизор — дыра со «снегом» и битыми полосами экрана; прожжённая дыра — внутри адский огонь; когти — четыре светящиеся раны; печать — выжженная пентаграмма. «Случайно» — каждый раз другое", "Where her fist lands: glass cracks; a TV gets a hole with snow and dead screen lines; a burnt hole has hellfire inside; claws leave four glowing gashes; a sigil is a pentagram burnt into the glass. “Random”: something else every time")
+            PxCombo {
+                width: Math.min(parent.width, Theme.u * 120)
+                model: [
+                    {
+                        "label": I18n.t("Стекло", "Glass"),
+                        "value": "glass"
+                    },
+                    {
+                        "label": I18n.t("Разбитый телевизор", "Smashed TV"),
+                        "value": "tv"
+                    },
+                    {
+                        "label": I18n.t("Прожжённая дыра", "Burnt hole"),
+                        "value": "burn"
+                    },
+                    {
+                        "label": I18n.t("Следы когтей", "Claw marks"),
+                        "value": "claws"
+                    },
+                    {
+                        "label": I18n.t("Выжженная печать", "Burnt sigil"),
+                        "value": "sigil"
+                    },
+                    {
+                        "label": I18n.t("Случайно", "Random"),
+                        "value": "random"
+                    }
+                ]
+                currentValue: Config.y2k.breakage || "glass"
+                onActivated: v => Config.y2k.breakage = v
+            }
+        }
+    }
+
+    // the novel (services/Novel): chapters written in the editor, played out on the desktop
+    PxGroup {
+        width: parent.width
+        title: I18n.t("Новелла", "The novel")
+        advanced: true
+        icon: "document"
+        SettingRow {
+            label: I18n.t("Истории ангела", "The angel's stories")
+            hint: I18n.t("главы из папки ", "Chapters from ") + Novel.dir + I18n.t(": записки на обоях после сна, вопросы с вариантами ответа («?» над ней — нажми), её записки про тебя. Пишутся в редакторе диалогов", ": notes on the wallpaper after sleep, questions with answers to pick (a “?” over her — click), her notes about you. Written in the dialogue editor")
             PxToggle {
-                checked: Config.y2k.shake
-                onToggled: c => Config.y2k.shake = c
+                checked: Config.novel.enabled
+                onToggled: c => Config.novel.enabled = c
             }
         }
         SettingRow {
-            label: I18n.t("Лучи и хор ангела", "The angel's rays and choir")
-            hint: I18n.t("когда она возвращается из ада: полторы секунды солнца справа (при запуске — только самый первый раз)", "When she comes back from hell: a second and a half of sunshine on the right (at start-up only the very first time)")
-            PxToggle {
-                checked: Config.y2k.heavenFx
-                onToggled: c => Config.y2k.heavenFx = c
+            visible: Config.novel.enabled
+            label: I18n.t("Сейчас", "Now")
+            hint: {
+                const s = Novel.state;
+                const st = Novel.stories[s.chapter];
+                if (!Object.keys(Novel.stories).length)
+                    return I18n.t("глав нет — открой редактор", "No chapters yet — open the editor");
+                if (!s.chapter)
+                    return I18n.t("ещё не началась: первая глава ждёт выхода компьютера из сна (или «Начать сейчас»)", "Not started: the first chapter waits for the computer to wake from sleep (or “Start now”)");
+                return (st ? st.title || s.chapter : s.chapter) + (s.main.node ? " · " + s.main.node + (s.main.wait ? " (" + s.main.wait.replace(/^at:\d+/, I18n.t("ждёт времени", "waits for its time")) + ")" : "") : (s.done[s.chapter] ? I18n.t(" · главная линия пройдена", " · main line done") : "")) + (s.free ? I18n.t(" · вопросы и записки приходят сами", " · questions and notes come by themselves") : "");
+            }
+            Flow {
+                width: parent.width
+                spacing: Theme.u * 2
+                PxButton {
+                    compact: true
+                    accent: true
+                    icon: "document"
+                    text: I18n.t("Редактор диалогов", "Dialogue editor")
+                    onClicked: Novel.edit()
+                }
+                PxButton {
+                    compact: true
+                    icon: "folder"
+                    text: I18n.t("Папка", "Folder")
+                    onClicked: Shell.openPath(Novel.dir)
+                }
+                PxButton {
+                    compact: true
+                    icon: "play"
+                    text: I18n.t("Начать сейчас", "Start now")
+                    onClicked: {
+                        Novel.reload();
+                        startLater.restart();
+                    }
+                    Timer {
+                        id: startLater
+                        interval: 600
+                        onTriggered: Novel.startChapter(Novel.state.chapter || Object.keys(Novel.stories).sort()[0] || "")
+                    }
+                }
+                PxButton {
+                    compact: true
+                    icon: "chat"
+                    text: I18n.t("Вопрос сейчас", "A question now")
+                    onClicked: Novel.forceQuestion()
+                }
+                PxButton {
+                    compact: true
+                    flat: true
+                    icon: "refresh"
+                    text: I18n.t("С самого начала", "From the very start")
+                    onClicked: Novel.reset()
+                }
+            }
+        }
+        SettingRow {
+            visible: Config.novel.enabled
+            label: I18n.t("Кто ты", "Who you are")
+            hint: I18n.t("как ангел к тебе обращается (хотел / хотела). Она всё равно однажды спросит сама", "How the angel addresses you. She still asks one day herself")
+            PxSegmented {
+                model: [
+                    {
+                        "label": I18n.t("Парень", "A guy"),
+                        "value": "m"
+                    },
+                    {
+                        "label": I18n.t("Девушка", "A girl"),
+                        "value": "f"
+                    },
+                    {
+                        "label": I18n.t("Не указывать", "Rather not say"),
+                        "value": ""
+                    }
+                ]
+                currentValue: Config.novel.gender || ""
+                onActivated: v => Config.novel.gender = v
+            }
+        }
+        SettingRow {
+            visible: Config.novel.enabled
+            label: I18n.t("Как тебя зовут", "Your name")
+            hint: I18n.t("для {name} в репликах; пусто — имя пользователя", "For {name} in her lines; empty — your login name")
+            PxField {
+                width: Math.min(parent.width, Theme.u * 120)
+                text: Config.novel.name || ""
+                placeholder: StartApps.userName
+                onEdited: Config.novel.name = text.trim()
             }
         }
     }
@@ -453,6 +726,7 @@ PxPage {
     PxGroup {
         width: parent.width
         title: I18n.t("Стрим-режим", "Stream mode")
+        advanced: true
         icon: "monitor"
         SettingRow {
             label: I18n.t("Сейчас", "Now")
@@ -529,6 +803,7 @@ PxPage {
     PxGroup {
         width: parent.width
         title: I18n.t("Блёстки", "Glitter")
+        advanced: true
         icon: "sparkle"
         SettingRow {
             label: I18n.t("Шлейф за курсором", "Sparkle trail")
@@ -573,6 +848,7 @@ PxPage {
     PxGroup {
         width: parent.width
         title: I18n.t("Звуки", "Sounds")
+        advanced: true
         icon: "speaker"
         SettingRow {
             label: I18n.t("Звуки angelOS", "angelOS sounds")
@@ -658,6 +934,7 @@ PxPage {
     PxGroup {
         width: parent.width
         title: I18n.t("Загрузочный экран", "Loading screen")
+        advanced: true
         icon: "monitor"
         SettingRow {
             label: I18n.t("При входе в систему", "On login")

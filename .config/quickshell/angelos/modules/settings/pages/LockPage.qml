@@ -148,6 +148,7 @@ PxPage {
 
     PxGroup {
         title: I18n.t("Заставка (Idle)", "Idle screen")
+        advanced: true
         icon: "moon"
         width: parent.width
         SettingRow {

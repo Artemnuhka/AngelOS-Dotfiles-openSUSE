@@ -16,12 +16,13 @@ import qs.widgets
 // angelOS UI self-test, started by scripts/test-ui.sh (ANGELOS_TEST=1, Qt's
 // offscreen platform, a throwaway HOME). Inside the real shell, so the type
 // anchors of shell.qml are the ones in use:
-//   pages     every settings page, simple view and Expert, loads (no errors)
+//   pages     every settings page loads in each settings skin (no errors), the sidebar is
+//             always there; sub-pages (advanced groups) open on their own; ◀ ▶ history
 //   previews  every preview scene loads and plays through its frames
 //   search    settings search: 40 typical queries, average and worst time
 //   rig       the helper's pictures (SpriteRig): both figures read, sized as
 //             their rig.json says, swapped and played through without errors
-//   alttab    the three Alt+Tab switcher styles load and follow the pick
+//   alttab    the Alt+Tab switcher styles (and hell's own) load and follow the pick
 //   bar       bar widgets (Wi-Fi, Bluetooth, wired, tray, desk sprites) load, their panels open
 //   wrap      long switch labels wrap inside a narrow group instead of running past it
 //   start     every Start look (the bodies of StartOverlay) loads, searches, walks with the keys, Esc closes
@@ -91,7 +92,7 @@ Scope {
             id: altTabStage
             property string style: ""
             active: style !== ""
-            sourceComponent: style === "ngo" ? atNgo : style === "y2k" ? atY2k : atAngel
+            sourceComponent: style === "ngo" ? atNgo : style === "y2k" ? atY2k : style === "hell" ? atHell : atAngel
         }
         Component {
             id: atAngel
@@ -108,6 +109,12 @@ Scope {
         Component {
             id: atY2k
             AltTabY2k {
+                host: altTabHost
+            }
+        }
+        Component {
+            id: atHell
+            AltTabHell {
                 host: altTabHost
             }
         }
@@ -302,7 +309,7 @@ Scope {
     readonly property var variants: ({
             "WallpaperFx": Wallpapers.transitions.map(t => t.id),
             "StartMenu": ["classic", "win11", "fullscreen", "xmb", "windose", "wii", "spotlight"],
-            "BarStyle": ["taskbar", "top", "island"],
+            "BarStyle": ["taskbar", "top", "island", "dock", "capsules", "windose"],
             "DeskSwitch": WorkspaceAnim.styles.map(s => s.id),
             "OpenFx": WindowAnim.openStyles.map(s => s.id),
             "CloseFx": WindowAnim.closeStyles.map(s => s.id),
@@ -315,6 +322,8 @@ Scope {
     property int index: -1
     property double started: 0
     property bool expertPass: false
+    property int navStep: 0
+    property string navNote: ""
     property var settingsSkins: ["classic", "windose", "stream"]
     property int settingsSkinIndex: 0
     property bool settingsShotPending: false
@@ -359,11 +368,10 @@ Scope {
     }
 
     function startPages(expert) {
-        expertPass = expert;
+        expertPass = false;
         Config.settingsUi.skin = settingsSkins[settingsSkinIndex];
-        Config.settingsUi.expert = expert;
         const ids = view.allPages.map(p => p.id);
-        list = expert ? ids : ["home", "more"].concat(ids);
+        list = ["home"].concat(ids);
         index = -1;
         phase = "pages";
         nextPage();
@@ -371,9 +379,7 @@ Scope {
     function nextPage() {
         index++;
         if (index >= list.length) {
-            if (!expertPass)
-                startPages(true);
-            else if (settingsSkinIndex + 1 < settingsSkins.length) {
+            if (settingsSkinIndex + 1 < settingsSkins.length) {
                 settingsSkinIndex++;
                 startPages(false);
             }
@@ -390,7 +396,6 @@ Scope {
     function startSettingsShots() {
         settingsShotFlavor = Config.appearance.flavor;
         settingsShotMode = Config.appearance.mode;
-        Config.settingsUi.expert = false;
         list = [];
         for (const skin of settingsSkins)
             for (const page of ["home", "appearance", "updates"])
@@ -489,12 +494,11 @@ Scope {
             const ms = Date.now() - started;
             if (d.status === Loader.Loading && ms < 8000)
                 return;
-            const name = (expertPass ? "page-expert:" : "page:") + settingsSkins[settingsSkinIndex] + ":" + list[index];
+            const name = "page:" + settingsSkins[settingsSkinIndex] + ":" + list[index];
             report(name, d.status === Loader.Ready && view.frame.skin === settingsSkins[settingsSkinIndex] && d.settingsSkin === settingsSkins[settingsSkinIndex],
                    d.status === Loader.Ready ? ms + " ms, page skin " + d.settingsSkin : "status " + d.status + " " + d.source);
             if (list[index] === "home" || list[index] === "appearance")
-                report("sidebar:" + settingsSkins[settingsSkinIndex] + ":" + (expertPass ? "expert" : "simple") + ":" + list[index],
-                       d.sidebarVisible === (expertPass || settingsSkins[settingsSkinIndex] !== "classic"));
+                report("sidebar:" + settingsSkins[settingsSkinIndex] + ":" + list[index], d.sidebarVisible === true);
             nextPage();
             return;
         }
@@ -554,16 +558,43 @@ Scope {
             return;
         }
         if (phase === "nav") {
-            // simple view: "Back" returns to "All sections", not to the home tiles
-            Config.settingsUi.expert = false;
-            Shell.settingsPage = "home";
-            Shell.settingsPage = "more";
-            Shell.settingsPage = "fonts";
-            const label = view.backLabel;
-            view.back();
-            const first = Shell.settingsPage;
-            view.back();
-            report("nav-back", first === "more" && Shell.settingsPage === "home", "fonts → " + first + " (" + label + ") → " + Shell.settingsPage);
+            // ◀ ▶: account → sound → its sub-page System sounds → its "Clicks" group, back
+            // twice lands on sound, forward once on System sounds again
+            if (navStep === 0) {
+                Shell.settingsPage = "account";
+                navStep = 1;
+                return;
+            }
+            const go = [["sound", ""], ["sfx", ""], ["bar", "Иконки"]];
+            if (navStep <= go.length) {
+                Shell.settingsPage = go[navStep - 1][0];
+                Shell.settingsSub = go[navStep - 1][1];
+                navStep++;
+                return;
+            }
+            if (navStep === go.length + 1) {
+                const it = view.diagnostics();
+                const pg = view.pageItem;
+                // the sub-page: its heading is the group, the page's other groups stepped aside
+                const others = pg && pg.advancedGroups ? pg.advancedGroups.filter(c => c.title !== "Иконки") : [];
+                report("subpage", it.sub === "Иконки" && !!pg && pg.focusGroup === "Иконки" && others.length > 0 && others.every(c => !c.visible), "bar › " + it.sub + ", " + others.filter(c => c.visible).length + " other groups still shown");
+                view.back();
+                navStep++;
+                return;
+            }
+            if (navStep === go.length + 2) {
+                view.back();
+                navStep++;
+                return;
+            }
+            if (navStep === go.length + 3) {
+                const afterBack = Shell.settingsPage;
+                view.forward();
+                navStep++;
+                navNote = afterBack;
+                return;
+            }
+            report("nav-back", navNote === "sound" && Shell.settingsPage === "sfx" && view.sectionOf("sfx") === "sound", "bar›Иконки → ◀ ◀ " + navNote + " → ▶ " + Shell.settingsPage + " (section " + view.sectionOf(Shell.settingsPage) + ")");
             // settings undo puts a changed setting back
             const before = Config.appearance.shadows;
             phase = "undo";
@@ -625,7 +656,7 @@ Scope {
                         "workspace_id": i
                     }));
             AltTab.index = 1;
-            altTabStyles = ["angelos", "ngo", "y2k"];
+            altTabStyles = ["angelos", "ngo", "y2k", "hell"];
             altTabSeen = [];
             phase = "alttab";
             started = Date.now();
@@ -729,7 +760,7 @@ Scope {
                 report("start-styles", startSeen.every(x => x.indexOf("FAIL") < 0), startSeen.join(", "));
                 console.log("TEST-PAGE hell-widgets");
                 hellSteps = [];
-                for (const k of ["Clock", "Sysmon", "Cava", "NowPlaying", "frame"])
+                for (const k of ["Clock", "Sysmon", "Cava", "NowPlaying", "Hellwheel", "frame"])
                     for (const r of ["heaven", "hell"])
                         hellSteps.push([k, r]);
                 hellSeen = [];

@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>angelOS · новелла</title>
+<link rel="stylesheet" href="editor.css">
+</head>
+<body>
+<header id="top">
+  <div class="brand">✧ angelOS <span>новелла</span></div>
+  <select id="storySel" title="Глава"></select>
+  <button id="newStory" title="Новая глава">+ глава</button>
+  <input id="title" placeholder="Название главы" spellcheck="true">
+  <label class="inline">с кем
+    <select id="with" title="Глава идёт, только пока в углу этот персонаж">
+      <option value="angel">ангел</option>
+      <option value="demon">демоница</option>
+      <option value="any">любой</option>
+    </select>
+  </label>
+  <span class="grow"></span>
+  <span id="status"></span>
+  <button id="folder" title="Открыть папку новеллы">📁</button>
+  <button id="check">Проверка <b id="probCount"></b></button>
+  <button id="play" class="accent">▶ Прогнать</button>
+  <button id="save" class="accent" title="Ctrl+S">Сохранить</button>
+</header>
+
+<main>
+  <aside id="left">
+    <input id="find" placeholder="Поиск по узлам и тексту…">
+    <div class="addrow" id="addrow"></div>
+    <div id="list"></div>
+
+    <details open>
+      <summary>Вопросы сами по себе <small>(пул)</small></summary>
+      <p class="hint">После узла «свобода» ангел время от времени задаёт эти вопросы (каждый один раз): над ней появляется «?», клик — вопрос с вариантами.</p>
+      <div id="poolQ"></div>
+      <div class="row"><select id="poolQAdd"></select><button id="poolQAddBtn">добавить</button></div>
+    </details>
+    <details>
+      <summary>Записки, которые она роняет</summary>
+      <p class="hint">Случайные фразы про тебя: падают листком на рабочий стол. Шаблоны: {name} {app} {song} {time} {daypart} {g:он|она|?}</p>
+      <div id="poolD"></div>
+      <button id="poolDAdd">+ записка</button>
+      <div class="row small">каждые <input id="ambQ1" type="number" min="1">–<input id="ambQ2" type="number" min="1"> мин вопрос,
+        <input id="ambD1" type="number" min="1">–<input id="ambD2" type="number" min="1"> мин записка</div>
+    </details>
+    <details>
+      <summary>Переменные</summary>
+      <p class="hint">Числа и слова, которые меняют ответы (trust, mood…). gender: m / f / x / "" — пол; setupGender — что выбрано в мастере настройки.</p>
+      <div id="vars"></div>
+      <button id="varAdd">+ переменная</button>
+    </details>
+    <details>
+      <summary>Спрайты</summary>
+      <p class="hint">Картинки лежат в <code id="spriteDir"></code>: sprites/angel/happy.png → спрайт «happy» ангела. После добавления файлов — «обновить».</p>
+      <div id="sprites"></div>
+      <button id="spritesReload">обновить</button>
+    </details>
+  </aside>
+
+  <section id="graphWrap">
+    <svg id="graph"></svg>
+    <div id="graphTools">
+      <button id="relayout" title="Разложить узлы заново по порядку">разложить</button>
+      <button id="zoomOut">−</button><button id="zoomIn">+</button><button id="zoomFit">вписать</button>
+    </div>
+    <div id="graphHelp">колесо — масштаб · тащи фон — двигать · тащи узел — переставить · двойной клик — прогнать отсюда</div>
+  </section>
+
+  <aside id="right">
+    <div id="inspector"><p class="empty">Выбери узел на графе или в списке.</p></div>
+  </aside>
+</main>
+
+<div id="problems" class="sheet" hidden>
+  <div class="sheetHead"><b>Проверка главы</b><button data-close>✕</button></div>
+  <div id="problemList"></div>
+</div>
+
+<div id="player" hidden>
+  <div class="playerBox">
+    <div class="playerHead">
+      <b>Прогон</b>
+      <label class="inline">пол <select id="pGender"><option value="">не указан</option><option value="m">парень</option><option value="f">девушка</option><option value="x">не сказал(а)</option></select></label>
+      <label class="inline">в мастере <select id="pSetup"><option value="">не указан</option><option value="m">парень</option><option value="f">девушка</option></select></label>
+      <span class="grow"></span>
+      <button id="pQuestion">случайный вопрос</button>
+      <button id="pDrop">записка</button>
+      <button id="pRestart">с начала</button>
+      <button data-close>✕</button>
+    </div>
+    <div class="stage">
+      <div class="portrait"><img id="pSprite" alt=""><div id="pNoSprite">нет спрайта</div></div>
+      <div class="dialog">
+        <div id="pName"></div>
+        <div id="pText"></div>
+        <div id="pChoices"></div>
+        <div id="pWhen"></div>
+      </div>
+    </div>
+    <div id="pPaper" hidden><div class="paperTitle"></div><div class="paperText"></div><button id="pPaperClose">сложить</button></div>
+    <div class="playerFoot"><span id="pVars"></span><span class="grow"></span><span id="pNode"></span></div>
+  </div>
+</div>
+
+<script src="core.js"></script>
+<script src="editor.js"></script>
+</body>
+</html>

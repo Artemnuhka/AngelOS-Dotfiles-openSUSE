@@ -86,6 +86,50 @@ IpcHandler {
     // the corner helper: `angelos helper "tip | joke | hint | ask <text> | plea | status"`
     // (owner: angel — the demon leaves at once; dev or owner: prank, ascend, fx,
     // hell, throw; dev only: drag)
+    // the novel (services/Novel, ~/AngelOs-Nov): start [chapter] | reset | reload | status |
+    // question | drop | resume | click | next | choose N | open | fold | edit
+    function novel(line: string): string {
+        const a = String(line || "").trim().split(/\s+/);
+        switch (a[0]) {
+        case "start":
+            return Novel.startChapter(a[1] || Object.keys(Novel.stories).sort()[0] || "");
+        case "reset":
+            return Novel.reset();
+        case "reload":
+            Novel.reload();
+            return "ok";
+        case "question":
+            Novel.forceQuestion();
+            return "ok";
+        case "drop":
+            Novel.forceDrop();
+            return "ok";
+        case "resume":
+            Novel.resumed();
+            return "ok";
+        case "click":
+            return Novel.click() ? "ok" : "nothing waits for a click";
+        case "next":
+            Novel.advance();
+            return "ok";
+        case "choose":
+            Novel.choose((parseInt(a[1]) || 1) - 1);
+            return "ok";
+        case "edit":
+            Novel.edit();
+            return "ok";
+        case "open":
+            // unfold the paper on the desk (what a click on it does)
+            if (!Novel.paper)
+                return "no paper";
+            Novel.noteOpen = true;
+            return "ok";
+        case "fold":
+            Novel.noteRead();
+            return "ok";
+        }
+        return Novel.status();
+    }
     function helper(line: string): string {
         const cmd = String(line).trim().split(/\s+/)[0];
         const arg = String(line).trim().slice(cmd.length).trim();

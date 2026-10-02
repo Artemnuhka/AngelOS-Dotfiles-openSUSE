@@ -13,7 +13,8 @@ import qs.widgets
 // (NGO) window — by the button; iPhone-like grid, PSP XMB, Wii channels — the whole
 // screen; Spotlight — a search pill centred in the upper third. All of them animate
 // through `reveal` (0 → 1) and share the body interface: closeRequested, current,
-// reset(), setQuery(text), key(event).
+// reset(), setQuery(text), key(event). While the demon rules: each of them in a hell
+// version (re-inked, flames along the edge), or hell's own (StartHell).
 Variants {
     model: Shell.screens
 
@@ -23,13 +24,18 @@ Variants {
         required property var modelData
         readonly property string screenName: modelData.name
         readonly property bool open: Shell.startScreen === screenName
-        readonly property string style: ["classic", "win11", "fullscreen", "xmb", "windose", "wii", "spotlight"].includes(Config.bar.startStyle) ? Config.bar.startStyle : "classic"
+        // while the demon rules Start goes to hell (Y2K → Angel or demon → Start in hell):
+        // "skin" — your look in a hell version (re-inked, shaders/hell_ink.frag, with flames),
+        // "hell" — hell's own menu (StartHell), "" — untouched
+        readonly property bool hellish: Angel.demon && Config.y2k.hellStart === "hell"
+        readonly property bool hellSkin: Angel.demon && Config.y2k.hellStart === "skin"
+        readonly property string style: hellish ? "hell" : ["classic", "win11", "fullscreen", "xmb", "windose", "wii", "spotlight"].includes(Config.bar.startStyle) ? Config.bar.startStyle : "classic"
         readonly property bool full: style === "fullscreen" || style === "xmb" || style === "wii"
         readonly property bool spot: style === "spotlight"
         property bool shown: false
         property real reveal: 0
         // this look's deep settings (services/StartPrefs: Settings → Bar → Start → Fine-tune)
-        readonly property var prefs: StartPrefs.of(style)
+        readonly property var prefs: StartPrefs.of(style === "hell" ? "classic" : style)
 
         screen: modelData
         visible: shown
@@ -153,7 +159,7 @@ Variants {
             // Fine-tune → Animation can make any of them fade, slide or zoom instead
             readonly property string kind: win.prefs.animKind || "auto"
             readonly property bool slides: kind === "slide" || (kind === "auto" && (win.style === "win11" || Config.bar.taskbarAlign === "center"))
-            readonly property bool zooms: kind === "zoom" || (kind === "auto" && (win.style === "classic" || win.style === "windose") && !slides)
+            readonly property bool zooms: kind === "zoom" || (kind === "auto" && (win.style === "classic" || win.style === "windose" || win.style === "hell") && !slides)
             // Spotlight: a fifth down the screen, dropping in a little
             y: win.full ? 0 : win.spot ? Math.round(win.height * 0.2) - (kind === "auto" || kind === "slide" ? (1 - win.reveal) * Theme.u * 10 : 0) : restY + (slides ? (win.above ? 1 : -1) * (1 - win.reveal) * Theme.u * 24 : 0)
             opacity: win.full ? 1 : win.reveal
@@ -167,8 +173,15 @@ Variants {
                     "wii": wiiComp,
                     "win11": win11Comp,
                     "windose": windoseComp,
-                    "spotlight": spotComp
+                    "spotlight": spotComp,
+                    "hell": hellComp
                 })[win.style] || classicComp
+            // hell's version of whatever look this is
+            layer.enabled: win.hellSkin && win.shown
+            layer.effect: ShaderEffect {
+                fragmentShader: Qt.resolvedUrl("../../shaders/hell_ink.frag.qsb")
+                property real keep: 0.3
+            }
             onLoaded: {
                 item.closeRequested.connect(Shell.closeStart);
                 if (win.open && item.reset)
@@ -178,6 +191,28 @@ Variants {
                 visible: !win.full
                 anchors.fill: parent
                 z: -1
+            }
+        }
+        // hell's version: flames lick the menu's top edge (or the screen's foot for the
+        // full-screen looks), stepped like the hell windows' trim
+        ShaderEffect {
+            id: hellFlames
+            visible: win.hellSkin && win.shown && !!body.item
+            readonly property int rows: win.full ? 14 : 7
+            x: win.full ? 0 : body.x
+            y: win.full ? win.height - height : body.y - height + Theme.u
+            width: win.full ? win.width : body.width * body.scale
+            height: Theme.u * rows
+            opacity: win.full ? 0.9 * win.reveal : body.opacity
+            property real time: 0
+            property real seed: 3.33
+            property size cells: Qt.size(Math.max(1, Math.round(width / Theme.u)), rows)
+            fragmentShader: Qt.resolvedUrl("../../shaders/hell_flames.frag.qsb")
+            Timer {
+                interval: 140
+                repeat: true
+                running: hellFlames.visible
+                onTriggered: hellFlames.time += 0.14
             }
         }
         Component {
@@ -219,6 +254,12 @@ Variants {
         Component {
             id: spotComp
             StartSpotlight {}
+        }
+        Component {
+            id: hellComp
+            StartHell {
+                reveal: win.reveal
+            }
         }
 
         RightClickGuard {}

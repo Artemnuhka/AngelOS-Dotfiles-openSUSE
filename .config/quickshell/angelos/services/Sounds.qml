@@ -9,7 +9,8 @@ import qs.config
 //   y2k       synthesised by scripts/y2k-sounds.py into ~/.local/share/angelos/sounds/y2k
 //   overdose  NEEDY GIRL OVERDOSE (Windose) sounds, fetched on first use by
 //             scripts/sound-pack.py into …/sounds/overdose
-// Events: startup notify error click shutdown angel wallpaper, the "cute" ones
+// Events: startup notify error click shutdown angel wallpaper, a USB device plugged in
+// or out (usbIn usbOut: scripts/usb-watch.py, a hub's burst plays once), the "cute" ones
 // (open toggle screenshot volume windowClose — Config.y2k.cuteSounds), the
 // demon's voice, and the effects crack/choir/rocks/shatter (always synthesised;
 // rocks: the demon's 8-bit rockfall, shatter: the screen breaking when the
@@ -22,7 +23,7 @@ import qs.config
 Singleton {
     id: root
 
-    readonly property var events: ["startup", "notify", "error", "click", "shutdown", "angel", "wallpaper", "open", "toggle", "screenshot", "volume", "windowClose", "demon", "crack", "choir", "rocks", "shatter", "voice", "clickRight", "key", "windowOpen", "workspace", "lock", "unlock"]
+    readonly property var events: ["startup", "notify", "error", "click", "shutdown", "angel", "wallpaper", "open", "toggle", "screenshot", "volume", "windowClose", "demon", "crack", "choir", "rocks", "shatter", "voice", "clickRight", "key", "windowOpen", "workspace", "lock", "unlock", "usbIn", "usbOut", "bark"]
     // off until switched on in System sounds (typing and such would surprise)
     readonly property var optIn: ["clickRight", "key", "windowOpen", "workspace", "lock", "unlock"]
     // the input ones: quiet over a fullscreen window (games) when asked
@@ -33,9 +34,9 @@ Singleton {
     readonly property var extra: ["voiceAngel", "voiceDemon", "key2", "key3"]
     readonly property string customDir: base + "/custom"
     readonly property var cute: ["open", "toggle", "screenshot", "volume", "windowClose"]
-    readonly property var effects: ["crack", "choir", "rocks", "shatter", "voice"]
+    readonly property var effects: ["crack", "choir", "rocks", "shatter", "voice", "bark"]
     // the helper's own sounds follow "Her voice" (Config.y2k.helperVolume) on top of the volume
-    readonly property var helperSounds: ["angel", "demon", "crack", "choir", "rocks", "shatter", "voice", "voiceAngel", "voiceDemon"]
+    readonly property var helperSounds: ["angel", "demon", "crack", "choir", "rocks", "shatter", "voice", "voiceAngel", "voiceDemon", "bark"]
     function volumeOf(name) {
         const v = Math.max(0, Math.min(1, Config.y2k.soundVolume));
         const own = Math.max(0, Math.min(1.5, Number(tweak(name).vol === undefined ? 1 : tweak(name).vol)));
@@ -114,7 +115,7 @@ Singleton {
         }
     }
     // scripts/y2k-sounds.py PACK_VERSION: an older pack is synthesised again
-    readonly property string packVersion: "2"
+    readonly property string packVersion: "5"
     readonly property string base: Config.home + "/.local/share/angelos/sounds"
     readonly property string dir: base + "/y2k"
     readonly property string pack: Config.y2k.soundPack === "overdose" ? "overdose" : "y2k"
@@ -242,6 +243,32 @@ Singleton {
             if (root.watchArgs.length > 0)
                 clicks.running = true;
         }
+    }
+
+    // ---- USB devices plugged in / out (scripts/usb-watch.py reads udev, no root);
+    // runs only while one of the two sounds is on
+    readonly property bool usbWanted: Config.ready && !Shell.dev && (enabled("usbIn") || enabled("usbOut"))
+    Process {
+        id: usb
+        running: root.usbWanted
+        command: ["python3", "-u", Quickshell.shellDir + "/scripts/usb-watch.py"]
+        stdout: SplitParser {
+            onRead: line => {
+                const what = line.split(" ")[0];
+                if (what === "add")
+                    root.play("usbIn");
+                else if (what === "remove")
+                    root.play("usbOut");
+            }
+        }
+        onExited: if (root.usbWanted && !usbRestart.running)
+            usbRestart.start()
+    }
+    Timer {
+        id: usbRestart
+        interval: 5000
+        onTriggered: if (root.usbWanted)
+            usb.running = true
     }
 
     // ---- the shell's own moments ----

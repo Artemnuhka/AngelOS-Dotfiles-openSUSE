@@ -1,28 +1,21 @@
 import QtQuick
 import Quickshell
-import Quickshell.Io
 import qs.config
+import qs.services
 import qs.widgets
 
 Column {
     id: root
     property var plugin
-    property bool available: true
     width: parent ? parent.width : 400
     spacing: Theme.u * 5
 
-    Process {
-        running: true
-        command: ["sh", "-c", "command -v wlsunset"]
-        onExited: code => root.available = code === 0
-    }
-
     PxText {
-        visible: !root.available
         width: parent.width
         wrapMode: Text.Wrap
-        color: Theme.danger
-        text: I18n.t("wlsunset не установлен: sudo pacman -S wlsunset — после этого ночной свет заработает сам.", "Install wlsunset: sudo pacman -S wlsunset. Night light will start automatically afterward.")
+        kind: "tiny"
+        color: ScreenTune.error || ScreenTune.anyFailed ? Theme.danger : Theme.textDim
+        text: ScreenTune.error ? ScreenTune.error : ScreenTune.anyFailed ? I18n.t("гамму держит другая программа (wlsunset, gammastep?) — закрой её, ночной свет подхватит сам", "Another program holds the gamma (wlsunset, gammastep?): close it and the night light takes over") : ScreenTune.night ? I18n.t("сейчас ", "Now ") + ScreenTune.kelvin + " K" + I18n.t(" · яркость мониторов — Настройки → Монитор", " · monitor brightness: Settings → Monitor") : ""
     }
 
     PxGroup {

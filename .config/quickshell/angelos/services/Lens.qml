@@ -28,6 +28,8 @@ Singleton {
     readonly property string runtimeDir: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/angelos"
 
     function cmd(c, screen) {
+        if (liveMode || live)
+            return liveCmd(c, screen);
         if (c === "in") {
             if (!open)
                 show(screen);
@@ -49,6 +51,66 @@ Singleton {
             close();
         }
     }
+    // ---- the live lens (Config.lens.mode "live", the default): a glass beside the pointer
+    // that shows the screen frame by frame — extras/lens-live, a quickshell process of its
+    // own (ScreencopyView may crash Qt; then only the lens goes). It takes the mouse and
+    // the keys itself; the niri keys reach it through a control file.
+    readonly property bool liveMode: Config.lens.mode !== "snapshot"
+    property bool live: false
+    property int ctlSerial: 0
+    readonly property string ctlFile: runtimeDir + "/lens-live.json"
+    function liveCmd(c, screen) {
+        if (c === "in")
+            live ? tell("in") : liveShow(screen);
+        else if (c === "toggle")
+            live ? tell("close") : liveShow(screen);
+        else if (c === "out") {
+            if (live)
+                tell("out");
+        } else if (c !== "refresh" && live)
+            tell("close");
+    }
+    function tell(what) {
+        ctlSerial++;
+        Quickshell.execDetached(["sh", "-c", 'mkdir -p "$1" && printf "%s" "$3" > "$2.tmp" && mv -f "$2.tmp" "$2"', "sh", runtimeDir, ctlFile, JSON.stringify({
+                "serial": ctlSerial,
+                "cmd": what
+            })]);
+    }
+    function liveShow(screen) {
+        if (liveProc.running || Shell.dev)
+            return;
+        const name = screen || Niri.focusedOutput || (Quickshell.screens[0] ? Quickshell.screens[0].name : "");
+        const here = Pointer.screen === name;
+        tell("open");                       // the serial it starts from
+        liveProc.environment = {
+            "ANGELOS_LENS": JSON.stringify({
+                "screen": name,
+                "x": here ? Pointer.x : -1,
+                "y": here ? Pointer.y : -1,
+                "zoom": Math.max(1.5, Config.lens.zoom || 2),
+                "size": Config.lens.size,
+                "shape": Config.lens.shape,
+                "crisp": Config.lens.crisp,
+                "u": Theme.u,
+                "accent": Theme.hex(Theme.accent),
+                "edge": Theme.hex(Theme.edge),
+                "selectText": Theme.hex(Theme.selectText),
+                "font": Theme.fontBody,
+                "fontPx": Theme.sizeTiny,
+                "control": ctlFile
+            })
+        };
+        screenName = name;
+        live = true;
+        liveProc.running = true;
+    }
+    Process {
+        id: liveProc
+        command: ["sh", "-c", 'exec "$(command -v qs || echo "$HOME/.local/bin/qs")" -p "$1"', "sh", Quickshell.shellDir + "/extras/lens-live"]
+        onExited: root.live = false
+    }
+
     function show(screen) {
         screenName = screen || Niri.focusedOutput || (Quickshell.screens[0] ? Quickshell.screens[0].name : "");
         zoom = Math.max(1.5, Config.lens.zoom || 2);

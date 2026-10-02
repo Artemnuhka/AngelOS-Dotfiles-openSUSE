@@ -4,6 +4,7 @@ Apps, entry "helium" of templates/templates.json).
 
   helium-theme.py build PALETTE.json   write the theme for the palette's realm
   helium-theme.py status               what is set up, as JSON
+  helium-theme.py follow [--wait]      Helium's theme → "GTK": it follows angelOS live from now on
 
 Two ways for Helium to follow angelOS:
   live   Helium's own "GTK" theme (Settings → Appearance → Theme → GTK): it reads GTK's
@@ -15,12 +16,18 @@ Two ways for Helium to follow angelOS:
          its face, links in the accent, the new tab the desk; in hell obsidian, blood,
          embers and bone — and Helium reads it when it starts. Chromium keeps one theme at
          a time (enabling a second one uninstalls the first), so a theme can't switch live.
+
+`follow` picks "GTK" for the user (Settings → Window behavior → Helium → "Follow angelOS"):
+Helium writes its Preferences when it quits, so they are edited only while it is closed.
+With Helium running, a waiter (a transient systemd unit, so a shell restart doesn't kill it)
+does it the moment Helium closes, for up to 12 hours. Preferences are copied aside first.
 """
 import hashlib
 import json
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 HOME = Path.home()
@@ -140,7 +147,64 @@ def status():
         "theme": str(BASE / "theme"),
         "themeLoaded": theme_loaded(),
         "gtkMode": bool(gtk_mode),
+        "pending": subprocess.run(["systemctl", "--user", "is-active", "--quiet", "angelos-helium-follow"]).returncode == 0,
     }))
+
+
+def helium_running():
+    return subprocess.run(["pgrep", "-x", "helium"], capture_output=True).returncode == 0
+
+
+def set_gtk():
+    """Helium's theme → GTK (what Settings → Appearance → Theme → GTK does), dark/light from
+    the system; the user colour and any theme extension let go."""
+    path = PROFILE / "Default/Preferences"
+    prefs = json.loads(path.read_text())
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    backup = path.with_name("Preferences.angelos-" + stamp)
+    shutil.copy2(path, backup)
+    theme = prefs.setdefault("extensions", {}).setdefault("theme", {})
+    theme.pop("id", None)
+    theme["system_theme"] = 1                    # ui::SystemTheme::kGtk
+    bt = prefs.setdefault("browser", {}).setdefault("theme", {})
+    for k in ("user_color2", "color_variant2", "user_color", "color_variant", "is_grayscale2"):
+        bt.pop(k, None)
+    bt["color_scheme2"] = 0                       # follow the system's dark or light
+    tmp = path.with_name("Preferences.angelos-tmp")
+    tmp.write_text(json.dumps(prefs, separators=(",", ":")))
+    tmp.replace(path)
+    return str(backup)
+
+
+def follow(wait):
+    if not (PROFILE / "Default/Preferences").exists():
+        print(json.dumps({"ok": False, "error": "no Helium profile yet: start Helium once"}))
+        return 1
+    if not helium_running():
+        print(json.dumps({"ok": True, "done": True, "backup": set_gtk()}))
+        return 0
+    if not wait:
+        # wait in a transient unit of its own, the shell may restart meanwhile
+        unit = "angelos-helium-follow"
+        subprocess.run(["systemctl", "--user", "stop", unit], capture_output=True)
+        r = subprocess.run(["systemd-run", "--user", "--collect", "--quiet", "--unit", unit,
+                            sys.executable, str(Path(__file__).resolve()), "follow", "--wait"], capture_output=True, text=True)
+        if r.returncode != 0:
+            subprocess.Popen([sys.executable, str(Path(__file__).resolve()), "follow", "--wait"],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+        print(json.dumps({"ok": True, "done": False, "pending": True}))
+        return 0
+    deadline = time.time() + 12 * 3600
+    gone = 0
+    while time.time() < deadline:
+        gone = gone + 1 if not helium_running() else 0
+        if gone >= 2:                             # closed for good, Preferences written
+            time.sleep(1)
+            print(json.dumps({"ok": True, "done": True, "backup": set_gtk()}))
+            return 0
+        time.sleep(2)
+    print(json.dumps({"ok": False, "error": "Helium stayed open"}))
+    return 1
 
 
 def main():
@@ -151,6 +215,8 @@ def main():
         print(json.dumps({"ok": True, "changed": changed, "realm": pal.get("realm", "heaven")}))
     elif a == ["status"]:
         status()
+    elif a and a[0] == "follow":
+        sys.exit(follow("--wait" in a))
     else:
         print(__doc__, file=sys.stderr)
         sys.exit(1)

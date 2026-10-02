@@ -79,3 +79,37 @@ dialog sheet,
 dialog sheet > outline {
     border-radius: 0;
 }
+
+/* Pixel controls like angelOS's own: square buttons, fields, cards and lists,
+   bevelled buttons (light top-left, dark bottom-right; pressed — the other way round). */
+button,
+entry,
+spinbutton,
+dropdown > button,
+splitbutton,
+splitbutton > button,
+.linked > button,
+.linked > entry,
+list,
+list.boxed-list,
+list.boxed-list > row,
+.card,
+.boxed-list,
+notebook,
+scale > trough > slider,
+progressbar > trough,
+progressbar > trough > progress,
+switch,
+switch > slider,
+searchbar > revealer > box,
+popover > contents,
+.osd {
+    border-radius: 0;
+}
+button:not(.flat):not(.titlebutton):not(.circular) {
+    box-shadow: inset 1px 1px alpha(#ffffff, 0.16), inset -1px -1px alpha(#000000, 0.32);
+}
+button:not(.flat):not(.titlebutton):active,
+button:not(.flat):not(.titlebutton):checked {
+    box-shadow: inset 1px 1px alpha(#000000, 0.32), inset -1px -1px alpha(#ffffff, 0.1);
+}

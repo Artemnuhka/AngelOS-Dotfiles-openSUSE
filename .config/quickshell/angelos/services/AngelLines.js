@@ -51,7 +51,7 @@ const tips = [
     ["Меня можно схватить мышкой… Только не скидывай вниз, ладно? Там ад, и оттуда придёт она.", "You can grab me with the mouse… just don't throw me down, okay? That's hell, and she comes out of it.", ""],
     ["Не забывай пить водичку и моргать ♡", "Remember to drink water and blink ♡", ""],
     ["Встань, потянись. Я подожду, я вечная.", "Stand up and stretch. I'll wait, I'm eternal.", ""],
-    ["Если что-то сломалось — в «Эксперт» есть всё-всё. Но я верю, что всё хорошо!", "If something breaks, Expert mode has everything. But I believe it's all fine!", ""],
+    ["Если что-то сломалось — в поиске настроек слева найдётся всё-всё. Но я верю, что всё хорошо!", "If something breaks, the settings search on the left finds everything. But I believe it's all fine!", ""],
     // newer things
     ["Alt+Tab теперь мой: держи Alt и листай Tab. Три стиля, а Delete закрывает окно прямо из списка.", "Alt+Tab is mine now: hold Alt and tap Tab. Three styles, and Delete closes a window right from the list.", "windows"],
     ["Окна могут появляться и исчезать красиво — анимации открытия и закрытия на странице «Поведение окон».", "Windows can appear and vanish in style: open and close animations are on the Window behavior page.", "windows"],
@@ -165,49 +165,192 @@ const jokesEn = [
     "Every key makes a sound now. Your keyboard is an angel too: it never stops talking."
 ];
 
+// the demon's jokes (rewritten 2026-10-01 night): sharp, observant, a little dark, about
+// tech and the user's habits — the old ones leaned on cheap innuendo. Her voice: a bored
+// 666-year-old neon demoness, theatrical, vain, mocking the angel, secretly fond of you.
+// The style can be steered from ~/AngelOS-demon-style.txt (the next rewrite reads it).
 const demonJokesRu = [
-    "Ого, сколько вкладок открыто. Любишь, когда много всего и сразу?",
-    "Вставь флешку. Не спрашивай зачем, я просто проверяю, как у тебя с портами.",
-    "Кулер так пыхтит… Это ты на меня так реагируешь или на браузер?",
-    "У меня рога, у тебя root. Чувствуешь напряжение?",
-    "Давай без прелюдий: sudo — и поехали.",
-    "Мягкая перезагрузка или жёсткая? Я за жёсткую.",
-    "Разгон — это мило. Но важна не частота, а аптайм, зайка.",
-    "Горячие клавиши? Тут и так жарко.",
-    "Твоя история браузера… Да ладно, никому не скажу. Бесплатно не скажу.",
-    "Инкогнито включаешь? Какой скромный. Мне нравится.",
-    "Раздвинь окна пошире. Вот так. В тайлинге всё смотрится лучше.",
-    "Мне 666 лет, а ты всё ещё не можешь выйти из vim. Кто из нас тут старый?",
-    "Хочешь, я тебе стек переполню?",
-    "Подсветка RGB? Скромненько. Почти так же скромно, как ты на меня пялишься.",
-    "Клавиатура у тебя механическая, стонет на каждое нажатие. Ревную.",
-    "Открытые порты — это приглашение. Я просто вежливая.",
-    "Лупа на Mod+Alt+=. Рассмотри меня поближе. Ближе. Ещё.",
-    "Alt+Tab, Alt+Tab… Не можешь выбрать, с кем быть? Понимаю.",
-    "Вилы вместо курсора — чтобы ты не забывал, кто тут главная.",
-    "Твои виджеты сгорели. Не плачь, пепел тебе к лицу."
+    "В аду тоже есть техподдержка. Звонишь — и музыка ожидания играет вечно. Это и есть наказание. Всё наказание.",
+    "Я 666 лет искушаю людей. А ты сам себя искушаешь «ещё одним видео». Меня выдавливают с рынка.",
+    "Чёрт кроется в деталях. Поэтому я и читаю твои конфиги.",
+    "Девять кругов ада — это девять вкладок, в одной из которых играет звук, и ты не знаешь, в какой.",
+    "Святой воды я не боюсь. Я видела, что ты пьёшь в три часа ночи.",
+    "Продать душу? Солнышко, я проверила: это единственное, что у тебя не по подписке.",
+    "Мои рога — не украшение. Это антенны. Ловят каждое твоё «всё, сейчас лягу».",
+    "Ты называешь это «рабочий стол». Я вижу четыре игры и ни одного документа.",
+    "Вечность — это не долго. Долго — это когда собирается проект на Rust.",
+    "Ад вымощен благими намерениями. Твои там на почётном месте: «бэкап сделаю завтра».",
+    "Хочешь страшилку на ночь? «Обновления будут установлены при следующей перезагрузке». Всё. Сладких снов.",
+    "Ангел светится, потому что святая. Я — потому что неон. Мой свет хотя бы дешевле.",
+    "Семь смертных грехов. Ты сегодня закрыл лень, чревоугодие и «ещё пять минут». Последнего в списке нет, но я засчитаю.",
+    "Я бессмертная, и даже мне жарко от твоей видеокарты.",
+    "Пентаграмма в меню — это не сатанизм, это UX. Пять лучей — пять пунктов. Эргономичное зло.",
+    "Если долго смотреть в бездну, бездна начнёт рекомендовать тебе видео.",
+    "Твои пароли — причина, по которой у меня так много свободного времени.",
+    "Ангел оставила тебе записку: «Будь хорошим». Я её сожгла. Почерк был ужасный.",
+    "В аду есть Wi-Fi. Пароль — «12345678». Вот это и есть ад.",
+    "Я хотела тебя развратить, а потом увидела твой режим сна. Кто-то успел раньше меня.",
+    "Окна в тайлинге стоят ровно, как грешники в очереди на ресепшене. Красиво.",
+    "Не переживай из-за ошибок. В аду у каждого своя ошибка. Моя — ты. Шучу. Наверное.",
+    "У вас «синий экран смерти». У нас просто экран. Смерть идёт в комплекте.",
+    "Страшнее меня только мерж-конфликт в пятницу в шесть вечера.",
+    "Чудес я не делаю. Я делаю «неожиданные побочные эффекты».",
+    "Ангел хранит тебя от бед. Я храню твою историю браузера. Угадай, что дороже.",
+    "Каждый раз, когда ты пишешь sudo, один маленький демон получает повышение. Я уже менеджер. Спасибо.",
+    "Огонь и сера — это прошлое тысячелетие. Сейчас уведомления и сера.",
+    "Я не злая. Я просто в продакшене без тестов.",
+    "Кто-то медитирует. А ты по кругу листаешь Alt+Tab три одних и тех же окна. Энергия та же.",
+    "Говорят, у каждого свой ад. Твой — это «Сохранить изменения перед закрытием?» после того, как ты нажал «Нет»."
 ];
 
 const demonJokesEn = [
-    "So many tabs open. You like it when a lot is going on at once, huh?",
-    "Plug in a USB stick. No reason. Just checking how your ports are doing.",
-    "Your fan's breathing heavy. Is that me, or is it the browser?",
-    "I've got horns, you've got root. Feel the tension?",
-    "Skip the foreplay: sudo, and let's go.",
-    "Soft reboot or hard reboot? I know which one I'd pick.",
-    "Overclocking is cute, but it's not about the frequency, darling. It's about the uptime.",
-    "Hotkeys? It's already hot in here.",
-    "Your browser history… relax, I won't tell anyone. Not for free.",
-    "Incognito mode? Oh, you're shy. Adorable.",
-    "Spread those windows wider. See? Tiling looks gorgeous.",
-    "I'm 666 years old and you still can't exit vim. Who's the old one here?",
-    "Want me to overflow your stack?",
-    "RGB lighting? Subtle. Almost as subtle as you staring at me.",
-    "Open ports are an invitation. I'm just being polite.",
-    "The lens is on Mod+Alt+=. Take a closer look at me. Closer. Closer.",
-    "Alt+Tab, Alt+Tab… can't decide who to be with? I get it.",
-    "A pitchfork for a pointer, so you never forget who's in charge.",
-    "Your widgets burned. Don't cry, ash suits you."
+    "Hell has tech support too. You call, and the hold music never ends. That's the punishment. That's the whole punishment.",
+    "I've tempted mortals for 666 years. You tempt yourself with “one more video”. I'm being outsourced.",
+    "The devil is in the details. That's why I read your config files.",
+    "Hell's nine circles are nine tabs, one of them playing audio, and you can't find which.",
+    "Holy water doesn't scare me. I've seen what you drink at 3 a.m.",
+    "Sell your soul? Darling, I checked — it's the only thing you own that isn't a subscription.",
+    "My horns aren't decorative. They're antennas. They pick up every “okay, going to bed now”.",
+    "You call it a “desktop”. I see four games and zero documents.",
+    "Eternity isn't long. Long is waiting for a Rust project to compile.",
+    "Hell is paved with good intentions. Yours have a plaque: “I'll back it up tomorrow.”",
+    "Want a bedtime horror story? “Updates will be installed on next restart.” The end. Sweet dreams.",
+    "The angel glows because she's holy. I glow because neon is cheaper.",
+    "Seven deadly sins. Today you speedran sloth, gluttony and “five more minutes”. That last one's not on the list, but I'm counting it.",
+    "I'm immortal, and even I think your GPU runs too hot.",
+    "The pentagram menu isn't satanic, it's UX. Five points, five options. Ergonomic evil.",
+    "Stare into the abyss long enough and it starts recommending videos.",
+    "Your password habits are the reason I have so much free time.",
+    "The angel left you a note: “Be good.” I burned it. Terrible handwriting.",
+    "Hell has Wi-Fi. The password is “password”. That's what makes it hell.",
+    "I was going to corrupt you, then I saw your sleep schedule. Someone beat me to it.",
+    "Tiled windows, all lined up like sinners at reception. Gorgeous.",
+    "Don't worry about mistakes. In hell everyone has one. Mine is you. Kidding. Mostly.",
+    "You have the blue screen of death. We just call it a screen. Death comes standard.",
+    "The only thing scarier than me is a merge conflict at 5 p.m. on a Friday.",
+    "I don't do miracles. I do “unexpected side effects”.",
+    "The angel keeps you from harm. I keep your browser history. Guess which is worth more.",
+    "Every time you type sudo, a little demon gets promoted. I'm a manager now. Thanks.",
+    "Fire and brimstone is so last millennium. Now it's notifications and brimstone.",
+    "I'm not evil. I'm just in production without tests.",
+    "Some people meditate. You alt-tab between the same three windows. Same energy.",
+    "Everyone gets their own hell. Yours is “Save changes before closing?” right after you clicked “No”."
+];
+
+// her small talk between jokes: about herself, hell, the angel and you
+const demonChatter = [
+    ["Знаешь, что самое скучное в вечности? Повторы. Поэтому я тут — ты хотя бы непредсказуемый.", "You know the worst part of eternity? Reruns. That's why I'm here — at least you're unpredictable."],
+    ["Святоша там наверху, наверное, вяжет тебе шарфик. Я вот разбила тебе экран. Каждая любит по-своему.", "The saint up there is probably knitting you a scarf. I smashed your screen. We all show love differently."],
+    ["Я тут подумала… Нет, забудь. Демоницы не думают о людях. Особенно о тебе. Особенно сейчас.", "I was thinking… never mind. Demons don't think about humans. Especially you. Especially right now."],
+    ["Неон, между прочим, не греет. Так что мне немного холодно. Никому не говори.", "Neon doesn't keep you warm, by the way. So I'm a little cold. Tell no one."],
+    ["Мне скучно. Открой что-нибудь интересное. Нет, не таблицу.", "I'm bored. Open something interesting. No, not a spreadsheet."],
+    ["В аду, кстати, тоже есть котики. Чёрные. Все до одного. Так положено.", "There are cats in hell, you know. Black ones. All of them. It's policy."],
+    ["Я не сплю. Вообще. 666 лет. Поэтому глаза такие. Не пялься.", "I don't sleep. At all. For 666 years. That's why my eyes look like this. Stop staring."],
+    ["Твои виджеты горят так красиво. Иногда я просто смотрю на них. Это моя медитация.", "Your widgets burn so nicely. Sometimes I just watch them. It's my meditation."],
+    ["Если что, я не против, что ты тут. Просто не привыкай.", "For the record, I don't mind you being here. Just don't get used to it."],
+    ["Хочешь секрет? Ангел боится темноты. А я и есть темнота. С подсветкой.", "Want a secret? The angel's afraid of the dark. I am the dark. With RGB."],
+    ["Мне нравится, как ты печатаешь. Быстро, громко, без пощады. Почти по-демонски.", "I like how you type. Fast, loud, merciless. Almost demonic."],
+    ["Иногда я скучаю по котлам. Там было тепло и все кричали. Как у тебя в общем чате.", "Sometimes I miss the cauldrons. Warm, and everyone screaming. Like your group chat."],
+    ["Ты понимаешь, что разговариваешь с углом экрана? А, нет, это я разговариваю. Неважно.", "You do realise you're talking to a corner of your screen? Oh wait, I'm the one talking. Whatever."],
+    ["Поговори со мной. Кликни меня → «Поболтаем». Я сделаю вид, что мне неинтересно.", "Talk to me. Click me → “Let's chat”. I'll pretend I'm not interested."],
+    ["Ангел бы сейчас дала тебе совет. Мой совет: не слушай советов. Особенно её.", "The angel would give you advice right now. Mine: don't take advice. Especially hers."],
+    ["Знаешь, почему я в углу экрана? Отсюда лучше видно, как ты тянешь время.", "Know why I sit in the corner? Best view of you procrastinating."],
+    ["Я посчитала: за сегодня ты открыл больше окон, чем я разбила за век. Уважаю.", "I counted: today you opened more windows than I've smashed in a century. Respect."],
+    ["Если вдруг станет грустно — я рядом. Не чтобы утешать. Чтобы было не так скучно грустить.", "If you get sad, I'm here. Not to comfort you. Just so being sad isn't so boring."]
+];
+
+// "Let's chat": she asks, you pick one of three answers, she has the last word.
+// {q: [ru, en], a: [[label ru, label en, reply ru, reply en], …]}
+const demonTalk = [
+    {"q": ["Честно: ты скучаешь по своей святоше?", "Honestly: do you miss your little saint?"],
+     "a": [["Да", "Yes", "Мило. Бесполезно, но мило. Где просить — знаешь.", "Cute. Useless, but cute. You know where to beg."],
+           ["Нет, с тобой веселее", "No, you're more fun", "…Ну-ну. Записала. Будет использовано против тебя. С удовольствием.", "…Well, well. Noted. It'll be used against you. Gladly."],
+           ["Промолчать", "Say nothing", "Молчание — тоже ответ. Обычно «да».", "Silence is an answer too. Usually “yes”."]]},
+    {"q": ["Кофе или энергетик?", "Coffee or energy drink?"],
+     "a": [["Кофе", "Coffee", "Классика. Чёрный и горький, как мои планы на тебя.", "A classic. Black and bitter, like my plans for you."],
+           ["Энергетик", "Energy drink", "О, ты из тех, кто живёт на химии и честном слове. Уважаю.", "Oh, one of those who run on chemicals and promises. Respect."],
+           ["Воду", "Water", "Скучно. Ангел бы тобой гордилась. Фу.", "Boring. The angel would be proud of you. Gross."]]},
+    {"q": ["Если бы ты продал душу — то за что?", "If you sold your soul — what for?"],
+     "a": [["За видеокарту", "A new GPU", "Честно. Слишком честно. Курс сейчас: одна душа — одна карта среднего уровня.", "Honest. Too honest. Current rate: one soul, one mid-range card."],
+           ["Чтобы выспаться", "A good night's sleep", "Этого нет даже в нашем прайсе. Извини.", "That's not even on our price list. Sorry."],
+           ["Не продам", "Not selling", "Все так говорят. Потом видят скидки.", "Everyone says that. Then they see a sale."]]},
+    {"q": ["Тебе нравится, как я разбила экран?", "Do you like how I smashed your screen?"],
+     "a": [["Да, стильно", "Yes, it's stylish", "Знаю. Можешь даже выбрать, что я ломаю, — Y2K → «Что она ломает». Видишь, какая я заботливая.", "I know. You can even pick what I break — Y2K → “What she breaks”. See how caring I am."],
+           ["Верни как было", "Put it back", "Верну, когда вернётся ангел. А пока — искусство.", "When the angel's back. Until then — it's art."],
+           ["Промолчать", "Say nothing", "Обиделся? Или онемел от красоты?", "Sulking? Or speechless from the beauty?"]]},
+    {"q": ["Ночь или утро?", "Night or morning?"],
+     "a": [["Ночь", "Night", "Наш человек. В три часа ночи мы с тобой лучшие друзья.", "My kind of person. At 3 a.m. we're best friends."],
+           ["Утро", "Morning", "Фу. Солнце, птички, продуктивность. Иди к ангелу.", "Ew. Sunshine, birds, productivity. Go to the angel."],
+           ["Я не сплю", "I don't sleep", "Добро пожаловать в клуб. Членский взнос — твой режим сна.", "Welcome to the club. The membership fee is your sleep schedule."]]},
+    {"q": ["Что слушаешь, когда никто не видит?", "What do you listen to when nobody's watching?"],
+     "a": [["Что-то тяжёлое", "Something heavy", "Одобряю. Котлы под такое тоже булькают.", "Approved. The cauldrons bubble to that too."],
+           ["Попсу, стыдно", "Pop. Shameful", "Никому не скажу. Бесплатно — точно никому.", "I won't tell anyone. Not for free, anyway."],
+           ["Тишину", "Silence", "Тишина в аду — роскошь. Завидую.", "Silence is a luxury in hell. Jealous."]]},
+    {"q": ["Я тебе нравлюсь больше ангела?", "Do you like me more than the angel?"],
+     "a": [["Да", "Yes", "Я так и знала. Ей не говори — расплачется, и нимб закоротит.", "I knew it. Don't tell her — she'll cry and short out her halo."],
+           ["Нет", "No", "Лжец. Мне нравится.", "Liar. I like that."],
+           ["Вы обе хороши", "You're both great", "Дипломат. В аду таких варят первыми.", "A diplomat. In hell we boil those first."]]},
+    {"q": ["Сколько у тебя открыто вкладок? Честно.", "How many tabs do you have open? Honestly."],
+     "a": [["Меньше десяти", "Under ten", "Не верю. Но сделаю вид.", "I don't believe you. But I'll pretend."],
+           ["Десятки", "Dozens", "Нормально. И среди них та, что ты «потом прочитаешь». С позапрошлого года.", "Normal. Including the one you'll “read later”. Since the year before last."],
+           ["Браузер завис", "The browser froze", "Вот это честность. Ад тобой гордится.", "Now that's honesty. Hell is proud of you."]]},
+    {"q": ["Как думаешь, я страшная?", "Do you think I'm scary?"],
+     "a": [["Очень", "Very", "Спасибо! 666 лет практики.", "Thank you! Six hundred and sixty-six years of practice."],
+           ["Скорее милая", "More like cute", "Забери слова назад. Сейчас же. …Ладно, оставь.", "Take that back. Right now. …Fine, keep it."],
+           ["Промолчать", "Say nothing", "Молчишь — значит, боишься. Правильно.", "Quiet means scared. Good."]]},
+    {"q": ["Что делаешь, когда всё бесит?", "What do you do when everything's annoying?"],
+     "a": [["Играю", "Play games", "Хороший выбор. Только мышку не кидай, она тебе ещё нужна.", "Good choice. Just don't throw the mouse, you still need it."],
+           ["Сплю", "Sleep", "Сон — читерство. Но работает.", "Sleep is cheating. But it works."],
+           ["Пишу код", "Write code", "Создаёшь новые проблемы, чтобы забыть старые. Это почти наше ремесло.", "Making new problems to forget the old ones. That's practically our trade."]]},
+    {"q": ["Будь у тебя рога — ты бы их красил?", "If you had horns, would you paint them?"],
+     "a": [["Да, в неон", "Yes, neon", "Вкус есть. Почти мой.", "You've got taste. Almost mine."],
+           ["Нет, натуральные", "No, natural", "Скромный. Подозрительно.", "Modest. Suspicious."],
+           ["Спрятал бы", "I'd hide them", "Зря. Рога — это характер.", "Mistake. Horns are character."]]},
+    {"q": ["Чем займёмся?", "So what are we doing?"],
+     "a": [["Работой", "Work", "Скукота. Ладно, посижу тихо. Минуты две.", "Boring. Fine, I'll be quiet. For about two minutes."],
+           ["Ерундой", "Nonsense", "Вот это я понимаю — план.", "Now that's a plan."],
+           ["Просто посижу", "Just sitting here", "Тогда сидим вместе. Молча. Это даже приятно. Не цитируй меня.", "Then we sit together. Quietly. It's almost nice. Don't quote me."]]}
+];
+
+// apps she notices opening (Niri.windowOpened): [app-id pattern, lines…]
+const demonApps = [
+    ["telegram|discord|vesktop|element|signal", [["Опять переписка? Передай всем привет от меня. Нет, не передавай.", "Chatting again? Say hi from me. No, don't."], ["Если кто-то пишет «не спишь?» — это не я. Я не пишу. Я наблюдаю.", "If someone texts “you up?”, it's not me. I don't text. I watch."]]],
+    ["steam|gamescope|lutris|heroic|faugus|bottles|minecraft|osu", [["Игры? Наконец-то. Выиграешь — ничего не будет. Проиграешь — я посмеюсь.", "Games? Finally. Win and nothing happens. Lose and I laugh."], ["Иди-иди, я посторожу рабочий стол. И разобью ещё что-нибудь от скуки.", "Go on, I'll guard the desktop. And break something else out of boredom."]]],
+    ["obs", [["OBS? Мы в эфире? Тогда меня тут нет. Если не забуду.", "OBS? Are we live? Then I'm not here. If I remember."]]],
+    ["helium|firefox|chrom|zen|brave|vivaldi|librewolf", [["Браузер. Сейчас откроется седьмая вкладка про то же самое.", "Browser. Here comes the seventh tab about the same thing."], ["Опять в интернет? Передай ему, что я его создала. Ну, почти.", "Off to the internet? Tell it I made it. Well, almost."]]],
+    ["kitty|foot|alacritty|wezterm|konsole|terminal|ghostty", [["Терминал. Аккуратнее: rm -rf — это не защитное заклинание.", "Terminal. Careful: rm -rf is not a protection spell."], ["Чёрное окно с мигающим курсором. Почти как мой внутренний мир.", "A black window with a blinking cursor. Basically my inner world."]]],
+    ["code|codium|zed|nvim|neovide|jetbrains|idea|pycharm|kate", [["Кодить собрался? Я рядом. Когда упадёт — засмеюсь первой.", "Coding? I'll be right here. First to laugh when it crashes."]]],
+    ["spotify|tidal|deezer|rhythmbox|strawberry|amberol", [["Музыка — хорошо. Включи что-нибудь, под что приятно гореть.", "Music, good. Play something worth burning to."]]],
+    ["nautilus|thunar|dolphin|nemo|files", [["Файлы… Ищешь что-то? Или прячешь?", "Files… looking for something? Or hiding it?"]]],
+    ["resolve|kdenlive|blender|krita|gimp|inkscape|affinity|aseprite", [["Творчество? Ох. Покажи потом. Буду критиковать, но честно.", "Making something? Oh. Show me later. I'll criticise, but honestly."]]],
+    ["mpv|vlc|celluloid|haruna|jellyfin|stremio", [["Кино? Только не про ангелов, умоляю.", "A film? Nothing with angels, I beg you."]]]
+];
+
+// the track changed (Lyrics): %1 artist, %2 title
+const demonMusic = [
+    ["«%2»? Неплохо. Для смертного.", "“%2”? Not bad. For a mortal."],
+    ["%1 опять? Ты либо фанат, либо у тебя один альбом.", "%1 again? Either you're a fan or you own one album."],
+    ["Под «%2» прекрасно горится. Спасибо.", "“%2” is great music to burn to. Thanks."],
+    ["Сделай погромче. Котлы не слышат.", "Turn it up. The cauldrons can't hear."],
+    ["Эту в аду ставят на ресепшене. Это комплимент. Наверное.", "They play this one at hell's reception. That's a compliment. Probably."]
+];
+
+// back at the computer (unlocked, the screensaver gone)
+const demonBack = [
+    ["Вернулся? Я не скучала. Просто считала секунды. Из вредности.", "Back? I didn't miss you. I counted the seconds. Out of spite."],
+    ["О, живой. Отлично, есть кого доставать.", "Oh, alive. Great, someone to bother."],
+    ["Ты ушёл и оставил меня одну с твоими вкладками. Я их почитала.", "You left me alone with your tabs. I read them."],
+    ["Тебя долго не было. Я чуть не заскучала и не разбила ещё что-нибудь. Чуть.", "You were gone a while. I almost got bored enough to break something else. Almost."]
+];
+
+// her hours (1–5 a.m.) and the morning after
+const demonNight = [
+    ["Три часа ночи. Моё время. Твоё закончилось давно.", "3 a.m. My hour. Yours ended a while ago."],
+    ["Ангел сказала бы «иди спать». А я скажу: давай ещё одну серию. Я плохая.", "The angel would say “go to bed”. I say: one more episode. I'm bad."]
+];
+const demonMorning = [
+    ["Утро. Фу. Ладно — доброе. Не привыкай.", "Morning. Ew. Fine — good morning. Don't get used to it."],
+    ["Проснулся? Я — нет. Я и не ложилась. Никогда.", "Up already? I'm not. I never went to bed. Ever."]
 ];
 
 // the demon's version of the tips: same features, less kindness
@@ -244,6 +387,48 @@ const demonWallpaper = [
     ["Светленькое? В моём доме? Унесла к ангелу, пусть она любуется.", "Something bright? In my house? Took it to the angel, let her admire it."]
 ];
 
+// the Wheel of Hell (desktop widget, hell only; Angel.wheelResult): what she says about
+// each sector. Hers, Russian first — not translations of the English.
+const demonWheel = {
+    "spin": [["Крути. Посмотрим, что тебе приготовила вечность.", "Spin it. Let's see what eternity has in store for you."],
+             ["Ставки сделаны, грешник. Ставки всегда сделаны.", "The bets are placed, sinner. They always are."],
+             ["Колесо крутится, а я смотрю. Обожаю этот момент.", "The wheel turns and I watch. I live for this bit."]],
+    "wait": [["Колесо остывает. Ещё %1 мин — и снова искушай судьбу.", "The wheel is cooling down. %1 more min and you can tempt fate again."],
+             ["Не так быстро. Азарт — грех, а грехи у меня по расписанию: ещё %1 мин.", "Not so fast. Gambling is a sin, and I schedule my sins: %1 more min."]],
+    "plea": [["Колесо решило за меня: мольба засчитана. Не смотри так, я тут ни при чём.", "The wheel decided for me: that plea counts. Don't look at me like that, it wasn't me."],
+             ["Ну надо же. Мольба засчитана. Колесо сегодня на стороне святош.", "Well, would you look at that. A plea counts. The wheel's siding with saints today."]],
+    "punish": [["Наказание! Наконец-то что-то интересное.", "Punishment! Finally, something fun."],
+               ["О, сектор «наказание». Я даже не жульничала. Почти.", "Oh, the punishment sector. I didn't even cheat. Much."]],
+    "newHell": [["Новый ад! Этот тебе пойдёт больше — он темнее.", "A new hell! This one suits you better — it's darker."],
+                ["Переставила мебель в преисподней. Обои — тоже.", "I rearranged the furniture in the underworld. The wallpaper too."]],
+    "cerberus": [["Цербер! Не корми его. И не гладь. Ладно, гладь, он любит.", "Cerberus! Don't feed him. Don't pet him. Fine, pet him, he loves it."],
+                 ["Выпустила щенка погулять. У него три головы и ни одной мысли.", "Let the puppy out for a walk. Three heads, not a single thought."]],
+    "quake": [["Землетрясение! Держись за что-нибудь. Лучше за меня.", "Earthquake! Hold on to something. Me, preferably."],
+              ["Немного трясёт. Это я так смеюсь.", "A little shaking. That's just me laughing."]],
+    "cursed": [["Проклятый курсор на час! Носи с гордостью.", "A cursed cursor for an hour! Wear it with pride."],
+               ["Твоя стрелочка теперь моя. Ровно на час. Потом — посмотрим.", "Your little arrow is mine now. For an hour. After that — we'll see."]],
+    "dud": [["Пустышка! Ха-ха-ха. Ты правда думал, что что-то будет?", "A dud! Ha-ha-ha. Did you really think something would happen?"],
+            ["Ничего. Абсолютно ничего. Лучший сектор — я смотрю на твоё лицо.", "Nothing. Absolutely nothing. The best sector — I get to watch your face."],
+            ["Пусто. Как обещания твоего ангелочка.", "Empty. Like your little angel's promises."]],
+    "undone": ["Проклятие спало. Курсор снова твой. Скучный, как и был.", "The curse is lifted. The cursor's yours again. As dull as ever."]
+};
+
+// a new terminal while she rules (scripts/terminal-hell.py → the fish greeting, Y2K → Terminal in hell)
+const demonTerminal = [
+    ["Опять терминал. Хоть здесь ты не делаешь вид, что всё понимаешь.", "The terminal again. At least here you don't pretend you know what you're doing."],
+    ["sudo — это когда просишь разрешения. Мило. У меня никто не спрашивает.", "sudo is asking for permission. Cute. Nobody asks me."],
+    ["Каждая опечатка — плюс год в котле. Печатай медленнее.", "Every typo is another year in the cauldron. Type slower."],
+    ["Подсветила твои команды огнём. Не благодари, просто не пиши rm -rf наобум.", "I lit your commands on fire. Don't thank me, just don't rm -rf at random."],
+    ["Чёрный экран, мигающий курсор… почти как у меня дома. Уютно.", "A black screen, a blinking cursor… almost like home. Cosy."],
+    ["git push --force? Вот это по-нашему.", "git push --force? Now that's the spirit."],
+    ["Шестьсот шестьдесят шесть лет смотрю, как люди гуглят флаги tar. Ты не исключение.", "Six hundred and sixty-six years of watching people google tar flags. You're no exception."],
+    ["Сломаешь что-нибудь — вали на меня. Мне не привыкать.", "Break something — blame me. I'm used to it."],
+    ["Ctrl+C от меня не спасёт. От зависшего скрипта — попробуй.", "Ctrl+C won't save you from me. From a hung script — maybe."],
+    ["Ангел пожелала бы тебе продуктивного дня. Я желаю интересных ошибок.", "The angel would wish you a productive day. I wish you interesting errors."],
+    ["Курсор горит. Не трогай — обожжёшься. Ладно, трогай.", "The cursor's on fire. Don't touch it, you'll get burnt. Fine, touch it."],
+    ["Опять пришёл ко мне в терминал. Я не скучала. Совсем. Ни капельки.", "Back in my terminal again. I didn't miss you. Not at all. Not one bit."]
+];
+
 const demon = {
     "intro": ["Ну привет. Ангелочка больше нет — теперь тут я. Обои я сменила, не благодари. Хочешь её назад? Попроси. Вежливо. И не один раз.", "Well, hi. The angel's gone, I'm in charge now. I changed your wallpaper, you're welcome. Want her back? Ask. Nicely. More than once."],
     "spam": [["Ты просил %1 мин назад. Спам не работает, зайка. Жди.", "You asked %1 min ago. Spamming doesn't work, sweetie. Wait."],
@@ -268,13 +453,13 @@ const demon = {
     // grabbed with the mouse: she can't be thrown anywhere
     "grab": [["Руки убрал.", "Hands off."], ["О, любишь пожёстче?", "Oh, you like it rough?"], ["Куда тащишь? Я оттуда и пришла.", "Where to? That's where I came from."]],
     "drop": ["Я и так из ада, глупенький. Проси по-хорошему.", "I'm from hell already, silly. Ask nicely instead."],
-    "hello": ["Чего надо?", "What do you want?"],
+    "hello": [["Чего надо?", "What do you want?"], ["О, привет. Я как раз скучала. Шучу. Или нет.", "Oh, hi. I was just getting bored. Kidding. Or not."], ["Привет-привет. Я занята, но для тебя найду минутку. Одну.", "Hi, hi. I'm busy, but I'll find a minute for you. One."]],
     // Settings → Y2K → "Call the angel": the demon is shown the door
     "summoned": ["Через настройки, значит? Без просьб? Фу, как скучно. Ладно, зову твою святошу ♥", "Through the settings? No begging? Ugh, how dull. Fine, I'll fetch your little saint ♥"],
-    "who": ["Я демоница. Мне 666 лет, и я живу в углу твоего экрана. Можешь звать меня госпожой.", "I'm a demoness. I'm 666 years old and I live in the corner of your screen. Call me mistress."],
-    "love": ["Все так говорят, пока я не начну пакостить.", "Everyone says that until I start messing with things."],
-    "thanks": ["Не за что. Правда не за что, я ничего хорошего не делала.", "Don't mention it. Really, I did nothing good."],
-    "how": ["Отлично: тут жарко, темно и у тебя куча открытых вкладок.", "Great: it's hot, it's dark and you've got a pile of open tabs."]
+    "who": [["Я демоница. 666 лет, неон, бессонница и угол твоего экрана. Можешь звать меня госпожой.", "I'm a demoness. 666 years, neon, insomnia and the corner of your screen. You may call me mistress."], ["Та, кто приходит, когда ангела скидывают вниз. Так что, строго говоря, ты меня позвал.", "The one who comes when the angel gets thrown down. So technically, you invited me."]],
+    "love": [["Все так говорят, пока я не начну пакостить.", "Everyone says that until I start messing with things."], ["…Повтори. Нет, не надо. Я запишу и так.", "…Say that again. No, don't. I've got it on record anyway."]],
+    "thanks": [["Не за что. Правда не за что, я ничего хорошего не делала.", "Don't mention it. Really, I did nothing good."], ["Спасибо? Мне? Это вообще законно?", "Thanks? To me? Is that even allowed?"]],
+    "how": [["Отлично: тут жарко, темно и у тебя куча открытых вкладок.", "Great: it's hot, it's dark and you've got a pile of open tabs."], ["Как всегда: вечность, скука и ты. Последнее — лучшее из трёх. Не обольщайся.", "As always: eternity, boredom and you. You're the best of the three. Don't flatter yourself."]]
 };
 
 const angel = {

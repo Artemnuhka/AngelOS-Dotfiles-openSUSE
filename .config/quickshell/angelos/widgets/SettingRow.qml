@@ -33,6 +33,14 @@ Item {
     width: parent ? parent.width : implicitWidth
     implicitHeight: rowHeight + (gif.item ? gif.item.implicitHeight + Theme.u * 3 : 0)
 
+    // classic: a hairline between the rows of a card, in the middle of the gap above
+    Rectangle {
+        visible: root.settingsSkin === "classic" && root.y > 0 && !!root.parent && root.parent.fixedWidth === true
+        y: -Math.round((root.parent && root.parent.spacing ? root.parent.spacing : Theme.u * 4) / 2) - height / 2
+        width: parent.width
+        height: Math.max(1, Theme.u / 2)
+        color: Qt.alpha(Theme.lo, Theme.dark ? 0.9 : 0.55)
+    }
     Rectangle {
         visible: root.settingsSkin !== "classic"
         width: parent.width

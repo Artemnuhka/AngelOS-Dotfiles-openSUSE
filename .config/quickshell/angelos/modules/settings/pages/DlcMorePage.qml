@@ -15,7 +15,7 @@ PxPage {
     headingColor: skin === "windose" ? Theme.windoseTitle : skin === "stream" ? Theme.streamLive : Theme.dark ? Theme.accent : Theme.edge
     subtitleColor: Theme.textDim
     heading: I18n.t("Все разделы", "All sections")
-    subtitle: I18n.t("То же, что в режиме «Эксперт», только плитками.", "The same as in Expert mode, as tiles.")
+    subtitle: I18n.t("То же, что в боковой панели, только плитками.", "The same as in the sidebar, as tiles.")
 
     Repeater {
         model: Shell.settingsView ? Shell.settingsView.visibleGroups : []

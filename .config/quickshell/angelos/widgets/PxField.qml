@@ -61,10 +61,12 @@ Item {
         color: Theme.text
         selectionColor: Theme.select
         selectedTextColor: Theme.selectText
-        font.family: root.kind === "title" ? Theme.fontTitle : Theme.fontBody
-        font.pixelSize: root.kind === "title" ? Theme.sizeTitle : Theme.sizeBody
+        // handwritten in the grimoire (Theme.scriptWindow), like PxText
+        readonly property bool script: Theme.scriptWindow !== null && Window.window === Theme.scriptWindow
+        font.family: script ? Theme.fontScript : root.kind === "title" ? Theme.fontTitle : Theme.fontBody
+        font.pixelSize: script ? Theme.scriptPx(root.kind === "title" ? Theme.sizeTitle : Theme.sizeBody) : root.kind === "title" ? Theme.sizeTitle : Theme.sizeBody
         font.hintingPreference: Font.PreferFullHinting
-        renderType: Text.NativeRendering
+        renderType: script ? Text.QtRendering : Text.NativeRendering
         echoMode: root.password ? TextInput.Password : TextInput.Normal
         passwordCharacter: "♥"
         selectByMouse: true

@@ -459,6 +459,29 @@ Singleton {
         source: Qt.resolvedUrl("../data/fonts/Jacquard24-Regular.ttf")
     }
 
+    // Rubik Burned (OFL, data/fonts; Latin and Cyrillic): hell's lyrics on the bar — bold
+    // letters with burnt holes (BarLyrics while the demon rules, Y2K → Lyrics in hell)
+    readonly property string fontLyricsHell: lyricsHellFont.status === FontLoader.Ready ? lyricsHellFont.name : fontTitle
+    FontLoader {
+        id: lyricsHellFont
+        source: Qt.resolvedUrl("../data/fonts/RubikBurned-Regular.ttf")
+    }
+
+    // ---- the grimoire's handwriting ----
+    // Caveat (OFL, data/fonts; Latin and Cyrillic): while Settings are the demon's book
+    // (SettingsView sets scriptWindow to its window), every PxText and field in that window
+    // writes by hand, a size larger — a script's small letters need it to read. Elsewhere
+    // nothing changes and nothing is looked up (PxText checks scriptWindow first).
+    readonly property string fontScript: scriptFont.status === FontLoader.Ready ? scriptFont.name : fontBody
+    property var scriptWindow: null
+    function scriptPx(px) {
+        return Math.round(px * 1.38);
+    }
+    FontLoader {
+        id: scriptFont
+        source: Qt.resolvedUrl("../data/fonts/Caveat-Variable.ttf")
+    }
+
     // ---- metrics ----
     readonly property int u: Math.max(1, Config.appearance.px)   // one art pixel
     readonly property int fs: Math.max(1, Config.appearance.fontScale)

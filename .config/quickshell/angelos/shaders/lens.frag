@@ -1,13 +1,15 @@
 #version 440
-// The lens at the pointer (modules/lens/LensOverlay): the screen's picture magnified
-// around `center` inside a circle (shape 0) or a square (1) with a pixel rim; outside
-// it nothing (the live screen shows through). crisp: nearest texel, sharp pixels.
+// The lens (modules/lens/LensOverlay, extras/lens-live): the screen's picture magnified
+// around `spot` inside a circle (shape 0) or a square (1) at `center`, with a pixel
+// rim; outside it nothing (the live screen shows through). The snapshot lens sits on
+// what it magnifies (spot = center); the live one beside it. crisp: sharp pixels.
 layout(location = 0) in vec2 qt_TexCoord0;
 layout(location = 0) out vec4 fragColor;
 layout(std140, binding = 0) uniform buf {
     mat4 qt_Matrix;
     float qt_Opacity;
-    vec2 center;     // px in the item
+    vec2 center;     // the glass, px in the item
+    vec2 spot;       // what it magnifies, px in the item
     vec2 itemSize;
     vec2 texSize;    // the picture's pixels (physical)
     float radius;    // px
@@ -34,7 +36,7 @@ void main() {
         fragColor = vec4(c.rgb, 1.0) * c.a * qt_Opacity;
         return;
     }
-    vec2 uv = (center + d / zoom) / itemSize;
+    vec2 uv = (spot + d / zoom) / itemSize;
     if (crisp > 0.5)
         uv = (floor(uv * texSize) + 0.5) / texSize;
     vec4 c = texture(source, clamp(uv, vec2(0.0), vec2(1.0)));

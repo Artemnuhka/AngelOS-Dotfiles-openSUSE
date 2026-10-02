@@ -1,5 +1,6 @@
 import QtQuick
 import qs.config
+import qs.services
 import qs.widgets
 import qs.modules.bar
 import "."
@@ -43,8 +44,8 @@ Item {
         id: popup
         panelId: "cat"
         anchorItem: root
-        above: Config.bar.style === "taskbar"
-        title: I18n.t("котик.exe", "cat.exe")
+        above: BarLayout.bottom
+        title: Angel.demon ? I18n.t("цербер.exe", "cerberus.exe") : I18n.t("котик.exe", "cat.exe")
         icon: "heart"
         contentWidth: Theme.u * 120
         contentHeight: Theme.u * 70
@@ -65,7 +66,8 @@ Item {
             PxText {
                 anchors.horizontalCenter: parent.horizontalCenter
                 dim: true
-                text: Cpu.percent < (root.plugin ? root.plugin.get("walk", 15) : 15) ? I18n.t("спит… zzz", "Sleeping… zzz") : Cpu.percent < (root.plugin ? root.plugin.get("run", 60) : 60) ? I18n.t("гуляет ♡", "Walking ♡") : I18n.t("БЕЖИТ!!", "RUNNING!!")
+                readonly property int pace: Cpu.percent < (root.plugin ? root.plugin.get("walk", 15) : 15) ? 0 : Cpu.percent < (root.plugin ? root.plugin.get("run", 60) : 60) ? 1 : 2
+                text: Angel.demon ? [I18n.t("дремлет… zzz ×3", "Dozing… zzz ×3"), I18n.t("рыщет по процессам", "Prowling the processes"), I18n.t("ГОНИТСЯ ЗА ДУШАМИ!!", "CHASING SOULS!!")][pace] : [I18n.t("спит… zzz", "Sleeping… zzz"), I18n.t("гуляет ♡", "Walking ♡"), I18n.t("БЕЖИТ!!", "RUNNING!!")][pace]
             }
         }
     }

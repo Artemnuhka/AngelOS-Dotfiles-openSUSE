@@ -9,6 +9,9 @@ Placeholders: {{key}} -> "#rrggbb", {{key.strip}} -> "rrggbb", plus
 {{mode}} (light|dark), {{flavor}}, {{gtkSuffix}} ("-dark" or ""), {{shellDir}},
 {{paletteFile}}, and the window-decoration keys ThemeExport adds ({{realm}},
 {{decor*}}: heaven's or hell's colours for title bars and their buttons).
+Entries with "terminal": true render with the palette's "term" overrides on top
+(hell's colours while the demon rules, Y2K → Terminal in hell) and {{kittyExtra}};
+entries with "apps": true with its "apps" overrides (GTK, Qt: Y2K → Apps in hell).
 An entry with a "command" lists the files it writes in "writes" (~/ paths, {a,b}
 alternatives): an update's snapshot takes them too, so «Вернуть как было» removes
 or restores them (scripts/update-txn.py).
@@ -63,11 +66,16 @@ def main():
         if e["id"] in disabled:
             continue
         try:
+            p = pal
+            for flag, key in (("terminal", "term"), ("apps", "apps")):
+                if e.get(flag) and isinstance(pal.get(key), dict) and pal[key]:
+                    p = dict(p, **pal[key])
+                    p["gtkSuffix"] = "-dark" if p.get("mode") == "dark" else ""
             if e.get("template"):
                 src = Path(e["_base"]) / e["template"]
                 dst = Path(os.path.expanduser(e["target"]))
                 dst.parent.mkdir(parents=True, exist_ok=True)
-                out = render(src.read_text(), pal)
+                out = render(src.read_text(), p)
                 if not dst.exists() or dst.read_text() != out:
                     tmp = dst.with_suffix(dst.suffix + ".angelos-tmp")
                     tmp.write_text(out)
@@ -75,7 +83,7 @@ def main():
                     print(f"wrote {dst}")
             for key in ("command", "reload"):
                 if e.get(key):
-                    subprocess.run(["sh", "-c", render(e[key], pal, shlex.quote)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10)
+                    subprocess.run(["sh", "-c", render(e[key], p, shlex.quote)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10)
         except Exception as ex:  # keep going with the other templates
             print(f"{e['id']}: {ex}", file=sys.stderr)
 

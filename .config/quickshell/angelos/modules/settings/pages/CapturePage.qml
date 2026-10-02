@@ -75,6 +75,9 @@ PxPage {
                         Image {
                             width: parent.width
                             height: Math.round(width * 9 / 16)
+                            // in the grimoire: an engraving the right way round, not a negative
+                            layer.enabled: Theme.scriptWindow !== null && Window.window === Theme.scriptWindow
+                            layer.effect: GrimoirePhoto {}
                             fillMode: Image.PreserveAspectFit
                             smooth: false
                             cache: false

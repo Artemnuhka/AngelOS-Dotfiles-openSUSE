@@ -78,11 +78,18 @@ Scope {
                 }
             }
 
+            // while the demon rules (Y2K → Angel or demon → Alt+Tab in hell): "hell" — hell's
+            // own switcher (AltTabHell), "skin" — the chosen style re-inked in hell's palette
+            // (shaders/hell_ink.frag) with flames along its top, "" — untouched
+            readonly property bool hellOwn: Angel.demon && Config.y2k.hellAltTab === "hell"
+            readonly property bool hellSkin: Angel.demon && Config.y2k.hellAltTab === "skin"
+            readonly property int skinPad: hellSkin ? Theme.u * 7 : 0
+
             Item {
                 id: stage
                 anchors.fill: parent
                 implicitWidth: view.item ? view.item.implicitWidth : 0
-                implicitHeight: view.item ? view.item.implicitHeight : 0
+                implicitHeight: (view.item ? view.item.implicitHeight : 0) + win.skinPad
                 opacity: 0
                 scale: 0.94
                 Component.onCompleted: {
@@ -103,7 +110,33 @@ Scope {
                 Loader {
                     id: view
                     anchors.fill: parent
-                    sourceComponent: AltTab.style === "ngo" ? ngo : AltTab.style === "y2k" ? y2k : angelos
+                    anchors.topMargin: win.skinPad
+                    sourceComponent: win.hellOwn ? hell : AltTab.style === "ngo" ? ngo : AltTab.style === "y2k" ? y2k : angelos
+                    layer.enabled: win.hellSkin
+                    layer.effect: ShaderEffect {
+                        property real keep: 0.35
+                        fragmentShader: Qt.resolvedUrl("../../shaders/hell_ink.frag.qsb")
+                    }
+                }
+                // the hell version's flames, licking up from the switcher's top edge
+                ShaderEffect {
+                    id: skinFlames
+                    visible: win.hellSkin
+                    readonly property int rows: 7
+                    x: Theme.u * 4
+                    width: parent.width - Theme.u * 8
+                    height: Theme.u * rows
+                    y: win.skinPad - height + Theme.u * 3
+                    property real time: 0
+                    property real seed: 3.3
+                    property size cells: Qt.size(Math.max(1, Math.round(width / Theme.u)), rows)
+                    fragmentShader: Qt.resolvedUrl("../../shaders/hell_flames.frag.qsb")
+                    Timer {
+                        interval: 140
+                        repeat: true
+                        running: skinFlames.visible
+                        onTriggered: skinFlames.time += 0.14
+                    }
                 }
             }
             Component {
@@ -121,6 +154,12 @@ Scope {
             Component {
                 id: y2k
                 AltTabY2k {
+                    host: win
+                }
+            }
+            Component {
+                id: hell
+                AltTabHell {
                     host: win
                 }
             }

@@ -84,6 +84,10 @@ Singleton {
     function tr(pair) {
         return I18n.t(pair[0], pair[1]);
     }
+    // a [ru, en] pair, or a list of them (one picked, not twice in a row)
+    function line(x, key) {
+        return tr(Array.isArray(x[0]) ? pick(x, key) : x);
+    }
     // random, but not the same line twice in a row
     property var _last: ({})
     function pick(list, key) {
@@ -152,14 +156,40 @@ Singleton {
             "run": () => root.joke()
         });
     }
-    // the timer: a tip, or now and then a joke; the demon drops hints how to get rid of her
+    // the timer: a tip, or now and then a joke. The demon is the talkative one: small
+    // talk, a question with three answers, jokes, and hints how to get rid of her
     function chatter() {
-        if (demon && Math.random() < 0.45)
-            hint();
-        else if (Config.y2k.jokes && Math.random() < 0.4)
+        if (demon) {
+            const r = Math.random();
+            if (r < 0.2 && pleasCounted < pleasNeeded)
+                hint();
+            else if (r < 0.45)
+                say(line(Lines.demonChatter, "dchat"));
+            else if (r < 0.65)
+                talk();
+            else if (Config.y2k.jokes && r < 0.9)
+                joke();
+            else
+                tip();
+            return;
+        }
+        if (Config.y2k.jokes && Math.random() < 0.4)
             joke();
         else
             tip();
+    }
+    // "Let's chat": she asks, three answers as buttons, she has the last word
+    function talk() {
+        const list = demon ? Lines.demonTalk : [];
+        if (!list.length)
+            return tip();
+        const q = pick(list, "talk" + demon);
+        const en = I18n.english;
+        say(tr(q.q), q.a.map(a => ({
+                    "label": en ? a[1] : a[0],
+                    "icon": "chat",
+                    "run": () => root.say(en ? a[3] : a[2])
+                })), 30000);
     }
     // the demon hints how the angel comes back, with the button right there
     property double lastHint: 0
@@ -183,15 +213,15 @@ Singleton {
         if (/шут|анекдот|смеш|рассмеш|joke|funny|laugh/.test(s))
             return joke();
         if (/^(привет|здравств|хай|хей|ку\b|добр|hello|hi\b|hey|yo\b)/.test(s))
-            return say(tr(L.hello));
+            return say(line(L.hello, "hello" + demon));
         if (/как дела|как ты|как жизнь|how are you|what'?s up|sup\b/.test(s))
-            return say(tr(L.how));
+            return say(line(L.how, "how" + demon));
         if (/кто ты|ты кто|who are you|what are you/.test(s))
-            return say(tr(L.who));
+            return say(line(L.who, "who" + demon));
         if (/люблю|love you|i love/.test(s))
-            return say(tr(L.love));
+            return say(line(L.love, "love" + demon));
         if (/спасиб|благодар|thank/.test(s))
-            return say(tr(L.thanks));
+            return say(line(L.thanks, "thanks" + demon));
         if (demon && /вернись|верни|ангел|уйди|уходи|come back|angel|go away|leave/.test(s))
             return plea();
         if (!demon && /(^|\s)ад(\s|$)|демон|hell|demon/.test(s))
@@ -402,6 +432,7 @@ Singleton {
     property bool _unlockedNow: false
     function becomeAngel() {
         _undone = undoAllPranks();
+        liftCurse(false);
         Config.y2k.character = "angel";
         Config.y2k.pleas = [];
         Config.y2k.pranks = [];
@@ -479,6 +510,8 @@ Singleton {
                 parts.push(I18n.t("ПКМ по обоям теперь — " + style, "right-click on the wallpaper is a " + style + " now"));
             if (Config.y2k.hellSettings === "grimoire")
                 parts.push(I18n.t("настройки — мой гримуар", "Settings are my grimoire"));
+            if (Config.y2k.hellStart)
+                parts.push(I18n.t("«Пуск» — адский", "Start is hellish"));
             const mine = [];
             if (Config.y2k.hellWidgets && DesktopWidgets.widgets.length)
                 mine.push(I18n.t("виджеты", "the widgets"));
@@ -759,6 +792,160 @@ Singleton {
         return true;
     }
 
+    // ---- the Wheel of Hell (desktop widget "hellwheel", hell only): a spin every 20 min ----
+    // eight sectors, the order around the wheel; both pleas sit opposite each other
+    readonly property var wheelSectors: ["plea", "punish", "newHell", "cerberus", "plea", "quake", "cursed", "dud"]
+    readonly property int wheelCooldown: 20 * 60000
+    function wheelLeft() {
+        return Math.max(0, wheelCooldown - (now - (Config.y2k.wheelAt || 0)));
+    }
+    function wheelReady() {
+        return demon && !transition && Date.now() - (Config.y2k.wheelAt || 0) >= wheelCooldown;
+    }
+    // the spin, shared by every copy of the widget (its face and its input copy): they only
+    // show wheelAngle; the ticks and the result come from here. The cooldown counts from
+    // the start (closing the widget doesn't buy another go).
+    property real wheelAngle: 0              // degrees clockwise; 0 = sector 0 under the pointer
+    property bool wheelSpinning: false
+    property int wheelTarget: 0
+    property string wheelWhere: ""
+    property double _wheelStart: 0
+    property real _wheelFrom: 0
+    property real _wheelTo: 0
+    property int _wheelLast: -1
+    readonly property int wheelMs: 4800
+    function wheelUnder(angle) {
+        const a = ((-angle % 360) + 360) % 360;
+        return Math.round(a / 45) % 8;
+    }
+    function wheelSpin(where) {
+        if (wheelSpinning)
+            return false;
+        if (!wheelReady()) {
+            say(line(Lines.demonWheel.wait, "wwait").replace("%1", Math.max(1, Math.ceil(wheelLeft() / 60000))));
+            return false;
+        }
+        Config.y2k.wheelAt = Date.now();
+        now = Date.now();
+        wheelWhere = where || screenName;
+        wheelTarget = Math.floor(Math.random() * 8);
+        // land inside the sector, not on its edge: the pointer stops ±16° off its middle
+        const want = wheelTarget * 45 + (Math.random() - 0.5) * 32;
+        const base = wheelAngle - (wheelAngle % 360);
+        let to = base + 360 * 5 + ((360 - want) % 360);
+        while (to - wheelAngle < 360 * 4.5)
+            to += 360;
+        _wheelFrom = wheelAngle;
+        _wheelTo = to;
+        _wheelStart = Date.now();
+        _wheelLast = wheelUnder(wheelAngle);
+        wheelSpinning = true;
+        wheelClock.start();
+        say(line(Lines.demonWheel.spin, "wspin"), null, wheelMs, true);
+        return true;
+    }
+    Timer {
+        id: wheelClock
+        interval: 33
+        repeat: true
+        onTriggered: {
+            const p = Math.min(1, (Date.now() - root._wheelStart) / root.wheelMs);
+            const e = 1 - Math.pow(1 - p, 3.2);
+            root.wheelAngle = root._wheelFrom + (root._wheelTo - root._wheelFrom) * e;
+            const under = root.wheelUnder(root.wheelAngle);
+            if (under !== root._wheelLast) {
+                root._wheelLast = under;
+                Sounds.playSoft("toggle", 0.55);
+            }
+            if (p >= 1) {
+                stop();
+                root.wheelAngle = root._wheelTo % 360;
+                root.wheelSpinning = false;
+                root.wheelResult(root.wheelSectors[root.wheelUnder(root.wheelAngle)], root.wheelWhere);
+            }
+        }
+    }
+    // where it stopped; `where` is the widget's screen (Cerberus runs there)
+    property string wheelLast: ""            // where it stopped last (the widget shows it for a minute)
+    property double wheelLastAt: 0
+    function wheelResult(id, where) {
+        if (!demon || transition)
+            return;
+        wheelLast = id;
+        wheelLastAt = Date.now();
+        hush();
+        const w = Lines.demonWheel;
+        if (id === "plea") {
+            // a lucky plea, no dice and no cooldown: the third one still sends her off
+            const t = Date.now();
+            const got = (Config.y2k.pleas || []).filter(x => t - x < pleaWindow).concat([t]);
+            Config.y2k.pleas = got;
+            if (got.length >= pleasNeeded) {
+                say(line(w.plea, "wplea"), null, 3000);
+                ascendSoon.restart();
+            } else
+                say(line(w.plea, "wplea") + " " + tr(got.length === 1 ? Lines.demon.yes1 : Lines.demon.yes2));
+        } else if (id === "punish") {
+            say(line(w.punish, "wpunish"), null, 2600);
+            punishSoon.restart();
+        } else if (id === "newHell") {
+            if (newHell())
+                say(line(w.newHell, "wnewhell"));
+            else
+                say(line(w.dud, "wdud"));
+        } else if (id === "cerberus") {
+            HellFx.cerberus(where || screenName);
+            say(line(w.cerberus, "wcerb"));
+        } else if (id === "quake") {
+            say(line(w.quake, "wquake"));
+            shake("hell", () => {});
+        } else if (id === "cursed") {
+            curseCursor();
+            say(line(w.cursed, "wcursed"));
+        } else {
+            say(line(w.dud, "wdud"));
+        }
+    }
+    Timer {
+        id: ascendSoon
+        interval: 2800
+        onTriggered: root.ascend()
+    }
+    Timer {
+        id: punishSoon
+        interval: 2600
+        onTriggered: if (!root.prank())
+            root.joke()
+    }
+    // the cursed cursor: another of the six hell cursors for an hour, then hers again
+    function curseCursor() {
+        const pool = Cursors.hellish.filter(c => c.theme && c.theme !== Config.cursor.hell);
+        if (!pool.length)
+            return false;
+        if (!Config.y2k.cursedUntil)
+            Config.y2k.cursedWas = Config.cursor.hell || "";
+        Config.y2k.cursedUntil = Date.now() + 3600000;
+        Cursors.setHell(pool[Math.floor(Math.random() * pool.length)].theme);
+        return true;
+    }
+    function liftCurse(speak) {
+        if (!Config.y2k.cursedUntil)
+            return;
+        Config.y2k.cursedUntil = 0;
+        Cursors.setHell(Config.y2k.cursedWas || "angelOS-Hell");
+        Config.y2k.cursedWas = "";
+        if (speak && demon)
+            react(tr(Lines.demonWheel.undone));
+    }
+    Timer {
+        interval: 30000
+        repeat: true
+        running: !!Config.y2k.cursedUntil
+        triggeredOnStart: true
+        onTriggered: if (Date.now() > Config.y2k.cursedUntil)
+            root.liftCurse(true)
+    }
+
     // ---- pranks: a real setting flips, the bubble says what it is ----
     function getPath(path) {
         const [a, b] = path.split(".");
@@ -988,15 +1175,15 @@ Singleton {
             else if (root.demon && root.present && !root.talking && !root.menuOpen && !root.transition && Config.y2k.helperTips !== "off" && !StreamMode.active && !Shell.hiddenScreen(root.screenName) && root.now - (Config.y2k.demonSince || 0) > 120000 && root.now - root.lastHint > 12 * 60000)
                 root.hint();
             const h = new Date().getHours();
-            if (!root.demon && h >= 1 && h < 5 && root.nightSaid !== new Date().toDateString() && !Shell.fullscreenOn(root.screenName)) {
+            if (h >= 1 && h < 5 && root.nightSaid !== new Date().toDateString() && !Shell.fullscreenOn(root.screenName)) {
                 root.nightSaid = new Date().toDateString();
-                root.react(root.tr(Lines.angel.night));
+                root.react(root.demon ? root.line(Lines.demonNight, "dnight") : root.tr(Lines.angel.night));
             }
         }
     }
     property string nightSaid: ""
     Timer {
-        interval: Config.y2k.helperTips === "often" ? 6 * 60000 : 20 * 60000
+        interval: (Config.y2k.helperTips === "often" ? 6 : 20) * 60000 * (root.demon ? 0.5 : 1)
         running: root.present && Config.y2k.helperTips !== "off"
         repeat: true
         onTriggered: if (!root.talking && !root.menuOpen && !root.transition && !Shell.hiddenScreen(root.screenName))
@@ -1009,7 +1196,7 @@ Singleton {
         function onSettingsOpenChanged() {
             if (Shell.settingsOpen && Config.ready && !Config.y2k.helperGreeted) {
                 Config.y2k.helperGreeted = true;
-                root.say(I18n.t("Привет! Я Ангелочек ♡ Тут всё настраивается — начни с больших плиток, а сложное спрятано под «Эксперт».", "Hi! I'm Angel ♡ Everything is set up here — start with the big tiles; advanced things hide behind “Expert”."));
+                root.say(I18n.t("Привет! Я Ангелочек ♡ Тут всё настраивается — разделы слева, подробности за стрелками «›».", "Hi! I'm Angel ♡ Everything is set up here — the sections on the left, the details behind the “›” arrows."));
             } else if (Shell.settingsOpen)
                 pageTip.restart();
         }
@@ -1041,6 +1228,81 @@ Singleton {
                 root.react(root.demon ? I18n.t("Щёлк. Компромат сохранён.", "Click. Blackmail material saved.") : I18n.t("Щёлк! Скриншот уже в буфере — вставляй куда хочешь ♡", "Click! The screenshot is on the clipboard ♡"), null, true);
             else if (info.critical)
                 root.react(root.demon ? I18n.t("О, что-то горит. Люблю, когда горит.", "Oh, something's on fire. I love it when things burn.") : I18n.t("Ой… Что-то важное — посмотри уведомление!", "Oh… something important — check the notification!"));
+        }
+    }
+    // ---- the demon notices things: apps opening, the music, you coming back, the hour ----
+    // each kind on its own cooldown, on top of react()'s one-per-two-minutes
+    property var _seen: ({})
+    function demonNotice(kind, minutes, chance, msg) {
+        const t = Date.now();
+        if (!demon || !present || transition || !msg || Math.random() > chance || t - (_seen[kind] || 0) < minutes * 60000 || StreamMode.active || Shell.hiddenScreen(screenName) || Shell.fullscreenOn(screenName))
+            return;
+        _seen[kind] = t;
+        react(msg, null, false);
+    }
+    Connections {
+        target: Niri
+        function onWindowOpened(id) {
+            if (!root.demon)
+                return;
+            const w = Niri.windows.find(x => x.id === id);
+            const app = String(w && w.app_id || "").toLowerCase();
+            for (const [re, lines] of Lines.demonApps)
+                if (new RegExp(re).test(app)) {
+                    root.demonNotice("app:" + re, 30, 0.45, root.line(lines, "app:" + re));
+                    return;
+                }
+        }
+    }
+    Connections {
+        target: Lyrics
+        function onTrackKeyChanged() {
+            if (root.demon && Lyrics.playing && Lyrics.title)
+                musicSoon.restart();
+        }
+    }
+    Timer {
+        id: musicSoon
+        interval: 4000
+        onTriggered: if (Lyrics.playing && Lyrics.title)
+            root.demonNotice("music", 20, 0.3, root.line(Lines.demonMusic, "dmusic").replace("%1", Lyrics.artist || "?").replace("%2", Lyrics.title))
+    }
+    // back at the computer: unlocked, or the screensaver went away after a while
+    property double _awaySince: 0
+    Connections {
+        target: Shell
+        function onLockedChanged() {
+            if (Shell.locked)
+                root._awaySince = Date.now();
+            else
+                backSoon.restart();
+        }
+    }
+    Connections {
+        target: Idle
+        function onActiveChanged() {
+            if (Idle.active)
+                root._awaySince = root._awaySince || Date.now();
+            else
+                backSoon.restart();
+        }
+    }
+    property string _morningSaid: ""
+    Timer {
+        id: backSoon
+        interval: 2500
+        onTriggered: {
+            const away = root._awaySince ? Date.now() - root._awaySince : 0;
+            root._awaySince = 0;
+            if (!root.demon || Shell.locked || Idle.active || away < 3 * 60000)
+                return;
+            const h = new Date().getHours(), day = new Date().toDateString();
+            if (h >= 6 && h < 11 && root._morningSaid !== day) {
+                root._morningSaid = day;
+                root.demonNotice("morning", 0, 1, root.line(Lines.demonMorning, "dmorning"));
+            } else {
+                root.demonNotice("back", 10, 0.7, root.line(Lines.demonBack, "dback"));
+            }
         }
     }
     readonly property string wallpaperKey: JSON.stringify([Config.wallpaper.fallback, Config.wallpaper.outputs])

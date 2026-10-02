@@ -8,6 +8,9 @@ import qs.widgets
 // Win98 taskbar at the bottom. Auto-hide (Bar → Auto-hide): the bar slides down
 // leaving a thin line at the screen edge, windows get the whole screen; the
 // pointer at the bottom edge, Start or a bar menu bring it back.
+// In hell (BarLayout.hell): a hot slab of obsidian with lava in its cracks and flames
+// licking up along its top edge — above the bar, in headroom that takes no input and
+// no room from the windows.
 PanelWindow {
     id: win
 
@@ -48,14 +51,19 @@ PanelWindow {
     // the line that stays at the edge while it hides, the pointer finds it there
     readonly property int peek: Math.max(2, Theme.u)
 
+    readonly property bool hell: BarLayout.hell
+    readonly property int barHeight: Theme.u * 20
+    readonly property int headroom: hell ? Theme.u * 8 : 0
+
     screen: modelData
     anchors {
         bottom: true
         left: true
         right: true
     }
-    implicitHeight: Theme.u * 20
-    exclusionMode: Shell.dev || autoHide ? ExclusionMode.Ignore : ExclusionMode.Auto
+    implicitHeight: barHeight + headroom
+    exclusionMode: Shell.dev || autoHide ? ExclusionMode.Ignore : ExclusionMode.Normal
+    exclusiveZone: barHeight
     mask: Region {
         item: hot
     }
@@ -88,17 +96,38 @@ PanelWindow {
     PxBox {
         id: box
         width: parent.width
-        height: parent.height
-        y: Math.round(win.tucked * (win.height - win.peek))
-        color: Theme.panel
+        height: win.barHeight
+        y: win.headroom + Math.round(win.tucked * (win.barHeight - win.peek))
+        color: win.hell ? "transparent" : Theme.panel
+        hell: win.hell
         outline: false
 
         Rectangle {
             // top highlight line like the original taskbar
+            visible: !win.hell
             width: parent.width
             height: Theme.u
             y: -box.inset
             color: Theme.hi
+        }
+        // hell: the slab under everything, the flames over its top edge
+        HellSlab {
+            visible: win.hell
+            x: -box.inset
+            y: -box.inset
+            width: box.width
+            height: box.height
+            look: "lava"
+            live: !Shell.fullscreenOn(win.modelData.name)
+        }
+        HellFlames {
+            visible: win.hell
+            x: -box.inset
+            y: -box.inset - height + Theme.u
+            width: box.width
+            rows: 8
+            seed: 4
+            live: !Shell.fullscreenOn(win.modelData.name)
         }
 
         BarContent {

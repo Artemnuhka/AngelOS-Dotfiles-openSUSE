@@ -30,6 +30,8 @@ PxPage {
             "workspace": [I18n.t("Смена стола", "Desk switch"), I18n.t("лёгкий взмах при переходе на другой стол", "A soft swish when you go to another desk")],
             "lock": [I18n.t("Блокировка", "Lock"), ""],
             "unlock": [I18n.t("Разблокировка", "Unlock"), ""],
+            "usbIn": [I18n.t("USB подключено", "USB plugged in"), I18n.t("флешка, мышь, геймпад; хаб со всем содержимым — один звук", "A stick, a mouse, a gamepad; a hub with everything on it is one sound")],
+            "usbOut": [I18n.t("USB отключено", "USB unplugged"), I18n.t("после выхода из сна молчит: устройства не выдёргивали", "Quiet after waking up: nothing was pulled out")],
             "shutdown": [I18n.t("Выход и выключение", "Log out and power off"), I18n.t("успевает доиграть перед выходом", "Plays out before the session ends")],
             "click": [I18n.t("Клик", "Click"), Sounds.clickStatus === "noperm" ? I18n.t("нет доступа к мыши (группа input) — клики не слышно", "No access to the mouse (the input group): clicks stay silent") : I18n.t("щелчок на клик, во всех окнах", "A tick on a click, in every window")],
             "clickRight": [I18n.t("Правый клик — свой звук", "Right click — its own sound"), I18n.t("выключено: правая кнопка щёлкает как левая", "Off: the right button ticks like the left")],
@@ -40,7 +42,8 @@ PxPage {
             "choir": [I18n.t("Хор ангела", "The angel's choir"), I18n.t("вместе с лучами", "With the rays")],
             "crack": [I18n.t("Удар по стеклу", "The glass punch"), ""],
             "rocks": [I18n.t("Тряска и камни", "Quake and rocks"), ""],
-            "shatter": [I18n.t("Экран ломается", "The screen breaks"), ""]
+            "shatter": [I18n.t("Экран ломается", "The screen breaks"), ""],
+            "bark": [I18n.t("Цербер лает", "Cerberus barks"), I18n.t("когда Колесо Ада выпускает щенка", "When the Wheel of Hell lets the puppy out")]
         })
     function labelOf(id) {
         return (labels[id] || [id])[0];
@@ -54,7 +57,9 @@ PxPage {
                 "label": I18n.t("Свой звук", "Its own"),
                 "value": ""
             }];
-        const others = Sounds.events.filter(e => e !== id && e !== "voice" && labels[e]).map(e => ({
+        // the demon's own sounds stay hers: not offered in heaven
+        const hellish = ["demon", "crack", "rocks", "shatter", "bark"];
+        const others = Sounds.events.filter(e => e !== id && e !== "voice" && labels[e] && (Angel.hellShown || !hellish.includes(e))).map(e => ({
                     "label": "♪ " + labelOf(e),
                     "value": e
                 }));
@@ -267,6 +272,7 @@ PxPage {
     PxGroup {
         width: parent.width
         title: I18n.t("Мышь и клавиатура", "Mouse and keyboard")
+        advanced: true
         icon: "mouse"
         Repeater {
             model: ["click"]
@@ -323,7 +329,7 @@ PxPage {
         title: I18n.t("События системы", "System events")
         icon: "bell"
         Repeater {
-            model: ["startup", "notify", "error", "windowOpen", "windowClose", "workspace", "open", "toggle", "screenshot", "volume", "wallpaper", "lock", "unlock", "shutdown"]
+            model: ["startup", "notify", "error", "windowOpen", "windowClose", "workspace", "usbIn", "usbOut", "open", "toggle", "screenshot", "volume", "wallpaper", "lock", "unlock", "shutdown"]
             delegate: eventRow
         }
     }
@@ -351,7 +357,7 @@ PxPage {
         }
         Repeater {
             // the demon's own sounds (her lines, the glass, the rocks) only while she rules
-            model: Angel.hellShown ? ["angel", "demon", "voice", "choir", "crack", "rocks", "shatter"] : ["angel", "voice", "choir"]
+            model: Angel.hellShown ? ["angel", "demon", "voice", "choir", "crack", "rocks", "shatter", "bark"] : ["angel", "voice", "choir"]
             delegate: eventRow
         }
     }
@@ -359,6 +365,7 @@ PxPage {
     PxGroup {
         width: parent.width
         title: I18n.t("Свои звуки", "Your own sounds")
+        advanced: true
         icon: "folder"
         PxText {
             width: parent.width

@@ -46,7 +46,7 @@ def read(src):
 
 def clean(env):
     # bin/angelos remembers the originals of what it changes for the shell
-    for key in ("QT_PLUGIN_PATH", "QSG_RHI_BACKEND"):
+    for key in ("QT_PLUGIN_PATH", "QSG_RHI_BACKEND", "QT_QPA_PLATFORMTHEME"):
         pre = "ANGELOS_PRE_" + key
         if pre in env:
             if env[pre]:

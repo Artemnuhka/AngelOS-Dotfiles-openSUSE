@@ -9,6 +9,14 @@ Singleton {
     id: root
 
     readonly property var sections: ["left", "center", "right"]
+    // the bar's looks (Settings → Bar → Style) and the ones along the bottom edge (their
+    // popups and menus open upwards)
+    readonly property var styles: ["taskbar", "top", "island", "dock", "capsules", "windose"]
+    readonly property string style: styles.includes(Config.bar.style) ? Config.bar.style : "taskbar"
+    readonly property bool bottom: style === "taskbar" || style === "dock" || style === "windose"
+    // while the demon rules the looks have hell versions of their own (Y2K → Bar in hell):
+    // the content re-inked (shaders/hell_ink.frag), the frame each style's own — not the dock
+    readonly property bool hell: Config.ready && Angel.demon && Config.y2k.hellBar
     readonly property var defaults: ({
             "left": ["start", "workspaces", "tasks"],
             "center": ["lyrics"],

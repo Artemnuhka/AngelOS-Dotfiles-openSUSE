@@ -1,5 +1,6 @@
 import QtQuick
 import qs.config
+import qs.services
 import qs.widgets
 import qs.modules.bar
 import "."
@@ -58,7 +59,7 @@ Item {
         id: popup
         panelId: "claude"
         anchorItem: root
-        above: Config.bar.style === "taskbar"
+        above: BarLayout.bottom
         title: "claude.exe"
         icon: "bot"
         contentWidth: Theme.u * 190

@@ -179,6 +179,7 @@ Scope {
                         Shell.lock();
                     } else {
                         root.sleeping = false;
+                        Shell.resumed();
                         // in case the lock could not come up before sleeping
                         if (!Shell.locked)
                             Shell.lock();

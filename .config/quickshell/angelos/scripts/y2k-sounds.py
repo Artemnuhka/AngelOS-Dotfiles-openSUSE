@@ -5,7 +5,8 @@
                                wallpaper open toggle screenshot volume windowClose
                                demon crack choir rocks shatter voice, the input and
                                system ones clickRight key (+ key2 key3, typing
-                               variety) windowOpen workspace lock unlock as .ogg
+                               variety) windowOpen workspace lock unlock usbIn
+                               usbOut bark as .ogg
                                (.wav without ffmpeg) and the pips voiceAngel
                                voiceDemon as .wav, prints JSON
 
@@ -92,10 +93,10 @@ def level(x, peak_db=-6.0, rms_db=-20.0):
 
 
 # RMS ceilings, dBFS: the helper speaks under everything else
-LOUDNESS = {"voiceAngel": -25.0, "voiceDemon": -26.0, "voice": -25.0, "angel": -24.0, "demon": -25.0,
+LOUDNESS = {"bark": -24.0, "voiceAngel": -25.0, "voiceDemon": -26.0, "voice": -25.0, "angel": -24.0, "demon": -25.0,
             "choir": -23.0, "crack": -25.0, "rocks": -23.0, "shatter": -23.0,
             "key": -27.0, "key2": -27.0, "key3": -27.0, "clickRight": -22.0, "workspace": -24.0}
-PACK_VERSION = "3"
+PACK_VERSION = "5"
 
 
 def startup():
@@ -282,6 +283,45 @@ def unlock():
     return echo(buf, 0.1, 0.2, 2)
 
 
+def bark():
+    # Cerberus (the Wheel of Hell): three quick puppy barks, one a head — noisy little
+    # 8-bit yaps dropping in pitch, the last one the deepest
+    sec = 0.75
+    buf = np.zeros(int(sec * RATE))
+    for i, (f, at) in enumerate(((520, 0.0), (430, 0.2), (330, 0.42))):
+        d = 0.13
+        t = t_axis(d)
+        x = pulse(f * 1.25, f * 0.7, d, 0.35) * 0.7 + lowpass(noise(d, 51 + i), 2600) * 0.45
+        x = crunch8(x * np.exp(-t * 14) * env(len(t), 0.004, 0.05))
+        place(buf, lowpass(x, 3400), at)
+    return buf
+
+
+def usb_in():
+    # a device plugged in: "da-ding" going up — a soft knock, then a fifth and an octave
+    # on bells over a short triangle pad, the way old systems greeted a new device
+    sec = 0.75
+    buf = np.zeros(int(sec * RATE))
+    place(buf, lowpass(noise(0.025, 41), 1800) * np.exp(-t_axis(0.025) * 160) * 0.5, 0.0)
+    place(buf, bell(note(67), 0.45, index=1.1, decay=7) * 0.55, 0.01)
+    place(buf, bell(note(74), 0.5, index=1.0, decay=6) * 0.5, 0.11)
+    place(buf, bell(note(79), 0.55, index=0.9, decay=5.5) * 0.45, 0.2)
+    pad = tri(note(55), 0.45, detune=0.003) * env(int(0.45 * RATE), attack=0.04, release=0.3)
+    place(buf, pad * 0.18, 0.08)
+    return echo(buf, 0.13, 0.22, 2)
+
+
+def usb_out():
+    # unplugged: the same three bells falling, duller, with a little click of the plug
+    sec = 0.7
+    buf = np.zeros(int(sec * RATE))
+    place(buf, bell(note(79), 0.4, index=0.8, decay=8) * 0.45, 0.0)
+    place(buf, bell(note(74), 0.45, index=0.8, decay=7) * 0.5, 0.1)
+    place(buf, bell(note(67), 0.5, index=0.9, decay=6) * 0.55, 0.2)
+    place(buf, lowpass(noise(0.02, 43), 2400) * np.exp(-t_axis(0.02) * 200) * 0.35, 0.21)
+    return lowpass(echo(buf, 0.13, 0.2, 2), 5200)
+
+
 def demon():
     # the demon's "heh": two wobbly low squares, a minor second apart
     sec = 0.55
@@ -438,7 +478,8 @@ SOUNDS = {"startup": startup, "notify": notify, "error": error, "click": click, 
           "windowClose": window_close, "demon": demon, "crack": crack, "choir": choir, "rocks": rocks,
           "shatter": shatter, "voice": voice, "voiceAngel": voice_angel, "voiceDemon": voice_demon,
           "clickRight": click_right, "key": key, "key2": lambda: key(1), "key3": lambda: key(2),
-          "windowOpen": window_open, "workspace": workspace, "lock": lock, "unlock": unlock}
+          "windowOpen": window_open, "workspace": workspace, "lock": lock, "unlock": unlock,
+          "usbIn": usb_in, "usbOut": usb_out, "bark": bark}
 # played by QtMultimedia's SoundEffect, which only takes .wav
 WAV_ONLY = {"voiceAngel", "voiceDemon"}
 

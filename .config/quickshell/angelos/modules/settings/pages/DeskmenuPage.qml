@@ -289,6 +289,7 @@ PxPage {
 
     PxGroup {
         title: I18n.t("Свои пункты", "Your own entries")
+        advanced: true
         icon: "plus"
         width: parent.width
         property string kind: "app"

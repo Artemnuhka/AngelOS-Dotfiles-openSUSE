@@ -43,3 +43,33 @@ tooltip,
 tooltip.background {
     border-radius: 0;
 }
+
+/* Pixel controls like angelOS's own: square buttons, fields and lists, bevelled
+   buttons (light top-left, dark bottom-right; pressed — the other way round). */
+button,
+entry,
+spinbutton,
+combobox button,
+.linked > button,
+.linked > entry,
+list,
+list row,
+notebook,
+notebook > header tab,
+scale slider,
+progressbar trough,
+progressbar progress,
+frame > border,
+.frame {
+    border-radius: 0;
+}
+button:not(.flat):not(.titlebutton):not(.image-button) {
+    box-shadow: inset 1px 1px alpha(#ffffff, 0.18), inset -1px -1px alpha(#000000, 0.35);
+}
+button:not(.flat):not(.titlebutton):active,
+button:not(.flat):not(.titlebutton):checked {
+    box-shadow: inset 1px 1px alpha(#000000, 0.35), inset -1px -1px alpha(#ffffff, 0.12);
+}
+entry:focus {
+    box-shadow: inset 0 0 0 2px {{accent}};
+}

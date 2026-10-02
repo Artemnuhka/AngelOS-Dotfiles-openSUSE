@@ -1,9 +1,9 @@
 import QtQuick
 import qs.config
 
-// The original tile list stays intact for classic; optional looks use new tiles.
+// Every section as tiles, in the Windose and Stream looks.
 Loader {
     id: root
     readonly property string settingsSkin: Theme.settingsSkinFor(root.parent)
-    source: settingsSkin === "classic" ? "ClassicMorePage.qml" : "DlcMorePage.qml"
+    source: "DlcMorePage.qml"
 }

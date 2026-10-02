@@ -231,6 +231,14 @@ Singleton {
             "label": I18n.t("Сейчас играет", "Now playing"),
             "icon": "play",
             "title": "music.exe"
+        },
+        {
+            // hell's own: offered, shown and spun only while the demon rules
+            "type": "hellwheel",
+            "label": I18n.t("Колесо Ада", "Wheel of Hell"),
+            "icon": "pentagram",
+            "title": "wheel666.exe",
+            "hell": true
         }
     ]
     readonly property var pluginTypes: Plugins.desktopWidgets.map(p => ({
@@ -240,7 +248,9 @@ Singleton {
                 "title": p.desktopTitle || (p.id + ".exe"),
                 "plugin": p
             }))
-    readonly property var types: builtin.concat(pluginTypes)
+    // the demon's widgets (the Wheel of Hell) don't exist in heaven: not offered, not shown
+    // (they stay in the settings and come back with her)
+    readonly property var types: builtin.filter(t => !t.hell || Angel.hellShown).concat(pluginTypes)
     readonly property var widgets: (Config.desktop.widgets || []).filter(w => !!typeInfo(w.type))
 
     // "clock.exe" → "clock.sh": the ending picked in Settings → Widgets

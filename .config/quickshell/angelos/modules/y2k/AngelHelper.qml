@@ -42,7 +42,7 @@ Scope {
             color: "transparent"
             implicitWidth: Theme.u * 160
             // room above her for the one coming down from the sky, or while she is held
-            readonly property int headroom: Angel.transition ? Theme.u * 70 : grab.held ? Theme.u * 30 : 0
+            readonly property int headroom: Angel.transition ? Theme.u * 70 : grab.held ? Theme.u * 30 : Novel.wantsClick ? Theme.u * 16 : 0
             implicitHeight: body.height + headroom
             WlrLayershell.layer: WlrLayer.Top
             WlrLayershell.namespace: "angelos-angel"
@@ -230,6 +230,14 @@ Scope {
                                 icon: "sparkle"
                                 text: Angel.demon ? I18n.t("Пошути", "Joke") : I18n.t("Шутка", "A joke")
                                 onClicked: Angel.joke()
+                            }
+                            // the demon asks something, three answers to pick from
+                            PxButton {
+                                visible: Angel.demon
+                                compact: true
+                                icon: "chat"
+                                text: I18n.t("Поболтаем", "Let's chat")
+                                onClicked: Angel.talk()
                             }
                             PxButton {
                                 visible: !Angel.demon
@@ -532,6 +540,22 @@ Scope {
                                 })
                             }
                         }
+                        // the novel has a question for you: a "?" bobbing over her head (click her)
+                        PxBox {
+                            visible: Novel.wantsClick && !win.bubbleOn && !stage.moving
+                            x: sprite.x + sprite.body.x + (sprite.body.width - width) / 2
+                            y: Math.max(0, sprite.y + sprite.body.y - height - Theme.u * 3 + (win.tick % 4 < 2 ? 0 : -Theme.u))
+                            width: Theme.u * 11
+                            height: Theme.u * 13
+                            color: Angel.demon ? Theme.hellBlood : Theme.accent
+                            PxText {
+                                anchors.centerIn: parent
+                                kind: "title"
+                                font.bold: true
+                                color: Angel.demon ? Theme.hellText : Theme.selectText
+                                text: "?"
+                            }
+                        }
                         // hellfire at the floor under her while they swap, or as she is
                         // pushed down
                         Row {
@@ -602,6 +626,9 @@ Scope {
                         }
                         onReleased: {
                             if (!dragging) {
+                                // the novel waits for this click ("?" over her): its question comes
+                                if (!Angel.menuOpen && Novel.click())
+                                    return;
                                 if (Angel.menuOpen)
                                     Angel.hush();
                                 else

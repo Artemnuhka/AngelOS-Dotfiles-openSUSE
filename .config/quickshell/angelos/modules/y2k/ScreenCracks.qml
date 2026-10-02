@@ -12,8 +12,12 @@ import qs.widgets
 // she rules and never takes the pointer: the nearer the pointer comes, the
 // clearer it gets (Pointer — reported by the desktop and the taskbar). When the
 // angel comes back the glass breaks and the shards fall out (Angel.shattered).
-// Settings → Y2K → Angel or demon: cracks full | weak | off. Hidden under
-// fullscreen windows and on streamed screens.
+// Settings → Y2K → Angel or demon: cracks full | weak | off, and what she breaks
+// (Config.y2k.breakage): glass (these pixel cracks) | tv (a smashed TV: a hole with snow
+// and dead LCD lines) | burn (a hole burnt through, hellfire inside) | claws (four glowing
+// gashes) | sigil (a pentagram burnt into the glass) | random (another one each punch) —
+// all but the glass drawn by shaders/breakage.frag. Hidden under fullscreen windows and
+// on streamed screens.
 Scope {
     id: root
 
@@ -24,6 +28,33 @@ Scope {
     property real fall: 0                    // 0..1 of the drop
     property int seed: 1
     readonly property bool weak: Config.y2k.cracks === "weak"
+    // what this punch broke: glass | tv | burn | claws | sigil
+    readonly property var kinds: ["glass", "tv", "burn", "claws", "sigil"]
+    property string kind: "glass"
+    function pickKind() {
+        const b = Config.y2k.breakage;
+        if (b === "random") {
+            const others = kinds.filter(k => k !== kind);
+            return others[Math.floor(Math.random() * others.length)];
+        }
+        return kinds.includes(b) ? b : "glass";
+    }
+    // a new choice in the settings shows at once
+    Connections {
+        target: Config.y2k
+        function onBreakageChanged() {
+            if (root.on && !root.falling && Config.y2k.breakage !== "random")
+                root.kind = root.pickKind();
+        }
+    }
+    // the shader's clock, stepped in its own way (10 fps inside)
+    property real clock: 0
+    Timer {
+        running: root.wanted && root.kind !== "glass"
+        interval: 100
+        repeat: true
+        onTriggered: root.clock = (root.clock + 0.1) % 1000
+    }
     // where her fist landed, in the corner square: on the Start button
     readonly property point impact: Qt.point(0.14, 0.92)
     readonly property bool wanted: on && Config.y2k.cracks !== "off" && screenName !== "" && StreamMode.effectsOn(screenName) && !Shell.fullscreenOn(screenName) && !Shell.locked
@@ -33,6 +64,7 @@ Scope {
         function onPunched(name, sound) {
             root.screenName = name;
             root.seed = Math.floor(Math.random() * 100000) + 1;
+            root.kind = root.pickKind();
             root.falling = false;
             root.fall = 0;
             root.grow = 0;
@@ -131,8 +163,25 @@ Scope {
             }
 
             readonly property int px: Math.max(2, Theme.u * 2)
+            // everything but the glass: a hole in a TV, a burnt hole, claws, a sigil
+            ShaderEffect {
+                visible: root.kind !== "glass"
+                anchors.fill: parent
+                opacity: (root.weak ? 0.75 : 1) * win.veil
+                fragmentShader: Qt.resolvedUrl("../../shaders/breakage.frag.qsb")
+                property real kind: root.kinds.indexOf(root.kind)
+                property real cells: win.width / win.px
+                property real t: root.clock
+                property real grow: root.grow
+                property real fall: root.fall
+                property real seed: root.seed % 997
+                property real weak: root.weak ? 1 : 0
+                property real ix: root.impact.x
+                property real iy: root.impact.y
+            }
             Canvas {
                 id: canvas
+                visible: root.kind === "glass"
                 width: Math.ceil(win.width / win.px)
                 height: Math.ceil(win.height / win.px)
                 scale: win.px

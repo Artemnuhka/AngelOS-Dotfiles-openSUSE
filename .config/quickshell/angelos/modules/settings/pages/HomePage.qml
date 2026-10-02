@@ -1,9 +1,9 @@
 import QtQuick
 import qs.config
 
-// Keep the original angelOS home intact; the optional looks have their own layout.
+// The home of the Windose and Stream looks (Classic opens your account instead).
 Loader {
     id: root
     readonly property string settingsSkin: Theme.settingsSkinFor(root.parent)
-    source: settingsSkin === "classic" ? "ClassicHomePage.qml" : "DlcHomePage.qml"
+    source: "DlcHomePage.qml"
 }

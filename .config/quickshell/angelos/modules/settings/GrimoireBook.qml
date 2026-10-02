@@ -8,7 +8,9 @@ import qs.widgets
 
 // Settings as a grimoire while the demon rules (Y2K → Angel or demon → Settings in hell):
 // a leather-bound book open on its spread — the contents on the left page (with the search),
-// the settings page on the right, re-inked on parchment by shaders/grimoire.frag. Changing
+// the settings page on the right, re-inked on parchment by shaders/grimoire.frag and written
+// by hand (Theme.fontScript, set for this window by SettingsView). The spine sits in the
+// middle: two equal pages. Changing
 // the section turns a page: forwards when it comes later in the contents, backwards when
 // earlier. SettingsView puts its search box into `searchSlot` and its page into `pageSlot`.
 Item {
@@ -129,9 +131,13 @@ Item {
         y: cover.y
         width: cover.width
         height: Theme.u * 17
+        // the cover in gothic letters (Jacquard 24, Latin only like the title)
         PxText {
             anchors.centerIn: parent
             kind: "title"
+            font.family: Theme.fontHell
+            font.pixelSize: Theme.hellPx(1)
+            renderType: Text.NativeRendering
             color: book.gold
             style: Text.Raised
             styleColor: book.leatherDark
@@ -179,7 +185,8 @@ Item {
         y: head.y + head.height
         width: cover.width - Theme.u * 14
         height: cover.height - head.height - Theme.u * 7
-        readonly property real leftW: Math.round(Math.max(Theme.u * 120, Math.min(width * 0.36, Theme.u * 190)))
+        // two equal pages, the spine in the middle
+        readonly property real leftW: Math.round(width / 2)
 
         // the pages' edges under the paper
         Rectangle {
@@ -268,9 +275,9 @@ Item {
         // ---- left page: the contents ----
         PxText {
             id: tocTitle
-            x: Theme.u * 6
+            x: Theme.u * 10
             y: Theme.u * 5
-            width: spread.leftW - Theme.u * 12
+            width: spread.leftW - Theme.u * 20
             horizontalAlignment: Text.AlignHCenter
             kind: "title"
             color: book.redInk
@@ -278,18 +285,18 @@ Item {
         }
         Item {
             id: searchSlot
-            x: Theme.u * 4
+            x: Theme.u * 10
             y: tocTitle.y + tocTitle.height + Theme.u * 3
-            width: spread.leftW - Theme.u * 9
+            width: spread.leftW - Theme.u * 20
             height: spread.height - y - seals.height - Theme.u * 6
         }
         Flickable {
             id: toc
             visible: book.view.query.trim() === ""
             x: searchSlot.x
-            y: searchSlot.y + Theme.sizeBody + Theme.u * 16
+            y: searchSlot.y + Theme.scriptPx(Theme.sizeBody) + Theme.u * 16
             width: searchSlot.width
-            height: searchSlot.y + searchSlot.height - y
+            height: seals.y - y - Theme.u * 4
             contentHeight: tocCol.implicitHeight
             clip: true
             boundsBehavior: Flickable.StopAtBounds
@@ -310,7 +317,7 @@ Item {
                 // the title page: the home tiles
                 Rectangle {
                     width: tocCol.width
-                    height: Theme.u * 12
+                    height: Math.max(Theme.u * 12, Theme.scriptPx(Theme.sizeBody) + Theme.u * 3)
                     color: homeMouse.containsMouse ? Qt.alpha(book.redInk, 0.08) : "transparent"
                     PxText {
                         anchors.verticalCenter: parent.verticalCenter
@@ -350,7 +357,7 @@ Item {
                                 readonly property bool sel: Shell.settingsPage === modelData.id
                                 readonly property int number: book.view.allPages.findIndex(p => p.id === modelData.id) + 1
                                 width: chapter.width
-                                height: Theme.u * 12
+                                height: Math.max(Theme.u * 12, lineName.implicitHeight + Theme.u * 2)
                                 color: lineMouse.containsMouse ? Qt.alpha(book.redInk, 0.08) : "transparent"
                                 PxText {
                                     id: lineName
@@ -399,7 +406,7 @@ Item {
         // wax seals at the foot of the left page: undo, the usual window for now
         Row {
             id: seals
-            x: Theme.u * 6
+            x: Theme.u * 10
             y: spread.height - height - Theme.u * 5
             spacing: Theme.u * 5
             Repeater {
@@ -460,14 +467,14 @@ Item {
         // ---- right page: the settings page ----
         Item {
             id: pageSlot
-            x: rightPage.x + Theme.u * 8
-            y: Theme.u * 4
-            width: rightPage.width - Theme.u * 14
-            height: spread.height - Theme.u * 18
+            x: rightPage.x + Theme.u * 12
+            y: Theme.u * 6
+            width: rightPage.width - Theme.u * 22
+            height: spread.height - Theme.u * 22
         }
-        // the ribbon bookmark
+        // the ribbon bookmark, down the outer edge of the right page (clear of the heading)
         Rectangle {
-            x: rightPage.x + Theme.u * 10
+            x: rightPage.x + rightPage.width - Theme.u * 9
             y: -Theme.u * 2
             width: Theme.u * 5
             height: Theme.u * 26

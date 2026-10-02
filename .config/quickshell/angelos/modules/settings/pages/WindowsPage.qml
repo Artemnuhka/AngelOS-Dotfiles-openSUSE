@@ -16,7 +16,7 @@ PxPage {
     }
     property string customPreset: ""
 
-    heading: I18n.t("Поведение окон", "Window behavior")
+    heading: I18n.t("Окна", "Windows")
     subtitle: I18n.t("niri располагает окна в прокручиваемых колонках. Изменения сохраняются с бэкапом и проверкой.", "niri arranges windows in scrolling columns. Changes are backed up and validated.")
     // window decorations: angelOS title bars (modules/decor), GTK's buttons (scripts/gtk-live.py), Helium
     PxGroup {
@@ -115,7 +115,7 @@ PxPage {
             visible: heliumStatus.info.installed === true
             label: "Helium"
             property bool copied: false
-            hint: heliumStatus.info.gtkMode ? (Angel.hellShown ? I18n.t("в режиме «GTK»: цвета и кнопки окна angelOS, рай и ад — сразу", "In GTK mode: angelOS colours and window buttons, heaven and hell at once") : I18n.t("в режиме «GTK»: цвета и кнопки окна angelOS — сразу", "In GTK mode: angelOS colours and window buttons at once")) : heliumStatus.info.themeLoaded ? (Angel.hellShown ? I18n.t("тема-расширение angelOS загружена: цвета рая или ада подхватываются при каждом запуске Helium. Для смены на лету — Настройки Helium → Внешний вид → Тема → GTK", "The angelOS theme extension is loaded: heaven's or hell's colours apply each time Helium starts. To switch live: Helium settings → Appearance → Theme → GTK") : I18n.t("тема-расширение angelOS загружена: её цвета подхватываются при каждом запуске Helium. Для смены на лету — Настройки Helium → Внешний вид → Тема → GTK", "The angelOS theme extension is loaded: its colours apply each time Helium starts. To switch live: Helium settings → Appearance → Theme → GTK")) : I18n.t("на лету: в Helium Настройки → Внешний вид → Тема → «GTK». Или тема-расширение: helium://extensions → Режим разработчика → «Загрузить распакованное» → папка ниже (цвета обновляются при запуске)", "Live: in Helium Settings → Appearance → Theme → “GTK”. Or the theme extension: helium://extensions → Developer mode → “Load unpacked” → the folder below (colours refresh at start)")
+            hint: heliumStatus.info.gtkMode ? (Angel.hellShown ? I18n.t("в режиме «GTK»: цвета и кнопки окна angelOS, рай и ад — сразу", "In GTK mode: angelOS colours and window buttons, heaven and hell at once") : I18n.t("в режиме «GTK»: цвета и кнопки окна angelOS — сразу", "In GTK mode: angelOS colours and window buttons at once")) : heliumStatus.info.themeLoaded ? (Angel.hellShown ? I18n.t("тема-расширение angelOS загружена: цвета рая или ада подхватываются при каждом запуске Helium. Для смены на лету — Настройки Helium → Внешний вид → Тема → GTK", "The angelOS theme extension is loaded: heaven's or hell's colours apply each time Helium starts. To switch live: Helium settings → Appearance → Theme → GTK") : I18n.t("тема-расширение angelOS загружена: её цвета подхватываются при каждом запуске Helium. Для смены на лету — Настройки Helium → Внешний вид → Тема → GTK", "The angelOS theme extension is loaded: its colours apply each time Helium starts. To switch live: Helium settings → Appearance → Theme → GTK")) : heliumStatus.info.pending ? I18n.t("закрой Helium — я сама переключу его тему на «GTK», и дальше он меняет цвета вместе с angelOS", "Close Helium and I'll switch its theme to “GTK”; from then on it changes colours with angelOS") : I18n.t("«Следовать теме angelOS» — и Helium меняет цвета вместе с системой (режим «GTK»; если Helium открыт — переключу, как закроешь). Или тема-расширение: helium://extensions → Режим разработчика → «Загрузить распакованное» → папка ниже (цвета обновляются при запуске)", "“Follow angelOS's theme” and Helium changes colours with the system (its “GTK” mode; if Helium is open, I switch it when it closes). Or the theme extension: helium://extensions → Developer mode → “Load unpacked” → the folder below (colours refresh at start)")
             Column {
                 width: parent.width
                 spacing: Theme.u * 2
@@ -129,6 +129,15 @@ PxPage {
                 Flow {
                     width: parent.width
                     spacing: Theme.u * 2
+                    // one click: Helium's theme → GTK, it follows angelOS live (helium-theme.py follow)
+                    PxButton {
+                        visible: !heliumStatus.info.gtkMode
+                        compact: true
+                        accent: true
+                        icon: "sparkle"
+                        text: heliumStatus.info.pending ? I18n.t("Включу, как закроешь Helium…", "On as soon as Helium closes…") : I18n.t("Следовать теме angelOS", "Follow angelOS's theme")
+                        onClicked: heliumFollow.running = true
+                    }
                     PxButton {
                         compact: true
                         icon: "folder"
@@ -154,6 +163,11 @@ PxPage {
                 }
             }
             Process {
+                id: heliumFollow
+                command: ["python3", Quickshell.shellDir + "/scripts/helium-theme.py", "follow"]
+                onExited: heliumStatus.running = true
+            }
+            Process {
                 id: heliumStatus
                 property var info: ({})
                 running: true
@@ -167,11 +181,58 @@ PxPage {
                 }
             }
         }
+        // Telegram (scripts/telegram-theme.py): applied once, then it follows the file on its own
+        SettingRow {
+            id: telegramRow
+            property bool copied: false
+            visible: telegramStatus.info.installed === true
+            label: "Telegram"
+            hint: I18n.t("тема angelOS для Telegram: рай, ад, светлая и тёмная — на лету. Один раз: «Скопировать путь» → в Telegram Настройки → Настройки чатов → ⋮ → «Выбрать из файла» → Ctrl+L, Ctrl+V, Enter → «Оставить». Дальше Telegram сам подхватывает каждую смену темы. Авто-ночной режим в Telegram лучше выключить — иначе он перескочит на свою ночную тему", "angelOS's theme for Telegram: heaven, hell, light and dark — on the fly. Once: “Copy the path” → in Telegram Settings → Chat Settings → ⋮ → “Choose from file” → Ctrl+L, Ctrl+V, Enter → “Keep changes”. After that Telegram picks up every theme change by itself. Better switch Telegram's auto-night mode off, or it jumps to its own night theme")
+            Flow {
+                width: parent.width
+                spacing: Theme.u * 2
+                PxButton {
+                    compact: true
+                    accent: !telegramStatus.info.asked
+                    icon: "sparkle"
+                    text: telegramRow.copied ? I18n.t("Путь скопирован ♡", "Path copied ♡") : I18n.t("Скопировать путь темы", "Copy the theme's path")
+                    onClicked: {
+                        telegramApply.running = true;
+                        telegramRow.copied = true;
+                    }
+                }
+                PxButton {
+                    compact: true
+                    icon: "folder"
+                    text: I18n.t("Папка темы", "Theme folder")
+                    onClicked: Quickshell.execDetached(["xdg-open", String(telegramStatus.info.theme || "").replace(/\/[^\/]*$/, "")])
+                }
+            }
+            Process {
+                id: telegramApply
+                command: ["python3", Quickshell.shellDir + "/scripts/telegram-theme.py", "apply"]
+                onExited: telegramStatus.running = true
+            }
+            Process {
+                id: telegramStatus
+                property var info: ({})
+                running: true
+                command: ["python3", Quickshell.shellDir + "/scripts/telegram-theme.py", "status"]
+                stdout: StdioCollector {
+                    onStreamFinished: {
+                        try {
+                            telegramStatus.info = JSON.parse(text);
+                        } catch (e) {}
+                    }
+                }
+            }
+        }
     }
 
     PxGroup {
         width: parent.width
         title: I18n.t("Закрытие окон", "Closing windows")
+        advanced: true
         icon: "close"
         SettingRow {
             id: rightRow
@@ -238,6 +299,7 @@ PxPage {
     PxGroup {
         width: parent.width
         title: "Alt+Tab"
+        advanced: true
         icon: "layers"
         PxText {
             width: parent.width
@@ -357,6 +419,7 @@ PxPage {
     PxGroup {
         width: parent.width
         title: I18n.t("Анимации окон", "Window animations")
+        advanced: true
         icon: "sparkle"
         Component.onCompleted: WindowAnim.refresh()
         Repeater {

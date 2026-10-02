@@ -1,24 +1,24 @@
 # angelOS wallpaper / dark
 [colors-dark]
 foreground=fafafa
-background=1a181f
-regular0=1a181f
+background=181922
+regular0=181922
 regular1=e36b78
 regular2=8eaf73
 regular3=d8b56b
-regular4=ccadb6
-regular5=b38391
+regular4=b9b1cc
+regular5=978ab3
 regular6=72b7b0
 regular7=fafafa
 bright0=b4b5b7
 bright1=f58b98
 bright2=aacf93
 bright3=efd18b
-bright4=ccadb6
-bright5=b38391
+bright4=b9b1cc
+bright5=978ab3
 bright6=92d7d0
 bright7=fafafa
-selection-foreground=1a181f
-selection-background=b38391
-cursor=1a181f b38391
-urls=ccadb6
+selection-foreground=181922
+selection-background=978ab3
+cursor=181922 978ab3
+urls=b9b1cc

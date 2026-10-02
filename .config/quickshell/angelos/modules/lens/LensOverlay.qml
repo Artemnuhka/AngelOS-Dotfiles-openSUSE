@@ -51,6 +51,7 @@ Scope {
                 visible: !Lens.hidden && snap.status === Image.Ready
                 property var source: snap
                 property point center: Qt.point(win.px, win.py)
+                property point spot: Qt.point(win.px, win.py)
                 property size itemSize: Qt.size(width, height)
                 property size texSize: Qt.size(Math.max(1, snap.implicitWidth), Math.max(1, snap.implicitHeight))
                 property real radius: win.radius

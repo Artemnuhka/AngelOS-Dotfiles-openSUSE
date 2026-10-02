@@ -19,6 +19,11 @@ UNIT_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/$UNIT"
 shell_env() {
   mode="$(cat "$CONF_DIR/renderer" 2>/dev/null | tr -cd 'a-z')"
   export ANGELOS_PRE_QT_PLUGIN_PATH="${QT_PLUGIN_PATH:-}" ANGELOS_PRE_QSG_RHI_BACKEND="${QSG_RHI_BACKEND:-}"
+  # Qt apps may use qt6ct (Settings → Appearance → Qt apps, scripts/qt-theme.py); the
+  # shell keeps the GTK platform theme it was made with, apps get theirs back (Shell.childEnv)
+  if [ "${QT_QPA_PLATFORMTHEME:-}" = qt6ct ]; then
+    export ANGELOS_PRE_QT_QPA_PLATFORMTHEME=qt6ct QT_QPA_PLATFORMTHEME=gtk3
+  fi
   case "$mode" in
     vulkan) export QSG_RHI_BACKEND=vulkan ;;
     opengl) ;;
@@ -192,6 +197,11 @@ case "$1" in
     fi
     [ "$dir" = cancel ] || exec niri msg action focus-window-previous
     ;;
+  novel)
+    # the novel's dialogue editor runs without the shell; the rest goes over IPC
+    if [ "${2:-}" = edit ]; then exec python3 "$SHELL_DIR/novel/editor/nov-editor.py"; fi
+    shift
+    exec qs -c angelos ipc call angelos novel "$*" ;;
   lens)
     # the lens at the pointer (niri keys Mod+Alt+= / - / 0): the shell's socket, else qs ipc
     what="$(printf '%s' "${2:-toggle}" | tr -cd 'a-z')"

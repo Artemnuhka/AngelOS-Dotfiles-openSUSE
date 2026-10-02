@@ -9,12 +9,17 @@ import qs.widgets
 // Titles show while every button still gets a readable width; when the windows
 // reach the lyrics or other widgets the row turns into icons, and when even the
 // icons don't fit it scrolls (mouse wheel, arrows at the edges).
+// The dock (`dock`): bare icons on the shelf that grow under the pointer and hop when
+// their window opens or is clicked, a dot under the focused one.
 Item {
     id: root
 
     required property string screenName
     property bool iconsOnly: false         // compact / island bars, or titles switched off
     property bool above: true              // the window menu opens above a bottom bar
+    property bool dock: false              // the dock's icons (BarItem: style "dock")
+    // the pointer along the row, for the dock's magnification
+    readonly property real pointerX: dockHover.hovered ? dockHover.point.position.x + flick.contentX : -1e6
     readonly property var ws: Niri.activeWorkspace(screenName)
     readonly property var list: Niri.sortedWindows(Config.bar.allWindows ? Niri.windows : Niri.windows.filter(w => ws && w.workspace_id === ws.id))
     readonly property int count: list.length
@@ -31,7 +36,11 @@ Item {
     // as wide as the buttons want to be (Settings → Bar → "Windows" width: compact)
     readonly property real naturalWidth: count * (iconsOnly ? iconWidth : maxW) + Math.max(0, count - 1) * spacing
 
-    clip: true
+    clip: !dock || overflow
+    HoverHandler {
+        id: dockHover
+        enabled: root.dock
+    }
 
     function scrollBy(dx) {
         const max = Math.max(0, flick.contentWidth - flick.width);
@@ -53,6 +62,13 @@ Item {
             scrollBy(x1 - flick.contentX - flick.width + Theme.u * 8);
     }
     onListChanged: Qt.callLater(reveal)
+    // the buttons that are there at start don't hop, the windows opened later do
+    property bool ready: false
+    Timer {
+        interval: 1500
+        running: true
+        onTriggered: root.ready = true
+    }
     onOverflowChanged: if (!overflow)
         flick.contentX = 0
 
@@ -90,11 +106,41 @@ Item {
                 PxButton {
                     id: btn
                     required property var modelData
+                    required property int index
                     width: root.buttonWidth
                     height: row.height
-                    checked: modelData.is_focused
+                    flat: root.dock
+                    checked: modelData.is_focused && !root.dock
+                    // the dock: grows with the pointer near, up to 1.5×, from its foot
+                    readonly property real centreX: index * (root.buttonWidth + root.spacing) + root.buttonWidth / 2
+                    readonly property real near: root.dock ? Math.max(0, 1 - Math.abs(root.pointerX - centreX) / (root.buttonWidth * 2.4)) : 0
+                    readonly property real grow: 1 + 0.5 * near * near
+                    property real hop: 0
+                    SequentialAnimation {
+                        id: hopper
+                        NumberAnimation {
+                            target: btn
+                            property: "hop"
+                            to: Theme.u * 7
+                            duration: 150
+                            easing.type: Easing.OutQuad
+                        }
+                        NumberAnimation {
+                            target: btn
+                            property: "hop"
+                            to: 0
+                            duration: 210
+                            easing.type: Easing.OutBounce
+                        }
+                    }
+                    Component.onCompleted: if (root.dock && root.ready)
+                        hopper.restart()
                     middleButton: true
-                    onClicked: Niri.focusWindow(modelData.id)
+                    onClicked: {
+                        Niri.focusWindow(modelData.id);
+                        if (root.dock)
+                            hopper.restart();
+                    }
                     onMiddleClicked: if (Config.bar.taskMiddleClose)
                         Niri.closeWindow(modelData.id)
                     onRightClicked: {
@@ -107,12 +153,30 @@ Item {
 
                     AppIcon {
                         id: ico
-                        x: (root.labels ? Theme.u * 4 : (btn.width - width) / 2) + (btn.down ? Theme.u : 0)
+                        x: (root.labels ? Theme.u * 4 : (btn.width - width) / 2) + (btn.down && !root.dock ? Theme.u : 0)
                         anchors.verticalCenter: parent ? parent.verticalCenter : undefined
-                        anchors.verticalCenterOffset: btn.down ? Theme.u : 0
+                        anchors.verticalCenterOffset: (btn.down && !root.dock ? Theme.u : 0) - (root.dock ? Theme.u + btn.hop : 0)
                         appId: btn.modelData.app_id || ""
-                        size: root.labels ? Theme.u * 8 : Math.max(Theme.u * 8, btn.height - Theme.u * 6)
+                        size: root.labels ? Theme.u * 8 : Math.max(Theme.u * 8, btn.height - Theme.u * (root.dock ? 7 : 6))
                         tint: Config.bar.tintTasks && !btn.modelData.is_focused ? Config.bar.trayTint : "off"
+                        scale: btn.grow
+                        transformOrigin: Item.Bottom
+                        Behavior on scale {
+                            enabled: root.dock
+                            NumberAnimation {
+                                duration: 90
+                                easing.type: Easing.OutCubic
+                            }
+                        }
+                    }
+                    // the dock: a dot under the focused window
+                    Rectangle {
+                        visible: root.dock && btn.modelData.is_focused
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        y: btn.height - Theme.u * 2
+                        width: Theme.u * 2
+                        height: Theme.u * 2
+                        color: btn.modelData.is_urgent ? Theme.danger : Theme.accent
                     }
                     PxText {
                         visible: root.labels

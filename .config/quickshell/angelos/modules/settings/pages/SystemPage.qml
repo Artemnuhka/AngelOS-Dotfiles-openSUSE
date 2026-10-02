@@ -12,6 +12,7 @@ PxPage {
 
     PxGroup {
         title: I18n.t("Разработка", "Development")
+        advanced: true
         icon: "sparkle"
         width: parent.width
         SettingRow {
@@ -37,6 +38,7 @@ PxPage {
 
     PxGroup {
         title: I18n.t("Отрисовка", "Rendering")
+        advanced: true
         icon: "monitor"
         width: parent.width
         Component.onCompleted: Renderer.refresh()
@@ -104,6 +106,7 @@ PxPage {
 
     PxGroup {
         title: I18n.t("Диспетчер задач", "Task Manager")
+        advanced: true
         icon: "chip"
         width: parent.width
         SettingRow {
@@ -360,6 +363,7 @@ PxPage {
 
     PxGroup {
         title: I18n.t("Программы", "Programs")
+        advanced: true
         icon: "terminal"
         width: parent.width
         PxButton {
@@ -423,6 +427,7 @@ PxPage {
     PxGroup {
         id: reportGroup
         title: I18n.t("Сообщить о проблеме", "Report a problem")
+        advanced: true
         icon: "warn"
         width: parent.width
         property var result: null

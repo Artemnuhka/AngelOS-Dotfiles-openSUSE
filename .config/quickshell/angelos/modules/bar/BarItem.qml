@@ -89,7 +89,7 @@ Loader {
     Component {
         id: startC
         StartButton {
-            small: root.bar.compact || root.bar.style !== "taskbar"
+            small: root.bar.compact || (root.bar.style !== "taskbar" && root.bar.style !== "windose")
             above: root.bar.above
             screenName: root.bar.screenName
             barWindow: root.bar.barWindow
@@ -106,7 +106,8 @@ Loader {
         Tasks {
             screenName: root.bar.screenName
             above: root.bar.above
-            iconsOnly: root.bar.compact || root.bar.style === "island" || !Config.bar.taskLabels
+            iconsOnly: root.bar.compact || root.bar.style === "island" || root.bar.style === "dock" || !Config.bar.taskLabels
+            dock: root.bar.style === "dock"
             visible: Config.bar.showWindows
         }
     }
@@ -140,7 +141,7 @@ Loader {
         id: volumeC
         Volume {
             above: root.bar.above
-            showPercent: !root.bar.compact && root.bar.style === "taskbar"
+            showPercent: !root.bar.compact && (root.bar.style === "taskbar" || root.bar.style === "windose")
         }
     }
     Component {
@@ -170,7 +171,7 @@ Loader {
         Clock {
             screenName: root.bar.screenName
             above: root.bar.above
-            showDate: root.bar.style === "taskbar"
+            showDate: root.bar.style === "taskbar" || root.bar.style === "windose"
         }
     }
     Component {

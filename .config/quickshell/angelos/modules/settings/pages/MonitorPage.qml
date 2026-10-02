@@ -9,7 +9,7 @@ import qs.widgets
 PxPage {
     id: page
 
-    heading: I18n.t("Монитор", "Monitor")
+    heading: I18n.t("Экран", "Display")
     subtitle: I18n.t("«Применить» меняет сразу, «Сохранить» пишет ~/.config/niri/monitor.kdl (с бэкапом и проверкой niri validate).", "Apply changes the live layout. Save to config writes monitor.kdl with a backup and niri validation.")
 
     property string selected: Object.keys(Outputs.draft)[0] || ""
@@ -107,6 +107,69 @@ PxPage {
             dim: true
             visible: StreamMode.active && Config.stream.hideAngel && StreamMode.onStream(Shell.primaryName)
             text: I18n.t("Сейчас идёт эфир: ангел и её эффекты ушли с этого экрана (Y2K → Стрим-режим)", "You're live: the angel and her effects have left this screen (Y2K → Stream mode)")
+        }
+    }
+
+    PxGroup {
+        title: I18n.t("Яркость и цвет", "Brightness and colour")
+        icon: "sun"
+        width: parent.width
+
+        PxText {
+            width: parent.width
+            wrapMode: Text.Wrap
+            kind: "tiny"
+            dim: true
+            text: I18n.t("Программно, через гамму видеокарты: подсветку монитора не трогает, на стрим и скриншоты не попадает. Ночной свет работает вместе с яркостью.", "In software, through the GPU's gamma: the monitor's backlight stays as it is, nothing shows on stream or in screenshots. The night light works together with it.") + (ScreenTune.nvidia ? "" : I18n.t(" Насыщенность — только на видеокартах NVIDIA.", " Saturation needs an NVIDIA GPU."))
+        }
+        Repeater {
+            model: Quickshell.screens.map(sc => sc.name)
+            delegate: Column {
+                id: tuneRow
+                required property string modelData
+                readonly property var info: Outputs.outputs[modelData] || null
+                width: parent.width
+                spacing: Theme.u * 2
+
+                PxText {
+                    text: (Shell.primaryName === tuneRow.modelData ? "★ " : "") + tuneRow.modelData + (tuneRow.info ? "  ·  " + ((tuneRow.info.make || "") + " " + (tuneRow.info.model || "")).trim() : "")
+                    font.bold: true
+                }
+                SettingRow {
+                    label: I18n.t("Яркость", "Brightness")
+                    hint: ScreenTune.stateOf(tuneRow.modelData) === "failed" ? I18n.t("гамму этого монитора держит другая программа (wlsunset, gammastep?) — закрой её", "Another program holds this monitor's gamma (wlsunset, gammastep?): close it") : ""
+                    PxSlider {
+                        width: parent.width
+                        from: 30
+                        to: 100
+                        stepSize: 1
+                        suffix: " %"
+                        value: Math.round(ScreenTune.brightnessOf(tuneRow.modelData) * 100)
+                        onMoved: v => ScreenTune.setTune(tuneRow.modelData, "brightness", v >= 100 ? null : Math.round(v) / 100)
+                    }
+                }
+                SettingRow {
+                    visible: ScreenTune.nvidia
+                    label: I18n.t("Насыщенность", "Saturation")
+                    hint: ScreenTune.vibranceError || I18n.t("NVIDIA Digital Vibrance: −100 % — серый, +100 % — вдвое ярче цвета", "NVIDIA Digital Vibrance: −100 % is grey, +100 % doubles the colour")
+                    PxSlider {
+                        width: parent.width
+                        from: -100
+                        to: 100
+                        stepSize: 5
+                        suffix: " %"
+                        value: Math.round(ScreenTune.saturationOf(tuneRow.modelData) * 100)
+                        onMoved: v => ScreenTune.setTune(tuneRow.modelData, "saturation", Math.round(v) === 0 ? null : Math.round(v) / 100)
+                    }
+                }
+                PxButton {
+                    compact: true
+                    icon: "refresh"
+                    text: I18n.t("Как было", "As it was")
+                    visible: ScreenTune.brightnessOf(tuneRow.modelData) < 1 || ScreenTune.saturationOf(tuneRow.modelData) !== 0
+                    onClicked: ScreenTune.reset(tuneRow.modelData)
+                }
+            }
         }
     }
 

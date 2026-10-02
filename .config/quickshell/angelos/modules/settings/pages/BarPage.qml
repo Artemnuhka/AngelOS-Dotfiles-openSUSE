@@ -9,11 +9,12 @@ PxPage {
     id: page
     // the Start looks that fill the screen (no position, no size)
     readonly property bool startFull: ["fullscreen", "xmb", "wii"].includes(Config.bar.startStyle)
-    heading: I18n.t("Панель", "Bar")
-    subtitle: I18n.t("Три вида: таскбар как в Win98, тонкая полоса сверху или плавающий остров.", "Choose a taskbar, a top strip, or a floating island.")
+    heading: I18n.t("Панель и «Пуск»", "Bar and Start")
+    subtitle: I18n.t("Шесть видов: таскбар как в Win98, полоса сверху, остров, док, капсулы и Windose. Всё остальное — по ссылкам ниже.", "Six styles: a Win98 taskbar, a strip on top, an island, a dock, capsules and Windose. Everything else is behind the links below.")
 
     PxGroup {
         title: I18n.t("Кнопка «Пуск»", "Start button")
+        advanced: true
         icon: "pill"
         width: parent.width
         SettingRow {
@@ -206,6 +207,7 @@ PxPage {
     // the avatar and the deep settings of every Start look (StartTuner, services/StartPrefs)
     PxGroup {
         title: I18n.t("«Пуск»: аватарка и тонкая настройка", "Start: avatar and fine-tuning")
+        advanced: true
         icon: "star"
         width: parent.width
         StartTuner {
@@ -290,7 +292,8 @@ PxPage {
             id: barStyleRow
             preview: "BarStyle"
             label: I18n.t("Вид панели", "Bar style")
-            PxSegmented {
+            PxCombo {
+                width: Math.min(parent.width, Theme.u * 140)
                 model: [
                     {
                         "label": I18n.t("Таскбар", "Taskbar"),
@@ -303,6 +306,18 @@ PxPage {
                     {
                         "label": I18n.t("Остров", "Island"),
                         "value": "island"
+                    },
+                    {
+                        "label": I18n.t("Док", "Dock"),
+                        "value": "dock"
+                    },
+                    {
+                        "label": I18n.t("Капсулы", "Capsules"),
+                        "value": "capsules"
+                    },
+                    {
+                        "label": "Windose",
+                        "value": "windose"
                     }
                 ]
                 currentValue: Config.bar.style
@@ -311,7 +326,10 @@ PxPage {
                     barStyleRow.show(v, ({
                             "taskbar": I18n.t("таскбар", "taskbar"),
                             "top": I18n.t("полоса", "strip"),
-                            "island": I18n.t("остров", "island")
+                            "island": I18n.t("остров", "island"),
+                            "dock": I18n.t("док", "dock"),
+                            "capsules": I18n.t("капсулы", "capsules"),
+                            "windose": "Windose"
                         })[v]);
                 }
             }

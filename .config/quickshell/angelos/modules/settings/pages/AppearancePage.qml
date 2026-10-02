@@ -9,44 +9,11 @@ PxPage {
     subtitle: I18n.t("Основная тема angelOS и дополнительные светлые и тёмные палитры.", "The original angelOS theme and additional light and dark palettes.")
     Component.onCompleted: BlurConfig.refresh()
 
-    SettingRow {
-        label: I18n.t("Язык", "Language")
-        PxCombo {
-            model: [
-                {
-                    label: "Русский",
-                    value: "ru"
-                },
-                {
-                    label: "English",
-                    value: "en"
-                }
-            ]
-            currentValue: Config.appearance.language
-            onActivated: v => Config.appearance.language = v
-        }
-    }
-    Row {
-        visible: !Shell.setupOpen
-        spacing: Theme.u * 4
-        PxButton {
-            text: I18n.t("Мастер настройки", "Setup wizard")
-            icon: "sparkle"
-            onClicked: Shell.setupOpen = true
-        }
-        PxButton {
-            text: I18n.t("Подсказки по интерфейсу", "Interface tips")
-            icon: "info"
-            onClicked: {
-                Shell.settingsOpen = false;
-                Tour.start();
-            }
-        }
-    }
     // Layout and controls change with the selected settings theme; colours stay independent.
     PxGroup {
         id: skinGroup
         title: I18n.t("Вид настроек", "Settings look")
+        advanced: true
         icon: "window"
         width: parent.width
         PxText {
@@ -340,6 +307,15 @@ PxPage {
                         Config.appearance.disabledTemplates = list;
                     }
                 }
+            }
+        }
+        SettingRow {
+            visible: Config.appearance.themeApps
+            label: I18n.t("Qt-приложения в стиле angelOS", "Qt apps in the angelOS look")
+            hint: I18n.t("через qt6ct: цвета темы (в аду — адские), квадратные углы, пиксельные кнопки и поля. Работает в kdenlive, qBittorrent, Prism Launcher и других Qt-программах; открытые меняются на лету, остальные — при следующем запуске. Выключение возвращает всё как было", "Through qt6ct: the theme's colours (hell's in hell), square corners, pixel buttons and fields. Works in kdenlive, qBittorrent, Prism Launcher and other Qt apps; open ones change on the fly, others on their next start. Off puts everything back")
+            PxToggle {
+                checked: Config.appearance.qtStyle
+                onToggled: c => Config.appearance.qtStyle = c
             }
         }
         Row {

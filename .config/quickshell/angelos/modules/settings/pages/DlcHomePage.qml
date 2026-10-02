@@ -10,7 +10,7 @@ import "../../../services/AngelLines.js" as Lines
 // settings skin (Config.settingsUi.skin — Windose desktop or Stream studio with
 // a LIVE header and a chat of tips on the side). Everything sits on an even grid: every
 // "Everyday" button the same size (4 × 2), every tile the same size (4 × 2).
-// Everything else lives under «Ещё» or behind the «Эксперт» button.
+// Every section is in the sidebar; sub-pages open from the links on top of a page.
 PxPage {
     id: page
 
@@ -20,7 +20,7 @@ PxPage {
     headingColor: skin === "windose" ? Theme.windoseTitle : Theme.streamLive
     subtitleColor: Theme.textDim
     heading: stream ? "" : I18n.t("Что настроить?", "What would you like to change?")
-    subtitle: stream ? "" : I18n.t("Нажми на плитку или напиши в поиске сверху своими словами — «сделать крупнее», «обои», «звук». Сложное спрятано под «Дополнительно» и кнопкой «Эксперт».", "Pick a tile or type in the search above in your own words — “bigger”, “wallpaper”, “sound”. Advanced things hide under “Advanced” and the Expert button.")
+    subtitle: stream ? "" : I18n.t("Нажми на плитку или напиши в поиске слева своими словами — «сделать крупнее», «обои», «звук». Подробности открываются стрелками «›» вверху страниц.", "Pick a tile or type in the search on the left in your own words — “bigger”, “wallpaper”, “sound”. Details open from the “›” links at the top of a page.")
 
     readonly property var tiles: [
         {
@@ -131,7 +131,7 @@ PxPage {
             "off": Config.appearance.px <= 1,
             "run": () => Config.appearance.px = Math.max(1, Config.appearance.px - 1)
         },
-        // Updates sits under «Ещё» otherwise: keep it one click away
+        // Updates: one click away
         {
             "icon": "download",
             "label": Updates.available ? I18n.t("Обновление ♡", "Update ♡") : I18n.t("Обновление", "Update"),

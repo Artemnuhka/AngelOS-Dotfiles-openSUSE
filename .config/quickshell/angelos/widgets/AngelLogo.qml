@@ -9,15 +9,17 @@ import "Logos.js" as Logos
 //              hell — gothic red letters with drips · chrome — Y2K silver-to-pink
 //   emblems:   heart (winged, halo) · pill · star · cd · kitty
 // While the demon rules (services/Angel) the halo turns into horns (the star turns red).
+// `hell` (the Start button in hell, StartButton): hell's colours and the Hell wordmark.
 Item {
     id: root
 
     property bool emblemOnly: false
+    property bool hell: false
     property int pixel: Theme.u
     readonly property var variants: ["classic", "angel", "windose", "hell", "chrome"]
     readonly property var emblemNames: ["heart", "pill", "star", "cd", "kitty"]
     // the Hell wordmark is hell's own: in heaven only once the portal is open (Angel.hellAllowed)
-    property string variant: !variants.includes(Config.bar.logoStyle) || (Config.bar.logoStyle === "hell" && !Angel.hellAllowed) ? "classic" : Config.bar.logoStyle
+    property string variant: hell ? "hell" : !variants.includes(Config.bar.logoStyle) || (Config.bar.logoStyle === "hell" && !Angel.hellAllowed) ? "classic" : Config.bar.logoStyle
     property string emblemName: emblemNames.includes(Config.bar.logoEmblem) ? Config.bar.logoEmblem : "heart"
     property int fontSize: Theme.sizeTitle
     // one art pixel of a pixel wordmark: the pixel of the 9 px title font at this size,
@@ -43,13 +45,16 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             bitmap: root.emblemRows
             pixel: root.pixel
-            ink: Theme.dark ? Theme.mix(Theme.accent, Theme.edge, 0.55) : Theme.edge
-            fill: Theme.accent
-            fill2: Theme.accent2
-            light: "#ffffff"
-            fill3: root.redStar ? "#e0203a" : Theme.mix(Theme.accent3, Qt.color("#ffd84a"), 0.6)
+            ink: root.hell ? "#1a0508" : Theme.dark ? Theme.mix(Theme.accent, Theme.edge, 0.55) : Theme.edge
+            fill: root.hell ? Theme.hellBlood : Theme.accent
+            fill2: root.hell ? Theme.hellEmber : Theme.accent2
+            light: root.hell ? Theme.hellText : "#ffffff"
+            fill3: root.hell ? Theme.hellFlame : root.redStar ? "#e0203a" : Theme.mix(Theme.accent3, Qt.color("#ffd84a"), 0.6)
             bad: "#e0203a"
-            palette: ({
+            palette: root.hell ? ({
+                    "p": Theme.hex(Theme.hellEmber),
+                    "x": "#7a0a1e"
+                }) : ({
                     "p": Theme.hex(Theme.mix(Theme.accent, "#ffffff", 0.45)),
                     "x": Theme.hex(root.redStar ? Qt.color("#7a0a1e") : Theme.accent2)
                 })

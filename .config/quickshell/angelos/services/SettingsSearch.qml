@@ -250,7 +250,7 @@ Singleton {
     property var pageInfo: ({})       // id -> {label, icon} from the settings sidebar
     // hell's own groups and rows ("page|Russian title"): their pages hide them while the
     // angel is here (Angel.hellShown), so the search does too …
-    readonly property var hellOnly: ["cursor|Курсор в аду", "y2k|Демоница", "y2k|ПКМ в аду", "y2k|Настройки в аду", "y2k|Виджеты в аду", "y2k|Курсор в аду", "y2k|Какой ад на обоях", "y2k|Трещины на экране"]
+    readonly property var hellOnly: ["cursor|Курсор в аду", "y2k|Демоница", "y2k|ПКМ в аду", "y2k|Настройки в аду", "y2k|Виджеты в аду", "y2k|Курсор в аду", "y2k|Какой ад на обоях", "y2k|Трещины на экране", "y2k|Alt+Tab в аду", "y2k|Терминал в аду", "y2k|Приложения в аду", "y2k|Лирика в аду", "y2k|Колесо Ада", "y2k|Панель в аду", "y2k|Ад"]
     // … and these groups go by the angel's name there
     readonly property var heavenGroups: ({
             "y2k|Ангел или демон": {

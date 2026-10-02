@@ -13,8 +13,12 @@ Singleton {
     property var barViews: ({})
     property bool setupOpen: false
     signal setupStepRequested(int step)
+    signal resumed()                  // the machine woke from sleep (Lock: logind PrepareForSleep false)
     property bool settingsOpen: false
     property string settingsPage: "appearance"
+    // a sub-page of it: one of its "advanced" groups opened on its own (Settings: "Title ›")
+    property string settingsSub: ""
+    onSettingsPageChanged: settingsSub = ""
     property bool launcherOpen: false
     property string launcherPrefill: ""
     property bool sessionOpen: false
@@ -153,11 +157,12 @@ Singleton {
         return locked || fullscreenOn(name);
     }
 
-    function openSettings(page) {
+    // with no page given Settings open where they were left, like macOS
+    function openSettings(page, sub) {
         if (page)
             settingsPage = page;
-        else if (!settingsOpen && !Config.settingsUi.expert)
-            settingsPage = "home";      // the simple view starts from the tiles
+        if (sub)
+            settingsSub = sub;
         settingsOpen = true;
     }
     function toggleSettings(page) {
@@ -181,6 +186,11 @@ Singleton {
             e.QSG_RHI_BACKEND = _pre("QSG_RHI_BACKEND");
         e.ANGELOS_PRE_QT_PLUGIN_PATH = null;
         e.ANGELOS_PRE_QSG_RHI_BACKEND = null;
+        // Qt apps in angelOS's look (Settings → Appearance → Qt apps): qt6ct from now on,
+        // not only after the next login (bin/angelos keeps the shell itself on gtk3)
+        if (Config.appearance.qtStyle)
+            e.QT_QPA_PLATFORMTHEME = "qt6ct";
+        e.ANGELOS_PRE_QT_QPA_PLATFORMTHEME = null;
         // the systemd service's own variables are not the apps' business
         if (service) {
             for (const k of ["ANGELOS_SERVICE", "INVOCATION_ID", "JOURNAL_STREAM", "SYSTEMD_EXEC_PID", "MANAGERPID", "MANAGERPIDFDID", "MEMORY_PRESSURE_WATCH", "MEMORY_PRESSURE_WRITE"])
