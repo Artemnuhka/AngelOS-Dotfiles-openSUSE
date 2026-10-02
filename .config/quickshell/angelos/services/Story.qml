@@ -52,6 +52,10 @@ Singleton {
     readonly property int pactAfter: rules.pactAfter || 3
     readonly property int limboAfter: rules.limboAfter || 3
     readonly property int limboReturnMinutes: rules.limboReturn || 10
+    // heaven ⇄ hell: a switch this soon after the last is instant; the same transition
+    // sound no oftener than this (story/game.json → pace, C1)
+    readonly property int quickSwitchMs: ((rules.pace || {}).quickSwitch || 60) * 1000
+    readonly property int soundGapMs: ((rules.pace || {}).soundGap || 2) * 1000
 
     readonly property bool inHell: player.character === "demon"
     readonly property string circle: hell.circle || ""

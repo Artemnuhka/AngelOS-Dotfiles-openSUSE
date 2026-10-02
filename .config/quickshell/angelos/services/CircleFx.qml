@@ -39,7 +39,9 @@ Singleton {
     property bool _dark: false
     property bool _hit: false
     property double _t0: 0
+    property int runs: 0                     // the self-test counts the shows asked for
     function run(id, atDark, then) {
+        runs++;
         // one at a time: a second run while the first is dark switches at once
         if (active) {
             if (atDark)

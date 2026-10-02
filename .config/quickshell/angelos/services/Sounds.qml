@@ -36,6 +36,8 @@ Singleton {
     readonly property string customDir: base + "/custom"
     readonly property var cute: ["open", "toggle", "screenshot", "volume", "windowClose"]
     readonly property var effects: ["crack", "choir", "rocks", "shatter", "voice", "bark", "circle", "circleSoft"]
+    // heaven ⇄ hell's sounds: never piled up (story/game.json → pace.soundGap)
+    readonly property var transitions: ["crack", "choir", "rocks", "shatter", "circle", "circleSoft"]
     // the helper's own sounds follow "Her voice" (Config.y2k.helperVolume) on top of the volume
     readonly property var helperSounds: ["angel", "demon", "crack", "choir", "rocks", "shatter", "voice", "voiceAngel", "voiceDemon", "bark"]
     function volumeOf(name) {
@@ -152,7 +154,7 @@ Singleton {
             return;
         // a burst of the same event (volume wheel, many toggles) plays once
         const now = Date.now(), key = soft < 1 ? name + "-soft" : name;
-        if (!force && now - (lastAt[key] || 0) < (name === "volume" ? 140 : name === "click" || name === "clickRight" ? 45 : name === "key" ? 25 : 90))
+        if (!force && now - (lastAt[key] || 0) < (name === "volume" ? 140 : name === "click" || name === "clickRight" ? 45 : name === "key" ? 25 : transitions.includes(name) ? Story.soundGapMs : 90))
             return;
         lastAt[key] = now;
         const vol = String(Math.max(0, Math.min(1, volumeOf(name) * (soft || 1))));

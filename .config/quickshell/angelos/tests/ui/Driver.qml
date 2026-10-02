@@ -41,6 +41,8 @@ import "../../services/Intents.js" as Intents
 //             the future, a scene that no longer exists, limbo across a restart, a player
 //             stuck under the old rules (a broken plea counter) — none blocks the way out;
 //             pleas are understood in any wording, with typos and the wrong layout
+//   pace      into hell through the portal shows the circle; back and forth within
+//             story/game.json's pace.quickSwitch is instant, later the whole show again (C1)
 //   cava      the cava widget (over a stand-in cava) starts, and starts again after it was
 //             hidden and shown with the same config (B4: the lock, sleep, a fullscreen game)
 //   rmb       a right-click menu opens where the button went down (B2); a right click into
@@ -385,6 +387,8 @@ Scope {
     readonly property string shots: Quickshell.env("ANGELOS_TEST_SHOTS") || ""
     property bool undoDone: false
     property int cavaFirst: 0
+    property int paceRuns: 0
+    property bool paceSlow: false
     property int undoSteps: 0
     // views: [view, skin] cases and where in one case the driver is
     property var viewCases: []
@@ -1139,6 +1143,38 @@ Scope {
                 return;
             report("exit-amnesty", !Story.inHell && !Story.hell.amnesty && Story.player.returns === 1 && (Story.hell.outcomes || []).some(o => o.kind === "amnesty"), "let out in " + (Date.now() - started) + " ms, returns " + Story.player.returns);
             Story.clockShift = 0;
+            Story.reset();
+            // C1: into hell through the portal, with the show and the circle's splash
+            paceRuns = CircleFx.runs;
+            Angel.lastSwitchAt = 0;
+            Angel._portal = true;
+            Angel.startSwap("toHell");
+            started = Date.now();
+            phase = "pace";
+            return;
+        }
+        if (phase === "pace") {
+            if (Angel.transition && Date.now() - started < 8000)
+                return;
+            const shown = Angel.demon && CircleFx.runs === paceRuns + 1;
+            // back and forth right after: at once, no splash, no burn
+            Angel.startSwap("ascend");
+            const out = !Angel.demon && !Angel.transition;
+            Angel.startSwap("toHell");
+            const back = Angel.demon && !Angel.transition && CircleFx.runs === paceRuns + 1;
+            report("pace-quick", shown && out && back, "portal → the circle's splash " + shown + "; out and in again within " + Story.quickSwitchMs / 1000 + " s: at once " + (out && back) + ", splashes " + (CircleFx.runs - paceRuns));
+            // later than the threshold: the whole show again
+            Angel.lastSwitchAt = Date.now() - Story.quickSwitchMs - 1000;
+            Angel.startSwap("ascend");
+            paceSlow = Angel.transition === "ascend";
+            started = Date.now();
+            phase = "pace-slow";
+            return;
+        }
+        if (phase === "pace-slow") {
+            if ((Angel.transition || DesktopWidgets.burning) && Date.now() - started < 10000)
+                return;
+            report("pace-slow", paceSlow && !Angel.demon && Theme.realm === "heaven", "a switch " + (Story.quickSwitchMs / 1000 + 1) + " s after the last: the full show " + paceSlow + ", heaven again " + (Theme.realm === "heaven"));
             Story.reset();
             cavaStage.active = true;
             started = Date.now();

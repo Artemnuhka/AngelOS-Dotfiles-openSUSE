@@ -149,6 +149,14 @@ Singleton {
         }
         if (want === (burning ? burnTo : Theme.realm))
             return;
+        // the quiet switch (Angel.instant, C1): straight over, no burn
+        if (Angel.instant) {
+            burnAnim.stop();
+            burnTo = "";
+            burn = 1;
+            Theme.realm = want;
+            return;
+        }
         burnTo = want;
         burnAnim.restart();
     }

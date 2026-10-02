@@ -475,11 +475,43 @@ Singleton {
     }
 
     // ---- the swap animation, stepped like the sprite (AngelHelper draws it) ----
+    // C1: every way into hell shows the circle (the throw, the portal); a switch soon after the
+    // last one (story/game.json → pace.quickSwitch) happens at once — no splash, no quake, no
+    // glass, no sound — so clicking back and forth never piles the shows up
+    property double lastSwitchAt: 0
+    property bool instant: false             // the switch going on is the quiet one (DesktopWidgets: no burn)
     function startSwap(kind) {
+        const t = Date.now();
+        const quick = lastSwitchAt > 0 && t - lastSwitchAt < Story.quickSwitchMs;
+        lastSwitchAt = t;
+        if (quick)
+            return swapAtOnce(kind);
         holdWidgets = true;
         transition = kind;
         swap = 0;
         swapTick.restart();
+    }
+    function swapAtOnce(kind) {
+        instant = true;
+        holdWidgets = false;
+        thrown = false;
+        _portal = false;
+        if (kind === "toHell") {
+            becomeDemon();
+            // her glass is part of how hell looks: it is there, without the punch or a sound
+            if (fxHere() && Config.y2k.cracks !== "off")
+                punched(screenName, "");
+        } else {
+            becomeAngel();
+        }
+        transition = "";
+        swap = 0;
+        instantDone.restart();
+    }
+    Timer {
+        id: instantDone
+        interval: 300
+        onTriggered: root.instant = false
     }
     Timer {
         id: swapTick
@@ -502,7 +534,7 @@ Singleton {
                 // the new one has arrived: the screen shakes, then it breaks
                 if (kind === "toHell" && root._portal) {
                     root._portal = false;
-                    root.shake("hell", () => {
+                    CircleFx.run(Story.circle, null, () => root.shake("hell", () => {
                         root.breakScreen();
                         root.say(I18n.t("Сам(а) пришёл(ла) через портал? Смело. Добро пожаловать домой 😈 Обратно — тем же порталом, в моём меню.", "Walked in through the portal yourself? Brave. Welcome home 😈 The way back is the same portal, in my menu."), {
                             "label": I18n.t("Портал", "Portal"),
@@ -510,7 +542,7 @@ Singleton {
                             "run": () => root.portal()
                         }, 12000);
                         hellNews.restart();
-                    });
+                    }));
                 } else if (kind === "toHell") {
                     // the circle comes up out of the dark, then she shakes and breaks the screen
                     CircleFx.run(Story.circle, null, () => root.shake("hell", () => {

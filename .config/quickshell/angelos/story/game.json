@@ -5,6 +5,11 @@
   "pactAfter": 3,
   "limboAfter": 3,
   "limboReturn": 10,
+  "pace": {
+    "_comment": "Heaven ⇄ hell, the shows. quickSwitch: seconds — a switch this soon after the last one is instant: no circle splash, no quake, no breaking glass, no sound (someone clicking back and forth). soundGap: seconds between two plays of the same transition sound (the blow, the rocks, the glass, the choir) — they never pile up.",
+    "quickSwitch": 60,
+    "soundGap": 2
+  },
   "actions": {
     "throw.fling": {"set": {"wrath": "+1"}, "note": "the angel flung down hard"},
     "throw.push": {"set": {"treachery": "+1"}, "note": "the angel pushed down slowly, on purpose"},
