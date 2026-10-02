@@ -58,6 +58,10 @@ FloatingWindow {
             "kind": "motion"
         },
         {
+            "label": I18n.t("Значки", "Icons"),
+            "kind": "icons"
+        },
+        {
             "label": I18n.t("Шрифты", "Fonts"),
             "kind": "fonts"
         },
@@ -163,6 +167,7 @@ FloatingWindow {
                     "bar": barStep,
                     "fonts": fontsStep,
                     "motion": motionStep,
+                    "icons": iconsStep,
                     "desktop": desktopStep
                 })[root.cur.kind] || settingsStep
         }
@@ -232,6 +237,16 @@ FloatingWindow {
                     }
                 }
             }
+        }
+    }
+    // D3: the shell's icons in one of three pixel styles (the cards are their own preview)
+    Component {
+        id: iconsStep
+        PxPage {
+            pageId: "setup"
+            heading: I18n.t("Значки", "Icons")
+            subtitle: I18n.t("Каким пикселем нарисованы значки оболочки. Можно пропустить — останутся свои; поменять потом: Внешний вид → Значки.", "Which pixel draws the shell's icons. Skip it and ours stay; change it later: Appearance → Icons.")
+            IconStyleCards {}
         }
     }
     Component {

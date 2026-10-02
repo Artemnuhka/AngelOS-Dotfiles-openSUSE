@@ -8,6 +8,7 @@ JsonAdapter {
     property JsonObject appearance: JsonObject {
         property string customAccent: "#c77dff"
         property string motion: "full"      // how much moves: full | calm (no flashes, shaking, sudden loud sounds) | off (no animations: the shell, niri, hell) — config/Motion
+        property string iconStyle: "angelos" // the shell's icons: angelos (our own) | pixelarticons | hackernoon — widgets/IconSets.js (D3)
         property string customAccentHell: ""  // hell's accent from its wallpaper ("From wallpaper"); heaven's stays customAccent
         property string language: "ru"
         property string mode: "dark"        // light | dark | auto

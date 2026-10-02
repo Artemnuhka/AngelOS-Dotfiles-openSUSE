@@ -210,6 +210,19 @@ PxPage {
         }
     }
 
+    // D3: the shell's icons — ours, pixelarticons or HackerNoon's (widgets/IconSets.js)
+    PxGroup {
+        title: I18n.t("Значки", "Icons")
+        icon: "grid"
+        width: parent.width
+
+        SettingRow {
+            label: I18n.t("Стиль значков", "Icon style")
+            hint: I18n.t("значки самой оболочки — панель, настройки, меню, кнопки. Сердечки, рожки и пентаграмма остаются своими в любом стиле. Значки приложений — тема системы, она отдельно", "The shell's own icons — the bar, settings, menus, buttons. Hearts, horns and the pentagram stay ours in every style. App icons are the system's icon theme, a separate thing")
+            IconStyleCards {}
+        }
+    }
+
     PxGroup {
         title: I18n.t("Подписи окон", "Window titles")
         icon: "monitor"

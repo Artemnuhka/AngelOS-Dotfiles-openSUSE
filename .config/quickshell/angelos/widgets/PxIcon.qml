@@ -1,6 +1,7 @@
 import QtQuick
 import qs.config
 import "Icons.js" as Icons
+import "IconSets.js" as IconSets
 
 // Pixel-art icon rendered from an ASCII bitmap (see Icons.js).
 Image {
@@ -24,7 +25,28 @@ Image {
     // more colours for detailed art: {"char": "#rrggbb"}, also overriding the ones above
     property var palette: ({})
 
-    readonly property var _svg: Icons.svg(bitmap && bitmap.length ? bitmap : name, Object.assign({
+    // the icon style (Settings → Appearance → Icons, D3): angelOS's own, pixelarticons or
+    // HackerNoon's. Theirs are drawn on a 24-unit grid, a whole number of screen pixels per
+    // cell, in the box of ours — at most a third larger; smaller than that, or a name the set
+    // lacks, and it is ours (a custom `bitmap` too)
+    property string iconStyle: Config.appearance.iconStyle || "angelos"
+    readonly property var _alt: {
+        if ((bitmap && bitmap.length) || iconStyle === "angelos")
+            return null;
+        const rows = IconSets.get(iconStyle, name);
+        if (!rows)
+            return null;
+        const own = Icons.get(name);
+        const box = own.reduce((m, r) => Math.max(m, r.length), own.length) * _px;
+        const cells = Math.max(rows.length, rows[0].length);
+        const k = Math.max(1, Math.round(box / cells));
+        return cells * k <= box * 1.35 ? {
+            "rows": rows,
+            "px": k
+        } : null;
+    }
+
+    readonly property var _svg: Icons.svg(_alt ? _alt.rows : bitmap && bitmap.length ? bitmap : name, Object.assign({
         "#": Theme.hex(ink),
         "o": Theme.hex(fill),
         "x": Theme.hex(fill2),
@@ -35,8 +57,8 @@ Image {
     }, palette || {}), hollow)
 
     source: _svg.url
-    width: Math.round(_svg.width * _px)
-    height: Math.round(_svg.height * _px)
+    width: Math.round(_svg.width * (_alt ? _alt.px : _px))
+    height: Math.round(_svg.height * (_alt ? _alt.px : _px))
     sourceSize: Qt.size(width, height)
     smooth: false
     mipmap: false

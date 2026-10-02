@@ -14,6 +14,8 @@ import qs.modules.bar.parts
 import qs.widgets
 import "../../novel/NovelCore.js" as Core
 import "../../services/Intents.js" as Intents
+import "../../widgets/Icons.js" as Icons
+import "../../widgets/IconSets.js" as IconSets
 
 // angelOS UI self-test, started by scripts/test-ui.sh (ANGELOS_TEST=1, Qt's
 // offscreen platform, a throwaway HOME). Inside the real shell, so the type
@@ -1211,6 +1213,31 @@ Scope {
             const hp = Novel.paper;
             report("contract-heaven", !!hp && Novel.noteOpen && hp.text.indexOf(I18n.t("Условия выхода", "The way out")) < 0 && Story.exitTerms().length === 0, "the angel's paper: " + (hp ? hp.title : "none"));
             Novel.noteRead();
+            // D3: the other icon styles — only names of ours, whole families, theirs in the
+            // box of ours (a third larger at most), ours when the box is too small for them
+            const own = Icons.names();
+            const strays = [], broken = [];
+            for (const st of ["pixelarticons", "hackernoon"]) {
+                for (const n of Object.keys(IconSets.sets[st]))
+                    if (own.indexOf(n) < 0)
+                        strays.push(st + ":" + n);
+                for (const fam of [["wifi", "wifiOff", "wifi1", "wifi2"], ["play", "pause", "next", "prev"], ["mic", "micMute"], ["speaker", "speakerMute"], ["bell", "bellOff"]]) {
+                    const have = fam.filter(n => !!IconSets.get(st, n)).length;
+                    if (have !== 0 && have !== fam.length)
+                        broken.push(st + ":" + fam.join("/"));
+                }
+            }
+            const probe = Qt.createQmlObject("import QtQuick; import qs.widgets; PxIcon { name: \"gear\"; iconStyle: \"hackernoon\" }", root);
+            const big = !!probe._alt && probe.width > 0 && probe.width <= 9 * Theme.u * 1.35 + 1;
+            probe.pixel = 1;
+            const small = !probe._alt;
+            probe.iconStyle = "pixelarticons";
+            probe.pixel = Theme.u;
+            const pa = !!probe._alt;
+            probe.name = "heartHorns";
+            const kept = !probe._alt;
+            probe.destroy();
+            report("icon-styles", !strays.length && !broken.length && big && small && pa && kept, (strays.length ? "not ours: " + strays.join(", ") + "; " : "") + (broken.length ? "half a family: " + broken.join(", ") + "; " : "") + "hackernoon gear in the box " + big + ", too small → ours " + small + ", pixelarticons " + pa + ", the horns stay ours " + kept);
             Story.reset();
             phase = "walls";
             return;
