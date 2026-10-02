@@ -240,6 +240,7 @@ Scope {
             }
             CerberusSprite {
                 id: dog
+                alert: true
                 pixel: cbWin.px
                 frame: Math.floor(root.cbT * 14) % 5
                 x: Math.round(cbWin.dogX / cbWin.px) * cbWin.px

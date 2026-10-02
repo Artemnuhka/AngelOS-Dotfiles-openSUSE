@@ -13,6 +13,9 @@ Item {
 
     required property string screenName
     readonly property var list: Niri.workspacesOn(screenName)
+    // the hell bar (BarItem): the active desk is the accent (a state), a desk with windows the
+    // sprite tone, an empty one only its outline; app icons in the circle's ramp
+    property bool barInk: false
 
     // the badge only takes room while it is shown: the slot opens, then closes again
     readonly property real badgeWidth: Math.min(Theme.u * 64, badgeMetrics.advanceWidth("✧ " + flashText) + Theme.u * 10)
@@ -67,8 +70,8 @@ Item {
                     anchors.fill: parent
                     anchors.topMargin: Theme.u
                     anchors.bottomMargin: Theme.u
-                    color: cell.lit ? Qt.alpha(Theme.accent, 0.28) : mouse.containsMouse ? Qt.alpha(Theme.accent, 0.12) : "transparent"
-                    border.width: cell.lit ? Math.max(1, Theme.u / 2) : 0
+                    color: root.barInk ? (cell.lit ? Theme.hellBarActive : mouse.containsMouse ? Theme.hellBarHover : "transparent") : cell.lit ? Qt.alpha(Theme.accent, 0.28) : mouse.containsMouse ? Qt.alpha(Theme.accent, 0.12) : "transparent"
+                    border.width: cell.lit && !root.barInk ? Math.max(1, Theme.u / 2) : 0
                     border.color: Theme.accent
                 }
                 Row {
@@ -83,8 +86,9 @@ Item {
                             required property var modelData
                             appId: modelData.app_id || ""
                             size: Theme.u * 8
-                            opacity: cell.lit ? 1 : 0.7
+                            opacity: cell.lit || root.barInk ? 1 : 0.7
                             tint: Config.bar.tintTasks && !cell.lit ? Config.bar.trayTint : "off"
+                            hellBar: root.barInk
                         }
                     }
                     PxText {
@@ -104,9 +108,10 @@ Item {
                     pixel: Theme.u
                     lit: cell.lit
                     hollow: !cell.lit && !cell.occupied
-                    tone: cell.modelData.is_urgent ? Theme.danger : Theme.accent4
-                    fill: cell.modelData.is_urgent ? Theme.danger : cell.lit ? Theme.accent : Theme.accent4
-                    opacity: cell.lit || mouse.containsMouse ? 1 : 0.75
+                    tone: root.barInk ? (cell.modelData.is_urgent ? Theme.hellAccent : Theme.hellSprite) : cell.modelData.is_urgent ? Theme.danger : Theme.accent4
+                    fill: root.barInk ? (cell.modelData.is_urgent || cell.lit ? Theme.hellAccent : Theme.hellSprite) : cell.modelData.is_urgent ? Theme.danger : cell.lit ? Theme.accent : Theme.accent4
+                    barInk: root.barInk
+                    opacity: cell.lit || mouse.containsMouse || root.barInk ? 1 : 0.75
                     scale: cell.lit ? 1.0 : 0.8
                     Behavior on scale {
                         NumberAnimation {
@@ -205,7 +210,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         width: root.badgeWidth
         height: Theme.u * 11
-        color: Theme.accent
+        color: root.barInk ? Theme.hellAccent : Theme.accent
         PxText {
             id: badgeText
             anchors.centerIn: parent
@@ -213,7 +218,7 @@ Item {
             text: "✧ " + root.flashText
             horizontalAlignment: Text.AlignHCenter
             elide: Text.ElideRight
-            color: Theme.selectText
+            color: root.barInk ? Theme.hellPlate : Theme.selectText
             font.bold: true
         }
     }

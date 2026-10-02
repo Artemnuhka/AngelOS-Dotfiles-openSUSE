@@ -124,6 +124,39 @@ Singleton {
     property real phase: 0                   // 0 → 1 through the event (the ambient moves with it)
     readonly property var ids: Object.keys(looks).filter(k => k !== "_comment")
 
+    // The hell bar's colour roles (BarContent, PxButton.barInk, shaders/hell_bar_tint.frag),
+    // each a key a circle's palette may set, else made from its other colours:
+    //   barIcon    the icons — the text colour with a fifth of the accent: each circle's bar
+    //              has its own hue at rest, far from the full accent of a state
+    //   barHover   the plate under a widget the pointer is on — the plate a step lighter
+    //   barActive  the plate under an open or switched-on widget — the plate toward the accent
+    //   sprite     the body of a sprite or an app icon's darks — the first mix of the plate and
+    //              the dim text that stands out from the plate (3:1), so a dark puppy shows
+    //   spriteHi   a sprite's lighter parts (heads, highlights) — between sprite and text
+    // The accent marks a state only: an open popup, a switch that is on, the active desk.
+    function barRoles(pal) {
+        const mixHex = (a, b, k) => {
+            const x = Qt.color(a), y = Qt.color(b);
+            const ch = v => ("0" + Math.round(v * 255).toString(16)).slice(-2);
+            return "#" + ch(x.r + (y.r - x.r) * k) + ch(x.g + (y.g - x.g) * k) + ch(x.b + (y.b - x.b) * k);
+        };
+        let sprite = pal.sprite;
+        if (!sprite)
+            for (let k = 0.3; k <= 1.001; k += 0.05) {
+                sprite = mixHex(pal.plate, pal.textDim, k);
+                if (contrast(sprite, pal.plate) >= 3)
+                    break;
+            }
+        return {
+            "barIcon": pal.barIcon || mixHex(pal.text, pal.accent, 0.2),
+            "barHover": pal.barHover || mixHex(pal.plate, pal.text, 0.1),
+            "barActive": pal.barActive || mixHex(pal.plate, pal.accent, 0.2),
+            "sprite": sprite,
+            "spriteHi": pal.spriteHi || mixHex(sprite, pal.text, 0.45)
+        };
+    }
+    readonly property var barRole: barRoles(palette)
+
     // WCAG contrast of two "#rrggbb" colours (tests check every circle's text roles)
     function contrast(a, b) {
         const lum = h => {

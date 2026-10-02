@@ -1,7 +1,7 @@
 #version 440
 // Any Start look (StartOverlay, Y2K → Start in hell: "hell version") and any Alt+Tab style
-// (AltTabHost, "skin") re-inked in the circle's palette, the way the bar's content is
-// (hell_bar_ink.frag): a few flat colours by what a pixel is — near black → plate, dark →
+// (AltTabHost, "skin") re-inked in the circle's palette (the bar draws itself now: BarContent):
+// a few flat colours by what a pixel is — near black → plate, dark →
 // face, mid → dim, light → text, coloured (the accent, app icons) → two dulled embers.
 // `keep` is no longer read (it kept a little of an icon's hue in the old loud hell).
 layout(location = 0) in vec2 qt_TexCoord0;

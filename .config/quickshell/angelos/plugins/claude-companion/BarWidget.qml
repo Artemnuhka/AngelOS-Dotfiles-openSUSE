@@ -13,6 +13,10 @@ Item {
     property var barWindow
 
     readonly property string limitMode: plugin ? plugin.get("barLimit", "off") : "off"   // five | week | both | off
+    // the hell bar draws the mask itself (Breath.barLook) instead of tinting it; the popup
+    // open is the state the bar shows
+    property bool hellBar: false
+    readonly property bool barOpen: popup.visible
     visible: !plugin || plugin.get("barAlways", true) || Pulse.state !== "none"
     implicitWidth: visible ? Theme.u * (limitMode === "off" ? 14 : limitMode === "both" ? 50 : 32) : 0
     implicitHeight: Theme.u * 13
@@ -24,6 +28,7 @@ Item {
         Breath {
             anchors.verticalCenter: parent.verticalCenter
             plugin: root.plugin
+            barLook: root.hellBar
         }
         PxText {
             visible: root.limitMode !== "off"
@@ -31,7 +36,9 @@ Item {
             horizontalAlignment: Text.AlignHCenter
             anchors.verticalCenter: parent.verticalCenter
             text: !Usage.ok ? "—" : root.limitMode === "week" ? Usage.weekLeft + "%" : root.limitMode === "both" ? Usage.fiveLeft + "% · " + Usage.weekLeft + "%" : Usage.fiveLeft + "%"
-            color: Usage.colorFor(root.limitMode === "week" ? Usage.weekLeft : Math.min(Usage.fiveLeft, root.limitMode === "both" ? Usage.weekLeft : 100), Theme)
+            readonly property real remaining: root.limitMode === "week" ? Usage.weekLeft : Math.min(Usage.fiveLeft, root.limitMode === "both" ? Usage.weekLeft : 100)
+            // the hell bar: the text colour, the accent once the limit runs low (a state)
+            color: root.hellBar ? (Usage.ok && remaining < 20 ? Theme.hellAccent : Theme.hellText) : Usage.colorFor(remaining, Theme)
             font.bold: true
         }
         PxText {
@@ -40,7 +47,7 @@ Item {
             width: Theme.u * 5
             text: "!"
             kind: "tiny"
-            color: Pulse.colorFor(Pulse.state, Theme)
+            color: root.hellBar ? Theme.hellAccent : Pulse.colorFor(Pulse.state, Theme)
         }
     }
     MouseArea {

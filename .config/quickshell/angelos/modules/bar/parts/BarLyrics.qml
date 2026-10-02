@@ -23,6 +23,8 @@ Item {
     readonly property string line: Lyrics.current !== "" ? Lyrics.current : "♪ ~ ♪"
     readonly property real chrome: note.width + Theme.u * 6
     readonly property bool hell: Angel.demon && Config.y2k.hellLyrics
+    // the hell bar (BarItem): the circle's text colours even when the lyrics keep their own font
+    property bool barInk: false
     readonly property string fontFamily: hell ? Theme.fontHell : Theme.fontBody
     readonly property int fontPx: hell ? Theme.hellPx(Theme.fs) : Theme.sizeBody
 
@@ -311,7 +313,8 @@ Item {
             text: root.previous
             elide: Text.ElideRight
             visible: !root.hell || root.burnOut < 1
-            color: root.hell ? "white" : Theme.textDim
+            // the burn (lyrics_burn.frag) takes the text in white; standing still, the circle's dim text
+            color: root.hell ? (root.burning ? "white" : Theme.hellTextDim) : root.barInk ? Theme.hellTextDim : Theme.textDim
             font.family: root.fontFamily
             font.pixelSize: root.fontPx
             renderType: Text.NativeRendering
@@ -348,7 +351,7 @@ Item {
             x: typer.running ? -Math.max(0, root.typedW + Theme.u * 3 - textBox.width) : -Math.min(root.scrollX, root.overflowW)
             anchors.verticalCenter: parent.verticalCenter
             textFormat: Text.StyledText
-            color: root.hell ? (Lyrics.current === "" || !Lyrics.playing ? "#b0b0b0" : "white") : Lyrics.current === "" || !Lyrics.playing ? Theme.textDim : Theme.text
+            color: root.hell ? (Lyrics.current === "" || !Lyrics.playing ? (root.burning ? "#b0b0b0" : Theme.hellTextDim) : (root.burning ? "white" : Theme.hellText)) : root.barInk ? (Lyrics.current === "" || !Lyrics.playing ? Theme.hellTextDim : Theme.hellText) : Lyrics.current === "" || !Lyrics.playing ? Theme.textDim : Theme.text
             text: {
                 const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
                 const t = root.shown;

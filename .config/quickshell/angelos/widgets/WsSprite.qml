@@ -12,15 +12,18 @@ PxIcon {
     property bool lit: false
     property color tone: Theme.accent4          // the fill when not lit
     property bool playful: true                 // spin / twinkle on activation
+    // the hell bar: one tone (fill) for the whole sprite, an outline in the dim text
+    property bool barInk: false
     readonly property string kind: ["heart", "star", "cd"].includes(sprite) ? sprite : "heart"
     property int turn: 0                        // quarter turns
     property real glint: 0
 
     name: iconOf(kind)
     fill: lit ? Theme.accent : tone
-    fill2: lit ? Theme.accent2 : tone
-    fill3: lit ? Theme.accent3 : tone
-    light: glint > 0.5 ? Theme.accent3 : "#ffffff"
+    fill2: barInk ? fill : lit ? Theme.accent2 : tone
+    fill3: barInk ? fill : lit ? Theme.accent3 : tone
+    light: barInk ? (lit ? Theme.hellText : Theme.hellSpriteHi) : glint > 0.5 ? Theme.accent3 : "#ffffff"
+    ink: barInk ? (lit ? Theme.hellText : Theme.hellTextDim) : Theme.dark ? Theme.text : Theme.edge
     rotation: turn * 90
 
     function iconOf(k) {

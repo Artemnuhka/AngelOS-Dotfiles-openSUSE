@@ -12,6 +12,10 @@ Item {
     property string screenName
     property var barWindow
     readonly property bool showPercent: plugin ? plugin.get("showPercent", false) : false
+    // the hell bar draws the Cerberus as he is (his colours are made for the dark plates)
+    // instead of tinting him; the popup open is the state the bar shows
+    property bool hellBar: false
+    readonly property bool barOpen: popup.visible
 
     Component.onCompleted: if (plugin)
         Cpu.intervalMs = plugin.get("poll", 2) * 1000
@@ -32,6 +36,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             text: Math.round(Cpu.percent) + "%"
             kind: "tiny"
+            color: root.hellBar ? Theme.hellText : Theme.text
         }
     }
     MouseArea {

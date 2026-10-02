@@ -18,6 +18,9 @@ Item {
     property bool iconsOnly: false         // compact / island bars, or titles switched off
     property bool above: true              // the window menu opens above a bottom bar
     property bool dock: false              // the dock's icons (BarItem: style "dock")
+    // the hell bar (BarItem): flat buttons with the one plate rule, the focused window's the
+    // active plate, app icons in the circle's ramp
+    property bool barInk: false
     // the pointer along the row, for the dock's magnification
     readonly property real pointerX: dockHover.hovered ? dockHover.point.position.x + flick.contentX : -1e6
     readonly property var ws: Niri.activeWorkspace(screenName)
@@ -110,6 +113,7 @@ Item {
                     width: root.buttonWidth
                     height: row.height
                     flat: root.dock
+                    barInk: root.barInk
                     checked: modelData.is_focused && !root.dock
                     // the dock: grows with the pointer near, up to 1.5×, from its foot
                     readonly property real centreX: index * (root.buttonWidth + root.spacing) + root.buttonWidth / 2
@@ -153,12 +157,13 @@ Item {
 
                     AppIcon {
                         id: ico
-                        x: (root.labels ? Theme.u * 4 : (btn.width - width) / 2) + (btn.down && !root.dock ? Theme.u : 0)
+                        x: (root.labels ? Theme.u * 4 : (btn.width - width) / 2) + (btn.down && !root.dock && !root.barInk ? Theme.u : 0)
                         anchors.verticalCenter: parent ? parent.verticalCenter : undefined
-                        anchors.verticalCenterOffset: (btn.down && !root.dock ? Theme.u : 0) - (root.dock ? Theme.u + btn.hop : 0)
+                        anchors.verticalCenterOffset: (btn.down && !root.dock && !root.barInk ? Theme.u : 0) - (root.dock ? Theme.u + btn.hop : 0)
                         appId: btn.modelData.app_id || ""
                         size: root.labels ? Theme.u * 8 : Math.max(Theme.u * 8, btn.height - Theme.u * (root.dock ? 7 : 6))
                         tint: Config.bar.tintTasks && !btn.modelData.is_focused ? Config.bar.trayTint : "off"
+                        hellBar: root.barInk
                         scale: btn.grow
                         transformOrigin: Item.Bottom
                         Behavior on scale {
@@ -185,11 +190,11 @@ Item {
                         anchors.right: parent.right
                         anchors.rightMargin: closeX.visible ? closeX.width + Theme.u * 4 : Theme.u * 4
                         anchors.verticalCenter: parent.verticalCenter
-                        anchors.verticalCenterOffset: btn.down ? Theme.u : 0
+                        anchors.verticalCenterOffset: btn.down && !root.barInk ? Theme.u : 0
                         text: Niri.titleOf(btn.modelData) || btn.modelData.app_id || "?"
                         elide: Text.ElideRight
                         font.bold: btn.modelData.is_focused
-                        color: btn.modelData.is_urgent ? Theme.danger : Theme.text
+                        color: root.barInk ? (btn.modelData.is_urgent ? Theme.hellAccent : Theme.hellText) : btn.modelData.is_urgent ? Theme.danger : Theme.text
                     }
                     // × on hover (Settings → Bar → Closing windows)
                     Rectangle {

@@ -157,7 +157,8 @@ IX Коцит, верный ответ → «И вышли мы вновь уз�
 
 Запись в `story/circles.json` перекрывает `base` только тем, что указано: `palette` (токены
 `Theme.hell*`; текст, приглушённый текст и акцент должны читаться на `plate` — тест требует
-4.5:1), `bar` (`texture`: stone ash water ice iron sand pitch whirl), `edge` (`kind`: scorch frost
+4.5:1; роли панели `barIcon`, `barHover`, `barActive`, `sprite`, `spriteHi` можно задать, иначе
+они выводятся из палитры — `HellLook.barRoles`, тест проверяет и их), `bar` (`texture`: stone ash water ice iron sand pitch whirl), `edge` (`kind`: scorch frost
 tarnish wet ash wind grime iron blood pitch), `backdrop` (`dim`, `desat`, `vignette`, `tint`,
 `ambient`: fog wind rain dust ripple embers sand pitch ice, `pictures`), `labels`, `voice`.
 Порядок кругов — `story/game.json → order`.

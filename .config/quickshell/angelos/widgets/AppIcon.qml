@@ -10,6 +10,11 @@ Item {
     property string iconName: ""
     property int size: Theme.u * 8
     property string tint: "off"   // off | mono | accent
+    // on the hell bar: the circle's sprite ramp instead (HellBarTint), so no app icon turns
+    // into a blot or sinks into the plate
+    property bool hellBar: false
+    layer.enabled: hellBar
+    layer.effect: HellBarTint {}
 
     readonly property string resolved: {
         let name = iconName;
@@ -32,7 +37,7 @@ Item {
         visible: root.resolved !== ""
         source: root.resolved
         size: root.size
-        mode: root.tint
+        mode: root.hellBar ? "off" : root.tint
     }
     PxIcon {
         anchors.centerIn: parent

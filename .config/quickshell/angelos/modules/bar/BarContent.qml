@@ -7,10 +7,14 @@ import qs.widgets
 // Left / center / right sections from BarLayout. `inline` packs everything in one row (island,
 // dock). Capsules: the full-width layout, each section as wide as it needs (the window draws
 // a capsule behind each: leftBox / centerBox / rightBox give their places). In hell
-// (BarLayout.hell) every pixel of the content takes one of four colours of the circle's
-// palette (shaders/hell_bar_ink.frag: face, dim, text, accent — each checked against the
-// plate), and `hellPlates` tells the window's HellBarFrame where the runs of widgets are,
-// so they sit on a calm plate and never on the pattern. The dock stays as it is in hell.
+// (BarLayout.hell) the widgets draw themselves in the circle's colours — the bar's roles
+// (Theme.hellBar*, HellLook.barRoles): icons as outlines in one colour on one grid, a square
+// cell each, a flat plate only while hovered or open (one height, one rule: BarItem,
+// PxButton.barInk), the accent only for a state; app icons and plugins without a hell look
+// of their own through the sprite ramp (HellBarTint) — and `hellPlates` tells the window's
+// HellBarFrame where the runs of widgets are, so they sit on a calm plate and never on the
+// pattern. Nothing is re-rendered as a whole: each widget repaints only itself. The dock
+// stays as it is in hell.
 Item {
     id: root
 
@@ -27,15 +31,6 @@ Item {
     readonly property alias centerBox: center
     readonly property alias rightBox: right
     readonly property bool hellInk: BarLayout.hell && style !== "dock"
-    layer.enabled: hellInk
-    layer.effect: ShaderEffect {
-        fragmentShader: Qt.resolvedUrl("../../shaders/hell_bar_ink.frag.qsb")
-        property color plate: Theme.hellPlate
-        property color face: Theme.mix(Theme.hellRim, Theme.hellFace, 0.4)
-        property color dim: Theme.hellTextDim
-        property color text: Theme.hellText
-        property color accent: Theme.hellAccent
-    }
     // where a section's widgets really are, in its own coordinates: [from, to] or null (a
     // stretched "Windows" counts as wide as its buttons)
     function usedRange(sec) {

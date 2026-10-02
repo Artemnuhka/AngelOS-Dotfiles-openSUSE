@@ -57,6 +57,7 @@ Item {
         pixel: root.pixel
         frame: root.frame
         asleep: root.pace === "idle"
+        alert: root.pace === "run"
         blink: root.frame === 1
         y: root.pace !== "idle" && root.frame % 2 === 1 ? 0 : root.pixel
     }

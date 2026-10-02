@@ -11,6 +11,9 @@ Item {
     required property string screenName
     property bool above: true
     property bool showDate: true
+    // the hell bar (BarItem): the circle's text colours; the calendar open is its state
+    property bool barInk: false
+    readonly property bool barOpen: panel.visible
 
     implicitWidth: col.implicitWidth + Theme.u * 8
     implicitHeight: col.implicitHeight
@@ -29,6 +32,7 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
             text: I18n.time(clock.date, Config.bar.showSeconds)
             kind: root.showDate ? "body" : "title"
+            color: root.barInk ? (root.barOpen ? Theme.hellAccent : Theme.hellText) : Theme.text
         }
         PxText {
             visible: root.showDate
@@ -36,6 +40,7 @@ Item {
             text: I18n.locale.toString(clock.date, I18n.english ? "ddd, MMM d" : "ddd d MMM")
             kind: "tiny"
             dim: true
+            color: root.barInk ? Theme.hellTextDim : Theme.textDim
         }
     }
 

@@ -13,6 +13,11 @@ Item {
     property bool flat: false
     property bool compact: false
     property bool hell: false              // hell's palette (Theme.realm): obsidian, blood, bone text
+    // the hell bar (BarItem sets it): no face of its own — a flat plate only while the pointer
+    // is on it (Theme.hellBarHover) or it is open / on (hellBarActive), as tall as the bar's
+    // cell; the icon is its outline in the icon colour, the accent only for a state (open, on,
+    // the strike of "off")
+    property bool barInk: false
     readonly property string settingsSkin: root.hell ? "classic" : Theme.settingsSkinFor(root.parent)
     property int iconPixel: Theme.u
     property bool middleButton: false      // also report middle clicks (task buttons close windows with them)
@@ -30,16 +35,21 @@ Item {
     implicitHeight: Math.max(row.implicitHeight + Theme.u * (compact ? 5 : 8), Theme.u * (compact ? 11 : 15))
     opacity: enabled ? 1 : 0.45
 
+    Rectangle {
+        anchors.fill: parent
+        visible: root.barInk && (mouse.containsMouse || root.checked)
+        color: root.checked ? Theme.hellBarActive : Theme.hellBarHover
+    }
     PxBox {
         anchors.fill: parent
-        visible: root.settingsSkin === "classic" && (!root.flat || mouse.containsMouse || root.checked)
+        visible: !root.barInk && root.settingsSkin === "classic" && (!root.flat || mouse.containsMouse || root.checked)
         sunken: root.down
         hell: root.hell
         color: root.hell ? (root.accent ? (mouse.containsMouse ? Qt.lighter(Theme.hellBlood, 1.15) : Theme.hellBlood) : root.checked ? Theme.mix(Theme.hellFace, Theme.hellBlood, 0.45) : mouse.containsMouse ? Theme.mix(Theme.hellFace, Theme.hellEmber, 0.2) : Theme.hellFace) : root.accent ? (mouse.containsMouse ? Qt.lighter(Theme.accent, 1.08) : Theme.accent) : root.danger && mouse.containsMouse ? Theme.danger : root.checked ? Theme.mix(Theme.face, Theme.accent, Theme.dark ? 0.4 : 0.3) : mouse.containsMouse ? Theme.mix(Theme.face, Theme.accent, 0.12) : Theme.face
     }
 
     Rectangle {
-        visible: root.settingsSkin === "windose"
+        visible: root.settingsSkin === "windose" && !root.barInk
         x: Theme.u
         y: Theme.u
         width: parent.width - Theme.u
@@ -48,7 +58,7 @@ Item {
         color: Qt.alpha(Theme.shadow, Theme.dark ? 0.25 : 0.12)
     }
     Rectangle {
-        visible: root.settingsSkin === "windose"
+        visible: root.settingsSkin === "windose" && !root.barInk
         x: root.down ? Theme.u : 0
         y: root.down ? Theme.u : 0
         width: parent.width - Theme.u
@@ -59,7 +69,7 @@ Item {
         border.color: Theme.windoseLine
     }
     Rectangle {
-        visible: root.settingsSkin === "stream"
+        visible: root.settingsSkin === "stream" && !root.barInk
         anchors.fill: parent
         anchors.margins: root.down ? Theme.u : 0
         radius: Theme.u * 2
@@ -77,8 +87,8 @@ Item {
     Row {
         id: row
         anchors.centerIn: parent
-        anchors.horizontalCenterOffset: root.down ? Theme.u : 0
-        anchors.verticalCenterOffset: root.down ? Theme.u : 0
+        anchors.horizontalCenterOffset: root.down && !root.barInk ? Theme.u : 0
+        anchors.verticalCenterOffset: root.down && !root.barInk ? Theme.u : 0
         spacing: Theme.u * 3
 
         PxIcon {
@@ -86,14 +96,23 @@ Item {
             name: root.icon || "heart"
             pixel: root.iconPixel
             anchors.verticalCenter: parent.verticalCenter
-            ink: root.hell ? Theme.hellText : root.settingsSkin !== "classic" ? (root.accent || root.checked ? Theme.selectText : Theme.text) : root.accent ? Theme.selectText : (Theme.dark ? Theme.text : Theme.edge)
+            ink: root.barInk ? (root.checked ? Theme.hellAccent : Theme.hellBarIcon) : root.hell ? Theme.hellText : root.settingsSkin !== "classic" ? (root.accent || root.checked ? Theme.selectText : Theme.text) : root.accent ? Theme.selectText : (Theme.dark ? Theme.text : Theme.edge)
+            bad: root.barInk ? Theme.hellAccent : Theme.danger
+            // the hell bar: the outline only, fills dropped (one weight for every icon)
+            palette: root.barInk ? ({
+                    "o": "none",
+                    "x": "none",
+                    "y": "none",
+                    "w": "none",
+                    "f": "none"
+                }) : ({})
         }
         PxText {
             visible: root.text !== ""
             text: root.text
             kind: root.kind
             anchors.verticalCenter: parent.verticalCenter
-            color: root.hell ? Theme.hellText : root.settingsSkin !== "classic" ? (root.danger ? "#ffffff" : root.accent || root.checked ? Theme.selectText : Theme.text) : root.accent ? Theme.selectText : root.danger && mouse.containsMouse ? "#ffffff" : Theme.text
+            color: root.barInk ? (root.checked ? Theme.hellAccent : Theme.hellText) : root.hell ? Theme.hellText : root.settingsSkin !== "classic" ? (root.danger ? "#ffffff" : root.accent || root.checked ? Theme.selectText : Theme.text) : root.accent ? Theme.selectText : root.danger && mouse.containsMouse ? "#ffffff" : Theme.text
             font.bold: root.checked
         }
     }

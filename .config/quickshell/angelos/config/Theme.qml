@@ -436,6 +436,13 @@ Singleton {
     readonly property color hellRim: HellLook.palette.rim
     readonly property color hellAccent: HellLook.palette.accent
     readonly property color hellPanel: Qt.alpha(hellBody, Math.max(0.82, panelAlpha))
+    // the hell bar's roles (HellLook.barRoles): icons, the hover and the active plate, a
+    // sprite's body and its lighter parts — the accent only for a state
+    readonly property color hellBarIcon: HellLook.barRole.barIcon
+    readonly property color hellBarHover: HellLook.barRole.barHover
+    readonly property color hellBarActive: HellLook.barRole.barActive
+    readonly property color hellSprite: HellLook.barRole.sprite
+    readonly property color hellSpriteHi: HellLook.barRole.spriteHi
     // Jacquard 12 Hell (OFL, data/fonts): Jacquard 12, a pixel blackletter, with the Cyrillic
     // drawn for angelOS on its own grid (sources and the build: data/fonts/src/jacquard12-hell).
     // Hell's headings, crisp at 21 px and its multiples (Theme.hellPx).

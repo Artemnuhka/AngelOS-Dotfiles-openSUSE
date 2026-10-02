@@ -997,21 +997,24 @@ Scope {
                 return;
             Theme.realm = "heaven";
             report("hell-widgets", hellSeen.every(x => x.indexOf("FAIL") < 0), hellSeen.filter(x => x.indexOf("FAIL") >= 0).join(", ") || hellSeen.length + " loads");
-            // every look of hell (story/circles.json): text, dim text and the accent read on
-            // the plate and on the bar's button face (WCAG 4.5:1)
+            // every look of hell (story/circles.json): what the hell bar draws, on what it draws it
+            // (HellLook.barRoles) — text, dim text, the icons and the accent on the plate and on the
+            // hover plate, the accent (an open or switched-on widget) and the text on the active
+            // plate: WCAG 4.5:1; a sprite's body and its lighter parts (the Cerberus, app icons'
+            // darks through HellBarTint) on the plate: 3:1, so nothing sinks into it
             const lookIds = HellLook.ids.length ? HellLook.ids : ["base"];
             const weak = [];
             for (const id of lookIds) {
                 const pal = HellLook.merged(HellLook.fallback, HellLook.looks.base, id !== "base" ? HellLook.looks[id] : null).palette;
-                const face = Theme.hex(Theme.mix(pal.rim, pal.face, 0.4));
-                for (const role of ["text", "textDim", "accent"])
-                    for (const [gname, ground] of [["plate", pal.plate], ["face", face]]) {
-                        const c = HellLook.contrast(pal[role], ground);
-                        if (c < 4.5)
-                            weak.push(id + ": " + role + " on " + gname + " " + c.toFixed(2));
-                    }
+                const r = HellLook.barRoles(pal);
+                const pairs = [["text", pal.text, "plate", pal.plate, 4.5], ["textDim", pal.textDim, "plate", pal.plate, 4.5], ["accent", pal.accent, "plate", pal.plate, 4.5], ["barIcon", r.barIcon, "plate", pal.plate, 4.5], ["text", pal.text, "barHover", r.barHover, 4.5], ["textDim", pal.textDim, "barHover", r.barHover, 4.5], ["barIcon", r.barIcon, "barHover", r.barHover, 4.5], ["accent", pal.accent, "barActive", r.barActive, 4.5], ["text", pal.text, "barActive", r.barActive, 4.5], ["sprite", r.sprite, "plate", pal.plate, 3], ["spriteHi", r.spriteHi, "plate", pal.plate, 3]];
+                for (const [what, c1, gname, ground, need] of pairs) {
+                    const c = HellLook.contrast(c1, ground);
+                    if (c < need)
+                        weak.push(id + ": " + what + " on " + gname + " " + c.toFixed(2));
+                }
             }
-            report("hell-contrast", HellLook.ids.length > 0 && weak.length === 0, weak.join(", ") || lookIds.length + " looks, text/dim/accent ≥ 4.5:1");
+            report("hell-contrast", HellLook.ids.length > 0 && weak.length === 0, weak.join(", ") || lookIds.length + " looks: text, dim, icons and the accent on the plates ≥ 4.5:1, sprites ≥ 3:1");
             // a burn there and back (DesktopWidgets.burnPreview) must land in heaven again
             DesktopWidgets.burnPreview("hell");
             started = Date.now();

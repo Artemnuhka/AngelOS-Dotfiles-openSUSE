@@ -46,17 +46,23 @@ Item {
     // tint and in the two embers of its eyes
     property bool horns: Angel.demon || Theme.hell
     property bool hellLook: Theme.hell
+    // on the hell bar: the mask drawn like the bar's icons — its outline and horns in the
+    // icon colour, no fill — and its eyes tell the state: the accent only when it wants you
+    property bool barLook: false
 
     PxIcon {
         id: face
-        name: root.hellLook ? "botHell" : root.horns ? "botHorns" : "bot"
+        name: root.hellLook || root.barLook ? "botHell" : root.horns ? "botHorns" : "bot"
         pixel: root.pixel
-        ink: root.hellLook ? Theme.hellRim : (Theme.dark ? Theme.text : Theme.edge)
+        ink: root.barLook ? Theme.hellBarIcon : root.hellLook ? Theme.hellRim : (Theme.dark ? Theme.text : Theme.edge)
         body: root.hellLook ? Theme.mix(Theme.hellFace, Pulse.hellColorFor(root.state, Theme), 0.2) : Pulse.colorFor(root.state, Theme)
-        fill: root.hellLook ? Theme.hellBlood : Theme.accent
+        palette: root.barLook ? ({
+                "f": "none"
+            }) : ({})
+        fill: root.hellLook || root.barLook ? Theme.hellBlood : Theme.accent
         fill3: root.state === "none" ? Theme.textDim : Theme.accent3
-        light: root.hellLook ? (root.state === "none" || root.state === "idle" ? Theme.hellRim : Theme.hellAccent) : "#ffffff"
-        bad: root.hellLook ? Theme.hellTextDim : "#e0203a"
-        opacity: root.state === "none" ? 0.6 : root.glow
+        light: root.barLook ? Pulse.hellColorFor(root.state, Theme) : root.hellLook ? (root.state === "none" || root.state === "idle" ? Theme.hellRim : Theme.hellAccent) : "#ffffff"
+        bad: root.barLook ? Theme.hellBarIcon : root.hellLook ? Theme.hellTextDim : "#e0203a"
+        opacity: root.state === "none" ? (root.barLook ? 0.8 : 0.6) : root.glow
     }
 }
