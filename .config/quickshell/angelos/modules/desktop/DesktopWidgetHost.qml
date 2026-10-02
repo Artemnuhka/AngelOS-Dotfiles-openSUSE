@@ -119,13 +119,12 @@ Item {
 
     // under the widget: right click on a bare spot → the desktop menu; the wheel
     // resizes in edit mode or with Ctrl
-    MouseArea {
+    ContextClick {
         anchors.fill: parent
         enabled: !host.face
         z: -1
-        acceptedButtons: Qt.RightButton
-        onClicked: m => {
-            const p = mapToItem(host.area, m.x, m.y);
+        onMenu: (x, y) => {
+            const p = mapToItem(host.area, x, y);
             host.contextMenu(p.x, p.y);
         }
         onWheel: w => {

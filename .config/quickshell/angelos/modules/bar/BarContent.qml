@@ -104,10 +104,9 @@ Item {
     implicitHeight: itemHeight
 
     // Behind the widgets: right-clicks on task buttons keep their own action.
-    MouseArea {
+    ContextClick {
         anchors.fill: parent
-        acceptedButtons: Qt.RightButton
-        onClicked: mouse => panelMenu.openAt(mouse.x, mouse.y)
+        onMenu: (x, y) => panelMenu.openAt(x, y)
     }
     PanelMenu {
         id: panelMenu

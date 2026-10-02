@@ -41,7 +41,8 @@ import "../../services/Intents.js" as Intents
 //             the future, a scene that no longer exists, limbo across a restart, a player
 //             stuck under the old rules (a broken plea counter) — none blocks the way out;
 //             pleas are understood in any wording, with typos and the wrong layout
-//   rmb       a right click into the window's corner pixel does not crash Qt
+//   rmb       a right-click menu opens where the button went down (B2); a right click into
+//             the window's corner pixel does not crash Qt
 // Prints "TEST <name> PASS|FAIL [detail]" and "TEST-PAGE <id>" markers (the
 // script ties log errors to the page that caused them), "TEST DONE <n>" last.
 Scope {
@@ -96,6 +97,16 @@ Scope {
         }
         TestEvent {
             id: sim
+        }
+        // a right-click menu area (the wallpaper's, a widget's, the bar's)
+        ContextClick {
+            id: ctxClick
+            width: 400
+            height: 300
+            z: -100
+            visible: false          // only for its check: the corner-pixel test needs nobody there
+            property var got: null
+            onMenu: (x, y) => got = Qt.point(x, y)
         }
         SpriteRig {
             id: rig
@@ -1114,6 +1125,15 @@ Scope {
             return;
         }
         if (phase === "rmb") {
+            // B2: with a menu open, Qt on Wayland reports the release relative to that
+            // popup — the menu must open where the button went down
+            ctxClick.got = null;
+            ctxClick.visible = true;
+            sim.mousePress(ctxClick, 50, 60, Qt.RightButton, Qt.NoModifier, -1);
+            sim.mouseRelease(ctxClick, 300, 200, Qt.RightButton, Qt.NoModifier, -1);
+            ctxClick.visible = false;
+            const at = ctxClick.got;
+            report("menu-at-press", !!at && at.x === 50 && at.y === 60, "down at 50,60, up at 300,200 → menu at " + (at ? at.x + "," + at.y : "none"));
             bare.visible = true;
             phase = "rmb-focus";
             return;

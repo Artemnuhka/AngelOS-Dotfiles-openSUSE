@@ -87,7 +87,8 @@ Variants {
                 onHoveredChanged: if (!hovered)
                     Pointer.left("desk", win.modelData.name)
             }
-            MouseArea {
+            // the menu opens where the right button went down (ContextClick: B2)
+            ContextClick {
                 anchors.fill: parent
                 acceptedButtons: Qt.RightButton | Qt.LeftButton
                 hoverEnabled: win.sparkles
@@ -95,13 +96,10 @@ Variants {
                     if (win.sparkles)
                         trail.spawn(m.x, m.y);
                 }
-                onClicked: m => {
-                    if (m.button === Qt.RightButton)
-                        menu.openAt(m.x, m.y);
-                    else {
-                        menu.close();
-                        DesktopWidgets.editMode = false;
-                    }
+                onMenu: (x, y) => menu.openAt(x, y)
+                onOtherClicked: {
+                    menu.close();
+                    DesktopWidgets.editMode = false;
                 }
             }
 
