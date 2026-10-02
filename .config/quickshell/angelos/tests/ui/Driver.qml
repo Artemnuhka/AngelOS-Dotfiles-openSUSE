@@ -364,7 +364,9 @@ Scope {
             "OpenFx": WindowAnim.openStyles.map(s => s.id),
             "CloseFx": WindowAnim.closeStyles.map(s => s.id),
             "LockScreen": ["pixelate", "hearts", "reactions", "indicators", "stream"],
-            "CaptureSkin": ["ropes", "window", "stream"]
+            "CaptureSkin": ["ropes", "window", "stream"],
+            "CircleFx": ["full", "calm", "off"],
+            "Breakage": ["glass", "tv", "burn", "claws", "sigil", "random"]
         })
 
     property string phase: "wait"
@@ -1293,6 +1295,11 @@ Scope {
         if (phase === "motion") {
             Motion.set("off");
             const zero = Motion.still && Motion.calm && Motion.ms(300) === 0;
+            // D4: previews hold one still frame — the result — while nothing may move
+            preview.scene = "CircleFx";
+            preview.variant = "full";
+            preview.frame = 3;
+            const stillPreview = preview.still && preview.t === 1;
             const runs = CircleFx.runs;
             Angel.lastSwitchAt = 0;
             Angel.startSwap("toHell");
@@ -1307,7 +1314,9 @@ Scope {
             Motion.migrate();
             const migrated = Motion.level === "calm" && !Config.game.calm;
             Motion.set("full");
-            report("motion-off", zero && atOnce && back, "off: durations 0 " + zero + ", into hell and out at once " + (atOnce && back) + " (splashes asked " + (CircleFx.runs - runs) + ", none shown)");
+            const movingAgain = !preview.still && preview.t < 1;
+            preview.scene = "";
+            report("motion-off", zero && atOnce && back && stillPreview && movingAgain, "off: durations 0 " + zero + ", into hell and out at once " + (atOnce && back) + " (splashes asked " + (CircleFx.runs - runs) + ", none shown), a preview is one still frame " + stillPreview + " and moves again after " + movingAgain);
             report("motion-calm", calm && migrated, "calm: the game's calm " + calm + "; the old game.calm became motion calm " + migrated);
             Story.reset();
             cavaStage.active = true;

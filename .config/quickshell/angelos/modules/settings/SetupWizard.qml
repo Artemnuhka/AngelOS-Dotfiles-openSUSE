@@ -229,11 +229,15 @@ FloatingWindow {
                     required property var modelData
                     label: modelData.label
                     hint: modelData.hint
+                    preview: "CircleFx"
                     PxButton {
                         accent: Motion.level === levelRow.modelData.value
                         icon: Motion.level === levelRow.modelData.value ? "heart" : "sparkle"
                         text: Motion.level === levelRow.modelData.value ? I18n.t("Выбрано", "Chosen") : I18n.t("Выбрать", "Choose")
-                        onClicked: Motion.set(levelRow.modelData.value)
+                        onClicked: {
+                            Motion.set(levelRow.modelData.value);
+                            levelRow.show(levelRow.modelData.value, I18n.t("переход в круг", "into a circle"));
+                        }
                     }
                 }
             }

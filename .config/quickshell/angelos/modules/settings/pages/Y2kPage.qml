@@ -579,7 +579,10 @@ PxPage {
             }
         }
         SettingRow {
+            id: breakRow
             visible: Angel.hellShown && Config.y2k.cracks !== "off"
+            // D4: the punch and what spreads from it, drawn as on the desktop
+            preview: "Breakage"
             label: I18n.t("Что она ломает", "What she breaks")
             hint: I18n.t("куда приходится её кулак: стекло трескается; телевизор — дыра со «снегом» и битыми полосами экрана; прожжённая дыра — внутри адский огонь; когти — четыре светящиеся раны; печать — выжженная пентаграмма. «Случайно» — каждый раз другое", "Where her fist lands: glass cracks; a TV gets a hole with snow and dead screen lines; a burnt hole has hellfire inside; claws leave four glowing gashes; a sigil is a pentagram burnt into the glass. “Random”: something else every time")
             PxCombo {
@@ -611,7 +614,10 @@ PxPage {
                     }
                 ]
                 currentValue: Config.y2k.breakage || "glass"
-                onActivated: v => Config.y2k.breakage = v
+                onActivated: v => {
+                    Config.y2k.breakage = v;
+                    breakRow.show(v, "");
+                }
             }
         }
     }
