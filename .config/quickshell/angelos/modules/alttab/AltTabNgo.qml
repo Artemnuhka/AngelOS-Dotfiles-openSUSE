@@ -83,7 +83,7 @@ Item {
             }
             Text {
                 anchors.verticalCenter: parent.verticalCenter
-                text: "Windose ▸ alt+tab.exe"
+                text: "Windose ▸ " + I18n.exe("alt+tab")
                 font.family: Theme.fontTitle
                 font.pixelSize: Theme.sizeBody
                 font.bold: true

@@ -45,7 +45,7 @@ Item {
         panelId: "cat"
         anchorItem: root
         above: BarLayout.bottom
-        title: Angel.demon ? I18n.t("цербер.exe", "cerberus.exe") : I18n.t("котик.exe", "cat.exe")
+        title: I18n.exe(Angel.demon ? I18n.t("цербер", "cerberus") : I18n.t("котик", "cat"))
         icon: "heart"
         contentWidth: Theme.u * 120
         contentHeight: Theme.u * 70

@@ -43,6 +43,30 @@ while IFS= read -r f; do
 done < <(grep -rlE 'WlrLayer\.Overlay' --include='*.qml' "$DIR" | grep -v '/tests/')
 ((fail)) || ok "full-screen overlays let input through (or say why they take it)"
 
+# window titles and captions take the ending from Settings → Appearance (I18n.exe, C3): no
+# string with a hard-coded ".exe" in QML, JS or a plugin manifest ("// suffix-ok" on the line
+# or the one above lets one through: the setting's own three endings)
+if out=$(python3 - "$DIR" <<'PY'
+import json, pathlib, re, sys
+root = pathlib.Path(sys.argv[1])
+lit = re.compile(r'"(?:[^"\\\n]|\\.)*"')
+bad = []
+for p in sorted(list(root.rglob("*.qml")) + list(root.rglob("*.js")) + list(root.rglob("manifest.json"))):
+    if "tests" in p.relative_to(root).parts:
+        continue
+    prev = ""
+    for n, line in enumerate(p.read_text(errors="ignore").splitlines(), 1):
+        s = line.strip()
+        if not s.startswith(("//", "*", "/*")) and "suffix-ok" not in line and "suffix-ok" not in prev:
+            for m in lit.finditer(line.split(" //")[0] if p.suffix != ".json" else line):
+                if re.search(r"\.exe\b", m.group(0)):
+                    bad.append("%s:%d %s" % (p.relative_to(root), n, m.group(0)[:60]))
+        prev = line
+print("\n".join(bad))
+sys.exit(1 if bad else 0)
+PY
+); then ok "no hard-coded .exe: titles follow the ending setting"; else bad "hard-coded .exe (use I18n.exe):"; printf '%s\n' "$out" | head -20 | sed 's/^/      /'; fi
+
 # python helpers at least compile
 if out=$(python3 -m py_compile "$DIR"/scripts/*.py 2>&1); then ok "scripts/*.py compile"; else bad "python: $out"; fi
 find "$DIR/scripts" -name __pycache__ -type d -exec rm -rf {} + 2>/dev/null

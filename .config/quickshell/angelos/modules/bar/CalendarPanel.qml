@@ -10,7 +10,7 @@ import qs.widgets
 BarPopup {
     id: root
 
-    title: I18n.t("календарь.exe", "calendar.exe")
+    title: I18n.exe(I18n.t("календарь", "calendar"))
     icon: "calendar"
     contentWidth: Theme.u * 170
     contentHeight: Theme.u * 250

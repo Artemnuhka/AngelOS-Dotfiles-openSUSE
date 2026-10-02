@@ -87,7 +87,7 @@ Scope {
             id: frame
             width: Theme.u * 110
             height: titleHeight + Theme.u * 34
-            title: "voice.exe"
+            title: I18n.exe("voice")
             icon: "mic"
             compact: true
             closable: false

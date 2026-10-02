@@ -28,7 +28,7 @@ PxButton {
         panelId: "bluetooth"
         anchorItem: root
         above: root.above
-        title: "bluetooth.exe"
+        title: I18n.exe("bluetooth")
         icon: "bluetooth"
         contentWidth: Theme.u * 150
         contentHeight: Math.min(Theme.u * 190, col.implicitHeight)

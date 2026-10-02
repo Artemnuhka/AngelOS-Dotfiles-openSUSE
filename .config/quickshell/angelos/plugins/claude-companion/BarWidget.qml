@@ -60,7 +60,7 @@ Item {
         panelId: "claude"
         anchorItem: root
         above: BarLayout.bottom
-        title: "claude.exe"
+        title: I18n.exe("claude")
         icon: "bot"
         contentWidth: Theme.u * 190
         contentHeight: Theme.u * 205

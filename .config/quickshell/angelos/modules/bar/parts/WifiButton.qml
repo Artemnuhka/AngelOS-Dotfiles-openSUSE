@@ -25,7 +25,7 @@ PxButton {
         panelId: "wifi"
         anchorItem: root
         above: root.above
-        title: "wi-fi.exe"
+        title: I18n.exe("wi-fi")
         icon: "wifi"
         contentWidth: Theme.u * 150
         contentHeight: Math.min(Theme.u * 190, col.implicitHeight)

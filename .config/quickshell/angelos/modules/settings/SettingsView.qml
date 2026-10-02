@@ -979,7 +979,7 @@ Item {
         anchors.rightMargin: Config.appearance.shadows ? Theme.u * 2 : 0
         anchors.bottomMargin: Config.appearance.shadows ? Theme.u * 2 : 0
         skin: win.skin
-        title: win.viewId === "properties" ? I18n.t("Свойства: ", "Properties: ") + (win.navSectionOf(win.currentId) || win.accountSection).label : (win.skin === "windose" ? "settings.exe ♡ " : "angelOS · ") + (win.atHome ? win.homeLabel : win.currentPage ? win.currentPage.label : I18n.t("Настройки", "Settings"))
+        title: win.viewId === "properties" ? I18n.t("Свойства: ", "Properties: ") + (win.navSectionOf(win.currentId) || win.accountSection).label : (win.skin === "windose" ? I18n.exe("settings") + " ♡ " : "angelOS · ") + (win.atHome ? win.homeLabel : win.currentPage ? win.currentPage.label : I18n.t("Настройки", "Settings"))
         icon: win.atHome ? "gear" : win.currentPage ? win.currentPage.icon : "gear"
         minimizable: false
         maximizable: true

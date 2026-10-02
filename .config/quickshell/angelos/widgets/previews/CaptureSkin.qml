@@ -94,7 +94,7 @@ Scene {
                 PxText {
                     x: Theme.u * 2
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "screenshot.exe"
+                    text: I18n.exe("screenshot")
                     kind: "tiny"
                     color: "#ffffff"
                     visible: sel.width > implicitWidth + Theme.u * 4

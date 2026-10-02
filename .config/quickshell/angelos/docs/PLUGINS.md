@@ -51,7 +51,7 @@ OpenAI и Claude, русский и английский интерфейс. [Р
 | `menu` | ПКМ-меню рабочего стола (декларативно). `exec` — команда sh, `settings` — открыть страницу настроек, `url` — xdg-open | — |
 | `menuComponent` | QML-элементы в ПКМ-меню (обычно `PxMenuItem`) | `plugin`, `menu` (вызови `menu.close()`) |
 | `barWidget` | панель, рядом с треем (все три стиля) | `plugin`, `screenName`, `barWindow` |
-| `desktopWidget` | виджет на рабочем столе: angelOS сам рисует рамку с заголовком `desktopTitle`, перетаскивание и удаление; добавляется через ПКМ → Вид | `plugin`, `screenName`, `widget` (`{uid, x, y, settings}`) |
+| `desktopWidget` | виджет на рабочем столе: angelOS сам рисует рамку с заголовком `desktopTitle` (без окончания: `"my-widget"` — angelOS добавит выбранное в настройках `.exe`, `.sh` или `.bin`; в своём QML — `I18n.exe("my-widget")`), перетаскивание и удаление; добавляется через ПКМ → Вид | `plugin`, `screenName`, `widget` (`{uid, x, y, settings}`) |
 | `settings` | страница в Настройки → Плагины → имя | `plugin` |
 | `main` | фоновый сервис, живёт пока плагин включён (можно держать тут `IpcHandler`) | `plugin` |
 | `launcher` | провайдер результатов лаунчера (Mod+Space) | `plugin`, `pluginId` |

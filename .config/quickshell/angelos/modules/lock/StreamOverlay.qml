@@ -142,7 +142,7 @@ Item {
         anchors.margins: Theme.u * 10
         width: Theme.u * 130
         height: titleHeight + chat.implicitHeight + Theme.pad * 2 + Theme.u * 6
-        title: I18n.t("чат.exe", "chat.exe")
+        title: I18n.exe(I18n.t("чат", "chat"))
         icon: "bell"
         compact: true
         closable: false

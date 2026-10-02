@@ -28,7 +28,7 @@ PxWindow {
     }
     onVariantChanged: restart()
 
-    title: "preview.exe" + (caption ? " · " + caption : "")
+    title: I18n.exe("preview") + (caption ? " · " + caption : "")
     icon: "play"
     compact: true
     translucent: false

@@ -10,7 +10,7 @@
     { "label": "__NAME__: привет", "icon": "heart", "exec": "notify-send angelOS 'привет из плагина ♡'" }
   ],
   "barWidget": "BarWidget.qml",
-  "desktopTitle": "__ID__.exe",
+  "desktopTitle": "__ID__",
   "desktopWidget": "DesktopWidget.qml",
   "realms": ["heaven", "hell"],
   "settings": "Settings.qml",

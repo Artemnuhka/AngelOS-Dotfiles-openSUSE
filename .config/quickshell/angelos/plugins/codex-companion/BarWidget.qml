@@ -58,7 +58,7 @@ Item {
         panelId: "codex"
         anchorItem: root
         above: BarLayout.bottom
-        title: "codex.exe"
+        title: I18n.exe("codex")
         icon: "terminal"
         contentWidth: Theme.u * 190
         contentHeight: Theme.u * 190

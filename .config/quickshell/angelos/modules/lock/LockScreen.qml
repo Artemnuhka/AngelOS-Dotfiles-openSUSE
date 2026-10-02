@@ -165,7 +165,7 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
             width: Theme.u * 170
             height: titleHeight + form.implicitHeight + Theme.pad * 2 + Theme.u * 8
-            title: root.preview ? I18n.t("вход.exe · предпросмотр", "login.exe · preview") : I18n.t("вход.exe", "login.exe")
+            title: I18n.exe(I18n.t("вход", "login")) + (root.preview ? I18n.t(" · предпросмотр", " · preview") : "")
             icon: "lock"
             closable: root.preview
             onCloseClicked: Shell.lockPreview = false

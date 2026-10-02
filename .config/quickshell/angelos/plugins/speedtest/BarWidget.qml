@@ -24,7 +24,7 @@ PxButton {
         panelId: "speedtest"
         anchorItem: root
         above: BarLayout.bottom
-        title: "speedtest.exe"
+        title: I18n.exe("speedtest")
         icon: "gauge"
         contentWidth: Theme.u * 150
         contentHeight: Theme.u * 205

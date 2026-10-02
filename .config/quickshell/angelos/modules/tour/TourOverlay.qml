@@ -125,7 +125,7 @@ PanelWindow {
         id: card
         width: Theme.u * 150
         height: titleHeight + body.implicitHeight + Theme.pad * 2 + Theme.u * 8
-        title: "tips.exe · " + (Tour.step + 1) + "/" + Tour.active.length
+        title: I18n.exe("tips") + " · " + (Tour.step + 1) + "/" + Tour.active.length
         icon: "info"
         compact: true
         onCloseClicked: Tour.stop()

@@ -220,32 +220,32 @@ Singleton {
             "type": "clock",
             "label": I18n.t("Часы", "Clock"),
             "icon": "calendar",
-            "title": "clock.exe"
+            "title": "clock"
         },
         {
             "type": "sysmon",
             "label": I18n.t("Системный монитор", "System monitor"),
             "icon": "chip",
-            "title": "sysmon.exe"
+            "title": "sysmon"
         },
         {
             "type": "cava",
             "label": I18n.t("Визуализатор cava", "cava visualizer"),
             "icon": "music",
-            "title": "cava.exe"
+            "title": "cava"
         },
         {
             "type": "nowplaying",
             "label": I18n.t("Сейчас играет", "Now playing"),
             "icon": "play",
-            "title": "music.exe"
+            "title": "music"
         },
         {
             // hell's own: offered, shown and spun only while the demon rules
             "type": "hellwheel",
             "label": I18n.t("Колесо Ада", "Wheel of Hell"),
             "icon": "pentagram",
-            "title": "wheel666.exe",
+            "title": "wheel666",
             "hell": true
         }
     ]
@@ -253,7 +253,7 @@ Singleton {
                 "type": "plugin:" + p.id,
                 "label": p.name,
                 "icon": p.icon || "plug",
-                "title": p.desktopTitle || (p.id + ".exe"),
+                "title": p.desktopTitle || p.id,
                 "plugin": p
             }))
     // the demon's widgets (the Wheel of Hell) don't exist in heaven: not offered, not shown
@@ -261,13 +261,12 @@ Singleton {
     readonly property var types: builtin.filter(t => !t.hell || Angel.hellShown).concat(pluginTypes)
     readonly property var widgets: (Config.desktop.widgets || []).filter(w => !!typeInfo(w.type))
 
-    // "clock.exe" → "clock.sh": the ending picked in Settings → Widgets
-    readonly property var suffixes: ["exe", "sh", "bin"]
+    // "clock.exe" → "clock.sh": the ending picked in Settings → Appearance (I18n.exe)
+    readonly property var suffixes: I18n.suffixes
     function titleOf(info) {
         if (!info)
             return "";
-        const ext = suffixes.includes(Config.desktop.titleSuffix) ? Config.desktop.titleSuffix : "exe";
-        return String(info.title).replace(/\.[a-z0-9]{1,4}$/i, "") + "." + ext;
+        return I18n.exe(I18n.label(info.title));
     }
     // widget size: 70–130 % of its natural size
     readonly property real minScale: 0.7

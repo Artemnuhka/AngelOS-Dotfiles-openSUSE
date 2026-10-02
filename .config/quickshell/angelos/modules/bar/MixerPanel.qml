@@ -11,7 +11,7 @@ import qs.widgets
 BarPopup {
     id: root
 
-    title: I18n.t("звук.exe", "audio.exe")
+    title: I18n.exe(I18n.t("звук", "audio"))
     icon: "speaker"
     contentWidth: Theme.u * 170
     contentHeight: Theme.u * 214

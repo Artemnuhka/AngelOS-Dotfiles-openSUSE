@@ -127,7 +127,7 @@ PxScroll {
             }
             PxText {
                 visible: root.settingsSkin !== "classic"
-                text: root.settingsSkin === "stream" ? "● LIVE  /  angelOS" : "▸ settings.exe / angelOS"
+                text: root.settingsSkin === "stream" ? "● LIVE  /  angelOS" : "▸ " + I18n.exe("settings") + " / angelOS"
                 kind: "tiny"
                 color: root.settingsSkin === "stream" ? Theme.streamLive : Theme.windoseLavender
                 font.bold: true

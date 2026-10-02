@@ -44,7 +44,7 @@ and the entry point for the selected kind (desktopWidget/barWidget/main/menu/
 launcher). A plugin may also add sidebarWidget (a compact Column that receives
 plugin and width) for the experimental sidebar. Settings.qml is mandatory, even for a small plugin: explain the data
 source and allow useful preferences. Do not override any installed/bundled id.
-Give desktop widgets a desktopTitle such as "my-widget.exe".
+Give desktop widgets a desktopTitle such as "my-widget", without an ending: angelOS adds the one the user picked (.exe, .sh or .bin). Window titles in the plugin's own QML: I18n.exe("my-widget").
 
 Import qs.config for Theme, Config and I18n; qs.widgets for native controls;
 qs.services only for documented services. All user-facing labels use

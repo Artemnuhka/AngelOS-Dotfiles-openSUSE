@@ -49,7 +49,7 @@ Item {
         width: parent.width
         height: implicitHeight
         hell: true
-        title: "inferno.exe"
+        title: I18n.exe("inferno")
         icon: "pentagram"
         compact: true
         closable: false

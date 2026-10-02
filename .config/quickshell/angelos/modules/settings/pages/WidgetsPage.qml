@@ -272,18 +272,6 @@ PxPage {
                 onToggled: c => Config.desktop.snap = c
             }
         }
-        SettingRow {
-            label: I18n.t("Окончание в заголовке", "Title ending")
-            hint: I18n.t("как подписаны окошки виджетов: clock.exe, clock.sh или clock.bin", "How widget windows are titled: clock.exe, clock.sh or clock.bin")
-            PxSegmented {
-                model: DesktopWidgets.suffixes.map(s => ({
-                            "label": "." + s,
-                            "value": s
-                        }))
-                currentValue: Config.desktop.titleSuffix || "exe"
-                onActivated: v => Config.desktop.titleSuffix = v
-            }
-        }
         Row {
             spacing: Theme.u * 3
             Repeater {

@@ -26,7 +26,7 @@ Singleton {
         {
             "id": "angelos",
             "label": "angelOS",
-            "hint": I18n.t("пиксельное окошко alt+tab.exe в цветах темы, выбранное — в розовой рамке с сердечком", "a pixel alt+tab.exe window in the theme colours, the pick framed in pink with a heart")
+            "hint": I18n.t("пиксельное окошко " + I18n.exe("alt+tab") + " в цветах темы, выбранное — в розовой рамке с сердечком", "a pixel " + I18n.exe("alt+tab") + " window in the theme colours, the pick framed in pink with a heart")
         },
         {
             "id": "ngo",

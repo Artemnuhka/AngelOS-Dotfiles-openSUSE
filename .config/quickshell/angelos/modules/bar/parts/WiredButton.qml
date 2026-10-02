@@ -28,7 +28,7 @@ PxButton {
         panelId: "wired"
         anchorItem: root
         above: root.above
-        title: "ethernet.exe"
+        title: I18n.exe("ethernet")
         icon: "ethernet"
         contentWidth: Theme.u * 130
         contentHeight: col.implicitHeight

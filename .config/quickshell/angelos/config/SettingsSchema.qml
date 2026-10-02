@@ -165,7 +165,7 @@ JsonAdapter {
         property var widgets: []            // [{uid, type, screen, x, y, settings}]; x/y < 0 = from the right/bottom
         property bool initialized: false
         property bool snap: true
-        property string titleSuffix: "exe"  // widget titles end in .exe | .sh | .bin
+        property string titleSuffix: "exe"  // every angelOS window, widget and caption ends in .exe | .sh | .bin (I18n.exe)
         // the right-click menu on the wallpaper (services/DeskMenu, Settings → Right-click menu)
         property string menuStyle: "list"   // list (the usual, Windows 11-like) | radial (a ring) | y2k (glossy bubble) | tiles (Control Center) | pentagram
         property var menuQuick: ["terminal", "files", "monitor", "wallpaperPick", "settings"] // the list's top row, the ring's first slots (up to 6)

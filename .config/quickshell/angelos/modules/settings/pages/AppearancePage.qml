@@ -182,6 +182,26 @@ PxPage {
     }
 
     PxGroup {
+        title: I18n.t("Подписи окон", "Window titles")
+        icon: "monitor"
+        width: parent.width
+
+        SettingRow {
+            label: I18n.t("Окончание в названиях", "Name ending")
+            // suffix-ok: the three endings themselves
+            hint: I18n.t("как подписаны все окошки angelOS — виджеты, панели, Alt+Tab, лок, плагины: calendar.exe, calendar.sh или calendar.bin", "How every angelOS window is titled — widgets, panels, Alt+Tab, the lock, plugins: calendar.exe, calendar.sh or calendar.bin")
+            PxSegmented {
+                model: I18n.suffixes.map(s => ({
+                            "label": "." + s,
+                            "value": s
+                        }))
+                currentValue: I18n.suffix
+                onActivated: v => Config.desktop.titleSuffix = v
+            }
+        }
+    }
+
+    PxGroup {
         title: I18n.t("Стекло и пиксели", "Glass and pixels")
 
         advanced: true

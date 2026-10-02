@@ -158,7 +158,7 @@ Rectangle {
             color: "#ffffff"
             style: Text.Outline
             styleColor: root.ink
-            text: "Windose.exe ♡"
+            text: I18n.exe("Windose") + " ♡"
         }
         Row {
             anchors.right: parent.right

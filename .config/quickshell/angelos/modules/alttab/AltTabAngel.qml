@@ -19,7 +19,7 @@ Item {
     PxWindow {
         id: frame
         anchors.fill: parent
-        title: "alt+tab.exe"
+        title: I18n.exe("alt+tab")
         icon: "layers"
         compact: true
         closable: false

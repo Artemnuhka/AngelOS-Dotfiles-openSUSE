@@ -424,7 +424,7 @@ PxPage {
         SettingRow {
             visible: Angel.hellShown
             label: I18n.t("Alt+Tab в аду", "Alt+Tab in hell")
-            hint: I18n.t("«Своё адское» — окно inferno.exe: выбранное окно над пентаграммой, столы — круги ада. «Адская версия» — твой стиль Alt+Tab в цветах круга", "“Hell's own” is an inferno.exe window: the pick over a pentagram, desks are hell's circles. “Hell version” is your Alt+Tab style in the circle's colours")
+            hint: I18n.t("«Своё адское» — окно " + I18n.exe("inferno") + ": выбранное окно над пентаграммой, столы — круги ада. «Адская версия» — твой стиль Alt+Tab в цветах круга", "“Hell's own” is an " + I18n.exe("inferno") + " window: the pick over a pentagram, desks are hell's circles. “Hell version” is your Alt+Tab style in the circle's colours")
             Flow {
                 width: parent.width
                 spacing: Theme.u * 4

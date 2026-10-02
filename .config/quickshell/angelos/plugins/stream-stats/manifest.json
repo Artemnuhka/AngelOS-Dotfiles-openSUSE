@@ -7,7 +7,7 @@
   "icon": "heart",
   "enabledByDefault": false,
   "main": "Main.qml",
-  "desktopTitle": "stats.exe",
+  "desktopTitle": "stats",
   "desktopWidget": "DesktopWidget.qml",
   "realms": ["heaven", "hell"],
   "barWidget": "BarWidget.qml",

@@ -21,8 +21,8 @@ PxPage {
         },
         {
             "id": "window",
-            "label": "screenshot.exe",
-            "hint": I18n.t("NGO-окошко: розовый заголовок, бегущий пунктир, сердечки по углам; при записи — «● REC recording.exe» с таймером", "An NGO window: pink title bar, marching ants, corner hearts; while recording — “● REC recording.exe” with a timer")
+            "label": I18n.exe("screenshot"),
+            "hint": I18n.t("NGO-окошко: розовый заголовок, бегущий пунктир, сердечки по углам; при записи — «● REC " + I18n.exe("recording") + "» с таймером", "An NGO window: pink title bar, marching ants, corner hearts; while recording — “● REC " + I18n.exe("recording") + "” with a timer")
         },
         {
             "id": "stream",

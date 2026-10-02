@@ -193,7 +193,7 @@ PxPage {
         width: parent.width
         SettingRow {
             label: I18n.t("Индикатор", "Indicator")
-            hint: I18n.t("«angelOS» — окошко voice.exe в стиле райса, «старый» — прежний кружок", "“angelOS” — a voice.exe window in the rice style, “classic” — the old circle")
+            hint: I18n.t("«angelOS» — окошко " + I18n.exe("voice") + " в стиле райса, «старый» — прежний кружок", "“angelOS” — a " + I18n.exe("voice") + " window in the rice style, “classic” — the old circle")
             PxSegmented {
                 model: [
                     {

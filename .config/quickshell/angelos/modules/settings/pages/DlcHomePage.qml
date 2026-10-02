@@ -145,7 +145,7 @@ PxPage {
             })))
 
     // the stream's chat: tips from the angel, signed by viewers; a click opens the page
-    readonly property var nicks: ["ame_fan_01", "kangel♡", "p-chan", "jine_user", "OMGkawaii", "angel_watcher", "pixel_heart", "2000s_kid", "needy_dev", "overdose.exe"]
+    readonly property var nicks: ["ame_fan_01", "kangel♡", "p-chan", "jine_user", "OMGkawaii", "angel_watcher", "pixel_heart", "2000s_kid", "needy_dev", I18n.exe("overdose")]
     readonly property var chatColors: [Theme.ngoPink, Theme.ngoLilac, Theme.ngoMint]
     property var chat: []
     function refillChat() {
@@ -283,7 +283,7 @@ PxPage {
                 PxText {
                     x: Theme.u * 3
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "♡  p-chan.exe"
+                    text: "♡  " + I18n.exe("p-chan")
                     kind: "tiny"
                     color: Theme.windoseInk
                 }
@@ -335,7 +335,7 @@ PxPage {
                     PxText {
                         x: Theme.u * 2
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "love.exe  ♡"
+                        text: I18n.exe("love") + "  ♡"
                         kind: "tiny"
                         color: Theme.windoseInk
                     }

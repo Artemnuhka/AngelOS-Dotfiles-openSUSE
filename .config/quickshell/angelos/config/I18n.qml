@@ -251,7 +251,7 @@ Singleton {
         "Бэкапы": "Backups",
         "Перезапустить оболочку": "Restart shell",
         "Котик": "Cat",
-        "котик.exe": "cat.exe",
+        "котик": "cat",
         "спит… zzz": "Sleeping… zzz",
         "гуляет ♡": "Walking ♡",
         "БЕЖИТ!!": "RUNNING!!",
@@ -359,7 +359,6 @@ Singleton {
         "неправильный пароль ✕": "Incorrect password ✕",
         "ошибка PAM: ": "PAM error: ",
         "ну пожааалуйста, вспомни пароль…": "Try your password again…",
-        "вход.exe": "login.exe",
         "Выполнить…": "Run…",
         "Программа… ": "Application… ",
         "> команда": "> command",
@@ -371,8 +370,6 @@ Singleton {
         "Сон": "Sleep",
         "Выйти": "Log out",
         "Рестарт": "Restart",
-        "звук.exe": "audio.exe",
-        "календарь.exe": "calendar.exe",
         "◂ назад": "◂ Back",
         "пн": "Mon",
         "вт": "Tue",
@@ -485,5 +482,13 @@ Singleton {
     }
     function t(ru, en) {
         return english ? en : ru;
+    }
+    // "calendar" → "calendar.exe" (or .sh / .bin): the ending picked in Settings → Appearance
+    // for every angelOS window, widget and caption (C3). A name that ends in one already
+    // gets the picked one instead ("cat.exe" → "cat.sh").
+    readonly property var suffixes: ["exe", "sh", "bin"]
+    readonly property string suffix: suffixes.includes(Config.desktop.titleSuffix) ? Config.desktop.titleSuffix : "exe"
+    function exe(name) {
+        return String(name || "").replace(/\.(exe|sh|bin)$/i, "") + "." + suffix;
     }
 }

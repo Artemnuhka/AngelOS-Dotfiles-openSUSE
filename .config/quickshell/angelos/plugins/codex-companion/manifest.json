@@ -8,7 +8,7 @@
   "enabledByDefault": true,
   "main": "Main.qml",
   "barWidget": "BarWidget.qml",
-  "desktopTitle": "codex.exe",
+  "desktopTitle": "codex",
   "desktopWidget": "Orb.qml",
   "realms": ["heaven", "hell"],
   "sidebarWidget": "SidebarBlock.qml",

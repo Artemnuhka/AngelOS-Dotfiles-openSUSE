@@ -11,7 +11,7 @@ import qs.modules.desktop.widgets
 PxWindow {
     id: root
 
-    title: "sidebar.exe"
+    title: I18n.exe("sidebar")
     icon: "layers"
     compact: true
     width: Theme.u * 150
