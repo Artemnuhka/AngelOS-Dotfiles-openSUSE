@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Io
 import qs.config
 import "AngelLines.js" as Lines
+import "Intents.js" as Intents
 
 // The Y2K helper in the screen corner (modules/y2k/AngelHelper): what she says
 // and who she is.
@@ -136,6 +137,7 @@ Singleton {
         hiddenUntil = Date.now() + minutes * 60000;
     }
     function openMenu(mode) {
+        now = Date.now();
         talking = false;
         menuMode = mode || "main";
         menuOpen = true;
@@ -225,6 +227,12 @@ Singleton {
         const L = demon ? Lines.demon : Lines.angel;
         if (/шут|анекдот|смеш|рассмеш|joke|funny|laugh/.test(s))
             return joke();
+        // in hell, wanting out wins over small talk ("привет, верни ангела"): any wording,
+        // typos and the wrong keyboard layout too (services/Intents.js, issue #31); the
+        // weak words ("назад", "please") only when it isn't a settings question
+        const settingsIntent = intents.find(it => it.re.test(s));
+        if (demon && (Intents.strong(s, "plea") || (!settingsIntent && Intents.weak(s, "plea"))))
+            return plea();
         if (/^(привет|здравств|хай|хей|ку\b|добр|hello|hi\b|hey|yo\b)/.test(s))
             return say(line(L.hello, "hello" + demon));
         if (/как дела|как ты|как жизнь|how are you|what'?s up|sup\b/.test(s))
@@ -237,16 +245,13 @@ Singleton {
         }
         if (/спасиб|благодар|thank/.test(s))
             return say(line(L.thanks, "thanks" + demon));
-        if (demon && /вернись|верни|ангел|уйди|уходи|come back|angel|go away|leave/.test(s))
-            return plea();
         if (!demon && /(^|\s)ад(\s|$)|демон|hell|demon/.test(s))
             return say(tr(Lines.angel.hell));
         if (/совет|подсказ|помоги|помощь|help|tip|advice/.test(s))
             return tip();
         // the questions people ask most, answered straight
-        for (const it of intents)
-            if (it.re.test(s))
-                return say(I18n.t(it.ru, it.en), showMe(it.page));
+        if (settingsIntent)
+            return say(I18n.t(settingsIntent.ru, settingsIntent.en), showMe(settingsIntent.page));
         const r = searchLoose(q);
         if (r && r.length) {
             const best = r[0];
@@ -383,6 +388,7 @@ Singleton {
             return;
         hush();
         Story.attempt(false);
+        now = Date.now();
     }
     // the way out was found (Story.outcome): stars — the bottom passed; pact — signed, out
     // now; limbo — the angel found the player in the grey. A line, then the swap back.
@@ -391,10 +397,13 @@ Singleton {
         if (!demon || transition)
             return;
         _escape = kind;
-        if (kind === "pact")
+        if (kind === "amnesty")
+            say(I18n.t("Правила сменились. Старые долги сгорели — иди. Но в следующий раз дорога будет длиннее.", "The rules have changed. Old debts burnt up — go. But next time the road will be longer."), null, 5200, true);
+        else if (kind === "pact")
             say(I18n.t("Подписано. Иди. Мы ещё увидимся — у тебя теперь есть кое-что моё.", "Signed. Go. We'll meet again — you have something of mine now."), null, 2600, true);
         else if (kind === "stars")
             say(I18n.t("…Ладно. Иди. Наверху светло.", "…Fine. Go. It's light up there."), null, 2600, true);
+        leave.interval = kind === "amnesty" ? 5200 : 2600;
         leave.restart();
     }
     function ascend() {
@@ -635,6 +644,8 @@ Singleton {
                 root.say(Story.render(I18n.t("Я тебя нашла. Ты так долго сидел{g:|а|(а)} в сером… Пойдём домой ♡", "I found you. You sat in the grey so long… Let's go home ♡")));
             else if (how === "pact")
                 root.say(Story.render(I18n.t("Я вернулась… Но ты что-то подписал{g:|а|(а)} там, внизу. Я вижу это на тебе.", "I'm back… But you signed something down there. I can see it on you.")));
+            else if (how === "amnesty")
+                root.say(Story.render(I18n.t("Я вернулась! Пока тебя не было, внизу всё перестроили — теперь там девять кругов. Не падай больше, ладно? ♡", "I'm back! While you were away they rebuilt it all down there — nine circles now. Don't fall again, okay? ♡")));
             else if (how === "stars")
                 root.say(Story.render(I18n.t("Ты прош{g:ёл|ла|ёл(ла)} через самое дно — и выш{g:ел|ла|ел(ла)} к звёздам. Я здесь ♡", "You went through the very bottom — and out to the stars. I'm here ♡")));
             else

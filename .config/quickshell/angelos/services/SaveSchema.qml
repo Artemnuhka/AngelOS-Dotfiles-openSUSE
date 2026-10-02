@@ -39,7 +39,8 @@ JsonAdapter {
         property bool limbo: false          // the limbo outcome: neither here nor there
         property double limboSince: 0
         property bool pact: false           // signed: something of hers stays in heaven
-        property var outcomes: []           // [{kind: stars|pact|limbo, circle, at}]
+        property bool amnesty: false        // fell under the old rules (before the circles): let out at the next start
+        property var outcomes: []           // [{kind: stars|pact|limbo|amnesty, circle, at}]
     }
 
     // every choice the player made: [{scene, node, choice, tone, at}] (the last 400)

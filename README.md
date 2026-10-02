@@ -92,6 +92,7 @@ The first login opens a short setup wizard (monitors, keyboard, theme, bar, wind
 angelOS is also a game played over your real desktop: an angel lives in the corner, and what happens next depends on your choices — two people get two different stories. It may scare you, but it never harms: it doesn't touch your files, sends nothing anywhere and never reads your windows, browser or chats (the characters know only what the shell knows anyway: your name, the time, the uptime, the music playing). The lock screen, power menu, volume, notifications and polkit always work.
 
 - **Out of the game at once, any time:** `angelos game off` or **Mod+Ctrl+Shift+Escape** — angelOS stays as plain dotfiles. Back: `angelos game on`.
+- **Looking for the way out of hell?** The demon's menu → Ask… → “Seek the way out” (or just type it, in your own words). The button shows the circle and the minutes until the next try; `angelos game status` shows where you are.
 - **Without the game from the start:** the installer asks (`ANGELOS_GAME=0`), and so does the first-run wizard.
 - **Calm mode** (no flashes, screen shaking or sudden loud sounds): Settings → System → The game, or `angelos game calm on`.
 - Progress lives in its own file, `~/.config/angelos/save.json` (updates never touch it); `angelos game reset` starts over.

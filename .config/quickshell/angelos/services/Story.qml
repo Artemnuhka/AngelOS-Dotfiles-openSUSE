@@ -61,6 +61,40 @@ Singleton {
     // limbo: the demon is gone and the angel hasn't come yet
     readonly property bool limbo: !!hell.limbo && inHell
 
+    // ---- the game's clock ----
+    // Date.now(), moved forward by the self-test (scripts/test-ui.sh) instead of waiting
+    // ten real minutes; nothing else sets it
+    property double clockShift: 0
+    function now() {
+        return Date.now() + clockShift;
+    }
+    // a time saved "in the future" (the clock went back: a dual boot with Windows, a sync
+    // after the shell started, a hand edit) would make the player wait for it — forever,
+    // if it is garbage. Such a time is forgotten: as if nothing happened yet (issue #31)
+    function repairClock() {
+        const t = now(), slack = 60000;
+        let fixed = [];
+        if ((player.lastPlea || 0) > t + slack) {
+            save.player.lastPlea = 0;
+            fixed.push("lastPlea");
+        }
+        if ((player.wheelAt || 0) > t + slack) {
+            save.player.wheelAt = 0;
+            fixed.push("wheelAt");
+        }
+        if ((player.cursedUntil || 0) > t + 3600000 + slack) {
+            save.player.cursedUntil = t + 3600000;
+            fixed.push("cursedUntil");
+        }
+        if ((hell.limboSince || 0) > t + slack) {
+            save.hell.limboSince = t;
+            fixed.push("limboSince");
+        }
+        if (fixed.length)
+            console.warn("save.json: times in the future reset (" + fixed.join(", ") + ")");
+        return fixed;
+    }
+
     function circleN(id) {
         return order.indexOf(id) + 1;
     }
@@ -99,7 +133,49 @@ Singleton {
         if (ready)
             return;
         ready = true;
+        repairClock();
         HellLook.circle = inHell && circle ? circle : "base";
+        if (inHell && (hell.amnesty || limboOver()))
+            freeSoon.restart();
+    }
+    // the shell has just started: let it settle (her sprite, the wallpaper) before she goes
+    Timer {
+        id: freeSoon
+        interval: 6000
+        onTriggered: root.freeIfDue(true)
+    }
+    // someone who fell under the old rules (three lucky pleas, before the circles) is let
+    // out at the first start after the update; limbo ends once the player was away long
+    // enough — a start of the shell long after limbo began counts too (a reboot, the night:
+    // limboSince is in the save, the away timer in Angel is not)
+    function freeIfDue(atStart) {
+        if (!enabled || !inHell)
+            return false;
+        if (Angel.transition) {
+            if (atStart)
+                freeSoon.restart();
+            return false;
+        }
+        if (hell.amnesty) {
+            outcome("amnesty");
+            return true;
+        }
+        if (atStart && limboOver()) {
+            Angel.getOut("limbo");
+            return true;
+        }
+        return false;
+    }
+    // the clock jumps around sleep (and NTP syncs after it): check the saved times again
+    Connections {
+        target: Shell
+        function onResumed() {
+            if (root.ready)
+                root.repairClock();
+        }
+    }
+    function limboOver() {
+        return !!hell.limbo && (hell.limboSince || 0) > 0 && now() - hell.limboSince >= limboReturnMinutes * 60000;
     }
     // the first start with a save: what the player had before it is carried over
     FileView {
@@ -122,19 +198,33 @@ Singleton {
         try {
             n = JSON.parse(oldNovel.text() || "null");
         } catch (e) {}
+        migrateFrom(y, n);
+    }
+    // settings.json's old y2k section (and novel.json) → the save; the self-test feeds it
+    // a stuck player's broken counter directly
+    function migrateFrom(y, n) {
+        y = y && typeof y === "object" ? y : {};
         save.createdAt = Date.now();
-        for (const k of ["character", "demonSince", "lastPlea", "wheelAt", "cursedUntil", "cursedWas", "pranks", "nextPrank", "returns", "angelSaved"])
-            if (y[k] !== undefined && y[k] !== null)
-                save.player[k] = y[k];
+        // a broken old counter must not break the save: each value only of its own type
+        const numbers = ["demonSince", "lastPlea", "wheelAt", "cursedUntil", "nextPrank", "returns"];
+        for (const k of ["character", "cursedWas", "pranks", "angelSaved"].concat(numbers)) {
+            const v = y[k];
+            if (v === undefined || v === null)
+                continue;
+            if (numbers.includes(k) ? typeof v === "number" && isFinite(v) && v >= 0 : k === "pranks" ? Array.isArray(v) : k === "angelSaved" ? typeof v === "object" : typeof v === "string")
+                save.player[k] = v;
+        }
         if (n)
             save.novel = n;
-        // someone already in hell lands in a circle like any fall
+        // someone already in hell lands in a circle like any fall — and is let out at once:
+        // they fell under the old rules, whatever their plea counter says (issue #31)
         if (save.player.character === "demon") {
             const c = circleForFall();
             save.hell.circle = c;
             save.hell.path = [c];
             save.hell.fallCircles = [c];
             save.hell.falls = 1;
+            save.hell.amnesty = true;
         }
         writeSoon.restart();
     }
@@ -306,6 +396,7 @@ Singleton {
         save.hell.attempts = 0;
         save.hell.silences = 0;
         save.hell.limbo = false;
+        save.hell.amnesty = false;
         setCircle("");
         Novel.stopScene();
     }
@@ -339,15 +430,40 @@ Singleton {
 
     // ---- getting out ----
     readonly property double nextTry: (player.lastPlea || 0) + attemptMinutes * 60000
-    // a try to get out: the circle's trial (`free`: the wheel's plea, no waiting)
+    // the buttons: "Seek the way out · I · 7 min" — the wait is shown, not guessed (issue #31)
+    function tryLabel(base, circleWord) {
+        const left = Math.ceil((nextTry - now()) / 60000);
+        return base + " · " + (circleWord ? circleWord + " " : "") + Theme.roman(circleN(circle)) + (left > 0 && !hell.limbo ? " · " + I18n.t(left + " мин", left + " min") : "");
+    }
+    // a try to get out: the circle's trial (`free`: the wheel's plea, no waiting). A try
+    // is never swallowed without a word (issue #31): there is always a trial, a reply
+    // with the minutes left, or what is in the way
     function attempt(free) {
         if (!enabled || !inHell || Angel.transition)
             return "not in hell";
-        if (hell.limbo)
-            return Angel.say(I18n.t("…", "…")) || "limbo";
-        if (Novel.sceneBusy)
-            return "busy";
-        const t = Date.now();
+        repairClock();
+        if (freeIfDue(false))
+            return "out";
+        if (hell.limbo) {
+            // nobody in the corner to say it: a notification (a draft line)
+            Quickshell.execDetached(["notify-send", "-a", "angelOS", I18n.t("Лимб", "Limbo"), I18n.t("Здесь никого нет. Отойди от компьютера — заблокируй экран минут на " + limboReturnMinutes + ", и ангел тебя найдёт.", "Nobody is here. Step away from the computer — lock the screen for " + limboReturnMinutes + " minutes, and the angel will find you.")]);
+            return "limbo";
+        }
+        if (Novel.sceneBusy) {
+            // a scene the update renamed or removed (the drafts change): it can't go on
+            if (Novel.sceneStale()) {
+                console.warn("save.json: the game's scene " + Novel.sceneStatus() + " is gone; dropped");
+                Novel.stopScene();
+            } else {
+                // a trial (or the pact) already waits for an answer: bring it back up
+                if (!Novel.sceneShown())
+                    Novel.resumeScene();
+                if (!Novel.sceneShown())
+                    Angel.say(I18n.t("Сначала ответь на то, что уже спрошено.", "Answer what you've already been asked first."));
+                return "busy";
+            }
+        }
+        const t = now();
         if (!free && t < nextTry) {
             act("plea.early");
             const l = voiceLine("wait");
@@ -368,12 +484,13 @@ Singleton {
         return Novel.playScene("pact");
     }
     // an outcome: stars (the bottom passed, the angel comes) · pact (signed: out now, a mark
-    // stays) · limbo (neither here nor there until the angel finds you)
+    // stays) · limbo (neither here nor there until the angel finds you) · amnesty (fell
+    // under the old rules, before the circles: let out once, after the update)
     function outcome(kind) {
         save.hell.outcomes = (hell.outcomes || []).concat([{
                     "kind": kind,
                     "circle": circle,
-                    "at": Date.now()
+                    "at": now()
                 }]).slice(-50);
         if (kind === "pact")
             save.hell.pact = true;
@@ -381,7 +498,7 @@ Singleton {
             save.hell.pact = false;     // the honest way out washes the mark off
         if (kind === "limbo") {
             save.hell.limbo = true;
-            save.hell.limboSince = Date.now();
+            save.hell.limboSince = now();
             Angel.hush();
             if (circle !== "limbo")
                 CircleFx.run("limbo", () => root.setCircle("limbo"), null);
@@ -465,7 +582,7 @@ Singleton {
             "nextFall": circleForFall(),
             "sins": sins,
             "attempts": hell.attempts || 0,
-            "nextTry": inHell ? Math.max(0, Math.ceil((nextTry - Date.now()) / 60000)) + " min" : "",
+            "nextTry": inHell ? Math.max(0, Math.ceil((nextTry - now()) / 60000)) + " min" : "",
             "silences": hell.silences || 0,
             "falls": hell.falls || 0,
             "returns": player.returns || 0,

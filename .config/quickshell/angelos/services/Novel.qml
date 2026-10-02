@@ -566,6 +566,9 @@ Singleton {
     function started() {
         if (!stateLoaded)
             return;
+        // the game's scene was renamed or removed by an update: it can't go on
+        if (sceneStale())
+            stopScene();
         for (const th of ["game", "main", "side"]) {
             const w = waitsFor(th);
             // the box or a paper was up when the shell went down: show it again
@@ -746,6 +749,27 @@ Singleton {
         };
         state = s;
         save();
+    }
+    // the save points at a scene or node that isn't there any more (scenes are drafts and
+    // get renamed): nothing can run it, and it must not block the way out (issue #31)
+    function sceneStale() {
+        const g = state.game || {};
+        if (!g.node || !loaded)
+            return false;
+        const sc = scenes[g.scene];
+        return !sc || !sc.nodes || !sc.nodes[g.node];
+    }
+    // the game's box (or its paper) is on screen right now
+    function sceneShown() {
+        return (!!line && line.thread === "game") || (!!paper && paper.thread === "game");
+    }
+    // the player asked for the way out while a scene waits: show where it stopped
+    function resumeScene() {
+        const w = waitsFor("game");
+        if (!w || sceneShown())
+            return;
+        if (w === "line" || w === "note" || w === "show" || w === "click")
+            run("game");
     }
     function sceneStatus() {
         const g = state.game || {};

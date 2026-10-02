@@ -13,6 +13,7 @@ import qs.modules.bar
 import qs.modules.bar.parts
 import qs.widgets
 import "../../novel/NovelCore.js" as Core
+import "../../services/Intents.js" as Intents
 
 // angelOS UI self-test, started by scripts/test-ui.sh (ANGELOS_TEST=1, Qt's
 // offscreen platform, a throwaway HOME). Inside the real shell, so the type
@@ -35,6 +36,11 @@ import "../../novel/NovelCore.js" as Core
 //             data, each circle has its trial; a fall lands on the heaviest sin, a right
 //             answer goes a circle deeper, the pact gets out with its mark; the game turns
 //             off and on again
+//   game-exit the way out of hell with the game's clock moved instead of waited (issue #31):
+//             too early → the minutes left; ten minutes later → the trial; a time saved in
+//             the future, a scene that no longer exists, limbo across a restart, a player
+//             stuck under the old rules (a broken plea counter) — none blocks the way out;
+//             pleas are understood in any wording, with typos and the wrong layout
 //   rmb       a right click into the window's corner pixel does not crash Qt
 // Prints "TEST <name> PASS|FAIL [detail]" and "TEST-PAGE <id>" markers (the
 // script ties log errors to the page that caused them), "TEST DONE <n>" last.
@@ -1029,6 +1035,81 @@ Scope {
             report("game-off", off && Story.enabled, "off: no angel, demon or novel; on again");
             Story.reset();
             report("game-reset", Object.keys(Story.vars).length === 0 && !Story.hell.pact && (Story.hell.outcomes || []).length === 0, "the save starts over");
+            phase = "game-exit";
+            return;
+        }
+        if (phase === "game-exit") {
+            // in hell without the show; the clock is moved, never waited for
+            Story.player.character = "demon";
+            Story.fell("limbo");
+            Story.player.lastPlea = Story.now();
+            const early = Story.attempt(false);
+            Story.clockShift += 11 * 60000;
+            const later = Story.attempt(false);
+            const asked = Novel.sceneBusy;
+            const twice = Story.attempt(false);
+            Novel.stopScene();
+            report("exit-wait", early === "wait" && later === "trial" && asked && twice === "busy", "too early → " + early + ", 11 min later → " + later + ", again while it waits → " + twice);
+            // the clock went back: the last try is "in the future"
+            Story.player.lastPlea = Story.now() + 3 * 3600000;
+            const future = Story.attempt(false);
+            Novel.stopScene();
+            report("exit-future", future === "trial" && Story.player.lastPlea <= Story.now(), "a try saved 3 h ahead → " + future);
+            // the save points at a scene an update renamed
+            Story.clockShift += 11 * 60000;
+            Novel.state = Object.assign({}, Novel.state, {
+                "game": {
+                    "scene": "trial-renamed",
+                    "node": "ask",
+                    "wait": "show"
+                }
+            });
+            const stale = Story.attempt(false);
+            Novel.stopScene();
+            report("exit-stale", stale === "trial", "a scene that is gone → " + stale);
+            // any wording of "let me out", typos and the wrong keyboard layout too
+            const pleas = ["верни ангела", "как вернуться", "хочу в рай", "отпусти меня", "умоляю", "привет, верни ангела", "как отсюда выбраться", "вирни ангила", "dthyb fyutkf", "хочу домой", "let me out", "bring the angel back", "I want to go back to heaven", "please"];
+            const notPleas = ["расскажи шутку", "как сделать крупнее", "это верно", "поменяй обои"];
+            const missed = pleas.filter(s => !Intents.weak(s, "plea")).concat(notPleas.filter(s => Intents.weak(s, "plea")).map(s => "not: " + s));
+            Story.clockShift += 11 * 60000;
+            Angel.answer("привет, верни ангела");
+            const typed = Novel.sceneBusy;
+            Novel.stopScene();
+            report("exit-words", missed.length === 0 && typed, missed.length ? "misread: " + missed.join("; ") : pleas.length + " pleas and " + notPleas.length + " other questions read right; typed → the trial " + typed);
+            // limbo across a restart: the angel finds the player once enough time has passed
+            Story.outcome("limbo");
+            Story.hell.limboSince = Story.now() - 11 * 60000;
+            Story.freeIfDue(true);
+            started = Date.now();
+            phase = "exit-limbo";
+            return;
+        }
+        if (phase === "exit-limbo") {
+            if ((Story.inHell || Angel.transition) && Date.now() - started < 12000)
+                return;
+            report("exit-limbo", !Story.inHell && !Story.hell.limbo, "limbo of 11 min at a start → " + (Story.inHell ? "still in hell" : "out") + " in " + (Date.now() - started) + " ms");
+            // a player stuck under the old rules: settings.json's y2k with a broken counter
+            Story.reset();
+            Story.migrateFrom({
+                "character": "demon",
+                "pleas": "garbage",
+                "lastPlea": 99999999999999,
+                "returns": "x"
+            }, null);
+            Story.repairClock();
+            const stuck = Story.inHell && Story.hell.amnesty && Story.player.lastPlea === 0;
+            Story.freeIfDue(true);
+            started = Date.now();
+            phase = "exit-amnesty";
+            report("exit-migrate", stuck, "old save in hell: amnesty " + Story.hell.amnesty + ", last try " + Story.player.lastPlea);
+            return;
+        }
+        if (phase === "exit-amnesty") {
+            if ((Story.inHell || Angel.transition) && Date.now() - started < 14000)
+                return;
+            report("exit-amnesty", !Story.inHell && !Story.hell.amnesty && Story.player.returns === 1 && (Story.hell.outcomes || []).some(o => o.kind === "amnesty"), "let out in " + (Date.now() - started) + " ms, returns " + Story.player.returns);
+            Story.clockShift = 0;
+            Story.reset();
             phase = "rmb";
             return;
         }

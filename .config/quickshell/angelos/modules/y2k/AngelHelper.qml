@@ -351,7 +351,7 @@ Scope {
                                 compact: true
                                 accent: true
                                 icon: "heart"
-                                text: I18n.t("Искать выход", "Seek the way out") + " · " + Theme.roman(Story.circleN(Story.circle))
+                                text: Angel.now && Story.tryLabel(I18n.t("Искать выход", "Seek the way out"))
                                 onClicked: Angel.plea()
                             }
                             PxButton {
