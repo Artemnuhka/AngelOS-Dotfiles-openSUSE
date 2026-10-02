@@ -428,6 +428,38 @@ else
     if install_case bad "$bad"; then fail "installer rejects: $bad"; else pass "installer rejects: $bad"; fi
     rm -rf "${WORK:?}/bad"
   done
+
+  # Arch Linux and CachyOS only: anything else is refused before a file changes
+  printf 'NAME="Ubuntu"\nID=ubuntu\nID_LIKE=debian\nPRETTY_NAME="Ubuntu 26.04 LTS"\n' > "$WORK/os-ubuntu"
+  printf 'NAME="EndeavourOS"\nID=endeavouros\nID_LIKE=arch\nPRETTY_NAME="EndeavourOS"\n' > "$WORK/os-eos"
+  printf 'NAME="Arch Linux"\nID=arch\nPRETTY_NAME="Arch Linux"\n' > "$WORK/os-arch"
+  if ! install_case distro DOTFILES_OS_RELEASE="$WORK/os-ubuntu" && grep -q 'Only Arch Linux and CachyOS are supported' "$WORK/distro.log" &&
+     [[ -z "$(find "$WORK/distro" -mindepth 1 -print -quit)" ]]; then
+    pass "installer refuses Ubuntu, nothing written"
+  else
+    fail "installer refuses Ubuntu, nothing written"; sed 's/^/    /' "$WORK/distro.log" >&2
+  fi
+  rm -rf "${WORK:?}/distro"
+  if ! install_case distro DOTFILES_OS_RELEASE="$WORK/os-eos" && grep -q 'based on Arch, but only Arch Linux and CachyOS' "$WORK/distro.log"; then
+    pass "installer refuses an Arch-based distribution with its own repositories (EndeavourOS)"
+  else
+    fail "installer refuses EndeavourOS"; sed 's/^/    /' "$WORK/distro.log" >&2
+  fi
+  rm -rf "${WORK:?}/distro"
+  # forced past the check (then stopped by bad input, so the run stays short)
+  if ! install_case distro DOTFILES_OS_RELEASE="$WORK/os-ubuntu" DOTFILES_FORCE_DISTRO=1 KB_TOGGLE=nonsense &&
+     grep -q 'going on because DOTFILES_FORCE_DISTRO=1' "$WORK/distro.log" && ! grep -q 'Only Arch Linux' "$WORK/distro.log"; then
+    pass "installer: DOTFILES_FORCE_DISTRO=1 goes on with a warning"
+  else
+    fail "installer: DOTFILES_FORCE_DISTRO=1"; sed 's/^/    /' "$WORK/distro.log" >&2
+  fi
+  rm -rf "${WORK:?}/distro"
+  if install_case distro DOTFILES_OS_RELEASE="$WORK/os-arch" KB_TOGGLE=nonsense; grep -qE 'Only Arch|not supported' "$WORK/distro.log"; then
+    fail "installer accepts Arch Linux"
+  else
+    pass "installer accepts Arch Linux"
+  fi
+  rm -rf "${WORK:?}/distro"
 fi
 
 # ── Settings → Updates: update, failures, restore ────────────────────────────
