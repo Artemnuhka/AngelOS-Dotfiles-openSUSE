@@ -66,7 +66,7 @@ Item {
         property: "turn"
         from: 0
         to: 1
-        duration: 460
+        duration: Motion.ms(460)
         easing.type: Easing.InOutQuad
     }
 

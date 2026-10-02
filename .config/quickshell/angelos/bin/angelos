@@ -7,8 +7,9 @@
 #   angelos ws <n|up|down|prev> | alttab next|prev|cancel | lens in|out|close|toggle | start | restart | stop | run | status | log | report | switch angelos|noctalia
 #   angelOS is also a game played over your desktop (an angel, a demon, a story that follows
 #   your choices). Out of it at once, any time: `angelos game off` or Mod+Ctrl+Shift+Escape;
-#   back: `angelos game on`. `angelos game calm on`: no flashes, shaking or sudden loud sounds.
-#   angelos game status | reset (the save, ~/.config/angelos/save.json, starts over)
+#   back: `angelos game on`. `angelos game status | reset` (the save, ~/.config/angelos/save.json).
+#   angelos motion full|calm|off — how much moves: calm = no flashes, shaking or sudden loud
+#   sounds; off = no animations at all (the shell, niri, hell), an optimisation mode
 SHELL_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/angelos"
 CONF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/angelos"
 RUN_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/angelos"
@@ -79,7 +80,7 @@ stop_strays() {
 save_env() { python3 "$SHELL_DIR/scripts/session-env.py" "$1" "$RUN_DIR/session.env" 2>/dev/null; }
 
 case "$1" in
-  ""|help|-h|--help) sed -n '2,11p' "$0"; exec qs -c angelos ipc show ;;
+  ""|help|-h|--help) sed -n '2,12p' "$0"; exec qs -c angelos ipc show ;;
   run)
     shell_env
     # under the service, a watchdog for a shell that stops answering (see guard below)
@@ -207,6 +208,7 @@ case "$1" in
     if [ "${2:-}" = edit ]; then exec python3 "$SHELL_DIR/novel/editor/nov-editor.py"; fi
     shift
     exec qs -c angelos ipc call angelos novel "$*" ;;
+  motion) exec qs -c angelos ipc call angelos motion "${2:-status}" ;;
   game)
     # the game: off | on | calm on|off | status | reset (+ dev: circle, scene, sin, outcome, try)
     shift

@@ -853,11 +853,11 @@ Item {
             SequentialAnimation on opacity {
                 running: true
                 PauseAnimation {
-                    duration: 900
+                    duration: Motion.ms(900)
                 }
                 NumberAnimation {
                     to: 0
-                    duration: 900
+                    duration: Motion.ms(900)
                 }
                 ScriptAction {
                     script: flash.destroy()

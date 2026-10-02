@@ -155,7 +155,7 @@ Item {
                 scale: slot.sel || slot.open ? 1.15 : 1
                 Behavior on scale {
                     NumberAnimation {
-                        duration: 90
+                        duration: Motion.ms(90)
                     }
                 }
                 color: slot.sel || slot.open ? Theme.hellFaceAlt : look.pit

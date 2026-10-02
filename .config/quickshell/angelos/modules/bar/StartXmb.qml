@@ -194,7 +194,7 @@ Item {
         property color wave: Qt.rgba(1, 1, 1, 0.85)
         fragmentShader: Qt.resolvedUrl("../../shaders/xmb_wave.frag.qsb")
         FrameAnimation {
-            running: root.visible && root.reveal > 0
+            running: root.visible && root.reveal > 0 && !Motion.still
             onTriggered: wave.time += frameTime
         }
     }
@@ -268,7 +268,7 @@ Item {
             opacity: root.reveal * (sel ? 1 : Math.max(0.25, 0.8 - Math.abs(index - root.cat) * 0.12))
             Behavior on x {
                 NumberAnimation {
-                    duration: 180
+                    duration: Motion.ms(180)
                     easing.type: Easing.OutCubic
                 }
             }
@@ -282,7 +282,7 @@ Item {
                 light: "#ffffff"
                 Behavior on pixel {
                     NumberAnimation {
-                        duration: 120
+                        duration: Motion.ms(120)
                     }
                 }
             }
@@ -324,7 +324,7 @@ Item {
             opacity: root.reveal * (sel ? 1 : off < 0 ? 0.35 : Math.max(0.3, 0.85 - off * 0.08))
             Behavior on y {
                 NumberAnimation {
-                    duration: 150
+                    duration: Motion.ms(150)
                     easing.type: Easing.OutCubic
                 }
             }

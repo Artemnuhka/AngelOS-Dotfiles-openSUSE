@@ -217,7 +217,7 @@ PanelWindow {
                     color: sel ? Theme.select : m.containsMouse ? Theme.mix(Theme.face, Theme.accent, 0.12) : "transparent"
                     Behavior on height {
                         NumberAnimation {
-                            duration: Theme.fast
+                            duration: Motion.ms(Theme.fast)
                             easing.type: Easing.OutCubic
                         }
                     }

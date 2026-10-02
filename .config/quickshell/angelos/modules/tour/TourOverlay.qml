@@ -51,16 +51,17 @@ PanelWindow {
     readonly property real radius: Math.max(Theme.u * 14, Math.sqrt(hole.width * hole.width + hole.height * hole.height) / 2 + Theme.u * 6)
     property real pulse: 0
     SequentialAnimation on pulse {
-        running: win.visible
+        running: win.visible && !Motion.still
+        alwaysRunToEnd: true
         loops: Animation.Infinite
         NumberAnimation {
             to: 1
-            duration: 900
+            duration: Motion.ms(900)
             easing.type: Easing.InOutSine
         }
         NumberAnimation {
             to: 0
-            duration: 900
+            duration: Motion.ms(900)
             easing.type: Easing.InOutSine
         }
     }
@@ -134,13 +135,13 @@ PanelWindow {
         y: win.step && win.step.key === "end" ? (win.height - height) / 2 : (win.cy > win.height / 2 ? win.cy - win.radius - height - Theme.u * 10 : win.cy + win.radius + Theme.u * 10)
         Behavior on x {
             NumberAnimation {
-                duration: Theme.normal
+                duration: Motion.ms(Theme.normal)
                 easing.type: Easing.OutCubic
             }
         }
         Behavior on y {
             NumberAnimation {
-                duration: Theme.normal
+                duration: Motion.ms(Theme.normal)
                 easing.type: Easing.OutCubic
             }
         }

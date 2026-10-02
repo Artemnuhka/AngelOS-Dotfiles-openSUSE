@@ -85,23 +85,26 @@ Item {
         onTextEdited: root.edited()
 
         cursorDelegate: Rectangle {
+            id: caret
             width: Theme.u * 2
             color: Theme.accent
             visible: input.activeFocus
+            onVisibleChanged: opacity = 1
             SequentialAnimation on opacity {
                 loops: Animation.Infinite
-                running: input.activeFocus
+                running: input.activeFocus && !Motion.still
+                onStopped: caret.opacity = 1
                 PropertyAction {
                     value: 1
                 }
                 PauseAnimation {
-                    duration: 480
+                    duration: Motion.ms(480)
                 }
                 PropertyAction {
                     value: 0
                 }
                 PauseAnimation {
-                    duration: 480
+                    duration: Motion.ms(480)
                 }
             }
         }

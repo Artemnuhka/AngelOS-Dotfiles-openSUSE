@@ -85,18 +85,19 @@ Item {
                     color: "#ffffff"
                     SequentialAnimation on opacity {
                         loops: Animation.Infinite
-                        running: root.visible
+                        running: root.visible && !Motion.still
+                        alwaysRunToEnd: true
                         PropertyAction {
                             value: 1
                         }
                         PauseAnimation {
-                            duration: 600
+                            duration: Motion.ms(600)
                         }
                         PropertyAction {
                             value: 0.2
                         }
                         PauseAnimation {
-                            duration: 600
+                            duration: Motion.ms(600)
                         }
                     }
                 }

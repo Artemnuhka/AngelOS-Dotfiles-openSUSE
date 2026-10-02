@@ -150,7 +150,7 @@ PopupWindow {
         property: "reveal"
         from: 0
         to: 1
-        duration: root.look === "pentagram" ? 420 : 230
+        duration: Motion.ms(root.look === "pentagram" ? 420 : 230)
         easing.type: root.look === "pentagram" ? Easing.OutCubic : Easing.OutBack
     }
     Timer {

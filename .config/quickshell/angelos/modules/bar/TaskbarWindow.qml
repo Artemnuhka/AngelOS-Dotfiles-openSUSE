@@ -43,7 +43,7 @@ PanelWindow {
     property real tucked: autoHide && !up ? 1 : 0
     Behavior on tucked {
         NumberAnimation {
-            duration: win.tucked < 0.5 ? 160 : 260
+            duration: Motion.ms(win.tucked < 0.5 ? 160 : 260)
             easing.type: Easing.OutCubic
         }
     }

@@ -27,7 +27,7 @@ Variants {
         property real grow: CursorShake.shaking ? CursorShake.zoom : 1
         Behavior on grow {
             NumberAnimation {
-                duration: CursorShake.shaking ? 170 : 240
+                duration: Motion.ms(CursorShake.shaking ? 170 : 240)
                 easing.type: CursorShake.shaking ? Easing.OutBack : Easing.InOutQuad
             }
         }

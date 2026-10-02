@@ -50,7 +50,7 @@ Scope {
     // the shader's clock, stepped in its own way (10 fps inside)
     property real clock: 0
     Timer {
-        running: root.wanted && root.kind !== "glass"
+        running: root.wanted && root.kind !== "glass" && !Motion.still
         interval: 100
         repeat: true
         onTriggered: root.clock = (root.clock + 0.1) % 1000
@@ -203,7 +203,7 @@ Scope {
             property real veil: 0.1 + 0.9 * away
             Behavior on veil {
                 NumberAnimation {
-                    duration: 110
+                    duration: Motion.ms(110)
                 }
             }
 

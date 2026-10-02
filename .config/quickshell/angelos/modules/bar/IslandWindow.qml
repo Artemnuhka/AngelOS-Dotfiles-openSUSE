@@ -49,7 +49,7 @@ PanelWindow {
         shadow: Config.appearance.shadows && !win.hell
         Behavior on width {
             NumberAnimation {
-                duration: Theme.normal
+                duration: Motion.ms(Theme.normal)
                 easing.type: Easing.OutCubic
             }
         }

@@ -182,6 +182,35 @@ PxPage {
     }
 
     PxGroup {
+        title: I18n.t("Движение", "Motion")
+        icon: "sparkle"
+        width: parent.width
+
+        SettingRow {
+            label: I18n.t("Анимации", "Animations")
+            hint: Motion.level === "off" ? I18n.t("всё стоит: анимации оболочки, niri и Ада выключены, рай ⇄ ад меняются сразу; ангел и демоница только тихо дышат. Режим оптимизации", "Everything stands still: the shell's, niri's and hell's animations are off, heaven ⇄ hell switch at once; the angel and the demon only breathe quietly. The optimisation mode") : Motion.level === "calm" ? I18n.t("без вспышек, тряски экрана и резких звуков: лучи ангела и тряска не появляются, переходы между кругами медленнее и тише, буквы реплик не дрожат", "No flashes, screen shaking or sudden loud sounds: no angel rays or shaking, hell's transitions are slower and quieter, the letters of her lines don't tremble") : I18n.t("всё как задумано; отдельные анимации — в своих разделах", "Everything as designed; single animations live in their own sections")
+            PxSegmented {
+                model: [
+                    {
+                        "label": I18n.t("Полное", "Full"),
+                        "value": "full"
+                    },
+                    {
+                        "label": I18n.t("Спокойное", "Calm"),
+                        "value": "calm"
+                    },
+                    {
+                        "label": I18n.t("Выключено", "Off"),
+                        "value": "off"
+                    }
+                ]
+                currentValue: Motion.level
+                onActivated: v => Motion.set(v)
+            }
+        }
+    }
+
+    PxGroup {
         title: I18n.t("Подписи окон", "Window titles")
         icon: "monitor"
         width: parent.width

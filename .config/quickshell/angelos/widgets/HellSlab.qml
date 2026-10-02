@@ -27,7 +27,7 @@ ShaderEffect {
     Timer {
         interval: 166
         repeat: true
-        running: root.live && root.visible && root.look !== "tomb" && root.look !== "blood"
+        running: root.live && root.visible && root.look !== "tomb" && root.look !== "blood" && !Motion.still
         onTriggered: root.time += 0.166
     }
 }

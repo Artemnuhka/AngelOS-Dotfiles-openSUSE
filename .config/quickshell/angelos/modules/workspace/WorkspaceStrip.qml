@@ -67,7 +67,7 @@ PanelWindow {
         Behavior on x {
             NumberAnimation {
                 id: slide
-                duration: Theme.normal
+                duration: Motion.ms(Theme.normal)
                 easing.type: Easing.OutBack
             }
         }

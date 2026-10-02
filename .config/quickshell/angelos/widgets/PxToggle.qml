@@ -47,7 +47,7 @@ Item {
             color: root.checked ? Theme.accent : Theme.face
             Behavior on x {
                 NumberAnimation {
-                    duration: Theme.fast
+                    duration: Motion.ms(Theme.fast)
                     easing.type: Easing.OutBack
                 }
             }

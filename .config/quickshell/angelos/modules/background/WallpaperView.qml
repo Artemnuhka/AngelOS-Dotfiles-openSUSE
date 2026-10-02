@@ -46,7 +46,7 @@ Item {
 
     function go(path) {
         styleIndex = Qt.binding(() => Wallpapers.transitionIndex(Config.wallpaper.transition));
-        const animate = configChanged && styleIndex >= 0 && Niri.ready && shown !== "";
+        const animate = configChanged && styleIndex >= 0 && Niri.ready && shown !== "" && !Motion.still;
         configChanged = false;
         anim.stop();
         if (!animate) {
@@ -82,7 +82,7 @@ Item {
         property: "progress"
         from: 0
         to: 1
-        duration: Config.wallpaper.duration
+        duration: Motion.ms(Config.wallpaper.duration)
         easing.type: Easing.Linear
     }
 

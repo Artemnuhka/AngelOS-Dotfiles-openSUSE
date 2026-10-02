@@ -91,12 +91,12 @@ Item {
             rotation: root.hot ? -3 : 0
             Behavior on scale {
                 NumberAnimation {
-                    duration: 90
+                    duration: Motion.ms(90)
                 }
             }
             Behavior on rotation {
                 NumberAnimation {
-                    duration: 90
+                    duration: Motion.ms(90)
                 }
             }
             PxIcon {

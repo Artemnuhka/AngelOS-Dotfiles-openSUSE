@@ -110,24 +110,25 @@ Item {
                     scale: cell.lit ? 1.0 : 0.8
                     Behavior on scale {
                         NumberAnimation {
-                            duration: Theme.fast
+                            duration: Motion.ms(Theme.fast)
                             easing.type: Easing.OutBack
                         }
                     }
                     SequentialAnimation on opacity {
-                        running: cell.modelData.is_urgent
+                        running: cell.modelData.is_urgent && !Motion.still
+                        alwaysRunToEnd: true
                         loops: Animation.Infinite
                         PropertyAction {
                             value: 1
                         }
                         PauseAnimation {
-                            duration: 300
+                            duration: Motion.ms(300)
                         }
                         PropertyAction {
                             value: 0.3
                         }
                         PauseAnimation {
-                            duration: 300
+                            duration: Motion.ms(300)
                         }
                     }
                 }
@@ -223,7 +224,7 @@ Item {
                 target: root
                 property: "slot"
                 to: root.badgeWidth + Theme.u * 6
-                duration: 120
+                duration: Motion.ms(120)
                 easing.type: Easing.OutCubic
             }
             NumberAnimation {
@@ -231,24 +232,24 @@ Item {
                 property: "opacity"
                 from: 0
                 to: 1
-                duration: 120
+                duration: Motion.ms(120)
             }
         }
         PauseAnimation {
-            duration: Math.max(250, Config.workspaces.popupMs)
+            duration: Motion.ms(Math.max(250, Config.workspaces.popupMs))
         }
         ParallelAnimation {
             NumberAnimation {
                 target: badge
                 property: "opacity"
                 to: 0
-                duration: 140
+                duration: Motion.ms(140)
             }
             NumberAnimation {
                 target: root
                 property: "slot"
                 to: 0
-                duration: 180
+                duration: Motion.ms(180)
                 easing.type: Easing.InCubic
             }
         }

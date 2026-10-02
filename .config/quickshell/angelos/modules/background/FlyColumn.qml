@@ -42,7 +42,7 @@ Item {
             NumberAnimation on shown {
                 from: 0
                 to: 1
-                duration: Config.desktop.menuAnim !== false ? 120 + pill.index * 20 : 1
+                duration: Motion.ms(Config.desktop.menuAnim !== false ? 120 + pill.index * 20 : 1)
             }
             opacity: shown
             Rectangle {

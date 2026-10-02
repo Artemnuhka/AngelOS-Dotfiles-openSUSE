@@ -154,7 +154,7 @@ Item {
                     opacity: t.item && t.item.enabled === false ? 0.5 : 1
                     Behavior on scale {
                         NumberAnimation {
-                            duration: 80
+                            duration: Motion.ms(80)
                         }
                     }
                     Column {

@@ -54,7 +54,7 @@ Item {
     opacity: LyricsGlow.opacity
     Behavior on opacity {
         NumberAnimation {
-            duration: 260
+            duration: Motion.ms(260)
             easing.type: Easing.OutCubic
         }
     }
@@ -132,7 +132,7 @@ Item {
             property: "burnIn"
             from: 0
             to: 1
-            duration: 640
+            duration: Motion.ms(640)
             easing.type: Easing.OutQuad
         }
         NumberAnimation {
@@ -140,14 +140,14 @@ Item {
             property: "burnOut"
             from: 0
             to: 1
-            duration: 760
+            duration: Motion.ms(760)
         }
         NumberAnimation {
             target: old
             property: "anchors.verticalCenterOffset"
             from: 0
             to: -Theme.u * 5
-            duration: 760
+            duration: Motion.ms(760)
             easing.type: Easing.OutQuad
         }
         NumberAnimation {
@@ -155,14 +155,14 @@ Item {
             property: "opacity"
             from: 1
             to: 1
-            duration: 760
+            duration: Motion.ms(760)
         }
         NumberAnimation {
             target: cur
             property: "anchors.verticalCenterOffset"
             from: Theme.u * 3
             to: 0
-            duration: 520
+            duration: Motion.ms(520)
             easing.type: Easing.OutQuad
         }
     }
@@ -251,7 +251,7 @@ Item {
     SequentialAnimation {
         id: glide
         PauseAnimation {
-            duration: 700
+            duration: Motion.ms(700)
         }
         NumberAnimation {
             id: glideMove
@@ -270,7 +270,7 @@ Item {
         x: Math.max(0, Math.round((root.width - root.chrome - Math.min(root.fullW, root.width - root.chrome)) / 2))
         Behavior on x {
             NumberAnimation {
-                duration: 160
+                duration: Motion.ms(160)
                 easing.type: Easing.OutCubic
             }
         }
@@ -363,7 +363,7 @@ Item {
                 property: "anchors.verticalCenterOffset"
                 from: 0
                 to: -Theme.u * 8
-                duration: 220
+                duration: Motion.ms(220)
                 easing.type: Easing.InQuad
             }
             NumberAnimation {
@@ -371,14 +371,14 @@ Item {
                 property: "opacity"
                 from: 0.8
                 to: 0
-                duration: 220
+                duration: Motion.ms(220)
             }
             NumberAnimation {
                 target: cur
                 property: "anchors.verticalCenterOffset"
                 from: Theme.u * 6
                 to: 0
-                duration: 180
+                duration: Motion.ms(180)
                 easing.type: Easing.OutBack
             }
         }

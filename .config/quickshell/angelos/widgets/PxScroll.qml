@@ -53,7 +53,7 @@ Item {
         id: glide
         target: flick
         property: "contentY"
-        duration: 110
+        duration: Motion.ms(110)
         easing.type: Easing.OutCubic
     }
 

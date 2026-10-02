@@ -31,13 +31,13 @@ PxWindow {
     }
     Behavior on scale {
         NumberAnimation {
-            duration: Theme.normal
+            duration: Motion.ms(Theme.normal)
             easing.type: Easing.OutBack
         }
     }
     Behavior on opacity {
         NumberAnimation {
-            duration: Theme.fast
+            duration: Motion.ms(Theme.fast)
         }
     }
 

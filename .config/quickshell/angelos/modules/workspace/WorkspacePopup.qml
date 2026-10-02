@@ -137,7 +137,7 @@ PanelWindow {
                 value: 0.6
             }
             PauseAnimation {
-                duration: 35
+                duration: Motion.ms(35)
             }
             PropertyAction {
                 target: frame
@@ -145,7 +145,7 @@ PanelWindow {
                 value: 0.85
             }
             PauseAnimation {
-                duration: 35
+                duration: Motion.ms(35)
             }
             PropertyAction {
                 target: frame
@@ -153,7 +153,7 @@ PanelWindow {
                 value: 1.08
             }
             PauseAnimation {
-                duration: 50
+                duration: Motion.ms(50)
             }
             PropertyAction {
                 target: frame
@@ -169,7 +169,7 @@ PanelWindow {
                 value: 0.9
             }
             PauseAnimation {
-                duration: 40
+                duration: Motion.ms(40)
             }
             PropertyAction {
                 target: frame
@@ -182,7 +182,7 @@ PanelWindow {
                 value: 0.7
             }
             PauseAnimation {
-                duration: 40
+                duration: Motion.ms(40)
             }
             PropertyAction {
                 target: frame
@@ -195,7 +195,7 @@ PanelWindow {
                 value: 0.5
             }
             PauseAnimation {
-                duration: 40
+                duration: Motion.ms(40)
             }
             ScriptAction {
                 script: win.shown = false

@@ -23,7 +23,7 @@ ShaderEffect {
     Timer {
         interval: 140
         repeat: true
-        running: root.live && root.visible
+        running: root.live && root.visible && !Motion.still
         onTriggered: root.time += 0.14
     }
 }

@@ -36,12 +36,18 @@ PxPage {
         title: I18n.t("Игра", "The game")
         icon: "heart"
         width: parent.width
+        // the calm mode is one of the three motion levels now (config/Motion, C4): one place
         SettingRow {
             label: I18n.t("Спокойный режим", "Calm mode")
-            hint: I18n.t("без вспышек, тряски экрана и резких звуков: лучи ангела и тряска не появляются, переходы между кругами ада медленнее и тише, буквы её реплик не дрожат", "No flashes, screen shaking or sudden loud sounds: no angel rays or shaking, hell's transitions are slower and quieter, her letters don't tremble")
-            PxToggle {
-                checked: Config.game.calm
-                onToggled: c => Config.game.calm = c
+            hint: I18n.t("теперь в «Внешний вид → Движение»: полное, спокойное (без вспышек, тряски и резких звуков) или выключено. Сейчас: ", "Now in Appearance → Motion: full, calm (no flashes, shaking or sudden loud sounds) or off. Now: ") + ({
+                    "full": I18n.t("полное", "full"),
+                    "calm": I18n.t("спокойное", "calm"),
+                    "off": I18n.t("выключено", "off")
+                })[Motion.level]
+            PxButton {
+                icon: "sparkle"
+                text: I18n.t("Открыть", "Open")
+                onClicked: Shell.openSettings("appearance")
             }
         }
         SettingRow {

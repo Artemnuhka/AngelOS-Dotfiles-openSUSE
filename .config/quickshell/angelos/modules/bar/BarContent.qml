@@ -223,7 +223,7 @@ Item {
             // the Windows 11 slide when the alignment changes or a window button comes and goes
             Behavior on x {
                 NumberAnimation {
-                    duration: 320
+                    duration: Motion.ms(320)
                     easing.type: Easing.OutCubic
                 }
             }

@@ -170,7 +170,7 @@ PxBox {
                 scale: tm.pressed ? 0.88 : 1
                 Behavior on scale {
                     NumberAnimation {
-                        duration: 90
+                        duration: Motion.ms(90)
                     }
                 }
             }

@@ -484,7 +484,7 @@ Singleton {
         const t = Date.now();
         const quick = lastSwitchAt > 0 && t - lastSwitchAt < Story.quickSwitchMs;
         lastSwitchAt = t;
-        if (quick)
+        if (quick || Motion.still)
             return swapAtOnce(kind);
         holdWidgets = true;
         transition = kind;
@@ -911,7 +911,7 @@ Singleton {
             to += 360;
         _wheelFrom = wheelAngle;
         _wheelTo = to;
-        _wheelStart = Date.now();
+        _wheelStart = Date.now() - (Motion.still ? wheelMs : 0);
         _wheelLast = wheelUnder(wheelAngle);
         wheelSpinning = true;
         wheelClock.start();

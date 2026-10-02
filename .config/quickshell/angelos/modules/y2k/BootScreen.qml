@@ -20,7 +20,7 @@ Scope {
     readonly property int step: Math.floor(p * 36)   // stepped, like the old installers
 
     function maybeStart() {
-        if (firstStart && Config.ready && Config.y2k.boot && !Shell.dev)
+        if (firstStart && Config.ready && Config.y2k.boot && !Shell.dev && !Motion.still)
             Shell.bootOpen = true;
     }
     function finish() {
@@ -58,7 +58,7 @@ Scope {
         property: "p"
         from: 0
         to: 1
-        duration: 3400
+        duration: Motion.ms(3400)
         onFinished: root.finish()
     }
 

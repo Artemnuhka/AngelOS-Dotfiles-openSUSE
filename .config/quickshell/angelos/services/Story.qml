@@ -29,14 +29,15 @@ import "../novel/NovelCore.js" as Core
 //               come up (modules/y2k/CircleTransition); hell's look follows HellLook.circle.
 //
 // Off (`angelos game off`, Mod+Ctrl+Shift+Escape, Settings): no angel, demon, novel or hell —
-// plain dotfiles, at once. Calm (Config.game.calm): no flashes, shaking or sudden loud sounds.
+// plain dotfiles, at once. Calm (Motion.calm — Settings → Appearance → Motion): no flashes,
+// shaking or sudden loud sounds; Motion "off": no animations, heaven ⇄ hell at once.
 // Nothing here reads the player's files, windows' contents or browser: the story knows only
 // what the shell knows anyway (the name, the time, the uptime, the music playing).
 Singleton {
     id: root
 
     readonly property bool enabled: Config.game.enabled !== false
-    readonly property bool calm: !!Config.game.calm
+    readonly property bool calm: Motion.calm
     readonly property string file: Config.dir + "/save.json"
     property bool ready: false
     property alias player: save.player

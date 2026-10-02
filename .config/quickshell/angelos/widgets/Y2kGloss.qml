@@ -99,20 +99,21 @@ Item {
             opacity: 0
             SequentialAnimation on opacity {
                 loops: Animation.Infinite
-                running: root.visible
+                running: root.visible && !Motion.still
+                alwaysRunToEnd: true
                 PauseAnimation {
-                    duration: 400 + tw.index * 700
+                    duration: Motion.ms(400 + tw.index * 700)
                 }
                 NumberAnimation {
                     to: 1
-                    duration: 260
+                    duration: Motion.ms(260)
                 }
                 NumberAnimation {
                     to: 0
-                    duration: 420
+                    duration: Motion.ms(420)
                 }
                 PauseAnimation {
-                    duration: 1400
+                    duration: Motion.ms(1400)
                 }
             }
         }

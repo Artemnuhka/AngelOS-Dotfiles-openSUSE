@@ -54,6 +54,10 @@ FloatingWindow {
             "page": "pages/AppearancePage.qml"
         },
         {
+            "label": I18n.t("Движение", "Motion"),
+            "kind": "motion"
+        },
+        {
             "label": I18n.t("Шрифты", "Fonts"),
             "kind": "fonts"
         },
@@ -158,6 +162,7 @@ FloatingWindow {
                     "finish": finish,
                     "bar": barStep,
                     "fonts": fontsStep,
+                    "motion": motionStep,
                     "desktop": desktopStep
                 })[root.cur.kind] || settingsStep
         }
@@ -189,6 +194,46 @@ FloatingWindow {
             }
         }
     }
+    // C4: how much moves — full, calm, or nothing (an optimisation mode)
+    Component {
+        id: motionStep
+        PxPage {
+            pageId: "setup"
+            heading: I18n.t("Движение", "Motion")
+            subtitle: I18n.t("Сколько всего движется на экране. Можно поменять в любой момент: Внешний вид → Движение или angelos motion.", "How much moves on screen. Change it any time: Appearance → Motion, or angelos motion.")
+            Repeater {
+                model: [
+                    {
+                        "value": "full",
+                        "label": I18n.t("Полное", "Full"),
+                        "hint": I18n.t("всё как задумано: переходы, эффекты, ад во всей красе", "Everything as designed: transitions, effects, hell in all its glory")
+                    },
+                    {
+                        "value": "calm",
+                        "label": I18n.t("Спокойное", "Calm"),
+                        "hint": I18n.t("без вспышек, тряски экрана и резких звуков", "No flashes, screen shaking or sudden loud sounds")
+                    },
+                    {
+                        "value": "off",
+                        "label": I18n.t("Выключено", "Off"),
+                        "hint": I18n.t("никаких анимаций — ни оболочки, ни niri, ни Ада; для слабых машин и тех, кого укачивает", "No animations at all — not the shell's, niri's or hell's; for slow machines and anyone motion makes queasy")
+                    }
+                ]
+                SettingRow {
+                    id: levelRow
+                    required property var modelData
+                    label: modelData.label
+                    hint: modelData.hint
+                    PxButton {
+                        accent: Motion.level === levelRow.modelData.value
+                        icon: Motion.level === levelRow.modelData.value ? "heart" : "sparkle"
+                        text: Motion.level === levelRow.modelData.value ? I18n.t("Выбрано", "Chosen") : I18n.t("Выбрать", "Choose")
+                        onClicked: Motion.set(levelRow.modelData.value)
+                    }
+                }
+            }
+        }
+    }
     Component {
         id: settingsStep
         Loader {
@@ -198,6 +243,7 @@ FloatingWindow {
     Component {
         id: welcome
         PxPage {
+            pageId: "setup"
             heading: I18n.t("Твой angelOS", "Your angelOS")
             subtitle: I18n.t("Настрой оболочку под себя. Основная тема останется доступной, а мастер можно снова открыть в настройках внешнего вида.", "Make the shell your own. The original theme stays available, and you can reopen this wizard in Appearance settings.")
             AngelLogo {
@@ -289,6 +335,7 @@ FloatingWindow {
     Component {
         id: settingsLook
         PxPage {
+            pageId: "setup"
             id: lookPage
             heading: I18n.t("Как разложить настройки?", "How should Settings be laid out?")
             subtitle: I18n.t("Страницы везде одни и те же. Сменить можно когда угодно: Внешний вид → Вид настроек.", "The pages are the same in every view. Change it any time: Appearance → Settings look.")
@@ -361,6 +408,7 @@ FloatingWindow {
     Component {
         id: shortcuts
         PxPage {
+            pageId: "setup"
             heading: I18n.t("Основные хоткеи", "Essential shortcuts")
             subtitle: I18n.t("Mod — клавиша Super / Windows. Полный список для текущего конфига: Mod+Shift+Escape.", "Mod is the Super / Windows key. Show your configuration's shortcut list with Mod+Shift+Escape.")
             Repeater {
@@ -378,6 +426,7 @@ FloatingWindow {
     Component {
         id: finish
         PxPage {
+            pageId: "setup"
             heading: I18n.t("Всё готово ♡", "You're ready ♡")
             PxCheck {
                 text: I18n.t("Показать подсказки по интерфейсу после мастера", "Show interface tips after the wizard")
@@ -402,6 +451,7 @@ FloatingWindow {
     Component {
         id: fontsStep
         PxPage {
+            pageId: "setup"
             heading: I18n.t("Пиксельные шрифты", "Pixel fonts")
             subtitle: I18n.t("Выбери набор шрифтов. Недостающие скачаются с GitHub / Google Fonts (с проверкой SHA-256). Потом можно поменять в Настройки → Шрифты.", "Pick a font set. Missing fonts are downloaded from GitHub / Google Fonts and verified by SHA-256. Change it later in Settings → Fonts.")
             Component.onCompleted: Fonts.refresh()
@@ -473,6 +523,7 @@ FloatingWindow {
     Component {
         id: barStep
         PxPage {
+            pageId: "setup"
             heading: I18n.t("Панель", "The bar")
             subtitle: I18n.t("Как выглядит панель. Раскладку элементов потом можно перетаскивать в Настройки → Панель.", "How the bar looks. Rearrange its items later in Settings → Bar.")
             PxGroup {
@@ -626,6 +677,7 @@ FloatingWindow {
     Component {
         id: desktopStep
         PxPage {
+            pageId: "setup"
             heading: I18n.t("Рабочий стол", "Desktop")
             subtitle: I18n.t("Виджеты на обоях — таскаются за заголовок, добавляются и убираются через ПКМ → Вид.", "Widgets on the wallpaper — drag them by the title, add or remove via right-click → View.")
             PxGroup {

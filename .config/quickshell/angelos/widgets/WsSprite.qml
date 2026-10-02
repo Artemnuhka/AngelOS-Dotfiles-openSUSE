@@ -66,7 +66,7 @@ PxIcon {
             value: 1
         }
         PauseAnimation {
-            duration: 90
+            duration: Motion.ms(90)
         }
         PropertyAction {
             target: root
@@ -74,7 +74,7 @@ PxIcon {
             value: 0
         }
         PauseAnimation {
-            duration: 90
+            duration: Motion.ms(90)
         }
         PropertyAction {
             target: root
@@ -82,7 +82,7 @@ PxIcon {
             value: 1
         }
         PauseAnimation {
-            duration: 90
+            duration: Motion.ms(90)
         }
         PropertyAction {
             target: root

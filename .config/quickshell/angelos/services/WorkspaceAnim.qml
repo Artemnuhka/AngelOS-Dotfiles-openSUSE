@@ -187,9 +187,10 @@ Singleton {
         const same = /^[0-9]+$/.test(target) ? parseInt(target) === idx : target === "up" ? idx <= (list[0] ? list[0].idx : 1) : target === "down" ? idx >= (list.length ? list[list.length - 1].idx : 1) : false;
         // leaving a fullscreen game or video: switch plainly, no grab of the game
         const plain = !screen || same || Idle.active || Shell.locked || MetaTap.coversOutput(Niri.focusedWindow);
-        if (!captured) {
-            // niri slides: the desktop widgets' pictures go up before it moves
-            if (plain || current.id === "instant" || Shell.fullscreenOn(out))
+        if (!captured || Motion.still) {
+            // niri slides: the desktop widgets' pictures go up before it moves (motion off:
+            // niri's animations are off too, it just switches)
+            if (plain || current.id === "instant" || Shell.fullscreenOn(out) || Motion.still)
                 niriAct(target);
             else
                 DesktopWidgets.prepareSwitch(out, () => root.niriAct(target));

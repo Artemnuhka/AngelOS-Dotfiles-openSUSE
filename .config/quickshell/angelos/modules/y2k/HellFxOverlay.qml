@@ -60,11 +60,11 @@ Scope {
     Connections {
         target: HellFx
         function onFireworks(screen, x, y, fromTop) {
-            if (root.allowed(screen))
+            if (root.allowed(screen) && !Motion.still)
                 root.salute(screen, x, y, fromTop);
         }
         function onCerberus(screen) {
-            if (root.allowed(screen) && !Shell.fullscreenOn(screen))
+            if (root.allowed(screen) && !Shell.fullscreenOn(screen) && !Motion.still)
                 root.run(screen);
         }
     }

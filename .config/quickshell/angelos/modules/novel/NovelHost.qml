@@ -85,7 +85,7 @@ Scope {
                 Component.onCompleted: opacity = 1
                 Behavior on opacity {
                     NumberAnimation {
-                        duration: 160
+                        duration: Motion.ms(160)
                     }
                 }
 
@@ -207,7 +207,7 @@ Scope {
                 running: deskNote.fromHer
                 from: 0
                 to: 1
-                duration: 900
+                duration: Motion.ms(900)
                 easing.type: Easing.OutBounce
             }
             property int tick: 0
@@ -283,7 +283,7 @@ Scope {
             Component.onCompleted: open = 1
             Behavior on open {
                 NumberAnimation {
-                    duration: 380
+                    duration: Motion.ms(380)
                     easing.type: Easing.OutBack
                 }
             }

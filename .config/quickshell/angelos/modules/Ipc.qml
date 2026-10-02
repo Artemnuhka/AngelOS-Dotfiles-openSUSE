@@ -95,8 +95,9 @@ IpcHandler {
         case "on":
             return Story.setEnabled(true);
         case "calm":
-            Config.game.calm = a[1] !== "off";
-            return "calm " + (Config.game.calm ? "on" : "off");
+            // older: the calm mode is Motion "calm" now (Settings → Appearance → Motion)
+            Motion.set(a[1] === "off" ? "full" : "calm");
+            return "calm " + (Motion.calm ? "on" : "off") + " (motion " + Motion.level + ")";
         case "reset":
             return Story.reset();
         case "":
@@ -520,6 +521,12 @@ IpcHandler {
     }
     function flavor(name: string): void {
         Config.appearance.flavor = name;
+    }
+    // how much moves: `angelos motion full|calm|off` (no argument: the level now)
+    function motion(level: string): string {
+        if (!level || level === "status")
+            return Motion.level;
+        return Motion.set(level);
     }
     function wallpaper(path: string): void {
         if (path === "random")

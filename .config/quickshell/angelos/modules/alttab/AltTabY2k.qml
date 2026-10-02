@@ -123,7 +123,7 @@ Item {
                     scale: card.picked ? 1.06 : hover.containsMouse ? 1.02 : 1
                     Behavior on scale {
                         NumberAnimation {
-                            duration: 120
+                            duration: Motion.ms(120)
                             easing.type: Easing.OutBack
                         }
                     }
@@ -207,23 +207,24 @@ Item {
                         opacity: 0
                         scale: 0.5
                         SequentialAnimation {
-                            running: true
+                            running: !Motion.still
+                            alwaysRunToEnd: true
                             loops: Animation.Infinite
                             PauseAnimation {
-                                duration: star.modelData[2]
+                                duration: Motion.ms(star.modelData[2])
                             }
                             ParallelAnimation {
                                 NumberAnimation {
                                     target: star
                                     property: "opacity"
                                     to: 1
-                                    duration: 260
+                                    duration: Motion.ms(260)
                                 }
                                 NumberAnimation {
                                     target: star
                                     property: "scale"
                                     to: 1.1
-                                    duration: 260
+                                    duration: Motion.ms(260)
                                     easing.type: Easing.OutBack
                                 }
                             }
@@ -232,17 +233,17 @@ Item {
                                     target: star
                                     property: "opacity"
                                     to: 0
-                                    duration: 380
+                                    duration: Motion.ms(380)
                                 }
                                 NumberAnimation {
                                     target: star
                                     property: "scale"
                                     to: 0.4
-                                    duration: 380
+                                    duration: Motion.ms(380)
                                 }
                             }
                             PauseAnimation {
-                                duration: 700 - star.modelData[2]
+                                duration: Motion.ms(700 - star.modelData[2])
                             }
                         }
                     }

@@ -182,19 +182,19 @@ Item {
                     target: box
                     property: "shakeX"
                     to: Theme.u * 6
-                    duration: 40
+                    duration: Motion.ms(40)
                 }
                 NumberAnimation {
                     target: box
                     property: "shakeX"
                     to: -Theme.u * 6
-                    duration: 40
+                    duration: Motion.ms(40)
                 }
                 NumberAnimation {
                     target: box
                     property: "shakeX"
                     to: 0
-                    duration: 40
+                    duration: Motion.ms(40)
                 }
             }
 
@@ -230,7 +230,7 @@ Item {
                                 value: 1.18
                             }
                             PauseAnimation {
-                                duration: 70
+                                duration: Motion.ms(70)
                             }
                             PropertyAction {
                                 target: heartState
@@ -339,7 +339,7 @@ Item {
         property: "block"
         from: Theme.u * 8
         to: Theme.u * 64
-        duration: 600
+        duration: Motion.ms(600)
         easing.type: Easing.InQuad
     }
 
@@ -380,6 +380,6 @@ Item {
         property: "opacity"
         from: 1
         to: 0
-        duration: 500
+        duration: Motion.ms(500)
     }
 }

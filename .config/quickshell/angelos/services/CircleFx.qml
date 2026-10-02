@@ -9,7 +9,7 @@ import qs.config
 // (Sounds "circle"), the new circle's number and name come up out of the black and stand a
 // moment, then the dark lifts on the circle's look. `atDark` runs once the screen is black
 // (the palette switches there, unseen), `then` after it has lifted.
-// Calm (Config.game.calm): slower, and a soft swell instead of the blow. Screens with a
+// Calm (Motion.calm): slower, and a soft swell instead of the blow. Motion off: no show at all. Screens with a
 // fullscreen window (games, video — when niri-game-mode turns animations off) or streamed
 // screens get no dark at all; with none left the switch happens at once, silently.
 // Nothing takes input: Start, the power menu, notifications, polkit and the lock (all on
@@ -49,7 +49,7 @@ Singleton {
             target = id;
             return;
         }
-        if (!anywhere) {
+        if (!anywhere || Motion.still) {
             if (atDark)
                 atDark();
             if (then)

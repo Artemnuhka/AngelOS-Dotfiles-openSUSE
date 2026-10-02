@@ -158,7 +158,7 @@ Item {
         scale: (0.6 + 0.4 * appear) * (m.pressed ? 0.9 : m.containsMouse || sel ? 1.06 : 1)
         Behavior on scale {
             NumberAnimation {
-                duration: 120
+                duration: Motion.ms(120)
                 easing.type: Easing.OutCubic
             }
         }
@@ -385,7 +385,7 @@ Item {
                 color: index === root.page ? "#ffffff" : Qt.alpha("#ffffff", 0.45)
                 Behavior on width {
                     NumberAnimation {
-                        duration: 160
+                        duration: Motion.ms(160)
                     }
                 }
                 MouseArea {

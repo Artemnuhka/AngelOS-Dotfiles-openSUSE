@@ -221,14 +221,15 @@ PxPage {
                     color: "#ffffff"
                     SequentialAnimation on opacity {
                         loops: Animation.Infinite
-                        running: page.visible
+                        running: page.visible && !Motion.still
+                        alwaysRunToEnd: true
                         NumberAnimation {
                             to: 0.2
-                            duration: 600
+                            duration: Motion.ms(600)
                         }
                         NumberAnimation {
                             to: 1
-                            duration: 600
+                            duration: Motion.ms(600)
                         }
                     }
                 }

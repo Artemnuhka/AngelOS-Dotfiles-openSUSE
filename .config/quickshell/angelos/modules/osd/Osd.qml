@@ -79,7 +79,7 @@ PanelWindow {
         Behavior on opacity {
             NumberAnimation {
                 id: fade
-                duration: Theme.fast
+                duration: Motion.ms(Theme.fast)
             }
         }
 

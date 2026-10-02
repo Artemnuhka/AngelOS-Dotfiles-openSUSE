@@ -206,7 +206,7 @@ Item {
         clip: true
         Behavior on height {
             NumberAnimation {
-                duration: 110
+                duration: Motion.ms(110)
                 easing.type: Easing.OutCubic
             }
         }

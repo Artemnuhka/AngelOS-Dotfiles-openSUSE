@@ -175,7 +175,7 @@ Item {
                 z: sel ? 1 : 0
                 Behavior on scale {
                     NumberAnimation {
-                        duration: 110
+                        duration: Motion.ms(110)
                         easing.type: Easing.OutCubic
                     }
                 }

@@ -251,13 +251,13 @@ PanelWindow {
                 property: "scale"
                 from: 0.9
                 to: 1.02
-                duration: 110
+                duration: Motion.ms(110)
             }
             NumberAnimation {
                 target: dialog
                 property: "scale"
                 to: 1
-                duration: 90
+                duration: Motion.ms(90)
             }
         }
 

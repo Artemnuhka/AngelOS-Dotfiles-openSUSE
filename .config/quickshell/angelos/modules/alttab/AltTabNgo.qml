@@ -228,18 +228,19 @@ Item {
                         property real hop: 0
                         y: -height + root.s - hop
                         SequentialAnimation on hop {
-                            running: icon.picked
+                            running: icon.picked && !Motion.still
+                            alwaysRunToEnd: true
                             loops: Animation.Infinite
                             NumberAnimation {
                                 from: 0
                                 to: root.s * 5
-                                duration: 220
+                                duration: Motion.ms(220)
                                 easing.type: Easing.OutQuad
                             }
                             NumberAnimation {
                                 from: root.s * 5
                                 to: 0
-                                duration: 220
+                                duration: Motion.ms(220)
                                 easing.type: Easing.InQuad
                             }
                         }

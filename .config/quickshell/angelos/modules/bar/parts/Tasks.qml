@@ -76,7 +76,7 @@ Item {
         id: glide
         target: flick
         property: "contentX"
-        duration: 140
+        duration: Motion.ms(140)
         easing.type: Easing.OutCubic
     }
 
@@ -122,14 +122,14 @@ Item {
                             target: btn
                             property: "hop"
                             to: Theme.u * 7
-                            duration: 150
+                            duration: Motion.ms(150)
                             easing.type: Easing.OutQuad
                         }
                         NumberAnimation {
                             target: btn
                             property: "hop"
                             to: 0
-                            duration: 210
+                            duration: Motion.ms(210)
                             easing.type: Easing.OutBounce
                         }
                     }
@@ -164,7 +164,7 @@ Item {
                         Behavior on scale {
                             enabled: root.dock
                             NumberAnimation {
-                                duration: 90
+                                duration: Motion.ms(90)
                                 easing.type: Easing.OutCubic
                             }
                         }

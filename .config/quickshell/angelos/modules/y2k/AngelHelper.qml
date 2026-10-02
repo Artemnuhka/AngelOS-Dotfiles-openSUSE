@@ -72,7 +72,7 @@ Scope {
             }
             Timer {
                 id: stirWait
-                running: win.still && win.visible && !win.stirring && !Config.game.calm
+                running: win.still && win.visible && !win.stirring && !Motion.calm
                 interval: (100 + Math.random() * 200) * 1000
                 onTriggered: {
                     win.stirring = true;
@@ -191,7 +191,7 @@ Scope {
                                 shown: typer.shown
                                 shake: 1
                                 // Y2K → Text tremble: off | light | strong; the demon's words barely move
-                                twitch: Config.y2k.textShake === "off" || Config.game.calm ? 0 : (Config.y2k.textShake === "strong" ? 0.18 : 0.05) * (Angel.demon ? 0.5 : 1)
+                                twitch: Config.y2k.textShake === "off" || Motion.calm ? 0 : (Config.y2k.textShake === "strong" ? 0.18 : 0.05) * (Angel.demon ? 0.5 : 1)
                             }
                             PxText {
                                 visible: Angel.menuOpen

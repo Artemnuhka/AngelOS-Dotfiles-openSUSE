@@ -108,7 +108,7 @@ Item {
                 scale: slot.sel || slot.open ? 1.14 : 1
                 Behavior on scale {
                     NumberAnimation {
-                        duration: 90
+                        duration: Motion.ms(90)
                     }
                 }
                 sunken: slotMouse.pressed

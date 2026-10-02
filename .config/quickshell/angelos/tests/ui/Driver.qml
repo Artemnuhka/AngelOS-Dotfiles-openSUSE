@@ -45,6 +45,8 @@ import "../../services/Intents.js" as Intents
 //             story/game.json's pace.quickSwitch is instant, later the whole show again (C1)
 //   walls     heaven's wallpaper stays as it is in hell, a pick in hell lasts for its circle,
 //             an older save is untangled, hell's accent is its own (C2)
+//   motion    Motion off: no animation lengths, heaven ⇄ hell at once without the shows;
+//             calm is the game's calm; the old game.calm toggle migrates (C4)
 //   cava      the cava widget (over a stand-in cava) starts, and starts again after it was
 //             hidden and shown with the same config (B4: the lock, sleep, a fullscreen game)
 //   rmb       a right-click menu opens where the button went down (B2); a right click into
@@ -1224,6 +1226,30 @@ Scope {
             Config.y2k.hellPicture = keep[3];
             Config.appearance.customAccent = keep[4];
             Config.appearance.customAccentHell = "";
+            Story.reset();
+            phase = "motion";
+            return;
+        }
+        // C4: one motion setting; off = no animations (heaven ⇄ hell at once, no splash, no burn)
+        if (phase === "motion") {
+            Motion.set("off");
+            const zero = Motion.still && Motion.calm && Motion.ms(300) === 0;
+            const runs = CircleFx.runs;
+            Angel.lastSwitchAt = 0;
+            Angel.startSwap("toHell");
+            const atOnce = Angel.demon && !Angel.transition && !CircleFx.active && !DesktopWidgets.burning;
+            Angel.startSwap("ascend");
+            const back = !Angel.demon && !Angel.transition;
+            Motion.set("calm");
+            const calm = Story.calm && !Motion.still && Motion.ms(300) === 300;
+            Motion.set("full");
+            // the game's old calm toggle becomes the calm level, once
+            Config.game.calm = true;
+            Motion.migrate();
+            const migrated = Motion.level === "calm" && !Config.game.calm;
+            Motion.set("full");
+            report("motion-off", zero && atOnce && back, "off: durations 0 " + zero + ", into hell and out at once " + (atOnce && back) + " (splashes asked " + (CircleFx.runs - runs) + ", none shown)");
+            report("motion-calm", calm && migrated, "calm: the game's calm " + calm + "; the old game.calm became motion calm " + migrated);
             Story.reset();
             cavaStage.active = true;
             started = Date.now();

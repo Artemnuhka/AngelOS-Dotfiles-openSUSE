@@ -27,7 +27,7 @@ Item {
     Timer {
         interval: 120
         repeat: true
-        running: root.swing !== 0 && root.visible
+        running: root.swing !== 0 && root.visible && !Motion.still
         onTriggered: root.t += 0.12
     }
     Column {

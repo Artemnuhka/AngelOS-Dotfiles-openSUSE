@@ -98,12 +98,12 @@ Scope {
                 }
                 Behavior on opacity {
                     NumberAnimation {
-                        duration: 110
+                        duration: Motion.ms(110)
                     }
                 }
                 Behavior on scale {
                     NumberAnimation {
-                        duration: 140
+                        duration: Motion.ms(140)
                         easing.type: Easing.OutBack
                     }
                 }

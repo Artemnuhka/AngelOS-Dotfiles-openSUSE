@@ -27,7 +27,7 @@ Item {
     NumberAnimation on reveal {
         from: 0
         to: 1
-        duration: 520
+        duration: Motion.ms(520)
         easing.type: Easing.OutCubic
     }
 
@@ -79,13 +79,13 @@ Item {
                     opacity: 0.9
                     Behavior on x {
                         NumberAnimation {
-                            duration: 130
+                            duration: Motion.ms(130)
                             easing.type: Easing.OutCubic
                         }
                     }
                     Behavior on y {
                         NumberAnimation {
-                            duration: 130
+                            duration: Motion.ms(130)
                             easing.type: Easing.OutCubic
                         }
                     }
@@ -135,7 +135,7 @@ Item {
                                 opacity: card.picked ? 1 : 0.62
                                 Behavior on y {
                                     NumberAnimation {
-                                        duration: 120
+                                        duration: Motion.ms(120)
                                     }
                                 }
                             }

@@ -7,6 +7,7 @@ import Quickshell.Io
 JsonAdapter {
     property JsonObject appearance: JsonObject {
         property string customAccent: "#c77dff"
+        property string motion: "full"      // how much moves: full | calm (no flashes, shaking, sudden loud sounds) | off (no animations: the shell, niri, hell) — config/Motion
         property string customAccentHell: ""  // hell's accent from its wallpaper ("From wallpaper"); heaven's stays customAccent
         property string language: "ru"
         property string mode: "dark"        // light | dark | auto
@@ -340,7 +341,7 @@ JsonAdapter {
     // The player's save is its own file (~/.config/angelos/save.json), not here.
     property JsonObject game: JsonObject {
         property bool enabled: true         // false: plain dotfiles — no angel, demon, novel or hell (installer ANGELOS_GAME=0, the setup wizard, `angelos game off`)
-        property bool calm: false           // accessibility: no flashes, no shaking, no sudden loud sounds
+        property bool calm: false           // older settings: became appearance.motion "calm" (config/Motion migrates it once)
     }
 
     // the novel (services/Novel, ~/AngelOs-Nov): chapters the angel plays out on the desktop

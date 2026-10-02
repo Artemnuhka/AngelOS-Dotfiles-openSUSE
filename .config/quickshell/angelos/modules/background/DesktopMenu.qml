@@ -304,7 +304,7 @@ PopupWindow {
             property: "v"
             from: 0.92
             to: 1
-            duration: 120
+            duration: Motion.ms(120)
             easing.type: Easing.OutCubic
         }
         height: col.implicitHeight + inset * 2

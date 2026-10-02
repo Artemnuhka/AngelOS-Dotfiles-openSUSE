@@ -94,7 +94,7 @@ angelOS is also a game played over your real desktop: an angel lives in the corn
 - **Out of the game at once, any time:** `angelos game off` or **Mod+Ctrl+Shift+Escape** — angelOS stays as plain dotfiles. Back: `angelos game on`.
 - **Looking for the way out of hell?** The demon's menu → Ask… → “Seek the way out” (or just type it, in your own words). The button shows the circle and the minutes until the next try; `angelos game status` shows where you are.
 - **Without the game from the start:** the installer asks (`ANGELOS_GAME=0`), and so does the first-run wizard.
-- **Calm mode** (no flashes, screen shaking or sudden loud sounds): Settings → System → The game, or `angelos game calm on`.
+- **Motion** (Settings → Appearance → Motion, the setup wizard, `angelos motion full|calm|off`): *calm* — no flashes, screen shaking or sudden loud sounds; *off* — no animations at all, the shell's, niri's and hell's (an optimisation mode; the angel and the demon only breathe).
 - Progress lives in its own file, `~/.config/angelos/save.json` (updates never touch it); `angelos game reset` starts over.
 - How the story works inside: [`docs/STORY.md`](.config/quickshell/angelos/docs/STORY.md) — **spoilers**.
 
@@ -114,6 +114,7 @@ angelos settingsView controlpanel  # sidebar | controlpanel | properties | tiles
 angelos tour                       # interface tips
 angelos switch noctalia            # go back to Noctalia (and `switch angelos` to return)
 angelos game off                   # out of the game at once (`on` to come back)
+angelos motion off                 # no animations at all (full | calm | off)
 ```
 
 ---

@@ -15,7 +15,7 @@ import qs.config
 Singleton {
     id: root
 
-    readonly property bool allowed: Angel.demon && !Shell.locked && !StreamMode.active && !Shell.screens.some(s => Shell.fullscreenOn(s.name))
+    readonly property bool allowed: Angel.demon && !Motion.still && !Shell.locked && !StreamMode.active && !Shell.screens.some(s => Shell.fullscreenOn(s.name))
     readonly property int durationMs: 4200
 
     function schedule() {
