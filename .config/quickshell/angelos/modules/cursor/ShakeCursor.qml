@@ -9,11 +9,14 @@ import qs.widgets
 
 // Shake to find the pointer (services/CursorShake): for a moment a see-through overlay draws
 // the theme's arrow bigger at the pointer (crisp pixels), then it shrinks back and goes.
-// Only a picture (B3): the real pointer is never moved and clicks reach what is under it.
-// niri tells nobody where the pointer is, so the overlay takes input everywhere except a
-// small hole around the pointer: under the pointer everything goes through to the apps;
-// a stroke out of the hole is one motion event here — the exact spot — and the hole moves
-// there. Until the first motion of a shake the overlay doesn't know the spot yet.
+// One arrow only: the compositor draws the real arrow above every surface, and only the surface
+// under the pointer can hide it — so while the big arrow is up the overlay holds the pointer and
+// shows a blank cursor. Holding it is also how the overlay knows the exact spot (niri tells
+// nobody where the pointer is): every motion lands here, the big arrow's tip sits on it, and when
+// it has shrunk back to the real size the overlay goes and the real arrow is there, same place.
+// Clicks still reach the apps (B3): a press ends the effect, and on release the overlay goes and
+// the same click is handed on to what is under the pointer (CursorShake.pass → vpointer.py).
+// A drag that started here is let go — it would land somewhere it wasn't meant to.
 Variants {
     model: Shell.screens
 
@@ -27,13 +30,23 @@ Variants {
         property real grow: CursorShake.shaking ? CursorShake.zoom : 1
         Behavior on grow {
             NumberAnimation {
-                duration: Motion.ms(CursorShake.shaking ? 170 : 240)
+                duration: Motion.ms(CursorShake.shaking ? 170 : catcher.pressed ? 90 : 240)
                 easing.type: CursorShake.shaking ? Easing.OutBack : Easing.InOutQuad
+            }
+        }
+        // a click was caught: the overlay is gone at once (even mid-shrink), so the click
+        // handed on lands on the app, not here
+        property bool passing: false
+        Connections {
+            target: CursorShake
+            function onShakingChanged() {
+                if (CursorShake.shaking)
+                    win.passing = false;
             }
         }
 
         screen: modelData
-        visible: CursorShake.shaking || grow > 1.02
+        visible: !passing && (CursorShake.shaking || grow > 1.02 || catcher.pressed)
         anchors {
             top: true
             bottom: true
@@ -44,46 +57,72 @@ Variants {
         color: "transparent"
         WlrLayershell.namespace: "angelos-cursor"
         WlrLayershell.layer: WlrLayer.Overlay
+        // takes input: only while the big arrow is up — the real arrow hides under a blank
+        // cursor and every motion gives the exact spot; clicks and wheel steps are handed on
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
-        // the pointer's last exact spot on this screen during this shake
+        // the pointer's spot on this screen during this shake (it may be on another screen)
         property bool known: false
         property real px: 0
         property real py: 0
-        readonly property int hole: Math.max(6, Theme.u * 4)
         onVisibleChanged: if (!visible)
             known = false
-        mask: Region {
-            x: 0
-            y: 0
-            width: win.width
-            height: win.height
-            Region {
-                intersection: Intersection.Subtract
-                x: win.known ? Math.round(win.px) - win.hole : -1
-                y: win.known ? Math.round(win.py) - win.hole : -1
-                width: win.known ? win.hole * 2 : 0
-                height: win.known ? win.hole * 2 : 0
-            }
-        }
 
         MouseArea {
             id: catcher
             anchors.fill: parent
             hoverEnabled: true
             acceptedButtons: Qt.AllButtons
+            cursorShape: Qt.BlankCursor
+            property real downX: 0
+            property real downY: 0
+            property int button: 0
             function seen(x, y) {
                 win.px = x;
                 win.py = y;
                 win.known = true;
             }
+            // Qt's buttons → the Linux codes the virtual pointer sends
+            function code(b) {
+                return b === Qt.RightButton ? 273 : b === Qt.MiddleButton ? 274 : b === Qt.BackButton ? 275 : b === Qt.ForwardButton ? 276 : 272;
+            }
             onPositionChanged: m => seen(m.x, m.y)
             onEntered: seen(mouseX, mouseY)
-            // a press can only land here in the frame before the hole caught up: the
-            // effect ends at once, nothing stays in the way
+            onExited: win.known = false
             onPressed: m => {
                 seen(m.x, m.y);
+                downX = m.x;
+                downY = m.y;
+                button = m.button;
                 CursorShake.dismiss();
+            }
+            onReleased: m => {
+                const click = Math.abs(m.x - downX) <= 6 && Math.abs(m.y - downY) <= 6;
+                win.passing = true;
+                if (click)
+                    handOn.later("click " + code(button));
+            }
+            onWheel: w => {
+                CursorShake.dismiss();
+                win.passing = true;
+                handOn.later("wheel " + (-w.angleDelta.y / 120) + " " + (-w.angleDelta.x / 120));
+            }
+        }
+        // a frame after the overlay went, so the compositor already sees what is under it
+        Timer {
+            id: handOn
+            property string what: ""
+            function later(w) {
+                what = w;
+                restart();
+            }
+            interval: 30
+            onTriggered: {
+                const p = what.split(" ");
+                if (p[0] === "click")
+                    CursorShake.pass(p[1]);
+                else
+                    CursorShake.wheel(p[1], p[2]);
             }
         }
 

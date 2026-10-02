@@ -8,7 +8,9 @@ import qs.config
 
 // Shake the mouse to find the pointer, like macOS (Settings → Cursor): scripts/shake-watch.py
 // spots a shake in evdev (needs the `input` group, like the Meta tap), modules/cursor/ShakeCursor
-// draws the arrow of the cursor theme (scripts/cursor-image.py) bigger for a moment.
+// draws the arrow of the cursor theme (scripts/cursor-image.py) bigger for a moment. While it
+// is up the overlay holds the pointer (the real arrow hides under it); a click or a wheel step
+// that lands there is handed on to what is under the pointer by scripts/vpointer.py.
 Singleton {
     id: root
 
@@ -29,14 +31,43 @@ Singleton {
     }
     // Settings → Cursor → "Show me": long enough to move the mouse and see it
     function demo() {
+        if (!image && !imager.running)
+            imager.load();
         shaking = true;
         calm.interval = 1600;
         calm.restart();
     }
-    // a click while it is big: shrink at once, the next click goes through
+    // a click while it is big: shrink at once
     function dismiss() {
         calm.stop();
         shaking = false;
+    }
+    // …and once the overlay is gone, the same click (a Linux button code) or wheel steps
+    // (notches, + = down / right) go to what is under the pointer
+    function pass(button) {
+        if (hand.ok)
+            hand.write("click " + button + "\n");
+    }
+    function wheel(dy, dx) {
+        if (hand.ok)
+            hand.write("wheel " + dy + " " + dx + "\n");
+    }
+    // the virtual pointer that hands clicks on: up while shaking is on, or since a demo
+    property bool _shown: false
+    onShakingChanged: if (shaking)
+        _shown = true
+    Process {
+        id: hand
+        property bool ok: false
+        running: root.wanted || root._shown
+        stdinEnabled: true
+        command: ["python3", "-u", Quickshell.shellDir + "/scripts/vpointer.py"]
+        onRunningChanged: if (!running)
+            ok = false
+        stdout: SplitParser {
+            onRead: line => hand.ok = line === "ready"
+        }
+        stderr: StdioCollector {}
     }
     Timer {
         id: calm
