@@ -21,10 +21,10 @@ Win98 windows, pixel hearts, a bar that sings along, and a desktop you can right
 </div>
 
 > [!NOTE]
-> The desktop screenshots and GIFs show angelOS in use. Wallpaper, widget placement, language and theme are configurable; the first-run wizard helps you choose your setup. The helper-tools illustration and SDDM test preview are labelled separately below.
+> The screenshots are of a clean install in a nested session (a generated wallpaper, no personal data); the GIFs show angelOS in use. Wallpaper, widget placement, language and theme are configurable; the first-run wizard helps you choose your setup. The helper-tools illustration and SDDM test preview are labelled separately below.
 > In a nested session Niri uses `Alt` as `Mod`; on real hardware `Mod` is the **Super / Windows** key, and that is what the tables use.
 
-**Jump to:** [angelOS.exe](#-angelosexe) · [Plugins](#-pluginsexe) · [Tiling](#-tilingexe) · [Keybindings](#-keybindings) · [Helper tools](#-helper-tools) · [Install](#-installation) · [Login screen](#-login-screen-sddm) · [Keyboard](#-keyboard-layouts) · [Mouse & monitors](#-mouse-and-monitors) · [Layout](#-repository-layout)
+**Jump to:** [angelOS.exe](#-angelosexe) · [The game](#-gameexe) · [Plugins](#-pluginsexe) · [Tiling](#-tilingexe) · [Keybindings](#-keybindings) · [Helper tools](#-helper-tools) · [Install](#-installation) · [Login screen](#-login-screen-sddm) · [Keyboard](#-keyboard-layouts) · [Mouse & monitors](#-mouse-and-monitors) · [Layout](#-repository-layout) · [License](#-license)
 
 ---
 
@@ -79,6 +79,13 @@ Widgets (`clock.exe`, `sysmon.exe`, `cava.exe`, `music.exe`, plus plugin ones) a
 
 A real window with pages for Appearance, Wallpaper, **Widgets**, Bar (drag-and-drop layout like Noctalia's, hearts or app icons, window-button widths, tray icon colours), Workspaces, Lyrics, Monitor (drag the screens around, writes `monitor.kdl`), Keyboard & mouse, **Windows** (default width, `Mod`+`R` presets, a width per app), Sound, **Default apps** (browser, editor, files, terminal, media…), Notifications, Plugins and System. Changes to Niri's config are backed up, checked with `niri validate` and rolled back if Niri says no.
 
+- **Four views** of the same pages: a macOS-like sidebar, a Win98 Control Panel, Properties tabs and big tiles (`angelos settingsView …`).
+- **Three styles of the shell's pixel icons**: angelOS's own, [pixelarticons](https://github.com/halfmage/pixelarticons) or [HackerNoon's Pixel Icon Library](https://github.com/hackernoon/pixel-icon-library).
+- **Previews** next to what changes the look or the motion — wallpaper transitions, window animations, Start, the bar, the lock screen; one still frame when motion is off.
+- **Browsers in the theme**: Helium and Chromium follow angelOS live through GTK (a gentle restart brings the tabs back), Firefox gets the palette through `userChrome.css`; profiles change only on a click, with a backup and *Put it back*.
+
+<img src="docs/screenshots/angelos-settings.png" width="80%" alt="Settings, the sidebar view: Appearance with the theme, motion and the three icon styles">
+
 ![Settings: appearance, bar layout editor, widgets, window widths, default apps](docs/demo/settings.gif)
 
 ### ♡ tips.exe
@@ -96,7 +103,10 @@ angelOS is also a game played over your real desktop: an angel lives in the corn
 - **Without the game from the start:** the installer asks (`ANGELOS_GAME=0`), and so does the first-run wizard.
 - **Motion** (Settings → Appearance → Motion, the setup wizard, `angelos motion full|calm|off`): *calm* — no flashes, screen shaking or sudden loud sounds; *off* — no animations at all, the shell's, niri's and hell's (an optimisation mode; the angel and the demon only breathe).
 - Progress lives in its own file, `~/.config/angelos/save.json` (updates never touch it); `angelos game reset` starts over.
+- **Not sure where you stand?** Ask her — “what did I sign?”, in any words — and she shows it on paper, with the way out in numbers.
 - How the story works inside: [`docs/STORY.md`](.config/quickshell/angelos/docs/STORY.md) — **spoilers**.
+
+<img src="docs/screenshots/angelos-hell.png" width="80%" alt="The same desktop after the angel was thrown down: someone else in the corner, the widgets in another script">
 
 ### ♡ from a terminal
 
@@ -245,12 +255,12 @@ The `tech` install profile installs the lighter `niri-screenshot-region-simple` 
 - An SDDM login screen: the animated [`pixel-cyberpunk`](#-login-screen-sddm) theme, installed and enabled for you.
 - Kitty, Alacritty, Foot, GTK, Fastfetch and fontconfig setups, themed to match.
 - The `pixora` pixel icon theme, Cozette / Pixeloid pixel fonts and the wallpaper packs you pick.
-- Package lists for Arch-based systems.
-- An installer that asks which shell and keyboard layouts you want, backs up anything it replaces, and is safe to re-run.
+- Package lists — every package from Arch Linux's official repositories, no AUR.
+- One command to install, `./install.sh`: it asks everything itself (shell, game, wallpapers, voice input, login screen, keyboard), backs up anything it replaces, and is safe to re-run.
 
 ## ✧ Requirements
 
-- Arch Linux or CachyOS
+- **Arch Linux or CachyOS.** The installer reads `/etc/os-release` and refuses anything else before a file changes — Arch-based distributions too, since their own repositories may differ (`DOTFILES_FORCE_DISTRO=1` runs it anyway, at your own risk). Every package it installs is in Arch's official `core`/`extra` repositories (`scripts/check-packages.sh` asks archlinux.org).
 - A Wayland session
 - `sudo` for the optional package step
 - `git` and `curl`
@@ -264,10 +274,10 @@ The helper scripts use `grim` and `slurp` (screenshots), `wf-recorder` (recordin
 ```bash
 git clone https://github.com/MixaDoDs/AngelOS-Dotfiles.git
 cd AngelOS-Dotfiles
-./.install
+./install.sh
 ```
 
-`./install.sh` is the same installer; `.install` is just a convenient entry point. Run without arguments it walks you through a short setup (English, or Russian when your locale is `ru_*`):
+That is the one command (`./.install` is the same thing). Run without arguments it asks everything itself, in a short setup (English, or Russian when your locale is `ru_*`):
 
 1. **Profile**: `full` (styling, a desktop shell, pixel fonts and icons, wallpapers) or `tech` (Niri config and helper tools only).
 2. **Shell**: **angelOS** (default), Noctalia, or none.
@@ -276,6 +286,8 @@ cd AngelOS-Dotfiles
 5. **Login screen**: whether to install SDDM with the `pixel-cyberpunk` theme and make it the login manager.
 6. **Keyboard layouts**: pick from a list or type any XKB code.
 7. **Layout switch shortcut**: Alt+Shift, Ctrl+Shift, Caps Lock, Right Alt or Left Alt.
+8. **The game**: whether angelOS is also the game (or plain dotfiles), and **extra apps from Flathub** (off by default).
+9. **GitHub (optional, only for the author of angelOS)**: their own tools — the chapter editor — come from a private repository and only to an account GitHub lets in. For everyone else nothing changes; skipping loses nothing. angelOS keeps no token, `gh` does.
 
 On the first login angelOS opens its setup wizard and then the interface tips by itself.
 
@@ -299,6 +311,8 @@ INSTALL_SDDM=0 ./install.sh                                   # keep your curren
 INSTALL_VOXTYPE=0 DOWNLOAD_VOXTYPE_MODEL=0 ./install.sh       # no voice input
 ENABLE_SERVICES=0 ./install.sh                                # do not enable user services
 WALLPAPER_PACKS=none ./install.sh                             # no wallpaper packs (all | none | Lain,Pixel,…)
+INSTALL_FLATPAK=1 ./install.sh                                # also the apps in packages/flatpak-apps.txt
+GITHUB_LOGIN=1 ./install.sh                                   # the author's tools (needs access; `angelos author login` later)
 ```
 
 `NOCTALIA=1` / `NOCTALIA=0` from earlier versions still work and mean `DESKTOP_SHELL=noctalia` / `none`.
@@ -433,22 +447,24 @@ scripts/check.sh             Repository check, including end-to-end installer te
 scripts/ci-local.sh          The GitHub check, run locally in its own container
 docs/screenshots/            Static preview images
 docs/demo/                   GIFs used in this README
-install.sh                   Installer with backups, profiles and a shell choice
+install.sh                   The installer: asks everything, backs up, Arch Linux / CachyOS only
+LICENSE                      MIT, for the dotfiles and angelOS
+THIRD-PARTY.md, LICENSES/    What others made, under which license (and what is unclear)
 ```
 
 ## ✧ Notes
 
 - No credentials, browser profiles, cookies, history, caches, keyrings or local runtime state are included. angelOS settings (`~/.config/angelos`) are yours and are not part of the repository.
 - Wallpaper packs are a separate repository, [PixelStreetArt_Wallpapers](https://github.com/MixaDoDs/PixelStreetArt_Wallpapers); they are optional and can be removed without affecting the configuration.
-- The `pixora` icon theme and pixel fonts are optional visual assets.
+- The `pixora` icon theme (CC BY 4.0, by tsora1603) and the pixel fonts (SIL OFL / MIT) are optional visual assets — see [`THIRD-PARTY.md`](THIRD-PARTY.md).
 - angelOS draws only its own pixel decorations; no game art is included.
 - Niri configuration syntax changes between releases; check the current Niri documentation if an option is rejected.
 
 ## ✧ License
 
-No license file is currently included for the dotfiles themselves. Add one before redistributing the repository under a specific license.
+The dotfiles and angelOS are released under the **MIT license** — see [`LICENSE`](LICENSE), © 2026 MixaDoDs.
 
-The SDDM theme in `sddm/themes/pixel-cyberpunk/` is from [Qylock](https://github.com/Darkkal44/qylock) by Darkkal44 and is distributed unmodified under the GNU GPL v3 (see its `LICENSE`). Its font, Pixelify Sans, is under the SIL Open Font License. The `claude-companion`, `cat`, `speedtest` and `web-search` plugins are angelOS ports of MIT-licensed Noctalia plugins (credited in their manifests).
+Parts made by others keep their own licenses, listed with their notices in [`THIRD-PARTY.md`](THIRD-PARTY.md): the SDDM theme from [Qylock](https://github.com/Darkkal44/qylock) by Darkkal44 (GNU GPL v3, unmodified), the fonts (SIL OFL 1.1 — [`LICENSES/OFL-1.1.txt`](LICENSES/OFL-1.1.txt); Cozette: MIT), the `pixora` icon theme and HackerNoon's pixel icons (CC BY 4.0), pixelarticons (MIT) and the Claude Companion plugin, a port of [lowcache/noctalia-claude-plugin](https://github.com/lowcache/noctalia-claude-plugin) (MIT). A few pictures and sounds of unknown origin are marked there as such.
 
 <div align="center">
 

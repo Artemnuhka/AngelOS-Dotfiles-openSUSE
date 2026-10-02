@@ -118,7 +118,8 @@ for file in \
   packages/pacman.txt packages/sddm.txt sddm/zz-pixelstreetart.conf \
   sddm/themes/pixel-cyberpunk/metadata.desktop sddm/themes/pixel-cyberpunk/Main.qml \
   sddm/themes/pixel-cyberpunk/BackgroundVideo.qml sddm/themes/pixel-cyberpunk/theme.conf \
-  sddm/themes/pixel-cyberpunk/bg.mp4 sddm/themes/pixel-cyberpunk/LICENSE; do
+  sddm/themes/pixel-cyberpunk/bg.mp4 sddm/themes/pixel-cyberpunk/LICENSE \
+  LICENSE THIRD-PARTY.md LICENSES/OFL-1.1.txt .config/quickshell/angelos/docs/ICON-CREDITS.md; do
   check_file "$file"
 done
 
