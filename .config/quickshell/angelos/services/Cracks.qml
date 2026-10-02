@@ -13,10 +13,12 @@ import qs.config
 // The spot is chosen once per punch — the corner square that overlaps the least of the bar, the
 // desktop widgets and her — and kept until the glass falls out (Angel.shattered).
 // Settings → Y2K → Angel or demon: cracks full | weak | off, and what she breaks
-// (Config.y2k.breakage): glass (pixel cracks) | tv (a smashed TV: a hole with snow and dead LCD
-// lines) | burn (a hole burnt through, hellfire inside) | claws (four glowing gashes) | sigil (a
-// pentagram burnt into the glass) | random (another one each punch) — all but the glass drawn by
-// shaders/breakage.frag. Hidden under fullscreen windows and on streamed screens.
+// (Config.y2k.breakage): circle (the default: one of the circle's own set, story/circles.json →
+// breakage — Limbo's fog, Treachery's frost…) | any one kind always (HellLook.breakageKinds:
+// glass, tv, burn, claws, sigil, fog, whirl, ooze, coin, ripple, spatter, pitch, frost) |
+// random (any kind, another one each punch) — all but the glass drawn by shaders/breakage.frag.
+// A new circle under the glass breaks it again in its own way. Hidden under fullscreen windows
+// and on streamed screens.
 Singleton {
     id: root
 
@@ -28,14 +30,20 @@ Singleton {
     property int seed: 1
     readonly property bool weak: Config.y2k.cracks === "weak"
     // what this punch broke: glass | tv | burn | claws | sigil
-    readonly property var kinds: ["glass", "tv", "burn", "claws", "sigil"]
+    readonly property var kinds: HellLook.breakageKinds
     property string kind: "glass"
+    // one of `from`, not the one there is now if there is another
+    function oneOf(from) {
+        const others = from.filter(k => k !== kind);
+        const pool = others.length ? others : from;
+        return pool[Math.floor(Math.random() * pool.length)];
+    }
     function pickKind() {
-        const b = Config.y2k.breakage;
-        if (b === "random") {
-            const others = kinds.filter(k => k !== kind);
-            return others[Math.floor(Math.random() * others.length)];
-        }
+        const b = Config.y2k.breakage || "circle";
+        if (b === "random")
+            return oneOf(kinds);
+        if (b === "circle")
+            return oneOf(HellLook.breakage);
         return kinds.includes(b) ? b : "glass";
     }
     // a new choice in the settings shows at once
@@ -46,13 +54,50 @@ Singleton {
                 root.kind = root.pickKind();
         }
     }
-    // the shader's clock, stepped in its own way (10 fps inside)
+    // a new circle under the glass: it breaks in that circle's way (the same corner)
+    Connections {
+        target: HellLook
+        function onCircleChanged() {
+            if (root.on && !root.falling && (Config.y2k.breakage || "circle") === "circle" && !HellLook.breakage.includes(root.kind)) {
+                root.kind = root.pickKind();
+                root.seed = Math.floor(Math.random() * 100000) + 1;
+                root.grow = 0;
+                anim.restart();
+            }
+        }
+    }
+    // older settings: "glass" was the default before the circles had their own marks — it
+    // becomes "circle" once (a later "glass" is the player's own choice and stays). A beat
+    // after Config is ready: the file's values land in the settings just after `ready`
+    Connections {
+        target: Config
+        function onReadyChanged() {
+            if (Config.ready)
+                migrateSoon.restart();
+        }
+    }
+    Component.onCompleted: if (Config.ready)
+        migrateSoon.restart()
+    Timer {
+        id: migrateSoon
+        interval: 400
+        onTriggered: root.migrate()
+    }
+    function migrate() {
+        if (!Config.ready || Config.y2k.breakageByCircle)
+            return;
+        if (Config.y2k.breakage === "glass")
+            Config.y2k.breakage = "circle";
+        Config.y2k.breakageByCircle = true;
+    }
+    // the shader's clock for the marks that keep moving (5 steps a second, 10 fps inside the
+    // shader's own time); the still ones spread and stop
     property real clock: 0
     Timer {
-        running: root.wanted && root.kind !== "glass" && !Motion.still
-        interval: 100
+        running: root.wanted && HellLook.breakageLiving.includes(root.kind) && !Motion.still
+        interval: 200
         repeat: true
-        onTriggered: root.clock = (root.clock + 0.1) % 1000
+        onTriggered: root.clock = (root.clock + 0.2) % 1000
     }
 
     // ---- where: fixed at the punch ----

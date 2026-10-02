@@ -3,13 +3,14 @@ import qs.config
 import qs.widgets
 
 // "What she breaks" (Settings → Y2K, D4): her fist lands in the corner and it spreads over a
-// little desk — the very drawing the desktop gets (widgets/BreakageArt). variant: glass | tv
-// | burn | claws | sigil | random (another one each pass).
+// little desk — the very drawing the desktop gets (widgets/BreakageArt). variant: circle (the
+// current circle's set, one after another) | random (every kind, another one each pass) | one
+// kind (HellLook.breakageKinds).
 Scene {
     id: root
 
-    readonly property var kinds: ["glass", "tv", "burn", "claws", "sigil"]
-    readonly property string kind: variant === "random" ? kinds[loops % kinds.length] : kinds.includes(variant) ? variant : "glass"
+    readonly property var kinds: HellLook.breakageKinds
+    readonly property string kind: variant === "random" ? kinds[loops % kinds.length] : variant === "circle" || !variant ? HellLook.breakage[loops % HellLook.breakage.length] : kinds.includes(variant) ? variant : "glass"
 
     // a window it breaks over
     Rectangle {

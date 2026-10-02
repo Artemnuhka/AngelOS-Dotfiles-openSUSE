@@ -160,7 +160,9 @@ IX Коцит, верный ответ → «И вышли мы вновь уз�
 4.5:1; роли панели `barIcon`, `barHover`, `barActive`, `sprite`, `spriteHi` можно задать, иначе
 они выводятся из палитры — `HellLook.barRoles`, тест проверяет и их), `bar` (`texture`: stone ash water ice iron sand pitch whirl), `edge` (`kind`: scorch frost
 tarnish wet ash wind grime iron blood pitch), `backdrop` (`dim`, `desat`, `vignette`, `tint`,
-`ambient`: fog wind rain dust ripple embers sand pitch ice, `pictures`), `labels`, `voice`.
+`ambient`: fog wind rain dust ripple embers sand pitch ice, `pictures`), `breakage` (что ломает
+её кулак: glass tv burn claws sigil fog whirl ooze coin ripple spatter pitch frost — один из
+набора на удар, если в Y2K выбрано «По кругу»), `labels`, `voice`.
 Порядок кругов — `story/game.json → order`.
 
 ### Инструменты

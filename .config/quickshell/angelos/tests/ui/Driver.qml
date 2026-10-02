@@ -366,7 +366,7 @@ Scope {
             "LockScreen": ["pixelate", "hearts", "reactions", "indicators", "stream"],
             "CaptureSkin": ["ropes", "window", "stream"],
             "CircleFx": ["full", "calm", "off"],
-            "Breakage": ["glass", "tv", "burn", "claws", "sigil", "random"]
+            "Breakage": ["circle", "glass", "tv", "burn", "claws", "sigil", "fog", "whirl", "ooze", "coin", "ripple", "spatter", "pitch", "frost", "random"]
         })
 
     property string phase: "wait"

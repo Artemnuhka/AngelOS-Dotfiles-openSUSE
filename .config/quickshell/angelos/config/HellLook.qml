@@ -67,6 +67,8 @@ Singleton {
                 "vignette": 0.6,
                 "tint": "#0b0809"
             },
+            // what her fist breaks in this circle (Config.y2k.breakage "circle"), one of them each punch
+            "breakage": ["glass", "tv", "burn", "claws", "sigil"],
             // the word after a reading on hell's widgets: "CPU · жар" — the metric first, always
             "labels": {
                 "cpu": {
@@ -111,6 +113,15 @@ Singleton {
     readonly property var where: look.where || ({})
     readonly property string voice: look.voice || ""
     readonly property string ambient: backdrop && backdrop.ambient ? backdrop.ambient : ""
+    // What her fist can break (widgets/BreakageArt; the index is shaders/breakage.frag's kind),
+    // the ones that keep moving once they've spread (services/Cracks runs a clock for them), and
+    // this circle's own set (story/circles.json → breakage: Config.y2k.breakage "circle")
+    readonly property var breakageKinds: ["glass", "tv", "burn", "claws", "sigil", "fog", "whirl", "ooze", "coin", "ripple", "spatter", "pitch", "frost"]
+    readonly property var breakageLiving: ["tv", "burn", "claws", "sigil", "ooze", "ripple", "pitch"]
+    readonly property var breakage: {
+        const own = (look.breakage || []).filter(k => breakageKinds.includes(k));
+        return own.length ? own : ["glass"];
+    }
     // "CPU · жар": the circle's word for a reading, after its plain name
     function label(id, plain) {
         const w = look.labels ? look.labels[id] : null;

@@ -1,11 +1,19 @@
 #version 440
 // The demon's mark on her corner of the screen when it isn't glass (ScreenCracks,
-// Y2K → Angel or demon → What she breaks):
+// Y2K → Angel or demon → What she breaks; by default the circle's own set, story/circles.json):
 //   kind 1  a smashed TV: a hole through the screen with snow inside, dead LCD lines
 //           bleeding out of it, sparks at the rim, cracks around
 //   kind 2  a hole burnt through: hellfire inside, an ember rim, char and scorch, smoke
 //   kind 3  claw marks: four tapered gashes glowing neon red, dripping
 //   kind 4  a sigil: a pentagram with runes burnt into the glass, drawing itself, smouldering
+//   kind 5  fog (Limbo): a breath on the glass, blotchy, a few hairline cracks, drops below
+//   kind 6  whirl (Lust): the crack winds out from the blow in a spiral, the wind's shape
+//   kind 7  ooze (Gluttony): a puncture that weeps something thick, drips crawling down
+//   kind 8  coin (Greed): a coin hammered into the glass, a stamp on it, cracks round it
+//   kind 9  ripple (Wrath): the blow spreads in broken rings, like a stone in the Styx
+//   kind 10 spatter (Violence): a small deep hole, cracks, a spray flung away from it
+//   kind 11 pitch (Fraud): a splash of tar, glossy, running; now and then eyes open in it
+//   kind 12 frost (Treachery): ice ferns grow out of the blow in six directions
 // All of it on a pixel grid (one cell = Theme.u·2 screen pixels) and stepped in time like
 // the sprites. grow 0 → 1: the mark appears; fall 0 → 1: the angel is back and it goes.
 // Drawn in the circle's few colours at the end (cEdge → cRim → cDim by brightness, the
@@ -62,6 +70,21 @@ float segment(vec2 p, vec2 a, vec2 b) {
     vec2 pa = p - a, ba = b - a;
     float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-4), 0.0, 1.0);
     return length(pa - ba * h);
+}
+
+// where the square's middle is from the blow: the marks grow inward, away from the corner
+vec2 inward(vec2 I) {
+    return normalize(vec2(0.5 * cells) - I);
+}
+// a thin crack from `a` along angle `ang`, bent a little, `len` cells long; 1 inside
+float crack(vec2 p, vec2 a, float ang, float len, float bend, float fk) {
+    vec2 d = p - a;
+    float rr = length(d);
+    float aa = ang + bend * sin(rr * 0.25 + fk * 1.9);
+    vec2 dir = vec2(cos(aa), sin(aa));
+    float along = dot(d, dir);
+    float off = abs(d.x * dir.y - d.y * dir.x);
+    return along > 0.0 && along < len && off < 0.55 ? 1.0 : 0.0;
 }
 
 // ---- 1: the smashed TV ----
@@ -177,8 +200,9 @@ vec4 burn(vec2 p, vec2 I, float st, float g, float size) {
 // ---- 3: claw marks ----
 vec4 claws(vec2 p, vec2 I, float st, float g, float size) {
     vec4 c = vec4(0.0);
-    vec2 C = I + vec2(0.2, -0.24) * cells;
-    vec2 dir = normalize(vec2(-0.55, 1.0));                 // a swipe from top right down to the Start button
+    vec2 v = inward(I);
+    vec2 C = I + v * cells * 0.32;                          // across the square from her corner
+    vec2 dir = normalize(vec2(-0.55 * sign(v.x), 1.0));     // a swipe down and toward the corner
     vec2 perp = vec2(-dir.y, dir.x);
     float L = cells * 0.72 * size;
     float spacing = cells * 0.11 * size;
@@ -269,6 +293,287 @@ vec4 sigil(vec2 p, vec2 I, float st, float g, float size) {
     return c;
 }
 
+// ---- 5: fog ----
+vec4 fog(vec2 p, vec2 I, float st, float g, float size) {
+    vec4 c = vec4(0.0);
+    vec2 d = p - I;
+    float r = length(d);
+    float R = cells * 0.45 * size * g;
+    vec2 b = floor(p / 2.0);                       // the breath settles in blocks of 2 cells
+    float edge = R * (0.6 + 0.55 * fbm(b * 0.3 + seed * 0.013));
+    if (r < edge) {
+        float k = 1.0 - r / max(edge, 1.0);
+        if (hash(b + seed * 0.1) < 0.2 + 0.55 * k + 0.2 * noise(b * 0.8 + seed))
+            c = over(c, vec3(0.55), 0.22 + 0.3 * k);
+    }
+    vec2 v = inward(I);
+    float base = atan(v.y, v.x);
+    for (int k = 0; k < 3; k++) {
+        float fk = float(k);
+        float ang = base + (fk - 1.0) * 0.75 + (hash(vec2(fk, seed + 2.0)) - 0.5) * 0.4;
+        float len = R * (0.9 + 0.5 * hash(vec2(fk, seed + 4.0)));
+        if (crack(p, I, ang, len, 0.12, fk) > 0.5)
+            c = over(c, vec3(0.85), 0.75);
+    }
+    // a few drops gather at the bottom of the breath and run down, slowly
+    for (int k = 0; k < 4; k++) {
+        float fk = float(k);
+        float x = I.x + (hash(vec2(fk, seed + 8.0)) - 0.5) * edge * 1.4;
+        float y0 = I.y + edge * 0.35 * (hash(vec2(fk, seed + 9.0)) - 0.2);
+        float run = g * cells * 0.08 * (0.5 + hash(vec2(fk, seed + 10.0)));
+        if (abs(p.x - x) < 0.6 && p.y > y0 && p.y < y0 + run)
+            c = over(c, p.y > y0 + run - 1.5 ? vec3(0.95) : vec3(0.5), 0.7);
+    }
+    return c;
+}
+
+// ---- 6: the whirl ----
+vec4 whirl(vec2 p, vec2 I, float st, float g, float size) {
+    vec4 c = vec4(0.0);
+    vec2 C = I + inward(I) * cells * 0.24;         // the eye of the wind, off the corner
+    vec2 d = p - C;
+    float r = length(d);
+    float a = atan(d.y, d.x);
+    float R = cells * 0.4 * size;
+    float turns = 2.4;
+    float k = 1.6;                                 // the spiral opens: r = k·θ
+    // the arm nearest to this pixel: θ = a + 2πn, r ≈ k·θ
+    float n = floor((r / k - a) / TAU + 0.5);
+    float th = a + n * TAU;
+    float onArm = abs(r - k * th);
+    if (th > 0.0 && th < turns * TAU * g && r < R && onArm < 0.7)
+        c = over(c, vec3(1.0), 0.85);
+    else if (th > 0.0 && th < turns * TAU * g && r < R && onArm < 1.7)
+        c = over(c, vec3(0.04), 0.5);              // its dark edge
+    // short splinters flung outward from the arm
+    float sector = floor((a + PI) / TAU * 24.0);
+    if (hash(vec2(sector, seed)) > 0.62 && r < R * g && abs(fract((a + PI) / TAU * 24.0) - 0.5) < 0.06 && hash(vec2(floor(r / 3.0), sector + seed)) > 0.5)
+        c = over(c, vec3(0.6), 0.6);
+    // a faint glow of her colour along the arm, breathing with the wind
+    if (onArm < 3.0 && th > 0.0 && th < turns * TAU * g && r < R)
+        c = over(c, vec3(1.0, 0.25, 0.7), 0.12 * (1.0 - onArm / 3.0));
+    return c;
+}
+
+// ---- 7: ooze ----
+vec4 ooze(vec2 p, vec2 I, float st, float g, float size) {
+    vec4 c = vec4(0.0);
+    vec2 d = p - I;
+    float r = length(d);
+    float R = cells * 0.12 * size * g;
+    float edge = R * (0.75 + 0.5 * fbm(normalize(d + 0.001) * 2.0 + seed * 0.02));
+    // a short ring of cracks round the puncture
+    for (int k = 0; k < 6; k++) {
+        float fk = float(k);
+        float ang = -PI + (fk + hash(vec2(fk, seed))) / 6.0 * TAU;
+        if (crack(p, I, ang, edge + cells * 0.12 * g, 0.2, fk) > 0.5 && r > edge)
+            c = over(c, vec3(0.8), 0.7);
+    }
+    // drips: thick, slow, each with a bead at its end; gravity is down (the screen's down)
+    float drip = 0.0;
+    float bead = 0.0;
+    for (int k = 0; k < 5; k++) {
+        float fk = float(k);
+        float x = I.x + (fk - 2.0) * edge * 0.45 + (hash(vec2(fk, seed + 1.0)) - 0.5) * 2.0;
+        float w = 0.9 + 0.8 * hash(vec2(fk, seed + 2.0));
+        float len = g * cells * (0.12 + 0.3 * hash(vec2(fk, seed + 3.0))) + mod(st * 0.15 + fk * 3.0, 4.0);
+        float top = I.y + sqrt(max(0.0, edge * edge - (x - I.x) * (x - I.x))) * 0.6;
+        if (p.y > top - 1.0 && p.y < top + len && abs(p.x - x) < w)
+            drip = 1.0;
+        if (length(p - vec2(x, top + len)) < w + 0.8)
+            bead = 1.0;
+    }
+    if (r < edge || drip > 0.5 || bead > 0.5) {
+        float shine = (d.x < 0.0 && d.y < 0.0 && r > edge * 0.4 && r < edge * 0.7) || (bead > 0.5 && hash(p + seed) > 0.7) ? 1.0 : 0.0;
+        c = over(c, shine > 0.5 ? vec3(0.75, 0.95, 0.3) : vec3(0.32, 0.4, 0.1), 0.92);
+    } else if (r < edge + 1.0) {
+        c = over(c, vec3(0.03), 0.7);
+    }
+    return c;
+}
+
+// ---- 8: the coin ----
+vec4 coin(vec2 p, vec2 I, float st, float g, float size) {
+    vec4 c = vec4(0.0);
+    vec2 C = I + inward(I) * cells * 0.1;
+    vec2 d = p - C;
+    float r = length(d);
+    float R = cells * 0.11 * size * min(1.0, g * 2.0);
+    // the cracks it drove into the glass: straight, many, short
+    for (int k = 0; k < 10; k++) {
+        float fk = float(k);
+        float ang = -PI + (fk + 0.5 * hash(vec2(fk, seed))) / 10.0 * TAU;
+        float len = R * 0.4 + cells * 0.28 * g * hash(vec2(fk, seed + 6.0));
+        if (crack(p, C + vec2(cos(ang), sin(ang)) * R, ang, len, 0.05, fk) > 0.5)
+            c = over(c, vec3(0.85), 0.75);
+    }
+    if (r < R) {
+        // the coin: a rim, a field, a stamp — a horned head in profile, crudely
+        float rim = R - r;
+        vec3 col = rim < 1.2 ? vec3(0.95, 0.75, 0.2) : vec3(0.55, 0.42, 0.12);
+        vec2 q = d / max(R, 1.0);
+        float head = length(q - vec2(0.05, 0.08)) < 0.42 ? 1.0 : 0.0;
+        float horn = abs(q.x - 0.25 + q.y * 0.6) < 0.08 && q.y < -0.15 && q.y > -0.65 ? 1.0 : 0.0;
+        if ((head > 0.5 || horn > 0.5) && rim > 2.0)
+            col = vec3(0.9, 0.7, 0.18);
+        if (hash(floor(p) + seed) > 0.93)
+            col = vec3(1.0, 0.95, 0.6);                // worn shine
+        c = over(c, col, 0.97);
+    } else if (r < R + 1.3) {
+        c = over(c, vec3(0.03), 0.8);
+    }
+    return c;
+}
+
+// ---- 9: the ripple ----
+vec4 ripple(vec2 p, vec2 I, float st, float g, float size) {
+    vec4 c = vec4(0.0);
+    vec2 C = I + inward(I) * cells * 0.2;          // where the stone went in, off the corner
+    vec2 d = p - C;
+    float r = length(d);
+    float a = atan(d.y, d.x);
+    float R = cells * 0.5 * size;
+    // a slow swell: the rings drift outward a cell every few seconds
+    float drift = floor(st * 0.05);
+    for (int k = 0; k < 5; k++) {
+        float fk = float(k);
+        float rk = R * (fk + 1.0) / 5.5 * g + mod(drift + fk, 2.0) * 0.5;
+        float wob = 0.7 * sin(a * (2.0 + fk * 0.5) + seed * 0.1 + fk);
+        float gap = noise(vec2(a * 3.0 + fk * 7.0, seed * 0.03));
+        if (abs(r - rk - wob) < 0.6 && gap > 0.32 + fk * 0.06)
+            c = over(c, fk < 2.0 ? vec3(1.0) : vec3(0.7), 0.85 - fk * 0.08);
+        else if (abs(r - rk - wob - 1.0) < 0.6 && gap > 0.32 + fk * 0.06)
+            c = over(c, vec3(0.04), 0.45);
+    }
+    // the blow itself: a small crushed star
+    if (r < 1.5 + 1.0 * g && hash(floor(p) + seed) > 0.35)
+        c = over(c, vec3(0.95), 0.8);
+    // something passes under the surface: a darker bulge crossing the rings, rarely
+    float pass = mod(st * 0.02 + seed, 7.0);
+    if (pass < 1.0 && abs(r - R * pass * g) < 3.0 && abs(a - 0.3) < 0.8)
+        c = over(c, vec3(0.2, 0.9, 0.7), 0.25);
+    return c;
+}
+
+// ---- 10: the spatter ----
+vec4 spatter(vec2 p, vec2 I, float st, float g, float size) {
+    vec4 c = vec4(0.0);
+    vec2 d = p - I;
+    float r = length(d);
+    vec2 v = inward(I);
+    float base = atan(v.y, v.x);
+    float a = atan(d.y, d.x);
+    // the spray: drops flung inward in a cone, bigger near the hole, a few streaks
+    vec2 cellId = floor(p / 2.0);
+    float h = hash(cellId + seed);
+    float da = abs(mod(a - base + PI, TAU) - PI);
+    float reach = cells * 0.62 * size * g;
+    if (da < 0.75 && r > 3.0 && r < reach && h > 0.86 - 0.12 * (1.0 - r / max(reach, 1.0))) {
+        vec2 dc = p - (cellId * 2.0 + 1.0);
+        if (length(dc) < 0.6 + 0.9 * hash(cellId + seed + 1.0) * (1.0 - r / max(reach, 1.0)))
+            c = over(c, vec3(0.75, 0.04, 0.06), 0.95);
+    }
+    for (int k = 0; k < 3; k++) {
+        float fk = float(k);
+        float ang = base + (fk - 1.0) * 0.35 + (hash(vec2(fk, seed + 3.0)) - 0.5) * 0.2;
+        if (crack(p, I + vec2(cos(ang), sin(ang)) * 4.0, ang, reach * (0.35 + 0.25 * hash(vec2(fk, seed))), 0.02, fk) > 0.5)
+            c = over(c, vec3(0.6, 0.02, 0.05), 0.9);
+    }
+    // cracks round the hole
+    for (int k = 0; k < 7; k++) {
+        float fk = float(k);
+        float ang = -PI + (fk + hash(vec2(fk, seed + 5.0))) / 7.0 * TAU;
+        if (crack(p, I, ang, cells * 0.16 * g * (0.6 + hash(vec2(fk, seed + 6.0))), 0.25, fk) > 0.5)
+            c = over(c, vec3(0.85), 0.75);
+    }
+    // the hole: small, black, a light rim
+    if (r < 2.2)
+        c = over(c, vec3(0.02), 0.97);
+    else if (r < 3.2)
+        c = over(c, vec3(0.95), 0.85);
+    return c;
+}
+
+// ---- 11: pitch ----
+vec4 pitch(vec2 p, vec2 I, float st, float g, float size) {
+    vec4 c = vec4(0.0);
+    vec2 C = I + inward(I) * cells * 0.06;
+    vec2 d = p - C;
+    float r = length(d);
+    vec2 n = d / max(r, 0.001);
+    float R = cells * 0.2 * size * g;
+    float edge = R * (0.55 + 0.7 * fbm(n * 1.8 + seed * 0.02));
+    // flung blobs round the splash
+    vec2 bid = floor(p / 3.0);
+    float hb = hash(bid + seed);
+    bool blob = hb > 0.965 && r > edge && r < edge * 1.8 && length(p - (bid * 3.0 + 1.5)) < 1.2;
+    // thick runs down from the bottom
+    bool run = false;
+    for (int k = 0; k < 4; k++) {
+        float fk = float(k);
+        float x = C.x + (fk - 1.5) * edge * 0.5 + (hash(vec2(fk, seed + 2.0)) - 0.5) * 2.0;
+        float top = C.y + edge * 0.5;
+        float len = g * cells * (0.1 + 0.22 * hash(vec2(fk, seed + 3.0)));
+        if (p.y > top - 2.0 && p.y < top + len && abs(p.x - x) < 1.3 - 0.6 * (p.y - top) / max(len, 1.0))
+            run = true;
+    }
+    if (r < edge || blob || run) {
+        vec3 col = vec3(0.02);
+        // the gloss: a light streak on its upper left
+        if (d.x < 0.0 && d.y < 0.0 && abs(r - edge * 0.55) < 0.9 && r < edge)
+            col = vec3(0.7);
+        // eyes open in it now and then (fraud watches): two dots, for a few seconds
+        float blink = mod(st * 0.1 + seed * 0.37, 12.0);
+        vec2 e1 = C + vec2(-edge * 0.25, -edge * 0.05), e2 = C + vec2(edge * 0.2, -edge * 0.08);
+        if (blink < 2.0 && g > 0.9 && (length(p - e1) < 1.1 || length(p - e2) < 1.1))
+            col = vec3(1.0, 0.85, 0.2);
+        c = over(c, col, 0.96);
+    } else if (r < edge + 1.0) {
+        c = over(c, vec3(0.45), 0.5);
+    }
+    return c;
+}
+
+// ---- 12: frost ----
+vec4 frost(vec2 p, vec2 I, float st, float g, float size) {
+    vec4 c = vec4(0.0);
+    vec2 d = p - I;
+    float r = length(d);
+    float R = cells * 0.66 * size * g;
+    float a = atan(d.y, d.x);
+    // six main stems, each with barbs at 60° on both sides — a fern of ice
+    for (int k = 0; k < 6; k++) {
+        float fk = float(k);
+        float ang = fk / 6.0 * TAU + seed * 0.01;
+        vec2 dir = vec2(cos(ang), sin(ang));
+        vec2 perp = vec2(-dir.y, dir.x);
+        float along = dot(d, dir);
+        float off = dot(d, perp);
+        float len = R * (0.55 + 0.45 * hash(vec2(fk, seed)));
+        if (along < 0.0 || along > len)
+            continue;
+        if (abs(off) < 0.55)
+            c = over(c, vec3(1.0), 0.9);
+        // barbs every 4 cells, shorter toward the tip
+        float seg = floor(along / 4.0);
+        float s0 = seg * 4.0;
+        float bl = (len - s0) * 0.35;
+        vec2 q = d - dir * s0;
+        for (int side = 0; side < 2; side++) {
+            float sgn = side == 0 ? 1.0 : -1.0;
+            vec2 bd = normalize(dir + perp * sgn * 1.732);
+            float ba = dot(q, bd);
+            float bo = abs(q.x * bd.y - q.y * bd.x);
+            if (ba > 0.0 && ba < bl && bo < 0.55 && hash(vec2(seg, fk + float(side) * 9.0 + seed)) > 0.2)
+                c = over(c, vec3(0.75, 0.9, 1.0), 0.8);
+        }
+    }
+    // rime: a dusting of crystals near the blow
+    if (r < R * 0.4 && hash(floor(p) + seed) > 0.88)
+        c = over(c, vec3(0.6), 0.5);
+    return c;
+}
+
 void main() {
     vec2 cell = floor(qt_TexCoord0 * cells);
     // the angel is back: it slides down as it goes
@@ -284,8 +589,24 @@ void main() {
         c = burn(p, I, st, g, size);
     else if (kind < 3.5)
         c = claws(p, I, st, g, size);
-    else
+    else if (kind < 4.5)
         c = sigil(p, I, st, g, size);
+    else if (kind < 5.5)
+        c = fog(p, I, st, g, size);
+    else if (kind < 6.5)
+        c = whirl(p, I, st, g, size);
+    else if (kind < 7.5)
+        c = ooze(p, I, st, g, size);
+    else if (kind < 8.5)
+        c = coin(p, I, st, g, size);
+    else if (kind < 9.5)
+        c = ripple(p, I, st, g, size);
+    else if (kind < 10.5)
+        c = spatter(p, I, st, g, size);
+    else if (kind < 11.5)
+        c = pitch(p, I, st, g, size);
+    else
+        c = frost(p, I, st, g, size);
     if (c.a > 0.001) {
         vec3 rgb = c.rgb / c.a;
         float l = dot(rgb, vec3(0.299, 0.587, 0.114));

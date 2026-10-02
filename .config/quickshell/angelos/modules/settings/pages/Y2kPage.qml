@@ -584,10 +584,14 @@ PxPage {
             // D4: the punch and what spreads from it, drawn as on the desktop
             preview: "Breakage"
             label: I18n.t("Что она ломает", "What she breaks")
-            hint: I18n.t("куда приходится её кулак: стекло трескается; телевизор — дыра со «снегом» и битыми полосами экрана; прожжённая дыра — внутри адский огонь; когти — четыре светящиеся раны; печать — выжженная пентаграмма. «Случайно» — каждый раз другое", "Where her fist lands: glass cracks; a TV gets a hole with snow and dead screen lines; a burnt hole has hellfire inside; claws leave four glowing gashes; a sigil is a pentagram burnt into the glass. “Random”: something else every time")
+            hint: I18n.t("куда приходится её кулак. «По кругу» — у каждого круга своё: в Лимбе запотевшее стекло, в Похоти трещина вихрем, в Чревоугодии сочащаяся жижа, в Жадности вбитая монета, в Гневе круги как на воде, в Ересях прожжённая дыра, в Насилии брызги, в Обмане смола, в Предательстве иней. Или одно и то же всегда, или «Случайно» — каждый раз другое", "Where her fist lands. “By circle”: each circle its own — fogged glass in Limbo, a whirling crack in Lust, ooze in Gluttony, a coin hammered in in Greed, rings like on water in Wrath, a burnt hole in Heresy, spatter in Violence, pitch in Fraud, frost in Treachery. Or always the same, or “Random”: something else every time")
             PxCombo {
                 width: Math.min(parent.width, Theme.u * 120)
                 model: [
+                    {
+                        "label": I18n.t("По кругу", "By circle"),
+                        "value": "circle"
+                    },
                     {
                         "label": I18n.t("Стекло", "Glass"),
                         "value": "glass"
@@ -609,11 +613,43 @@ PxPage {
                         "value": "sigil"
                     },
                     {
+                        "label": I18n.t("Запотевшее стекло", "Fogged glass"),
+                        "value": "fog"
+                    },
+                    {
+                        "label": I18n.t("Трещина вихрем", "Whirling crack"),
+                        "value": "whirl"
+                    },
+                    {
+                        "label": I18n.t("Сочащаяся жижа", "Oozing"),
+                        "value": "ooze"
+                    },
+                    {
+                        "label": I18n.t("Вбитая монета", "A coin hammered in"),
+                        "value": "coin"
+                    },
+                    {
+                        "label": I18n.t("Круги как на воде", "Rings like on water"),
+                        "value": "ripple"
+                    },
+                    {
+                        "label": I18n.t("Брызги", "Spatter"),
+                        "value": "spatter"
+                    },
+                    {
+                        "label": I18n.t("Смола", "Pitch"),
+                        "value": "pitch"
+                    },
+                    {
+                        "label": I18n.t("Иней", "Frost"),
+                        "value": "frost"
+                    },
+                    {
                         "label": I18n.t("Случайно", "Random"),
                         "value": "random"
                     }
                 ]
-                currentValue: Config.y2k.breakage || "glass"
+                currentValue: Config.y2k.breakage || "circle"
                 onActivated: v => {
                     Config.y2k.breakage = v;
                     breakRow.show(v, "");

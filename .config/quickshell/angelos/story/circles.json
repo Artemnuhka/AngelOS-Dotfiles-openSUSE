@@ -1,5 +1,5 @@
 {
-  "_comment": "How hell looks: one entry per circle (config/HellLook.qml). 'base' is hell before any circle and the defaults every circle starts from — a circle lists only what it changes. n: the circle's number (1 at the top, 9 at the bottom); name, where: its title and one line about it; sin: the story variable that leads a fall here (services/Game); voice: how the demon talks here (story/voices.json); palette: the hell tokens (Theme.hell*); bar: the stone behind the bar (shaders/hell_texture.frag: stone ash water ice iron sand pitch whirl); edge: the rim of windows and widgets (shaders/hell_edge.frag); backdrop: the dark laid over the wallpaper (shaders/hell_backdrop.frag: dim, desat, vignette 0..1, tint), its paintings from the Hell pack (pictures: landscape and portrait names — scripts/hell-wallpaper.py --prefer) and its ambient — fog wind rain dust ripple embers sand pitch ice, still but for a rare event; labels: the word after a reading on hell's widgets.",
+  "_comment": "How hell looks: one entry per circle (config/HellLook.qml). 'base' is hell before any circle and the defaults every circle starts from — a circle lists only what it changes. n: the circle's number (1 at the top, 9 at the bottom); name, where: its title and one line about it; sin: the story variable that leads a fall here (services/Game); voice: how the demon talks here (story/voices.json); palette: the hell tokens (Theme.hell*); bar: the stone behind the bar (shaders/hell_texture.frag: stone ash water ice iron sand pitch whirl); edge: the rim of windows and widgets (shaders/hell_edge.frag); backdrop: the dark laid over the wallpaper (shaders/hell_backdrop.frag: dim, desat, vignette 0..1, tint), its paintings from the Hell pack (pictures: landscape and portrait names — scripts/hell-wallpaper.py --prefer) and its ambient — fog wind rain dust ripple embers sand pitch ice, still but for a rare event; labels: the word after a reading on hell's widgets; breakage: what the demon's fist breaks in this circle (Config.y2k.breakage \"circle\": one of these each punch — widgets/BreakageArt, shaders/breakage.frag: glass tv burn claws sigil fog whirl ooze coin ripple spatter pitch frost); palette may also set the hell bar's roles barIcon, barHover, barActive, sprite, spriteHi (config/HellLook.qml barRoles).",
   "base": {
     "name": {
       "ru": "Ад",
@@ -51,6 +51,13 @@
       "vignette": 0.6,
       "tint": "#0b0809"
     },
+    "breakage": [
+      "glass",
+      "tv",
+      "burn",
+      "claws",
+      "sigil"
+    ],
     "labels": {
       "cpu": {
         "ru": "жар",
@@ -133,6 +140,10 @@
         "hell-bosch-portrait"
       ]
     },
+    "breakage": [
+      "fog",
+      "glass"
+    ],
     "labels": {
       "cpu": {
         "ru": "туман",
@@ -215,6 +226,10 @@
         "hell-bosch-portrait"
       ]
     },
+    "breakage": [
+      "whirl",
+      "claws"
+    ],
     "labels": {
       "cpu": {
         "ru": "вихрь",
@@ -297,6 +312,10 @@
         "hell-bosch-portrait"
       ]
     },
+    "breakage": [
+      "ooze",
+      "glass"
+    ],
     "labels": {
       "cpu": {
         "ru": "голод",
@@ -379,6 +398,10 @@
         "hell-bosch-portrait"
       ]
     },
+    "breakage": [
+      "coin",
+      "glass"
+    ],
     "labels": {
       "cpu": {
         "ru": "груз",
@@ -461,6 +484,10 @@
         "hell-bosch-portrait"
       ]
     },
+    "breakage": [
+      "ripple",
+      "tv"
+    ],
     "labels": {
       "cpu": {
         "ru": "ярость",
@@ -543,6 +570,10 @@
         "hell-bosch-portrait"
       ]
     },
+    "breakage": [
+      "burn",
+      "sigil"
+    ],
     "labels": {
       "cpu": {
         "ru": "жар",
@@ -625,6 +656,10 @@
         "hell-bosch-portrait"
       ]
     },
+    "breakage": [
+      "spatter",
+      "claws"
+    ],
     "labels": {
       "cpu": {
         "ru": "кровь",
@@ -707,6 +742,10 @@
         "hell-bosch-portrait"
       ]
     },
+    "breakage": [
+      "pitch",
+      "sigil"
+    ],
     "labels": {
       "cpu": {
         "ru": "смола",
@@ -789,6 +828,10 @@
         "hell-lucifer-portrait"
       ]
     },
+    "breakage": [
+      "frost",
+      "glass"
+    ],
     "labels": {
       "cpu": {
         "ru": "лёд",

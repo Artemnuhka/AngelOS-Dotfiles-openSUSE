@@ -2,8 +2,9 @@ import QtQuick
 import qs.config
 
 // What the demon broke, drawn: glass — pixel cracks spreading from the impact (a Canvas);
-// tv | burn | claws | sigil — shaders/breakage.frag. One drawing for the desktop
-// (ScreenCracks) and the settings' preview of "What she breaks" (widgets/previews/Breakage).
+// the rest (HellLook.breakageKinds: tv, burn, claws, sigil and the circles' own fog, whirl,
+// ooze, coin, ripple, spatter, pitch, frost) — shaders/breakage.frag. One drawing for the
+// desktop (ScreenCracks) and the settings' preview of "What she breaks" (previews/Breakage).
 Item {
     id: art
 
@@ -16,7 +17,7 @@ Item {
     property real clock: 0                   // the shader's clock
     property real veil: 1                    // how much shows (the pointer near: less)
     property int px: Math.max(2, Theme.u * 2)
-    readonly property var kinds: ["glass", "tv", "burn", "claws", "sigil"]
+    readonly property var kinds: HellLook.breakageKinds
 
     // everything but the glass: a hole in a TV, a burnt hole, claws, a sigil
     ShaderEffect {

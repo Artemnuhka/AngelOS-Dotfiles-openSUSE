@@ -313,7 +313,8 @@ JsonAdapter {
         property var seenTips: []           // settings pages whose first-visit tip the angel already told
         property double nextPrank: 0        // ms; not before
         property string cracks: "full"      // the demon's broken screen corner: full | weak | off
-        property string breakage: "glass"   // what her fist breaks there: glass | tv | burn | claws | sigil | random
+        property string breakage: "circle"  // what her fist breaks there: circle (the circle's own set, story/circles.json) | random | one kind (HellLook.breakageKinds)
+        property bool breakageByCircle: false // the old default "glass" became "circle" once (services/Cracks)
         property bool heavenFx: true        // sun rays and a choir when the angel comes back
         property bool raysSeen: false       // the rays played when she first appeared; not again on every start
         property string textShake: "light"  // the helper's letters twitch now and then: off | light | strong
