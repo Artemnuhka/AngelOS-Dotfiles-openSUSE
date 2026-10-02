@@ -1,0 +1,20 @@
+{
+  "_comment": "The rules of the game (services/Game). Draft numbers — tune freely, no code needed. order: the nine circles from the top down (story/circles.json). The circle a fall begins in: the heaviest sin among the circles no fall has begun in yet (all at zero: limbo); then all nine are open again. attempt: the minutes between tries to get out (each try is a trial scene in the circle — story/scenes, trigger \"trial\"); pactAfter: from this many failed tries in one circle the trial offers the pact; limboAfter: trials answered with silence (this fall) before the player sinks into the limbo outcome; limboReturn: minutes away from the computer (locked, asleep) before the angel finds them in limbo. actions: what the player does outside the scenes and which sin it weighs ({set} like a scene's, `every`: at most once per that many minutes; `realm`: only in heaven or hell).",
+  "order": ["limbo", "lust", "gluttony", "greed", "wrath", "heresy", "violence", "fraud", "treachery"],
+  "attempt": 10,
+  "pactAfter": 3,
+  "limboAfter": 3,
+  "limboReturn": 10,
+  "actions": {
+    "throw.fling": {"set": {"wrath": "+1"}, "note": "the angel flung down hard"},
+    "throw.push": {"set": {"treachery": "+1"}, "note": "the angel pushed down slowly, on purpose"},
+    "wheel.spin": {"set": {"greed": "+1"}, "note": "a spin of the Wheel of Hell"},
+    "joke.more": {"set": {"gluttony": "+1"}, "every": 3, "note": "“Another!” — one more joke"},
+    "ask.love": {"set": {"lust": "+1"}, "every": 10, "note": "“I love you” to her"},
+    "helper.off": {"set": {"heresy": "+1"}, "note": "turned her off"},
+    "helper.hide": {"set": {"limbo": "+1"}, "every": 30, "note": "“leave me for an hour”"},
+    "plea.early": {"set": {"wrath": "+1"}, "every": 5, "realm": "hell", "note": "begging again before the time is up"},
+    "portal": {"set": {"fraud": "+1"}, "note": "the portal: a way round"},
+    "choice.silent": {"set": {"limbo": "+1"}, "note": "any answer of the silent tone, in any scene"}
+  }
+}

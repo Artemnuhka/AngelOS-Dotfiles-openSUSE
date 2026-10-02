@@ -2,13 +2,16 @@
 """The demon's wallpaper (Settings → Y2K → Angel or demon).
 
   hell-wallpaper.py <dir> [WxH …] [--pack DIR …] [--cache DIR] [--repo OWNER/NAME] [--drawn]
+                    [--prefer NAME …]
       prints JSON {"ok", "files": {"WxH": path}, "source": "pack" | "drawn"}
 
 Paintings first: the Hell pack of the wallpapers repo — pixel hell made from
 public-domain paintings (Martin, Doré, Bosch). It is looked for in every --pack
 dir (the installer puts it into ~/Pictures/Hell), then in --cache; if neither has
 it, the Hell folder of --repo is downloaded into --cache once. Every screen size
-gets a random picture of its own orientation (portrait screens: the tall ones).
+gets a picture of its own orientation (portrait screens: the tall ones): one of the
+--prefer names when the pack has it (the circle's own painting, story/circles.json →
+backdrop.pictures: "hell-pandemonium"…), a random one otherwise.
 
 Drawn, with --drawn or when there is no pack and no network: drawn at 1/6 of the
 size and scaled up without smoothing — a dithered night sky, a cracked
@@ -201,7 +204,7 @@ def main():
     if not args:
         sys.exit(__doc__)
     out = Path(args.pop(0))
-    packs, cache, repo, drawn, sizes = [], None, "MixaDoDs/PixelStreetArt_Wallpapers", False, []
+    packs, cache, repo, drawn, sizes, prefer = [], None, "MixaDoDs/PixelStreetArt_Wallpapers", False, [], []
     while args:
         a = args.pop(0)
         if a == "--pack":
@@ -212,6 +215,8 @@ def main():
             repo = args.pop(0)
         elif a == "--drawn":
             drawn = True
+        elif a == "--prefer":
+            prefer.append(args.pop(0))
         else:
             sizes.append(a)
     sizes = sizes or ["1920x1080", "1080x1920"]
@@ -230,7 +235,8 @@ def main():
             for s in sizes:
                 W, H = (int(v) for v in s.lower().split("x"))
                 fit = [p for p, portrait in pics if portrait == (H > W)] or [p for p, _ in pics]
-                made[s] = random.choice(fit)
+                own = [p for p in fit if Path(p).stem in prefer]
+                made[s] = own[0] if own else random.choice(fit)
             print(json.dumps({"ok": True, "files": made, "source": "pack"}))
             return
 

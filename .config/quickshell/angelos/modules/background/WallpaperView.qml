@@ -158,6 +158,14 @@ Item {
             property real cell: Theme.u * 2 * root.dpr
             property size resolution: Qt.size(root.width * root.dpr, root.height * root.dpr)
             property color tint: b.tint || Theme.hellBody
+            // the circle's ambient (fog, rain, the Styx…), still but for the rare event
+            readonly property var kinds: ["", "fog", "wind", "rain", "dust", "ripple", "embers", "sand", "pitch", "ice"]
+            property real kind: Math.max(0, kinds.indexOf(HellLook.ambient))
+            property real event: HellLook.eventTarget === -2 ? HellLook.event : 0
+            property real phase: HellLook.eventTarget === -2 ? HellLook.phase : 0
+            property real seed: root.screenName.length
+            property color light: Theme.hellTextDim
+            property color accent: Theme.hellAccent
             fragmentShader: Qt.resolvedUrl("../../shaders/hell_backdrop.frag.qsb")
         }
     }

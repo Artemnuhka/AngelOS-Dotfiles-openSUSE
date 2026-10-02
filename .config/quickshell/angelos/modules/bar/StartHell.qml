@@ -44,7 +44,7 @@ PxBox {
                 "act": () => Shell.openSettings("wallpaper")
             },
             {
-                "text": I18n.t("Молить об ангеле", "Beg for the angel") + " · " + Angel.pleasCounted + "/" + Angel.pleasNeeded,
+                "text": I18n.t("Искать выход", "Seek the way out") + " · " + I18n.t("круг ", "circle ") + Theme.roman(Story.circleN(Story.circle)),
                 "icon": "heart",
                 "show": Angel.demon && !Angel.transition,
                 "act": () => Angel.plea()

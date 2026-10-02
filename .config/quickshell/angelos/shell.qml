@@ -59,6 +59,7 @@ ShellRoot {
     ScreenCracks {}
     ScreenQuake {}
     HellFxOverlay {}
+    CircleTransition {}
     BootScreen {}
     AltTabHost {}
     ShakeCursor {}

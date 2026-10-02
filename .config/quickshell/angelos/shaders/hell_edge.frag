@@ -56,7 +56,7 @@ void main() {
             o = event > 0.02 ? mix(cStain, cLight, event) : cStain;
     } else if (k == 1) {
         float reach = 1.0 + floor(col * 2.0) + (event > 0.5 ? 1.0 : 0.0);
-        if ((top < reach || bottom < 1.0 || side < 1.0) && h < 0.55)
+        if ((top < reach || bottom < 1.0 || side < 1.0) && h < 0.3)
             o = cLight;
         if (top < reach + 2.0 && top >= reach && col > 0.93)
             o = cLight;

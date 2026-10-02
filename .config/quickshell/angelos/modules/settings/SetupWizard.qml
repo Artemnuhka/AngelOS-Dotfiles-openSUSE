@@ -226,6 +226,26 @@ FloatingWindow {
                 wrapMode: Text.Wrap
                 text: I18n.t("Панель и рабочий стол запускаются на всех подключённых экранах. Параметры мониторов и ввода меняются только по твоему действию.", "The bar and desktop run on every connected display. Monitor and input settings change only when you edit them.")
             }
+            // the game over the desktop, or plain dotfiles (Config.game.enabled; the
+            // installer asks too: ANGELOS_GAME=0). No spoilers here: what it is, not what happens
+            SettingRow {
+                label: I18n.t("Как пользоваться?", "How do you want it?")
+                hint: Config.game.enabled ? I18n.t("angelOS — это ещё и игра поверх рабочего стола: в углу живёт ангел, а что будет дальше, зависит от твоих выборов. Работать она не мешает. Выйти из игры можно в любой момент: angelos game off или Mod+Ctrl+Shift+Escape.", "angelOS is also a game played over your desktop: an angel lives in the corner, and what happens next depends on your choices. It never gets in the way of work. Leave the game any time: angelos game off or Mod+Ctrl+Shift+Escape.") : I18n.t("Обычные дотфайлы: панель, окна, темы и всё остальное — без ангела, демоницы, новеллы и ада. Включить игру потом: Система → Игра или angelos game on.", "Plain dotfiles: the bar, windows, themes and the rest — no angel, demon, novel or hell. Turn the game on later: System → The game, or angelos game on.")
+                PxSegmented {
+                    model: [
+                        {
+                            "label": I18n.t("С игрой", "With the game"),
+                            "value": true
+                        },
+                        {
+                            "label": I18n.t("Просто рабочий стол", "Just the desktop"),
+                            "value": false
+                        }
+                    ]
+                    currentValue: Config.game.enabled !== false
+                    onActivated: v => Story.setEnabled(v)
+                }
+            }
             // for the angel's novel (services/Novel): how she speaks to you. Optional — she
             // asks herself one day anyway, and the story remembers what was said here
             SettingRow {
@@ -272,10 +292,13 @@ FloatingWindow {
             id: lookPage
             heading: I18n.t("Как разложить настройки?", "How should Settings be laid out?")
             subtitle: I18n.t("Страницы везде одни и те же. Сменить можно когда угодно: Внешний вид → Вид настроек.", "The pages are the same in every view. Change it any time: Appearance → Settings look.")
-            Component.onDestruction: if (!Config.settingsUi.viewPicked)
-                Config.settingsUi.viewPicked = Config.settingsUi.view
-            // her question, in a bubble next to her
+            Component.onDestruction: if (!Config.settingsUi.viewPicked) {
+                Config.settingsUi.viewPicked = Config.settingsUi.view;
+                Story.record("wizard", "settingsView", Config.settingsUi.view);
+            }
+            // her question, in a bubble next to her (with the game on)
             Row {
+                visible: Config.game.enabled
                 spacing: Theme.u * 4
                 PxIcon {
                     anchors.verticalCenter: parent.verticalCenter

@@ -31,6 +31,144 @@ PxPage {
         }
     }
 
+    // ---- the game (services/Story): accessibility, and the way back in once it was switched off ----
+    PxGroup {
+        title: I18n.t("Игра", "The game")
+        icon: "heart"
+        width: parent.width
+        SettingRow {
+            label: I18n.t("Спокойный режим", "Calm mode")
+            hint: I18n.t("без вспышек, тряски экрана и резких звуков: лучи ангела и тряска не появляются, переходы между кругами ада медленнее и тише, буквы её реплик не дрожат", "No flashes, screen shaking or sudden loud sounds: no angel rays or shaking, hell's transitions are slower and quieter, her letters don't tremble")
+            PxToggle {
+                checked: Config.game.calm
+                onToggled: c => Config.game.calm = c
+            }
+        }
+        SettingRow {
+            visible: !Config.game.enabled
+            label: I18n.t("Игра выключена", "The game is off")
+            hint: I18n.t("angelOS работает как обычные дотфайлы: без ангела, демоницы, новеллы и ада. Включить — и в углу снова появится ангел.", "angelOS works as plain dotfiles: no angel, demon, novel or hell. Switch it on and the angel is back in the corner.")
+            PxButton {
+                icon: "heart"
+                accent: true
+                text: I18n.t("Включить игру", "Turn the game on")
+                onClicked: Story.setEnabled(true)
+            }
+        }
+    }
+
+    // ---- developer mode: see and steer the story (Story, `angelos game …`) ----
+    PxGroup {
+        id: gameDev
+        title: I18n.t("Игра: инструменты разработчика", "The game: developer tools")
+        advanced: true
+        shown: Config.developer.enabled
+        icon: "chip"
+        width: parent.width
+        property string info: ""
+        property string circle: "limbo"
+        property string scene: ""
+        property bool armed: false
+        function refresh() {
+            info = Story.status();
+        }
+        Component.onCompleted: refresh()
+        Timer {
+            interval: 2000
+            repeat: true
+            running: gameDev.visible && Config.developer.enabled
+            onTriggered: gameDev.refresh()
+        }
+        PxText {
+            width: parent.width
+            kind: "mono"
+            dim: true
+            wrapMode: Text.WrapAnywhere
+            text: gameDev.info
+        }
+        SettingRow {
+            label: I18n.t("Перейти в круг", "Go to a circle")
+            hint: I18n.t("из рая ангел сначала падает; переход — с затемнением и ударом, как в игре", "from heaven the angel falls first; with the dark and the blow, as in the game")
+            Flow {
+                width: parent.width
+                spacing: Theme.u * 3
+                PxCombo {
+                    width: Theme.u * 90
+                    model: Story.order.map(id => ({
+                                "label": Theme.roman(Story.circleN(id)) + " · " + Story.circleName(id),
+                                "value": id
+                            }))
+                    currentValue: gameDev.circle
+                    onActivated: v => gameDev.circle = v
+                }
+                PxButton {
+                    icon: "play"
+                    text: I18n.t("Перейти", "Go")
+                    onClicked: {
+                        Story.jump(gameDev.circle);
+                        gameDev.refresh();
+                    }
+                }
+            }
+        }
+        SettingRow {
+            label: I18n.t("Запустить сцену", "Play a scene")
+            hint: I18n.t("сцены — story/scenes/*.json; условия события не проверяются", "Scenes are story/scenes/*.json; the event's condition isn't checked")
+            Flow {
+                width: parent.width
+                spacing: Theme.u * 3
+                PxCombo {
+                    width: Theme.u * 90
+                    model: Object.keys(Novel.scenes).sort()
+                    currentValue: gameDev.scene
+                    onActivated: v => gameDev.scene = v
+                }
+                PxButton {
+                    icon: "play"
+                    enabled: !!gameDev.scene
+                    text: I18n.t("Запустить", "Play")
+                    onClicked: {
+                        Novel.startScene(gameDev.scene);
+                        gameDev.refresh();
+                    }
+                }
+            }
+        }
+        SettingRow {
+            label: I18n.t("Сохранение", "The save")
+            hint: Story.file
+            Flow {
+                width: parent.width
+                spacing: Theme.u * 3
+                PxButton {
+                    icon: "refresh"
+                    danger: gameDev.armed
+                    text: gameDev.armed ? I18n.t("Точно сбросить?", "Really reset?") : I18n.t("Сбросить сохранение", "Reset the save")
+                    onClicked: {
+                        if (!gameDev.armed) {
+                            gameDev.armed = true;
+                            disarm.restart();
+                            return;
+                        }
+                        gameDev.armed = false;
+                        Story.reset();
+                        gameDev.refresh();
+                    }
+                    Timer {
+                        id: disarm
+                        interval: 4000
+                        onTriggered: gameDev.armed = false
+                    }
+                }
+                PxButton {
+                    icon: "folder"
+                    text: I18n.t("Открыть файл", "Open the file")
+                    onClicked: Shell.openPath(Story.file)
+                }
+            }
+        }
+    }
+
     Component.onCompleted: {
         SystemInfo.refresh();
         DesktopActions.refresh();

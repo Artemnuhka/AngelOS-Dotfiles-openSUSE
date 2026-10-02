@@ -109,7 +109,7 @@ PxPage {
                 visible: !Angel.demon
                 icon: "heart"
                 enabled: !Angel.transition
-                text: Angel.demon ? I18n.t("Призвать ангела (прогнать демоницу)", "Call the angel (send the demon off)") : I18n.t("Позвать ангела", "Call the angel")
+                text: I18n.t("Позвать ангела", "Call the angel")
                 onClicked: {
                     const r = Angel.summon();
                     summonNote.text = r === "hidden" ? I18n.t("стрим-режим прячет её с экранов в эфире — выбери экран не в эфире или выключи «Ангелочек уходит с экрана»", "Stream mode keeps her off the streamed screens: pick another screen or switch off “The angel leaves the screen”") : "";
@@ -283,7 +283,7 @@ PxPage {
         icon: Angel.hellShown ? "fire" : "heart"
         SettingRow {
             label: I18n.t("Кто живёт в углу", "Who lives in the corner")
-            hint: Angel.demon ? I18n.t("Демоница. Вернуть ангела можно только уговорами: её меню → «Спросить…» → «Верни ангела». Нужно 3 удачные просьбы за 2 часа, считается одна в 10 минут. Сейчас: ", "The demon. Only begging brings the angel back: her menu → “Ask…” → “Bring the angel back”. Three lucky pleas within 2 hours, one counts every 10 minutes. Now: ") + Angel.pleasCounted + "/" + Angel.pleasNeeded : I18n.t("Ангелочек. Схвати её мышкой и скинь вниз — провалится в ад, и придёт демоница: тёмные обои, пошлые шутки и пакости, которые показывают фишки angelOS.", "Angel. Grab her with the mouse and throw her down: she drops into hell and the demon comes — dark wallpaper, cheeky jokes and pranks that show off angelOS features.")
+            hint: Angel.demon ? I18n.t("Демоница. Путь наверх лежит вниз, через круги: её меню → «Спросить…» → «Искать выход», не чаще раза в 10 минут. Сейчас: круг ", "The demon. The way up lies down, through the circles: her menu → “Ask…” → “Seek the way out”, once per 10 minutes at most. Now: circle ") + Theme.roman(Story.circleN(Story.circle)) + " · " + Story.circleName(Story.circle) : I18n.t("Ангелочек. Схвати её мышкой и скинь вниз — провалится в ад, и придёт демоница: тёмные обои, пошлые шутки и пакости, которые показывают фишки angelOS.", "Angel. Grab her with the mouse and throw her down: she drops into hell and the demon comes — dark wallpaper, cheeky jokes and pranks that show off angelOS features.")
             PxIcon {
                 name: Angel.demon ? "fire" : "heart"
                 pixel: Theme.u * 2

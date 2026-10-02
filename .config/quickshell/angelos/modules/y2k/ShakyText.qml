@@ -15,6 +15,7 @@ Flow {
     property real shake: 1                   // px, one way
     property real twitch: 0.06               // 0 = still
     property int tick: 0
+    property color color: Theme.text
 
     Timer {
         interval: 120
@@ -58,6 +59,7 @@ Flow {
                     required property int index
                     readonly property int at: word.modelData.at + index
                     text: word.modelData.w.charAt(index)
+                    color: root.color
                     opacity: at < root.shown ? 1 : 0
                     transform: Translate {
                         x: root.nudge(letter.at, 0) * root.shake

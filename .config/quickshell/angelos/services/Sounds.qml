@@ -14,7 +14,8 @@ import qs.config
 // (open toggle screenshot volume windowClose — Config.y2k.cuteSounds), the
 // demon's voice, and the effects crack/choir/rocks/shatter (always synthesised;
 // rocks: the demon's 8-bit rockfall, shatter: the screen breaking when the
-// angel and the demon swap). Quiet in stream mode (StreamMode.quiet).
+// angel and the demon swap; circle: the low hit in the dark between hell's circles,
+// circleSoft its calm version). Quiet in stream mode (StreamMode.quiet).
 // Settings → System sounds (SfxPage) tunes each one (Config.y2k.soundTweaks,
 // {event: {on, vol, sound, vary}}): on/off, its own volume, another event's sound
 // ("notify") or a file ("file:/path", e.g. from sounds/custom), and for the input
@@ -23,7 +24,7 @@ import qs.config
 Singleton {
     id: root
 
-    readonly property var events: ["startup", "notify", "error", "click", "shutdown", "angel", "wallpaper", "open", "toggle", "screenshot", "volume", "windowClose", "demon", "crack", "choir", "rocks", "shatter", "voice", "clickRight", "key", "windowOpen", "workspace", "lock", "unlock", "usbIn", "usbOut", "bark"]
+    readonly property var events: ["startup", "notify", "error", "click", "shutdown", "angel", "wallpaper", "open", "toggle", "screenshot", "volume", "windowClose", "demon", "crack", "choir", "rocks", "shatter", "voice", "clickRight", "key", "windowOpen", "workspace", "lock", "unlock", "usbIn", "usbOut", "bark", "circle", "circleSoft"]
     // off until switched on in System sounds (typing and such would surprise)
     readonly property var optIn: ["clickRight", "key", "windowOpen", "workspace", "lock", "unlock"]
     // the input ones: quiet over a fullscreen window (games) when asked
@@ -34,7 +35,7 @@ Singleton {
     readonly property var extra: ["voiceAngel", "voiceDemon", "key2", "key3"]
     readonly property string customDir: base + "/custom"
     readonly property var cute: ["open", "toggle", "screenshot", "volume", "windowClose"]
-    readonly property var effects: ["crack", "choir", "rocks", "shatter", "voice", "bark"]
+    readonly property var effects: ["crack", "choir", "rocks", "shatter", "voice", "bark", "circle", "circleSoft"]
     // the helper's own sounds follow "Her voice" (Config.y2k.helperVolume) on top of the volume
     readonly property var helperSounds: ["angel", "demon", "crack", "choir", "rocks", "shatter", "voice", "voiceAngel", "voiceDemon", "bark"]
     function volumeOf(name) {
@@ -115,7 +116,7 @@ Singleton {
         }
     }
     // scripts/y2k-sounds.py PACK_VERSION: an older pack is synthesised again
-    readonly property string packVersion: "5"
+    readonly property string packVersion: "6"
     readonly property string base: Config.home + "/.local/share/angelos/sounds"
     readonly property string dir: base + "/y2k"
     readonly property string pack: Config.y2k.soundPack === "overdose" ? "overdose" : "y2k"

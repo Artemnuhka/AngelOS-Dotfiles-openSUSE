@@ -19,13 +19,21 @@ import "../novel/NovelCore.js" as Core
 // one rules — tried again every few seconds), note (a paper waits to be read), line (the
 // box is up, waiting for the user). After a "free" node the side thread now and then
 // takes an unasked question from the pool (each once) and she drops notes (pools.drops).
-// Progress lives in ~/.local/state/angelos/novel.json; `angelos novel reset` starts over.
+// The game's scenes (story/scenes/*.json in the shell, services/Story) run on a third
+// thread, state.game: they are entered by an event (Novel.playScene(trigger): "trial",
+// "pact", "limbo"… — the first scene whose event's `cond` holds), see the game's variables
+// (the sins, the circle, the tries) instead of the chapter's, and have three nodes more —
+// circle, exit, scene (novel/NovelCore.js).
+// Progress lives in the player's save (~/.config/angelos/save.json → novel, services/Story;
+// it was ~/.local/state/angelos/novel.json); `angelos novel reset` starts over.
 Singleton {
     id: root
 
     readonly property string dir: Config.expand(Config.novel.dir || "~/AngelOs-Nov")
-    readonly property bool enabled: Config.novel.enabled
+    // the chapters: the novel on and the game on (`angelos game off` stops everything)
+    readonly property bool enabled: Config.novel.enabled && Story.enabled
     property var stories: ({})               // "chapter1" → story
+    property var scenes: ({})                // "trial-greed" → a game scene (story/scenes)
     property var sprites: ({})               // "angel" → {"happy": "/…/sprites/angel/happy.png"}
     // the picture for a sprite name, "" when there is no such file (the box goes without it)
     function spriteFile(who, name) {
@@ -42,7 +50,7 @@ Singleton {
     // a crumpled paper on the desk: {from: desk|angel, title, text, thread} or null; noteOpen: unfolded
     property var paper: null
     property bool noteOpen: false
-    readonly property bool wantsClick: enabled && canShow && (waitsFor("main") === "click" || waitsFor("side") === "click") && !line
+    readonly property bool wantsClick: !line && ((enabled && canShow && (waitsFor("main") === "click" || waitsFor("side") === "click")) || (waitsFor("game") === "click" && canShowFor("game")))
     signal dropped                            // she let a note fall (the paper falls from her)
 
     function freshState() {
@@ -64,11 +72,20 @@ Singleton {
                 "node": "",
                 "wait": ""
             },
+            "game": {
+                "scene": "",
+                "node": "",
+                "wait": ""
+            },
             "log": []
         };
     }
     function story() {
         return stories[state.chapter] || null;
+    }
+    // the story a thread plays: the chapter, or the game's scene
+    function storyOf(thread) {
+        return thread === "game" ? scenes[(state.game || {}).scene] || null : stories[state.chapter] || null;
     }
     function waitsFor(thread) {
         const t = state[thread];
@@ -76,25 +93,47 @@ Singleton {
     }
 
     // ---- may she show something now? ----
-    readonly property bool canShow: {
-        const st = stories[state.chapter];
+    // the game's scenes may come without her (limbo: nobody in the corner), and while the
+    // circle's dark is down they wait
+    readonly property bool baseShow: Story.enabled && !Angel.transition && !CircleFx.active && !Shell.locked && !Idle.active && !StreamMode.active && !!Angel.screen && !Shell.hiddenScreen(Angel.screenName) && !Shell.fullscreenOn(Angel.screenName)
+    function canShowFor(thread) {
+        const st = storyOf(thread);
         const who = st ? st.with || "angel" : "angel";
-        return Angel.present && !Angel.transition && !Shell.locked && !Idle.active && !StreamMode.active && !Shell.hiddenScreen(Angel.screenName) && !Shell.fullscreenOn(Angel.screenName) && (who === "any" || (who === "demon") === Angel.demon);
+        if (!baseShow)
+            return false;
+        if (who === "any")
+            return true;
+        return Angel.present && (who === "demon") === Angel.demon;
     }
+    readonly property bool canShow: baseShow && Angel.present && (function () {
+            const st = stories[state.chapter];
+            const who = st ? st.with || "angel" : "angel";
+            return who === "any" || (who === "demon") === Angel.demon;
+        })()
 
     // ---- text ----
+    // {app} is the program's name only — never a window's title (that holds the page you
+    // read and who you write to); the story knows only what the shell knows anyway
+    function appName(w) {
+        const id = String(w && w.app_id || "");
+        if (!id)
+            return "";
+        const e = DesktopEntries.heuristicLookup(id);
+        return e && e.name ? e.name : id.replace(/^.*\./, "");
+    }
     function ctx() {
-        const w = Niri.focusedWindow;
         return {
             "vars": state.vars,
             "name": Config.novel.name || StartApps.userName,
-            "app": w ? (Niri.titleOf(w) || w.app_id || "").replace(/ [—–-] .*$/, "") : "",
+            "app": appName(Niri.focusedWindow),
             "song": Lyrics.title || "",
+            "uptime": Story.uptimeText(),
+            "english": I18n.english,
             "now": new Date()
         };
     }
-    function txt(s) {
-        return Core.render(s, ctx());
+    function txt(s, thread) {
+        return thread === "game" ? Story.render(s) : Core.render(s, ctx());
     }
 
     // ---- the chapter ----
@@ -120,14 +159,15 @@ Singleton {
     }
     // enter a node: it runs now or waits for its moment
     function go(thread, id) {
-        const st = story();
+        const st = storyOf(thread);
         const s = Object.assign({}, state);
         const n = st && id ? st.nodes[id] : null;
+        // (a thread keeps its other fields: the game's knows its scene)
         if (!n) {
-            s[thread] = {
+            s[thread] = Object.assign({}, s[thread], {
                 "node": "",
                 "wait": ""
-            };
+            });
             state = s;
             save();
             return;
@@ -140,10 +180,10 @@ Singleton {
             wait = "resume";
         else if (/^minutes:\d+$/.test(when))
             wait = "at:" + (Date.now() + parseInt(when.slice(8)) * 60000);
-        s[thread] = {
+        s[thread] = Object.assign({}, s[thread], {
             "node": id,
             "wait": wait
-        };
+        });
         state = s;
         save();
         if (!wait)
@@ -157,32 +197,36 @@ Singleton {
         state = s;
         save();
     }
-    function remember(id) {
+    function remember(id, thread) {
+        if (thread === "game")
+            id = state.game.scene + "/" + id;
         if (state.seen.indexOf(id) < 0) {
             const s = Object.assign({}, state);
             s.seen = s.seen.concat([id]);
             state = s;
         }
     }
-    function setVars(set) {
+    function setVars(set, thread) {
         if (!set)
             return;
+        if (thread === "game")
+            return Story.applySet(set);
         const s = Object.assign({}, state);
         s.vars = Core.applySet(s.vars, set);
         state = s;
     }
     // run the node a thread is at (its moment has come)
     function run(thread) {
-        const st = story();
+        const st = storyOf(thread);
         const id = state[thread].node;
         const n = st && id ? st.nodes[id] : null;
         if (!n)
             return go(thread, "");
-        if (!canShow && ["say", "choice", "note"].indexOf(n.type) >= 0) {
+        if (!canShowFor(thread) && ["say", "choice", "note"].indexOf(n.type) >= 0) {
             setWait(thread, "show");
             return;
         }
-        remember(id);
+        remember(id, thread);
         switch (n.type) {
         case "event":
             return go(thread, n.next);
@@ -192,44 +236,59 @@ Singleton {
             line = {
                 "who": n.who || "angel",
                 "sprite": n.sprite || "neutral",
-                "text": txt(n.text),
+                "text": txt(n.text, thread),
                 "choices": [],
                 "thread": thread
             };
             return;
         case "choice":
-            setWait(thread, "line");
-            Angel.hush();
-            line = {
-                "who": n.who || "angel",
-                "sprite": n.sprite || "neutral",
-                "text": txt(n.text),
-                "choices": (n.choices || []).map(c => ({
-                            "text": txt(c.text),
-                            "tone": c.tone || "neutral"
-                        })),
-                "thread": thread
-            };
-            return;
+            {
+                setWait(thread, "line");
+                Angel.hush();
+                // `shuffle`: the answers in another order every time (the silent one stays
+                // last), so the right one isn't learnt by its place; `order` maps them back
+                const all = n.choices || [];
+                let order = all.map((c, i) => i);
+                if (n.shuffle) {
+                    const loud = order.filter(i => all[i].tone !== "silent");
+                    for (let i = loud.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [loud[i], loud[j]] = [loud[j], loud[i]];
+                    }
+                    order = loud.concat(order.filter(i => all[i].tone === "silent"));
+                }
+                line = {
+                    "who": n.who || "angel",
+                    "sprite": n.sprite || "neutral",
+                    "text": txt(n.text, thread),
+                    "choices": order.map(i => ({
+                                "text": txt(all[i].text, thread),
+                                "tone": all[i].tone || "neutral"
+                            })),
+                    "order": order,
+                    "thread": thread
+                };
+                return;
+            }
         case "note":
             setWait(thread, "note");
             paper = {
                 "from": n.from || "desk",
-                "title": txt(n.title || ""),
-                "text": txt(n.text || ""),
+                "title": txt(n.title || "", thread),
+                "text": txt(n.text || "", thread),
                 "thread": thread
             };
             if (paper.from === "angel")
                 dropped();
             return;
         case "set":
-            setVars(n.set);
+            setVars(n.set, thread);
             return go(thread, n.next);
         case "if":
             {
                 let ok = false;
                 try {
-                    ok = Core.evalCond(n.cond, state.vars, state.seen);
+                    ok = Core.evalCond(n.cond, thread === "game" ? Story.ctxVars() : state.vars, state.seen);
                 } catch (e) {
                     console.warn("novel: if", id, e.message);
                 }
@@ -249,7 +308,25 @@ Singleton {
                 state = s;
                 return go(thread, n.next);
             }
+        // the game's own: into a circle, out of hell, on in another scene
+        case "circle":
+            go(thread, n.next || "");
+            if (n.to === "deeper")
+                Story.deeper();
+            else if (n.to === "stay")
+                Story.stay();
+            else
+                Story.enter(n.to);
+            return;
+        case "exit":
+            go(thread, "");
+            Story.outcome(n.outcome);
+            return;
+        case "scene":
+            return startScene(n.to);
         case "end":
+            if (thread === "game")
+                return go(thread, "");
             {
                 const s = Object.assign({}, state);
                 s.done = Object.assign({}, s.done);
@@ -282,26 +359,31 @@ Singleton {
             _after = null;
             return go(thread, to);
         }
-        const n = story() ? story().nodes[state[thread].node] : null;
+        const st = storyOf(thread);
+        const n = st ? st.nodes[state[thread].node] : null;
         go(thread, n ? n.next : "");
     }
     property var _after: null                 // where a reply line leads
     function choose(i) {
         if (!line || i < 0 || i >= line.choices.length)
             return;
+        if (line.order)
+            i = line.order[i];
         const thread = line.thread;
-        const n = story() ? story().nodes[state[thread].node] : null;
+        const st = storyOf(thread);
+        const n = st ? st.nodes[state[thread].node] : null;
         const c = n && n.choices ? n.choices[i] : null;
         if (!c)
             return;
         log(state[thread].node, i);
-        setVars(c.set);
+        Story.chose(thread === "game" ? state.game.scene : state.chapter, state[thread].node, i, c.tone || "neutral");
+        setVars(c.set, thread);
         if (c.reply && c.reply.text) {
             _after = c.next || "";
             line = {
                 "who": c.reply.who || n.who || "angel",
                 "sprite": c.reply.sprite || "neutral",
-                "text": txt(c.reply.text),
+                "text": txt(c.reply.text, thread),
                 "choices": [],
                 "thread": thread
             };
@@ -321,10 +403,10 @@ Singleton {
     }
     // a click on her: true when the story took it (AngelHelper then opens no menu)
     function click() {
-        if (!enabled || !canShow || line)
+        if (line)
             return false;
-        for (const th of ["main", "side"])
-            if (waitsFor(th) === "click") {
+        for (const th of ["game", "main", "side"])
+            if ((th === "game" || enabled) && waitsFor(th) === "click" && canShowFor(th)) {
                 run(th);
                 return true;
             }
@@ -336,7 +418,8 @@ Singleton {
         noteOpen = false;
         paper = null;
         if (p && p.thread) {
-            const n = story() ? story().nodes[state[p.thread].node] : null;
+            const st = storyOf(p.thread);
+            const n = st ? st.nodes[state[p.thread].node] : null;
             go(p.thread, n ? n.next : "");
         }
     }
@@ -351,7 +434,7 @@ Singleton {
         id: resumeSoon
         interval: 4000
         onTriggered: {
-            for (const th of ["main", "side"])
+            for (const th of ["game", "main", "side"])
                 if (root.waitsFor(th) === "resume")
                     root.run(th);
             if (!root.state.main.node && !root.line)
@@ -384,7 +467,7 @@ Singleton {
     // ---- the clock: timed nodes, retries, the pool ----
     Timer {
         interval: 5000
-        running: root.enabled && root.loaded && root.stateLoaded
+        running: Story.enabled && root.loaded && root.stateLoaded
         repeat: true
         onTriggered: root.tick()
     }
@@ -395,15 +478,18 @@ Singleton {
         if (now - _lastTick > 90000)
             resumed();
         _lastTick = now;
-        if (!story())
-            return;
-        for (const th of ["main", "side"]) {
+        // the game's scene first: it is what is happening to the player right now
+        for (const th of enabled ? ["game", "main", "side"] : ["game"]) {
+            if (!storyOf(th))
+                continue;
             const w = waitsFor(th);
             if (w.startsWith("at:") && now >= parseInt(w.slice(3)))
                 run(th);
-            else if (w === "show" && canShow && !line && !paper)
+            else if (w === "show" && canShowFor(th) && !line && !paper)
                 run(th);
         }
+        if (!enabled || !story())
+            return;
         if (!state.free || !canShow || line || paper)
             return;
         const st = story();
@@ -452,13 +538,15 @@ Singleton {
     }
     Process {
         id: loader
-        // the chapters and the sprite files in one go: {stories: {id: story}, sprites: {who: {name: path}}}
-        command: ["python3", "-c", "import json,sys,pathlib\nb=pathlib.Path(sys.argv[1])\nd=b/'story'\nout={}\nfor f in sorted(d.glob('*.json')) if d.is_dir() else []:\n    try: out[f.stem]=json.loads(f.read_text())\n    except Exception as e: print('novel: '+f.name+': '+str(e),file=sys.stderr)\nsp={}\nfor w in sorted((b/'sprites').iterdir()) if (b/'sprites').is_dir() else []:\n    if w.is_dir():\n        m={}\n        for f in sorted(w.iterdir()):\n            if f.suffix.lower() in ('.png','.webp','.gif','.jpg','.jpeg'): m.setdefault(f.stem,str(f))\n        sp[w.name]=m\nprint(json.dumps({'stories':out,'sprites':sp}))", root.dir]
+        // the chapters, the game's scenes and the sprite files in one go:
+        // {stories: {id: story}, scenes: {id: scene}, sprites: {who: {name: path}}}
+        command: ["python3", "-c", "import json,sys,pathlib\nb=pathlib.Path(sys.argv[1])\ndef load(d):\n    out={}\n    for f in sorted(d.glob('*.json')) if d.is_dir() else []:\n        try: out[f.stem]=json.loads(f.read_text())\n        except Exception as e: print('novel: '+f.name+': '+str(e),file=sys.stderr)\n    return out\nsp={}\nfor w in sorted((b/'sprites').iterdir()) if (b/'sprites').is_dir() else []:\n    if w.is_dir():\n        m={}\n        for f in sorted(w.iterdir()):\n            if f.suffix.lower() in ('.png','.webp','.gif','.jpg','.jpeg'): m.setdefault(f.stem,str(f))\n        sp[w.name]=m\nprint(json.dumps({'stories':load(b/'story'),'scenes':load(pathlib.Path(sys.argv[2])),'sprites':sp}))", root.dir, Quickshell.shellDir + "/story/scenes"]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
                     const d = JSON.parse(text || "{}");
                     root.stories = d.stories || {};
+                    root.scenes = d.scenes || {};
                     root.sprites = d.sprites || {};
                 } catch (e) {
                     root.stories = {};
@@ -476,35 +564,31 @@ Singleton {
     }
     // the shell started: a chapter waiting for "start", or one cut off mid-line goes on
     function started() {
-        if (!enabled || !stateLoaded)
+        if (!stateLoaded)
             return;
-        for (const th of ["main", "side"]) {
+        for (const th of ["game", "main", "side"]) {
             const w = waitsFor(th);
             // the box or a paper was up when the shell went down: show it again
             if (w === "line" || w === "note" || w === "show")
                 setWait(th, "show");
         }
-        if (!state.main.node)
+        if (enabled && !state.main.node)
             maybeStart("start");
     }
-    readonly property string stateFile: Config.home + "/.local/state/angelos/novel.json"
-    FileView {
-        id: stateView
-        path: root.stateFile
-        atomicWrites: true
-        printErrors: false
-        onLoaded: {
-            try {
-                root.state = Object.assign(root.freshState(), JSON.parse(text()));
-            } catch (e) {}
-            root.stateLoaded = true;
-            if (root.loaded)
-                root.started();
-        }
-        onLoadFailed: {
-            root.stateLoaded = true;
-            if (root.loaded)
-                root.started();
+    // the progress lives in the player's save (Story: ~/.config/angelos/save.json → novel)
+    function loadState() {
+        if (stateLoaded || !Story.ready)
+            return;
+        const st = Story.novelState;
+        state = Object.assign(freshState(), st && typeof st === "object" ? st : {});
+        stateLoaded = true;
+        if (loaded)
+            started();
+    }
+    Connections {
+        target: Story
+        function onReadyChanged() {
+            root.loadState();
         }
     }
     function save() {
@@ -513,10 +597,12 @@ Singleton {
     Timer {
         id: saveSoon
         interval: 400
-        onTriggered: stateView.setText(JSON.stringify(root.state, null, 1))
+        onTriggered: Story.saveNovel(root.state)
     }
-    Component.onCompleted: if (enabled)
-        reload()
+    Component.onCompleted: {
+        loadState();
+        reload();
+    }
     onEnabledChanged: if (enabled)
         reload()
     // new chapters and sprites written meanwhile (the editor saves into the folder)
@@ -571,6 +657,8 @@ Singleton {
             "nextDrop": state.nextDrop ? Math.round((state.nextDrop - Date.now()) / 60000) + " min" : "",
             "canShow": canShow,
             "line": !!line,
+            "tones": line ? line.choices.map(c => c.tone) : [],
+            "game": state.game,
             "paper": !!paper
         });
     }
@@ -591,5 +679,76 @@ Singleton {
     }
     function edit() {
         Quickshell.execDetached(["python3", Quickshell.shellDir + "/novel/editor/nov-editor.py", "--dir", dir]);
+    }
+
+    // ---- the game's scenes (services/Story) ----
+    readonly property bool sceneBusy: !!(state.game && state.game.node)
+    function eventOf(sc) {
+        const n = sc && sc.nodes ? sc.nodes[sc.start] : null;
+        return n && n.type === "event" ? n : null;
+    }
+    // the scene whose event is `trigger` and whose `cond` holds now: the highest event
+    // `priority` first (default 0), then by id
+    function sceneFor(trigger) {
+        const vars = Story.ctxVars();
+        const prio = id => {
+            const ev = eventOf(scenes[id]);
+            return ev && ev.priority ? Number(ev.priority) : 0;
+        };
+        for (const id of Object.keys(scenes).sort((a, b) => prio(b) - prio(a) || (a < b ? -1 : a > b ? 1 : 0))) {
+            const ev = eventOf(scenes[id]);
+            if (!ev || ev.trigger !== trigger)
+                continue;
+            let ok = false;
+            try {
+                ok = Core.evalCond(ev.cond, vars, state.seen);
+            } catch (e) {
+                console.warn("scene", id, e.message);
+            }
+            if (ok)
+                return id;
+        }
+        return "";
+    }
+    function playScene(trigger) {
+        const id = sceneFor(trigger);
+        if (!id)
+            return false;
+        startScene(id);
+        return true;
+    }
+    function startScene(id) {
+        const sc = scenes[id];
+        if (!sc)
+            return false;
+        if (line && line.thread === "game")
+            line = null;
+        const s = Object.assign({}, state);
+        s.game = {
+            "scene": id,
+            "node": "",
+            "wait": ""
+        };
+        state = s;
+        go("game", sc.start);
+        return true;
+    }
+    function stopScene() {
+        if (line && line.thread === "game")
+            line = null;
+        if (paper && paper.thread === "game")
+            paper = null;
+        const s = Object.assign({}, state);
+        s.game = {
+            "scene": "",
+            "node": "",
+            "wait": ""
+        };
+        state = s;
+        save();
+    }
+    function sceneStatus() {
+        const g = state.game || {};
+        return g.scene ? g.scene + " · " + (g.node || "—") + (g.wait ? " (" + g.wait + ")" : "") : "";
     }
 }

@@ -8,6 +8,10 @@
 #   DESKTOP_SHELL=angelos|noctalia|none
 #                                  desktop shell (default angelos; tech defaults to none).
 #                                  angelOS = the pixel Quickshell shell shipped in .config/quickshell/angelos
+#   ANGELOS_GAME=1|0               angelOS is also a game played over the desktop (an angel, a demon,
+#                                  a story that follows your choices); 0 = plain dotfiles without it.
+#                                  Asked interactively; unattended runs leave the current choice alone.
+#                                  Later: `angelos game on|off`, Mod+Ctrl+Shift+Escape leaves it at once
 #   NOCTALIA=1|0                   legacy switch: NOCTALIA=1 means DESKTOP_SHELL=noctalia
 #   NOCTALIA_RESET_SETTINGS=0|1    move aside Noctalia GUI settings saved by an earlier
 #                                  run, so the preconfigured shell setup applies (default 0)
@@ -59,7 +63,7 @@ VOXTYPE_FORCE="${VOXTYPE_FORCE:-0}"
 # asks about the rest.
 is_set() { [[ -n "${!1+x}" ]]; }
 for v in DOTFILES_MODE DESKTOP_SHELL NOCTALIA KB_LAYOUTS KB_TOGGLE INSTALL_VOXTYPE DOWNLOAD_VOXTYPE_MODEL \
-         INSTALL_WALLPAPERS WALLPAPER_PACKS INSTALL_SDDM NOCTALIA_RESET_SETTINGS; do
+         INSTALL_WALLPAPERS WALLPAPER_PACKS INSTALL_SDDM NOCTALIA_RESET_SETTINGS ANGELOS_GAME; do
   is_set "$v" && declare -r "GIVEN_$v=1"
 done
 given() { local n="GIVEN_$1"; [[ -n "${!n:-}" ]]; }
@@ -307,6 +311,12 @@ ask_profile() {
       3|none) DESKTOP_SHELL=none ;;
       *) DESKTOP_SHELL=angelos ;;
     esac
+  fi
+  if [[ "${DESKTOP_SHELL:-angelos}" == angelos && ("$MODE" == 1 || "$MODE" == full) ]] && ! given ANGELOS_GAME; then
+    confirm "$(_ 'angelOS is also a game played over your desktop: an angel in the corner, and a story that follows your choices. Play it? (No = plain dotfiles; `angelos game on|off` changes it later)' \
+                 'angelOS — это ещё и игра поверх рабочего стола: ангел в углу и история, которая идёт за твоими выборами. Играть? (Нет — обычные дотфайлы; потом: `angelos game on|off`)')" y \
+      && ANGELOS_GAME=1 || ANGELOS_GAME=0
+    GIVEN_ANGELOS_GAME=1
   fi
   if [[ "$MODE" == 1 || "$MODE" == full ]] && ! given INSTALL_WALLPAPERS && ! given WALLPAPER_PACKS; then
     choose_wallpapers
@@ -865,11 +875,34 @@ install_flatpak() {
 
 # angelOS: CLI on PATH, theme files for kitty/foot/gtk/niri, shell wiring.
 # On the first login angelOS opens its setup wizard and then the interface tips.
+# the game on or off (ANGELOS_GAME, only when it was asked or given): settings.json →
+# game.enabled, the rest of the file as it is. The player's save (save.json) is never touched.
+apply_game_choice() {
+  given ANGELOS_GAME || return 0
+  [[ "$ANGELOS_GAME" == 0 || "$ANGELOS_GAME" == 1 ]] || die "ANGELOS_GAME must be 0 or 1"
+  local f="$HOME_DIR/.config/angelos/settings.json"
+  mkdir -p -- "${f%/*}"
+  python3 - "$f" "$ANGELOS_GAME" <<'PY' || warn "$(_ 'Could not write the game choice into settings.json' 'Не удалось записать выбор игры в settings.json')"
+import json, os, sys, tempfile
+path, on = sys.argv[1], sys.argv[2] == "1"
+d = {}
+if os.path.exists(path):
+    with open(path) as f:
+        d = json.load(f)
+d.setdefault("game", {})["enabled"] = on
+fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path), prefix=".settings-")
+with os.fdopen(fd, "w") as f:
+    json.dump(d, f, ensure_ascii=False, indent=4)
+os.replace(tmp, path)
+PY
+}
+
 install_shell() {
   local shell_dir="$HOME_DIR/.config/quickshell/angelos"
   [[ "$DESKTOP_SHELL" != none && -d "$shell_dir" ]] || return 0
   if [[ "$DESKTOP_SHELL" == angelos ]]; then
     say "$(_ 'Setting up angelOS…' 'Настройка angelOS…')"
+    apply_game_choice
     ln -sfn "$shell_dir/bin/angelos" "$HOME_DIR/.local/bin/angelos"
     mkdir -p -- "$HOME_DIR/.config/angelos"
     printf 'angelos\n' > "$HOME_DIR/.config/angelos/active"

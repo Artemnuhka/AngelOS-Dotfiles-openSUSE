@@ -87,6 +87,16 @@ The first login opens a short setup wizard (monitors, keyboard, theme, bar, wind
 
 ![Interface tips circling the start button, workspaces, Claude, clock and more](docs/demo/tips.gif)
 
+### ♡ game.exe
+
+angelOS is also a game played over your real desktop: an angel lives in the corner, and what happens next depends on your choices — two people get two different stories. It may scare you, but it never harms: it doesn't touch your files, sends nothing anywhere and never reads your windows, browser or chats (the characters know only what the shell knows anyway: your name, the time, the uptime, the music playing). The lock screen, power menu, volume, notifications and polkit always work.
+
+- **Out of the game at once, any time:** `angelos game off` or **Mod+Ctrl+Shift+Escape** — angelOS stays as plain dotfiles. Back: `angelos game on`.
+- **Without the game from the start:** the installer asks (`ANGELOS_GAME=0`), and so does the first-run wizard.
+- **Calm mode** (no flashes, screen shaking or sudden loud sounds): Settings → System → The game, or `angelos game calm on`.
+- Progress lives in its own file, `~/.config/angelos/save.json` (updates never touch it); `angelos game reset` starts over.
+- How the story works inside: [`docs/STORY.md`](.config/quickshell/angelos/docs/STORY.md) — **spoilers**.
+
 ### ♡ from a terminal
 
 Everything is scriptable through the `angelos` command:
@@ -102,6 +112,7 @@ angelos settings windows           # open a settings page
 angelos settingsView controlpanel  # sidebar | controlpanel | properties | tiles
 angelos tour                       # interface tips
 angelos switch noctalia            # go back to Noctalia (and `switch angelos` to return)
+angelos game off                   # out of the game at once (`on` to come back)
 ```
 
 ---
@@ -196,6 +207,7 @@ Full list lives in [`.config/niri/cfg/keybinds.kdl`](.config/niri/cfg/keybinds.k
 | `Mod`+`Shift`+`P` | Turn monitors off |
 | `Mod`+`Shift`+`←→↑↓` | Focus another monitor |
 | `Mod`+`Esc` | Emergency escape: release a keyboard-shortcuts inhibitor from a fullscreen app |
+| `Mod`+`Ctrl`+`Shift`+`Esc` | Out of angelOS's game at once (`angelos game off`) |
 | `Ctrl`+`Alt`+`Delete` | Quit Niri |
 
 Media and volume keys are wired to `angelos …` (a small pixel OSD shows the level) and keep working on the lock screen.
@@ -280,6 +292,7 @@ Other switches (run `./install.sh --help` for the full list):
 SKIP_PACKAGES=1 ./install.sh                                  # config only: no pacman, no SDDM, no sudo
 DESKTOP_SHELL=noctalia ./install.sh                           # Noctalia instead of angelOS
 DESKTOP_SHELL=none ./install.sh                               # plain Niri, no shell
+ANGELOS_GAME=0 ./install.sh                                   # angelOS as plain dotfiles, without its game
 INSTALL_SDDM=0 ./install.sh                                   # keep your current login manager
 INSTALL_VOXTYPE=0 DOWNLOAD_VOXTYPE_MODEL=0 ./install.sh       # no voice input
 ENABLE_SERVICES=0 ./install.sh                                # do not enable user services

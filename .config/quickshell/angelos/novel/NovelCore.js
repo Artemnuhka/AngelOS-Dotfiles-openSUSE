@@ -12,7 +12,8 @@
 // it waits for, and `note` — a comment for the author):
 //   event   the chapter's entry: `trigger` resume | start | manual; → next
 //   say     who + sprite say text; → next
-//   choice  who asks text, `choices`: [{text, tone, set, reply: {who, sprite, text}, next}]
+//   choice  who asks text, `choices`: [{text, tone, set, reply: {who, sprite, text}, next}];
+//           `shuffle`: the answers come in another order every time (silent ones last)
 //   note    a crumpled paper: from "desk" (on the wallpaper) or "angel" (she drops it); title,
 //           text; read it → next
 //   set     vars changed (`set`: {trust: "+1", gender: "f"}); → next
@@ -21,10 +22,19 @@
 //   free    the chapter opens up: from now on random questions (pools.questions, each once)
 //           and dropped notes (pools.drops) come by themselves; → next (optional)
 //   end     the chapter is over; `chapter`: the next one to start (optional)
+// The game's scenes (story/scenes/*.json in the shell, services/Game) are stories too, with
+// three more nodes and a `cond` on their event (the scene plays only when it holds; of
+// several, the highest `priority`, then the first by id):
+//   circle  hell: `to` deeper (the next circle down) | stay (the try failed) | a circle's id;
+//           → next (optional)
+//   exit    the way out of hell: `outcome` stars | pact | limbo (the scene ends)
+//   scene   go on in another scene: `to` its id
 // Text templates: {name} · {g:male|female|unknown} (the unknown part may be left out:
-// "male/female") · {app} · {song} · {time} · {daypart} · {var:name}
+// "male/female") · {app} · {song} · {time} · {daypart} · {uptime} · {var:name}. A text may
+// also be {ru, en}: the shell's language picks.
 
-var TYPES = ["event", "say", "choice", "note", "set", "if", "random", "free", "end"];
+var TYPES = ["event", "say", "choice", "note", "set", "if", "random", "free", "end", "circle", "exit", "scene"];
+var OUTCOMES = ["stars", "pact", "limbo"];
 var WHO = ["angel", "demon", "narrator"];
 var TONES = ["positive", "negative", "silent", "neutral"];
 
@@ -33,10 +43,16 @@ function dayPart(h) {
 }
 
 // ---- text ----
-// ctx: {vars, name, app, song, now: Date}
+// ctx: {vars, name, app, song, uptime, english, now: Date}
+function pickLang(text, english) {
+    if (text && typeof text === "object" && !Array.isArray(text))
+        return english ? (text.en !== undefined ? text.en : text.ru) : (text.ru !== undefined ? text.ru : text.en);
+    return text;
+}
 function render(text, ctx) {
     ctx = ctx || {};
     var vars = ctx.vars || {};
+    text = pickLang(text, ctx.english);
     return String(text || "").replace(/\{([^{}]*)\}/g, function (all, body) {
         if (body.indexOf("g:") === 0) {
             var parts = body.slice(2).split("|");
@@ -59,6 +75,8 @@ function render(text, ctx) {
             return ctx.app || "компьютер";
         case "song":
             return ctx.song || "тишина";
+        case "uptime":
+            return ctx.uptime || "";
         case "time":
             return ("0" + now.getHours()).slice(-2) + ":" + ("0" + now.getMinutes()).slice(-2);
         case "daypart":
@@ -265,6 +283,9 @@ function exits(node) {
             push(to, "?", "random");
         });
         break;
+    case "exit":
+    case "scene":
+        break;
     default:
         if (Array.isArray(node.next))
             node.next.forEach(function (to) {
@@ -312,16 +333,23 @@ function validate(story) {
             if (!nodes[e.to])
                 out.push({ node: id, level: "error", text: "ведёт в несуществующий узел «" + e.to + "»" });
         });
-        if ((n.type === "say" || n.type === "choice") && !String(n.text || "").trim())
+        var said = pickLang(n.text, false);
+        if ((n.type === "say" || n.type === "choice") && !String(said || "").trim())
             out.push({ node: id, level: "warn", text: "пустая реплика" });
         if (n.type === "choice" && !(n.choices || []).length)
             out.push({ node: id, level: "error", text: "у вопроса нет вариантов ответа" });
-        if (n.type === "if") {
+        if (n.type === "if" || (n.type === "event" && n.cond)) {
             var err = checkCond(n.cond);
             if (err)
                 out.push({ node: id, level: "error", text: "условие: " + err });
         }
-        if (["say", "choice", "note", "set", "event"].indexOf(n.type) >= 0 && !n.next && n.type !== "choice")
+        if (n.type === "circle" && !n.to)
+            out.push({ node: id, level: "error", text: "круг: нет «to» (deeper, stay или id круга)" });
+        if (n.type === "exit" && OUTCOMES.indexOf(n.outcome) < 0)
+            out.push({ node: id, level: "error", text: "выход: неизвестный исход «" + n.outcome + "»" });
+        if (n.type === "scene" && !n.to)
+            out.push({ node: id, level: "error", text: "сцена: нет «to»" });
+        if (["say", "note", "set", "event"].indexOf(n.type) >= 0 && !n.next)
             out.push({ node: id, level: "warn", text: "никуда не ведёт (нет «дальше»)" });
         if (n.type === "choice")
             (n.choices || []).forEach(function (c, i) {
@@ -358,6 +386,12 @@ function blank(type) {
         return { type: "end" };
     case "event":
         return { type: "event", trigger: "resume", next: "" };
+    case "circle":
+        return { type: "circle", to: "deeper" };
+    case "exit":
+        return { type: "exit", outcome: "stars" };
+    case "scene":
+        return { type: "scene", to: "" };
     }
     return { type: type };
 }

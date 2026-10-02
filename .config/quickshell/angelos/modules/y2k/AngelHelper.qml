@@ -167,7 +167,9 @@ Scope {
                     anchors.bottomMargin: Theme.u * 2
                     width: Theme.u * 150
                     height: bubbleCol.implicitHeight + Theme.u * 8
-                    color: Theme.menuSurface
+                    // in hell the bubble is the circle's: its plate, its bone text, its buttons
+                    hell: Angel.demon
+                    color: Angel.demon ? Theme.hellPanel : Theme.menuSurface
                     shadow: Config.appearance.shadows
 
                     Column {
@@ -185,6 +187,7 @@ Scope {
                                 visible: !Angel.menuOpen
                                 width: parent.width - closeBtn.width - Theme.u * 2
                                 text: Angel.text
+                                color: Angel.demon ? Theme.hellText : Theme.text
                                 shown: typer.shown
                                 shake: 1
                                 // Y2K → Text tremble: off | light | strong; the demon's words barely move
@@ -192,11 +195,13 @@ Scope {
                             }
                             PxText {
                                 visible: Angel.menuOpen
+                                color: Angel.demon ? Theme.hellText : Theme.text
                                 width: parent.width - closeBtn.width - Theme.u * 2
                                 text: !Angel.menuOpen ? "" : Angel.menuMode === "ask" ? (Angel.demon ? I18n.t("Спрашивай. Может, отвечу.", "Go on, ask. Maybe I'll answer.") : I18n.t("Спроси что угодно — и про настройки тоже ♡", "Ask me anything, settings included ♡")) : (Angel.demon ? I18n.t("Ну? Чего тебе? Ангела хочешь — «Спросить…», и проси красиво.", "Well? What do you want? Want your angel — “Ask…”, and beg nicely.") : I18n.t("Чем помочь? ♡", "How can I help? ♡"))
                                 wrapMode: Text.Wrap
                             }
                             PxButton {
+                                hell: Angel.demon
                                 id: closeBtn
                                 compact: true
                                 flat: true
@@ -213,6 +218,7 @@ Scope {
                             Repeater {
                                 model: Angel.menuOpen ? [] : Angel.actions
                                 PxButton {
+                                    hell: Angel.demon
                                     required property var modelData
                                     required property int index
                                     compact: true
@@ -235,6 +241,7 @@ Scope {
                             width: parent.width
                             spacing: Theme.u * 2
                             PxButton {
+                                hell: Angel.demon
                                 compact: true
                                 accent: true
                                 icon: "chat"
@@ -242,6 +249,7 @@ Scope {
                                 onClicked: Angel.openMenu("ask")
                             }
                             PxButton {
+                                hell: Angel.demon
                                 visible: !Angel.demon
                                 compact: true
                                 icon: "star"
@@ -249,6 +257,7 @@ Scope {
                                 onClicked: Angel.tip()
                             }
                             PxButton {
+                                hell: Angel.demon
                                 compact: true
                                 icon: "sparkle"
                                 text: Angel.demon ? I18n.t("Пошути", "Joke") : I18n.t("Шутка", "A joke")
@@ -256,6 +265,7 @@ Scope {
                             }
                             // the demon asks something, three answers to pick from
                             PxButton {
+                                hell: Angel.demon
                                 visible: Angel.demon
                                 compact: true
                                 icon: "chat"
@@ -263,6 +273,7 @@ Scope {
                                 onClicked: Angel.talk()
                             }
                             PxButton {
+                                hell: Angel.demon
                                 visible: !Angel.demon
                                 compact: true
                                 icon: "gear"
@@ -273,6 +284,7 @@ Scope {
                                 }
                             }
                             PxButton {
+                                hell: Angel.demon
                                 compact: true
                                 icon: "moon"
                                 text: Angel.demon ? I18n.t("Отстань на час", "Leave me for an hour") : I18n.t("Спрячься на час", "Hide for an hour")
@@ -281,6 +293,7 @@ Scope {
                             // the portal: open after the angel's third comeback (or for the owner) —
                             // heaven ↔ hell at once, no begging and no throwing
                             PxButton {
+                                hell: Angel.demon
                                 visible: Angel.portalOpen
                                 compact: true
                                 accent: true
@@ -289,11 +302,13 @@ Scope {
                                 onClicked: Angel.portal()
                             }
                             PxButton {
+                                hell: Angel.demon
                                 compact: true
                                 icon: "close"
                                 text: I18n.t("Выключить", "Turn off")
                                 onClicked: {
                                     Angel.hush();
+                                    Story.act("helper.off");
                                     Config.y2k.helper = false;
                                 }
                             }
@@ -331,20 +346,23 @@ Scope {
                             width: parent.width
                             spacing: Theme.u * 2
                             PxButton {
+                                hell: Angel.demon
                                 visible: Angel.demon
                                 compact: true
                                 accent: true
                                 icon: "heart"
-                                text: I18n.t("Верни ангела", "Bring the angel back") + " · " + Angel.pleasCounted + "/" + Angel.pleasNeeded
+                                text: I18n.t("Искать выход", "Seek the way out") + " · " + Theme.roman(Story.circleN(Story.circle))
                                 onClicked: Angel.plea()
                             }
                             PxButton {
+                                hell: Angel.demon
                                 compact: true
                                 icon: "sparkle"
                                 text: I18n.t("Пошути", "Tell a joke")
                                 onClicked: Angel.joke()
                             }
                             PxButton {
+                                hell: Angel.demon
                                 visible: !Angel.demon
                                 compact: true
                                 icon: "star"
@@ -352,18 +370,21 @@ Scope {
                                 onClicked: Angel.tip()
                             }
                             PxButton {
+                                hell: Angel.demon
                                 compact: true
                                 icon: "chat"
                                 text: I18n.t("Как дела?", "How are you?")
                                 onClicked: Angel.answer(I18n.t("как дела", "how are you"))
                             }
                             PxButton {
+                                hell: Angel.demon
                                 compact: true
                                 icon: "info"
                                 text: I18n.t("Кто ты?", "Who are you?")
                                 onClicked: Angel.answer(I18n.t("кто ты", "who are you"))
                             }
                             PxButton {
+                                hell: Angel.demon
                                 compact: true
                                 flat: true
                                 icon: "arrowLeft"
@@ -609,9 +630,11 @@ Scope {
                                     required property int index
                                     name: "fire"
                                     pixel: Theme.u * 2
-                                    fill3: "#ffd23f"
-                                    bad: "#ff4a1c"
-                                    light: "#fff3b0"
+                                    // the circle's fire, not a cartoon's: its accent, its blood, its dim light
+                                    ink: Theme.hellEdge
+                                    fill3: Theme.hellAccent
+                                    bad: Theme.hellBlood
+                                    light: Theme.hellFlame
                                     y: ((win.tick + index) % 2) * Theme.u
                                 }
                             }
@@ -676,7 +699,8 @@ Scope {
                             }
                             dragging = false;
                             const thrown = !Angel.demon && (dy > deep || (dy > Theme.u * 6 && vy > 0.9));
-                            Angel.released(thrown, dx, dy);
+                            // flung (fast) or pushed down slowly, on purpose: the game weighs it
+                            Angel.released(thrown, dx, dy, vy > 0.9);
                             if (thrown) {
                                 dx = 0;
                                 dy = 0;

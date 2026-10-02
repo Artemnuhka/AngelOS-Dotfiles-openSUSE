@@ -11,12 +11,14 @@ import "AngelLines.js" as Lines
 //   angel   tips on a timer (Settings → Y2K), a tip the first time a settings
 //           page opens, jokes, answers in the "Ask" menu (settings search).
 //   demon   the user grabbed the angel and threw her down into hell: dark
-//           wallpaper, cheeky jokes, a cracked screen corner, and now and then
-//           a prank that flips a real setting — with "Undo" and "Where's
-//           that?" buttons, so every prank shows off a feature. She leaves
-//           after three lucky pleas ("Ask" → "Bring the angel back", 35 %,
-//           counted once per 10 minutes) within two hours; the angel then
-//           undoes the pranks and gives the wallpaper back.
+//           wallpaper, a cracked screen corner, the circle's voice, and now and
+//           then a prank that flips a real setting — with "Undo" and "Where's
+//           that?" buttons, so every prank shows off a feature. There is no
+//           button out: a try to get out ("Ask" → "Seek the way out", once per
+//           10 minutes) is the circle's trial (services/Story) — the way out lies
+//           down through the bottom. When the player gets out (getOut()), the
+//           angel undoes the pranks and gives the wallpaper back.
+// Who rules and what came with her is the player's save (Story.player), not a setting.
 // Effects: heaven() — sun rays and a choir (HeavenRays), punched() — the
 // demon's broken glass (ScreenCracks), quake() — the swap shakes the screen
 // (ScreenQuake). The demon arrives: shake with her 8-bit rocks, then the screen
@@ -28,16 +30,16 @@ Singleton {
     id: root
 
     // ---- who and where ----
-    readonly property bool demon: Config.y2k.character === "demon"
+    readonly property bool demon: Story.enabled && Story.player.character === "demon"
 
     // ---- heaven and hell kept apart ----
     // Hell's own things — the pentagram right-click menu, the Hell wordmark, a hell
     // cursor as the everyday one — live in hell only: in heaven they are locked. Once
     // the angel has come back from hell three times the portal opens: heaven ↔ hell at
     // will, like the owner (no begging, no throwing), and hell's things are allowed in
-    // heaven too. Config.y2k.returns counts the comebacks.
+    // heaven too. Story.player.returns counts the comebacks.
     readonly property int returnsNeeded: 3
-    readonly property int returns: Config.y2k.returns || 0
+    readonly property int returns: Story.player.returns || 0
     readonly property bool portalOpen: Owner.enabled || returns >= returnsNeeded
     readonly property bool hellAllowed: demon || portalOpen
     // Settings (and the setup wizard, Studio, the search) show hell's own things — the
@@ -45,13 +47,16 @@ Singleton {
     // wordmark, hell cursors, hell versions of plugins — only while the demon rules.
     // In heaven they are gone, not locked; the portal stays, it is the door.
     readonly property bool hellShown: demon
-    // the portal: to hell or back at once, the swap's effects as usual
+    // the portal: into hell at once, the swap's effects as usual. From hell it is the
+    // pact's door — the demon offers the pact (services/Story), it is no way out by itself
     function portal() {
         if (!portalOpen || transition)
             return false;
         hush();
+        if (demon)
+            return Story.portal();
         _portal = true;
-        startSwap(demon ? "ascend" : "toHell");
+        startSwap("toHell");
         return true;
     }
     property bool _portal: false
@@ -66,7 +71,8 @@ Singleton {
     property string menuMode: "main"         // main | ask
     property double hiddenUntil: 0
     property double now: Date.now()
-    readonly property bool shown: Config.y2k.helper && now >= hiddenUntil && !!screen
+    // the game off (`angelos game off`): nobody in the corner; limbo: the demon is gone too
+    readonly property bool shown: Config.y2k.helper && Story.enabled && !Story.limbo && now >= hiddenUntil && !!screen
     readonly property bool present: shown && !Shell.bootOpen && Config.ready
     property double lastReaction: 0
 
@@ -126,6 +132,7 @@ Singleton {
     }
     function hide(minutes) {
         hush();
+        Story.act("helper.hide");
         hiddenUntil = Date.now() + minutes * 60000;
     }
     function openMenu(mode) {
@@ -153,7 +160,10 @@ Singleton {
         say(pick(list, "joke" + demon), {
             "label": I18n.t("Ещё!", "Another!"),
             "icon": "star",
-            "run": () => root.joke()
+            "run": () => {
+                Story.act("joke.more");
+                root.joke();
+            }
         });
     }
     // the timer: a tip, or now and then a joke. The demon is the talkative one: small
@@ -161,8 +171,11 @@ Singleton {
     function chatter() {
         if (demon) {
             const r = Math.random();
-            if (r < 0.2 && pleasCounted < pleasNeeded)
+            const own = Story.voiceLine("chatter");
+            if (r < 0.15)
                 hint();
+            else if (own && r < 0.6)
+                say(own);
             else if (r < 0.45)
                 say(line(Lines.demonChatter, "dchat"));
             else if (r < 0.65)
@@ -191,14 +204,14 @@ Singleton {
                     "run": () => root.say(en ? a[3] : a[2])
                 })), 30000);
     }
-    // the demon hints how the angel comes back, with the button right there
+    // the demon hints how out — down — with the button right there
     property double lastHint: 0
     function hint() {
         if (!demon)
             return;
         lastHint = Date.now();
-        say(tr(pick(Lines.demon.hints, "hint")).replace("%1", pleasCounted).replace("%2", pleasNeeded), {
-            "label": I18n.t("Верни ангела", "Bring the angel back"),
+        say(Story.voiceLine("hint") || I18n.t("Хочешь наверх? Путь один — вниз, через все круги. Ищи выход — я посмотрю, как ты ищешь.", "You want to go up? There's one way: down, through every circle. Seek the way out — I'll watch you seek."), {
+            "label": I18n.t("Искать выход", "Seek the way out"),
             "icon": "heart",
             "run": () => root.plea()
         });
@@ -218,8 +231,10 @@ Singleton {
             return say(line(L.how, "how" + demon));
         if (/кто ты|ты кто|who are you|what are you/.test(s))
             return say(line(L.who, "who" + demon));
-        if (/люблю|love you|i love/.test(s))
+        if (/люблю|love you|i love/.test(s)) {
+            Story.act("ask.love");
             return say(line(L.love, "love" + demon));
+        }
         if (/спасиб|благодар|thank/.test(s))
             return say(line(L.thanks, "thanks" + demon));
         if (demon && /вернись|верни|ангел|уйди|уходи|come back|angel|go away|leave/.test(s))
@@ -328,7 +343,8 @@ Singleton {
     function grabbed() {
         say(tr(pick(demon ? Lines.demon.grab : Lines.angel.grab, "grab" + demon)), null, 2600);
     }
-    function released(deep, x, y) {
+    // `fling`: thrown hard (the speed of the drop) — or pushed down slowly, on purpose
+    function released(deep, x, y, fling) {
         if (demon) {
             say(tr(Lines.demon.drop));
             return;
@@ -337,6 +353,7 @@ Singleton {
             say(tr(Lines.angel.phew));
             return;
         }
+        Story.act(fling ? "throw.fling" : "throw.push");
         thrown = true;
         throwX = x;
         throwY = y;
@@ -349,51 +366,42 @@ Singleton {
         startSwap("toHell");
     }
     function becomeDemon() {
-        Config.y2k.character = "demon";
-        Config.y2k.demonSince = Date.now();
-        Config.y2k.pleas = [];
-        Config.y2k.lastPlea = 0;
-        Config.y2k.pranks = [];
-        Config.y2k.nextPrank = Date.now() + (6 + Math.random() * 4) * 60000;
+        Story.player.character = "demon";
+        Story.player.demonSince = Date.now();
+        Story.player.lastPlea = 0;
+        Story.player.pranks = [];
+        Story.player.nextPrank = Date.now() + (6 + Math.random() * 4) * 60000;
+        // the circle the fall lands in (the heaviest sin), hell's look follows it
+        Story.fell(Story.fallTarget());
         hellLook(true);
     }
 
-    // ---- demon → angel: three lucky pleas in two hours ----
-    readonly property int pleaCooldown: 10 * 60000
-    readonly property int pleaWindow: 2 * 3600000
-    readonly property real pleaChance: 0.35
-    readonly property int pleasNeeded: 3
-    readonly property int pleasCounted: (Config.y2k.pleas || []).filter(t => now - t < pleaWindow).length
+    // ---- demon → angel: Dante's way, down through the bottom (services/Story) ----
+    // a try to get out: the circle's trial (once per 10 minutes; Story.attempt)
     function plea() {
         if (!demon || transition)
             return;
-        const t = Date.now();
-        const since = t - (Config.y2k.lastPlea || 0);
-        if (since < pleaCooldown)
-            return say(tr(pick(since < 60000 ? Lines.demon.spam.slice(1) : Lines.demon.spam, "spam")).replace("%1", Math.round(since / 60000)));
-        Config.y2k.lastPlea = t;
-        const all = Config.y2k.pleas || [];
-        const fresh = all.filter(x => t - x < pleaWindow);
-        const stale = fresh.length < all.length ? tr(Lines.demon.expired) + " " : "";
-        if (Math.random() >= pleaChance) {
-            Config.y2k.pleas = fresh;
-            return say(stale + tr(pick(Lines.demon.no, "no")));
-        }
-        const got = fresh.concat([t]);
-        Config.y2k.pleas = got;
-        if (got.length >= pleasNeeded)
-            return ascend();
-        say(stale + tr(got.length === 1 ? Lines.demon.yes1 : Lines.demon.yes2));
+        hush();
+        Story.attempt(false);
     }
-    function ascend() {
+    // the way out was found (Story.outcome): stars — the bottom passed; pact — signed, out
+    // now; limbo — the angel found the player in the grey. A line, then the swap back.
+    property string _escape: ""
+    function getOut(kind) {
         if (!demon || transition)
             return;
-        say(tr(Lines.demon.leave), null, 2600);
+        _escape = kind;
+        if (kind === "pact")
+            say(I18n.t("Подписано. Иди. Мы ещё увидимся — у тебя теперь есть кое-что моё.", "Signed. Go. We'll meet again — you have something of mine now."), null, 2600, true);
+        else if (kind === "stars")
+            say(I18n.t("…Ладно. Иди. Наверху светло.", "…Fine. Go. It's light up there."), null, 2600, true);
         leave.restart();
     }
-    // Settings → Y2K → "Call the angel" (and `angelos helper summon`): she comes
-    // now — switched on and not hidden; if the demon rules, she leaves (a line,
-    // then the same swap as the pleas). Returns what happened.
+    function ascend() {
+        getOut("stars");
+    }
+    // Settings / `angelos helper summon`: she comes now — switched on and not hidden. In
+    // hell the demon doesn't let anyone in: that is no way out.
     function summon() {
         if (transition)
             return "busy";
@@ -404,13 +412,26 @@ Singleton {
         if (!screen)
             return "hidden";               // stream mode keeps her off every screen
         if (demon) {
-            say(tr(Lines.demon.summoned), null, 2600);
-            leave.restart();
-            return "ascend";
+            say(Story.voiceLine("refuse") || I18n.t("Ангела? Здесь только я.", "The angel? Only I'm here."), null, 4000);
+            return "refused";
         }
         lastReaction = Date.now();
         say(tr(pick(Lines.angel.summoned, "summoned")));
         return "ok";
+    }
+    // the game switched off (`angelos game off`, Settings): out of hell at once — no show,
+    // no line, the comeback not counted; pranks undone, the wallpaper given back
+    function leaveNow() {
+        leave.stop();
+        swapTick.stop();
+        transition = "";
+        swap = 0;
+        thrown = false;
+        _portal = false;
+        holdWidgets = false;
+        hush();
+        if (Story.player.character === "demon")
+            becomeAngel(false);
     }
     // the owner debugging: no begging, she goes right away
     function ownerAngel() {
@@ -430,16 +451,17 @@ Singleton {
     }
     property int _undone: 0
     property bool _unlockedNow: false
-    function becomeAngel() {
+    function becomeAngel(counted) {
         _undone = undoAllPranks();
         liftCurse(false);
-        Config.y2k.character = "angel";
-        Config.y2k.pleas = [];
-        Config.y2k.pranks = [];
-        // every comeback from hell counts; the third one opens the portal
-        const before = Config.y2k.returns || 0;
-        Config.y2k.returns = before + 1;
-        _unlockedNow = before < returnsNeeded && before + 1 >= returnsNeeded && !Owner.enabled;
+        Story.player.character = "angel";
+        Story.player.pranks = [];
+        Story.rose();
+        // every comeback from hell counts (not the game switched off); the third one opens the portal
+        const before = Story.player.returns || 0;
+        if (counted !== false)
+            Story.player.returns = before + 1;
+        _unlockedNow = counted !== false && before < returnsNeeded && before + 1 >= returnsNeeded && !Owner.enabled;
         hellLook(false);
     }
 
@@ -481,15 +503,16 @@ Singleton {
                         hellNews.restart();
                     });
                 } else if (kind === "toHell") {
-                    root.shake("hell", () => {
-                        root.breakScreen();
-                        root.say(root.tr(Lines.demon.intro), {
-                            "label": I18n.t("Как её вернуть?", "How do I get her back?"),
-                            "icon": "chat",
-                            "run": () => root.say(root.tr(Lines.demonTips[3]))
-                        }, 16000);
-                        hellNews.restart();
-                    });
+                    // the circle comes up out of the dark, then she shakes and breaks the screen
+                    CircleFx.run(Story.circle, null, () => root.shake("hell", () => {
+                            root.breakScreen();
+                            root.say(Story.voiceLine("enter") || root.tr(Lines.demon.intro), {
+                                "label": I18n.t("Как отсюда выйти?", "How do I get out?"),
+                                "icon": "chat",
+                                "run": () => root.hint()
+                            }, 16000);
+                            hellNews.restart();
+                        }));
                 } else {
                     root.breakScreen();
                     afterGlass.restart();
@@ -539,8 +562,8 @@ Singleton {
             return;
         if (demon) {
             if (Config.y2k.cracks !== "off")
-                punched(screenName, arriving ? "" : "crack");
-        } else if (Config.y2k.heavenFx && !(arriving && Config.y2k.raysSeen)) {
+                punched(screenName, arriving || Story.calm ? "" : "crack");
+        } else if (Config.y2k.heavenFx && !Story.calm && !(arriving && Config.y2k.raysSeen)) {
             if (arriving)
                 Config.y2k.raysSeen = true;
             heaven(screenName);
@@ -552,7 +575,7 @@ Singleton {
     // ---- the swap's end: quake, then the screen breaks ----
     property var _afterQuake: null
     function shake(kind, then) {
-        if (!Config.y2k.shake || !fxHere()) {
+        if (!Config.y2k.shake || Story.calm || !fxHere()) {
             then();
             return;
         }
@@ -577,7 +600,8 @@ Singleton {
         holdWidgets = false;
         if (!fxHere())
             return;
-        Sounds.play("shatter");
+        if (!Story.calm)
+            Sounds.play("shatter");
         if (!demon)
             shattered(screenName);
         else if (Config.y2k.cracks !== "off")
@@ -604,7 +628,17 @@ Singleton {
                 }, 16000);
                 return;
             }
-            root.say(root.tr(root._undone ? Lines.angel.back : Lines.angel.backClean));
+            const how = root._escape;
+            root._escape = "";
+            // (drafts — the author's lines replace them)
+            if (how === "limbo")
+                root.say(Story.render(I18n.t("Я тебя нашла. Ты так долго сидел{g:|а|(а)} в сером… Пойдём домой ♡", "I found you. You sat in the grey so long… Let's go home ♡")));
+            else if (how === "pact")
+                root.say(Story.render(I18n.t("Я вернулась… Но ты что-то подписал{g:|а|(а)} там, внизу. Я вижу это на тебе.", "I'm back… But you signed something down there. I can see it on you.")));
+            else if (how === "stars")
+                root.say(Story.render(I18n.t("Ты прош{g:ёл|ла|ёл(ла)} через самое дно — и выш{g:ел|ла|ел(ла)} к звёздам. Я здесь ♡", "You went through the very bottom — and out to the stars. I'm here ♡")));
+            else
+                root.say(root.tr(root._undone ? Lines.angel.back : Lines.angel.backClean));
         })
     }
     onPresentChanged: if (present && !transition)
@@ -629,7 +663,7 @@ Singleton {
     // ---- the demon's wallpaper: hell while she rules — always; yours with the angel ----
     // Whatever wallpaper is picked while she rules (Settings, the right-click menu,
     // `angelos wallpaper`, a hotkey), hell goes back up at once; the pick is kept in
-    // Config.y2k.angelSaved and the angel puts it up when she comes back.
+    // Story.player.angelSaved and the angel puts it up when she comes back.
     readonly property string wallKey: JSON.stringify([Config.wallpaper.fallback, Config.wallpaper.outputs, Config.wallpaper.workspaces])
     property string hellKey: ""              // the wallpaper hell put up last
     property var hellState: null             // …the same as an object, to put it back
@@ -654,8 +688,8 @@ Singleton {
     }
     function hellLook(on) {
         if (on) {
-            if (!Config.y2k.angelSaved) {
-                Config.y2k.angelSaved = Object.assign(wallState(), {
+            if (!Story.player.angelSaved) {
+                Story.player.angelSaved = Object.assign(wallState(), {
                     "mode": Config.appearance.mode
                 });
                 Config.appearance.mode = "dark";
@@ -663,7 +697,7 @@ Singleton {
             putHell();
             return;
         }
-        const s = Config.y2k.angelSaved;
+        const s = Story.player.angelSaved;
         hellKey = "";
         hellState = null;
         if (!s)
@@ -675,14 +709,14 @@ Singleton {
         Config.wallpaper.workspaces = s.workspaces || ({});
         if (s.mode)
             Config.appearance.mode = s.mode;
-        Config.y2k.angelSaved = null;
+        Story.player.angelSaved = null;
         _wallBusy = false;
     }
     // the user picked a wallpaper while she rules: it waits for the angel, hell stays
     onWallKeyChanged: {
-        if (!demon || transition || _wallBusy || !Config.ready || !Config.y2k.angelSaved || (!hellKey && !_hellPending) || wallKey === hellKey)
+        if (!demon || transition || _wallBusy || !Config.ready || !Story.player.angelSaved || (!hellKey && !_hellPending) || wallKey === hellKey)
             return;
-        Config.y2k.angelSaved = Object.assign({}, Config.y2k.angelSaved, wallState());
+        Story.player.angelSaved = Object.assign({}, Story.player.angelSaved, wallState());
         Qt.callLater(rehell);
     }
     function rehell() {
@@ -715,7 +749,9 @@ Singleton {
                 sizes.push(k);
         }
         _hellPending = true;
-        hellGen.command = ["python3", Quickshell.shellDir + "/scripts/hell-wallpaper.py", Config.home + "/.local/share/angelos/hell", "--pack", Config.home + "/Pictures/Hell", "--cache", Config.home + "/.local/share/angelos/hell-pack"].concat(Config.y2k.hellStyle === "drawn" ? ["--drawn"] : []).concat(sizes);
+        // the circle's own paintings first (story/circles.json → backdrop.pictures)
+        const own = (HellLook.backdrop && HellLook.backdrop.pictures || []).reduce((a, n) => a.concat(["--prefer", n]), []);
+        hellGen.command = ["python3", Quickshell.shellDir + "/scripts/hell-wallpaper.py", Config.home + "/.local/share/angelos/hell", "--pack", Config.home + "/Pictures/Hell", "--cache", Config.home + "/.local/share/angelos/hell-pack"].concat(Config.y2k.hellStyle === "drawn" ? ["--drawn"] : []).concat(own).concat(sizes);
         hellGen.running = true;
     }
     Process {
@@ -774,7 +810,7 @@ Singleton {
         onTriggered: {
             if (!root.demon || root.transition)
                 return;
-            if (!Config.y2k.angelSaved)
+            if (!Story.player.angelSaved)
                 root.hellLook(true);
             else if (!root.hellState) {
                 root.hellState = root.wallState();
@@ -786,7 +822,7 @@ Singleton {
         wakeHell.restart()
     // another hell picture now (the style changed; `angelos helper hellwall`)
     function newHell() {
-        if (!demon || transition || !Config.y2k.angelSaved)
+        if (!demon || transition || !Story.player.angelSaved)
             return false;
         putHell();
         return true;
@@ -797,10 +833,10 @@ Singleton {
     readonly property var wheelSectors: ["plea", "punish", "newHell", "cerberus", "plea", "quake", "cursed", "dud"]
     readonly property int wheelCooldown: 20 * 60000
     function wheelLeft() {
-        return Math.max(0, wheelCooldown - (now - (Config.y2k.wheelAt || 0)));
+        return Math.max(0, wheelCooldown - (now - (Story.player.wheelAt || 0)));
     }
     function wheelReady() {
-        return demon && !transition && Date.now() - (Config.y2k.wheelAt || 0) >= wheelCooldown;
+        return demon && !transition && Date.now() - (Story.player.wheelAt || 0) >= wheelCooldown;
     }
     // the spin, shared by every copy of the widget (its face and its input copy): they only
     // show wheelAngle; the ticks and the result come from here. The cooldown counts from
@@ -825,7 +861,8 @@ Singleton {
             say(line(Lines.demonWheel.wait, "wwait").replace("%1", Math.max(1, Math.ceil(wheelLeft() / 60000))));
             return false;
         }
-        Config.y2k.wheelAt = Date.now();
+        Story.player.wheelAt = Date.now();
+        Story.act("wheel.spin");
         now = Date.now();
         wheelWhere = where || screenName;
         wheelTarget = Math.floor(Math.random() * 8);
@@ -876,15 +913,9 @@ Singleton {
         hush();
         const w = Lines.demonWheel;
         if (id === "plea") {
-            // a lucky plea, no dice and no cooldown: the third one still sends her off
-            const t = Date.now();
-            const got = (Config.y2k.pleas || []).filter(x => t - x < pleaWindow).concat([t]);
-            Config.y2k.pleas = got;
-            if (got.length >= pleasNeeded) {
-                say(line(w.plea, "wplea"), null, 3000);
-                ascendSoon.restart();
-            } else
-                say(line(w.plea, "wplea") + " " + tr(got.length === 1 ? Lines.demon.yes1 : Lines.demon.yes2));
+            // a try to get out right now, no waiting: the circle's trial
+            say(line(w.plea, "wplea"), null, 3000);
+            pleaSoon.restart();
         } else if (id === "punish") {
             say(line(w.punish, "wpunish"), null, 2600);
             punishSoon.restart();
@@ -907,9 +938,9 @@ Singleton {
         }
     }
     Timer {
-        id: ascendSoon
-        interval: 2800
-        onTriggered: root.ascend()
+        id: pleaSoon
+        interval: 3000
+        onTriggered: Story.attempt(true)
     }
     Timer {
         id: punishSoon
@@ -922,31 +953,33 @@ Singleton {
         const pool = Cursors.hellish.filter(c => c.theme && c.theme !== Config.cursor.hell);
         if (!pool.length)
             return false;
-        if (!Config.y2k.cursedUntil)
-            Config.y2k.cursedWas = Config.cursor.hell || "";
-        Config.y2k.cursedUntil = Date.now() + 3600000;
+        if (!Story.player.cursedUntil)
+            Story.player.cursedWas = Config.cursor.hell || "";
+        Story.player.cursedUntil = Date.now() + 3600000;
         Cursors.setHell(pool[Math.floor(Math.random() * pool.length)].theme);
         return true;
     }
     function liftCurse(speak) {
-        if (!Config.y2k.cursedUntil)
+        if (!Story.player.cursedUntil)
             return;
-        Config.y2k.cursedUntil = 0;
-        Cursors.setHell(Config.y2k.cursedWas || "angelOS-Hell");
-        Config.y2k.cursedWas = "";
+        Story.player.cursedUntil = 0;
+        Cursors.setHell(Story.player.cursedWas || "angelOS-Hell");
+        Story.player.cursedWas = "";
         if (speak && demon)
             react(tr(Lines.demonWheel.undone));
     }
     Timer {
         interval: 30000
         repeat: true
-        running: !!Config.y2k.cursedUntil
+        running: !!Story.player.cursedUntil
         triggeredOnStart: true
-        onTriggered: if (Date.now() > Config.y2k.cursedUntil)
+        onTriggered: if (Date.now() > Story.player.cursedUntil)
             root.liftCurse(true)
     }
 
     // ---- pranks: a real setting flips, the bubble says what it is ----
+    // Only angelOS's own settings, each with its undo (and all undone when she leaves);
+    // nothing that writes another program's config (niri's animations used to be one).
     function getPath(path) {
         const [a, b] = path.split(".");
         const v = Config[a][b];
@@ -958,19 +991,6 @@ Singleton {
     }
     readonly property var osuPlugin: Plugins.enabledPlugins.find(p => p.id === "osu-mini") || null
     readonly property var pranks: [
-        {
-            "id": "switchFx",
-            "run": () => {
-                const old = WorkspaceAnim.current.id;
-                WorkspaceAnim.pick("heart");
-                return old;
-            },
-            "undo": old => WorkspaceAnim.pick(old || "soft"),
-            "can": () => WorkspaceAnim.current.id !== "heart" && !Shell.dev,
-            "page": "workspaces",
-            "ru": "Переключи рабочий стол. Сюрприз: он теперь открывается сердечком, фу. Это «Анимация переключения» в «Воркспейсах».",
-            "en": "Switch a workspace. Surprise: it opens through a heart now, ew. That's “Switch animation” in Workspaces."
-        },
         {
             "id": "heartAnim",
             "key": "workspaces.heartAnim",
@@ -1089,12 +1109,12 @@ Singleton {
     ]
     function prank() {
         if (!demon || transition || !present || talking || menuOpen || Shell.locked || Idle.active || StreamMode.active || Shell.settingsOpen || Shell.fullscreenOn(screenName)) {
-            Config.y2k.nextPrank = Date.now() + 5 * 60000;
+            Story.player.nextPrank = Date.now() + 5 * 60000;
             return false;
         }
-        const done = (Config.y2k.pranks || []).map(p => p.id);
+        const done = (Story.player.pranks || []).map(p => p.id);
         const options = pranks.filter(p => !done.includes(p.id) && (!p.can || p.can()));
-        Config.y2k.nextPrank = Date.now() + (25 + Math.random() * 20) * 60000;
+        Story.player.nextPrank = Date.now() + (25 + Math.random() * 20) * 60000;
         if (!options.length) {
             joke();
             return false;
@@ -1114,7 +1134,7 @@ Singleton {
             if (p.undo)
                 rec.old = r === undefined ? null : r;
         }
-        Config.y2k.pranks = (Config.y2k.pranks || []).concat([rec]);
+        Story.player.pranks = (Story.player.pranks || []).concat([rec]);
         effect();
         const acts = [];
         if (p.key || p.undo)
@@ -1133,7 +1153,7 @@ Singleton {
         return true;
     }
     function undoPrank(id, speak) {
-        const list = Config.y2k.pranks || [];
+        const list = Story.player.pranks || [];
         const rec = list.find(r => r.id === id && !r.undone);
         if (!rec)
             return false;
@@ -1143,7 +1163,7 @@ Singleton {
             setPath(rec.key, rec.old);
         else if (!rec.key && p && p.undo)
             p.undo(rec.old);
-        Config.y2k.pranks = list.map(r => r === rec ? Object.assign({}, r, {
+        Story.player.pranks = list.map(r => r === rec ? Object.assign({}, r, {
                 "undone": true
             }) : r);
         if (speak)
@@ -1152,7 +1172,7 @@ Singleton {
     }
     function undoAllPranks() {
         let n = 0;
-        for (const r of (Config.y2k.pranks || []).slice().reverse())
+        for (const r of (Story.player.pranks || []).slice().reverse())
             if (!r.undone && (r.key || (pranks.find(p => p.id === r.id) || {}).undo) && undoPrank(r.id, false))
                 n++;
         return n;
@@ -1169,15 +1189,15 @@ Singleton {
         repeat: true
         onTriggered: {
             root.now = Date.now();
-            if (root.demon && root.now > (Config.y2k.nextPrank || 0))
+            if (root.demon && root.now > (Story.player.nextPrank || 0))
                 root.prank();
             // and every twelve minutes or so she hints how to get the angel back
-            else if (root.demon && root.present && !root.talking && !root.menuOpen && !root.transition && Config.y2k.helperTips !== "off" && !StreamMode.active && !Shell.hiddenScreen(root.screenName) && root.now - (Config.y2k.demonSince || 0) > 120000 && root.now - root.lastHint > 12 * 60000)
+            else if (root.demon && root.present && !root.talking && !root.menuOpen && !root.transition && Config.y2k.helperTips !== "off" && !StreamMode.active && !Shell.hiddenScreen(root.screenName) && root.now - (Story.player.demonSince || 0) > 120000 && root.now - root.lastHint > 12 * 60000)
                 root.hint();
             const h = new Date().getHours();
             if (h >= 1 && h < 5 && root.nightSaid !== new Date().toDateString() && !Shell.fullscreenOn(root.screenName)) {
                 root.nightSaid = new Date().toDateString();
-                root.react(root.demon ? root.line(Lines.demonNight, "dnight") : root.tr(Lines.angel.night));
+                root.react(root.demon ? Story.voiceLine("night") || root.line(Lines.demonNight, "dnight") : root.tr(Lines.angel.night));
             }
         }
     }
@@ -1265,7 +1285,7 @@ Singleton {
         id: musicSoon
         interval: 4000
         onTriggered: if (Lyrics.playing && Lyrics.title)
-            root.demonNotice("music", 20, 0.3, root.line(Lines.demonMusic, "dmusic").replace("%1", Lyrics.artist || "?").replace("%2", Lyrics.title))
+            root.demonNotice("music", 20, 0.3, (Story.voiceLine("music") || root.line(Lines.demonMusic, "dmusic")).replace("%1", Lyrics.artist || "?").replace("%2", Lyrics.title))
     }
     // back at the computer: unlocked, or the screensaver went away after a while
     property double _awaySince: 0
@@ -1294,6 +1314,9 @@ Singleton {
         onTriggered: {
             const away = root._awaySince ? Date.now() - root._awaySince : 0;
             root._awaySince = 0;
+            // limbo: away long enough, and the angel has found you
+            if (Story.cameBack(away))
+                return;
             if (!root.demon || Shell.locked || Idle.active || away < 3 * 60000)
                 return;
             const h = new Date().getHours(), day = new Date().toDateString();
@@ -1301,7 +1324,7 @@ Singleton {
                 root._morningSaid = day;
                 root.demonNotice("morning", 0, 1, root.line(Lines.demonMorning, "dmorning"));
             } else {
-                root.demonNotice("back", 10, 0.7, root.line(Lines.demonBack, "dback"));
+                root.demonNotice("back", 10, 0.7, Story.voiceLine("back") || root.line(Lines.demonBack, "dback"));
             }
         }
     }

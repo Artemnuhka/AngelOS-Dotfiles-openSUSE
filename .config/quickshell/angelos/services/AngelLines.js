@@ -172,7 +172,7 @@ const jokesEn = [
 const demonJokesRu = [
     "В аду тоже есть техподдержка. Звонишь — и музыка ожидания играет вечно. Это и есть наказание. Всё наказание.",
     "Я 666 лет искушаю людей. А ты сам себя искушаешь «ещё одним видео». Меня выдавливают с рынка.",
-    "Чёрт кроется в деталях. Поэтому я и читаю твои конфиги.",
+    "Чёрт кроется в деталях. Поэтому я так долго смотрю на твои обои." /* ЧЕРНОВИК: без «читаю конфиги» — игра не читает файлы */,
     "Девять кругов ада — это девять вкладок, в одной из которых играет звук, и ты не знаешь, в какой.",
     "Святой воды я не боюсь. Я видела, что ты пьёшь в три часа ночи.",
     "Продать душу? Солнышко, я проверила: это единственное, что у тебя не по подписке.",
@@ -195,7 +195,7 @@ const demonJokesRu = [
     "У вас «синий экран смерти». У нас просто экран. Смерть идёт в комплекте.",
     "Страшнее меня только мерж-конфликт в пятницу в шесть вечера.",
     "Чудес я не делаю. Я делаю «неожиданные побочные эффекты».",
-    "Ангел хранит тебя от бед. Я храню твою историю браузера. Угадай, что дороже.",
+    "Ангел хранит тебя от бед. Я храню твоё время. Угадай, что дороже." /* ЧЕРНОВИК: без «историю браузера» */,
     "Каждый раз, когда ты пишешь sudo, один маленький демон получает повышение. Я уже менеджер. Спасибо.",
     "Огонь и сера — это прошлое тысячелетие. Сейчас уведомления и сера.",
     "Я не злая. Я просто в продакшене без тестов.",
@@ -206,7 +206,7 @@ const demonJokesRu = [
 const demonJokesEn = [
     "Hell has tech support too. You call, and the hold music never ends. That's the punishment. That's the whole punishment.",
     "I've tempted mortals for 666 years. You tempt yourself with “one more video”. I'm being outsourced.",
-    "The devil is in the details. That's why I read your config files.",
+    "The devil is in the details. That's why I stare at your wallpaper so long." /* DRAFT: no “I read your configs” — the game reads no files */,
     "Hell's nine circles are nine tabs, one of them playing audio, and you can't find which.",
     "Holy water doesn't scare me. I've seen what you drink at 3 a.m.",
     "Sell your soul? Darling, I checked — it's the only thing you own that isn't a subscription.",
@@ -229,7 +229,7 @@ const demonJokesEn = [
     "You have the blue screen of death. We just call it a screen. Death comes standard.",
     "The only thing scarier than me is a merge conflict at 5 p.m. on a Friday.",
     "I don't do miracles. I do “unexpected side effects”.",
-    "The angel keeps you from harm. I keep your browser history. Guess which is worth more.",
+    "The angel keeps you from harm. I keep your time. Guess which is worth more." /* DRAFT: no “browser history” */,
     "Every time you type sudo, a little demon gets promoted. I'm a manager now. Thanks.",
     "Fire and brimstone is so last millennium. Now it's notifications and brimstone.",
     "I'm not evil. I'm just in production without tests.",
@@ -339,7 +339,7 @@ const demonMusic = [
 const demonBack = [
     ["Вернулся? Я не скучала. Просто считала секунды. Из вредности.", "Back? I didn't miss you. I counted the seconds. Out of spite."],
     ["О, живой. Отлично, есть кого доставать.", "Oh, alive. Great, someone to bother."],
-    ["Ты ушёл и оставил меня одну с твоими вкладками. Я их почитала.", "You left me alone with your tabs. I read them."],
+    ["Ты ушёл и оставил меня одну. Я не трогала твои окна. Пока.", "You left me alone. I didn't touch your windows. Yet."] /* ЧЕРНОВИК: без «почитала вкладки» */,
     ["Тебя долго не было. Я чуть не заскучала и не разбила ещё что-нибудь. Чуть.", "You were gone a while. I almost got bored enough to break something else. Almost."]
 ];
 
@@ -356,7 +356,7 @@ const demonMorning = [
 // the demon's version of the tips: same features, less kindness
 const demonTips = [
     ["Mod+Alt+L — блокировка. Пригодится, когда будешь прятать вкладки от мамы.", "Mod+Alt+L locks the screen. Handy when you're hiding tabs from your mum.", "lock"],
-    ["Mod+V — история буфера. Всё, что ты копировал. Всё. Я читала.", "Mod+V is the clipboard history. Everything you copied. Everything. I read it.", ""],
+    ["Mod+V — история буфера. Всё, что ты копировал. Твоё — только твоё. Даже здесь.", "Mod+V is the clipboard history. Everything you copied. Yours is only yours. Even here.", ""] /* ЧЕРНОВИК: без «я читала» */,
     ["Mod+Shift+S — скриншот. Для компромата — самое то.", "Mod+Shift+S takes a screenshot. Perfect for blackmail material.", "capture"],
     ["Хочешь меня прогнать? Меню → «Спросить» → «Верни ангела». Проси хорошо и не часто — спам не работает.", "Want me gone? Menu → “Ask” → “Bring the angel back”. Ask nicely and not too often — spamming won't work.", ""],
     ["Панель можно сделать островом. Маленькая, парит и никому ничего не должна. Как я.", "The bar can be an island: small, floating and owing nobody anything. Like me.", "bar"],

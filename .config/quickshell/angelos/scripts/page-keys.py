@@ -24,7 +24,7 @@ KEEP = {"appearance.language", "wallpaper.fallback", "wallpaper.outputs", "wallp
         "settingsUi.usage", "settingsUi.expert", "settingsUi.skinChosen", "plugins.data", "updates.lastCheck",
         "updates.available", "y2k.character", "y2k.pleas", "y2k.lastPlea", "y2k.pranks",
         "y2k.nextPrank", "y2k.demonSince", "y2k.seenTips", "y2k.angelSaved", "y2k.returns",
-        "y2k.helperGreeted", "stream.dndSet", "lyrics.sourcesVersion", "workspaces.names"}
+        "y2k.helperGreeted", "stream.dndSet", "lyrics.sourcesVersion", "workspaces.names", "game.enabled"}
 
 
 def page_id(path):

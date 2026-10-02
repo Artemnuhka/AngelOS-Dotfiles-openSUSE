@@ -22,7 +22,7 @@ Item {
     readonly property int d: 72                  // the wheel, art pixels
     readonly property int px: Theme.u
     readonly property var labels: ({
-            "plea": I18n.t("Мольба", "A plea"),
+            "plea": I18n.t("Испытание", "A trial"),
             "punish": I18n.t("Наказание", "Punishment"),
             "newHell": I18n.t("Новый ад", "A new hell"),
             "cerberus": I18n.t("Цербер", "Cerberus"),
@@ -59,7 +59,7 @@ Item {
         triggeredOnStart: true
         onTriggered: root.clock = Date.now()
     }
-    readonly property int minutesLeft: Math.ceil(Math.max(0, Angel.wheelCooldown - (clock - (Config.y2k.wheelAt || 0))) / 60000)
+    readonly property int minutesLeft: Math.ceil(Math.max(0, Angel.wheelCooldown - (clock - (Story.player.wheelAt || 0))) / 60000)
     readonly property bool ready: minutesLeft <= 0 && !Angel.wheelSpinning
     // where it stopped last, for a minute
     readonly property bool showLast: !Angel.wheelSpinning && Angel.wheelLast !== "" && clock - Angel.wheelLastAt < 60000

@@ -27,7 +27,8 @@ Item {
     property int wordPixel: Math.max(1, Math.round(fontSize / 9))
     readonly property bool angel: variant === "angel"
     readonly property var wordArt: Logos.wordmark(variant)
-    property bool horns: Angel.demon
+    // the demon rules — or, in heaven, the pact signed down there left its mark (Story.marked)
+    property bool horns: Angel.demon || Story.marked
 
     readonly property var emblemRows: Logos.emblem(emblemName, horns)
     readonly property bool redStar: horns && !Logos.emblemHasHalo(emblemName)

@@ -335,7 +335,7 @@ JsonAdapter {
         property real helperScale: 1.0      // 1.00–1.15: Ctrl + mouse wheel over her, 5 % a notch (Y2K → Helper → Size)
     }
 
-    // the game: angelOS is a story played over the real desktop (services/Game, story/).
+    // the game: angelOS is a story played over the real desktop (services/Story, story/).
     // The player's save is its own file (~/.config/angelos/save.json), not here.
     property JsonObject game: JsonObject {
         property bool enabled: true         // false: plain dotfiles — no angel, demon, novel or hell (installer ANGELOS_GAME=0, the setup wizard, `angelos game off`)

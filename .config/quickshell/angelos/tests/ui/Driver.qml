@@ -12,6 +12,7 @@ import qs.modules.alttab
 import qs.modules.bar
 import qs.modules.bar.parts
 import qs.widgets
+import "../../novel/NovelCore.js" as Core
 
 // angelOS UI self-test, started by scripts/test-ui.sh (ANGELOS_TEST=1, Qt's
 // offscreen platform, a throwaway HOME). Inside the real shell, so the type
@@ -30,6 +31,10 @@ import qs.widgets
 //   start     every Start look (the bodies of StartOverlay) loads, searches, walks with the keys, Esc closes
 //   hell      the built-in desktop widgets and a hell window frame load in heaven and in hell,
 //             the widgets burn over and back, the six hell cursors are in the catalog
+//   game      the save (services/Story) loads, all nine circles and every scene are valid
+//             data, each circle has its trial; a fall lands on the heaviest sin, a right
+//             answer goes a circle deeper, the pact gets out with its mark; the game turns
+//             off and on again
 //   rmb       a right click into the window's corner pixel does not crash Qt
 // Prints "TEST <name> PASS|FAIL [detail]" and "TEST-PAGE <id>" markers (the
 // script ties log errors to the page that caused them), "TEST DONE <n>" last.
@@ -970,6 +975,60 @@ Scope {
                 return;
             const hellCursors = Cursors.hellish.length;
             report("hell-burn", !DesktopWidgets.burning && Theme.realm === "heaven" && hellCursors === 6, "burnt over and back in " + (Date.now() - started) + " ms, " + hellCursors + " hell cursors");
+            phase = "game";
+            started = Date.now();
+            return;
+        }
+        if (phase === "game") {
+            if (!Novel.loaded && Date.now() - started < 8000)
+                return;
+            report("game-save", Story.ready && Story.player.character === "angel" && Story.enabled, "save " + Story.file + (Story.ready ? "" : " not loaded"));
+            const missing = Story.order.filter(id => !HellLook.looks[id] || HellLook.looks[id].n !== Story.order.indexOf(id) + 1);
+            report("game-circles", Story.order.length === 9 && missing.length === 0, missing.length ? "missing or misnumbered: " + missing.join(", ") : "9 circles in order");
+            const bad = [];
+            for (const id of Object.keys(Novel.scenes))
+                for (const v of Core.validate(Novel.scenes[id]))
+                    if (v.level === "error")
+                        bad.push(id + "/" + v.node + ": " + v.text);
+            report("game-scenes", Object.keys(Novel.scenes).length > 0 && bad.length === 0, bad.join("; ") || Object.keys(Novel.scenes).length + " scenes valid");
+            const noTrial = Story.order.filter(id => !Object.keys(Novel.scenes).some(sid => {
+                    const ev = Novel.eventOf(Novel.scenes[sid]);
+                    return ev && ev.trigger === "trial" && Core.evalCond(ev.cond, Object.assign(Story.ctxVars(), {
+                        "circle": id
+                    }), []);
+                }));
+            report("game-trials", noTrial.length === 0, noTrial.length ? "no trial in " + noTrial.join(", ") : "every circle has its trial");
+            // a fall lands on the heaviest sin among the circles no fall began in
+            Story.applySet({
+                "greed": "+2",
+                "wrath": "+1"
+            });
+            const first = Story.circleForFall();
+            Story.hell.fallCircles = ["greed"];
+            const second = Story.circleForFall();
+            Story.hell.fallCircles = [];
+            report("game-fall", first === "greed" && second === "wrath", "greed 2, wrath 1 → " + first + ", then " + second);
+            // into hell without the show: greed, then a circle deeper, then the pact
+            Story.player.character = "demon";
+            Story.fell("greed");
+            const inGreed = Story.circle === "greed" && HellLook.circle === "greed" && Theme.hellAccent.toString() === Qt.color(HellLook.looks.greed.palette.accent).toString();
+            Story.deeper();
+            report("game-deeper", inGreed && Story.circle === "wrath" && Story.depth === 2, "greed (" + inGreed + ") → " + Story.circle + ", path " + JSON.stringify(Story.hell.path));
+            Story.outcome("pact");
+            started = Date.now();
+            phase = "game-out";
+            return;
+        }
+        if (phase === "game-out") {
+            if ((Story.inHell || Angel.transition) && Date.now() - started < 12000)
+                return;
+            report("game-pact", !Story.inHell && Story.marked && Story.circle === "" && HellLook.circle === "base" && Story.hell.outcomes.length === 1, "out by " + (Story.hell.outcomes[0] || {}).kind + " in " + (Date.now() - started) + " ms, marked " + Story.marked);
+            Story.setEnabled(false);
+            const off = !Story.enabled && !Angel.demon && !Angel.shown && !Novel.enabled;
+            Story.setEnabled(true);
+            report("game-off", off && Story.enabled, "off: no angel, demon or novel; on again");
+            Story.reset();
+            report("game-reset", Object.keys(Story.vars).length === 0 && !Story.hell.pact && (Story.hell.outcomes || []).length === 0, "the save starts over");
             phase = "rmb";
             return;
         }

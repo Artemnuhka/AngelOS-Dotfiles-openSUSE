@@ -14,6 +14,8 @@
               recent-windows switcher off) | false (niri's switcher, no block)
       lens:   true (Mod+Alt+= / Mod+Alt+- / Mod+Alt+0 → `angelos lens in|out|close`,
               the lens at the pointer) | false (no block)
+      quit:   true (Mod+Ctrl+Shift+Escape → `angelos game off`, out of the game at once,
+              services/Game) | false (no block)
 
 Writers take a lock (the Alt+Tab and the lens services may write at the same time).
 
@@ -88,10 +90,21 @@ def read_lens(text=None):
     return LS_BEGIN in text
 
 
-def render_keys(alttab, lens):
-    """the Alt+Tab block (niri's switcher off) and the lens marker, then one binds node
-    with the keys of both (niri takes a single binds node per file)"""
-    if not alttab and not lens:
+QT_BEGIN = "// >>> angelOS game off (README: «Как выйти из игры»)"
+QT_END = "// <<< angelOS game off"
+GAME_OFF = "exec ~/.config/quickshell/angelos/bin/angelos game off"
+
+
+def read_quit(text=None):
+    if text is None:
+        text = apps_path.read_text() if apps_path.exists() else ""
+    return QT_BEGIN in text
+
+
+def render_keys(alttab, lens, quit=False):
+    """the Alt+Tab block (niri's switcher off), the lens and game-off markers, then one
+    binds node with the keys of all (niri takes a single binds node per file)"""
+    if not alttab and not lens and not quit:
         return ""
     out = []
     if alttab:
@@ -99,6 +112,8 @@ def render_keys(alttab, lens):
                 "recent-windows {", "    off", "}", AT_END]
     if lens:
         out += [LS_BEGIN, "// the lens at the pointer: its keys are in the binds below", LS_END]
+    if quit:
+        out += [QT_BEGIN, "// out of angelOS's game at once: no angel, demon, novel or hell", QT_END]
     out += ["// angelOS keys (one binds node per file)", "binds {"]
     if alttab:
         out += [f'    Alt+Tab repeat=false hotkey-overlay-title="angelOS: Alt+Tab" {{ spawn-sh "{ANGELOS}next"; }}',
@@ -107,6 +122,8 @@ def render_keys(alttab, lens):
         out += [f'    Mod+Alt+Equal hotkey-overlay-title="angelOS: лупа ближе" {{ spawn-sh "{LENS}in"; }}',
                 f'    Mod+Alt+Minus hotkey-overlay-title="angelOS: лупа дальше" {{ spawn-sh "{LENS}out"; }}',
                 f'    Mod+Alt+0 repeat=false hotkey-overlay-title="angelOS: убрать лупу" {{ spawn-sh "{LENS}close"; }}']
+    if quit:
+        out += [f'    Mod+Ctrl+Shift+Escape repeat=false allow-inhibiting=false hotkey-overlay-title="angelOS: выйти из игры" {{ spawn-sh "{GAME_OFF}"; }}']
     out += ["}", "// <<< angelOS keys", ""]
     return "\n".join(out)
 
@@ -185,6 +202,7 @@ def current():
         "taskmgr": read_taskmgr(),
         "alttab": read_alttab(),
         "lens": read_lens(),
+        "quit": read_quit(),
     }
 
 
@@ -216,11 +234,11 @@ def set_block(text, name, lines):
     return new
 
 
-def render_apps(rules, taskmgr=None, alttab=False, lens=False):
+def render_apps(rules, taskmgr=None, alttab=False, lens=False, quit=False):
     out = ["// Managed by angelOS → Настройки → Окна. Per-app default widths.", ""]
     for app, w in sorted(rules.items()):
         out += ["window-rule {", f'    match app-id=r#"^{re.escape(app)}$"#', f"    default-column-width {{ {w}; }}", "}", ""]
-    return "\n".join(out) + render_taskmgr(taskmgr) + render_keys(alttab, lens)
+    return "\n".join(out) + render_taskmgr(taskmgr) + render_keys(alttab, lens, quit)
 
 
 def atomic_write(path, content):
@@ -237,7 +255,7 @@ def atomic_write(path, content):
 
 
 def apply(changes):
-    unknown = set(changes) - {"gaps", "center", "defaultWidth", "presets", "apps", "taskmgr", "alttab", "lens"}
+    unknown = set(changes) - {"gaps", "center", "defaultWidth", "presets", "apps", "taskmgr", "alttab", "lens", "quit"}
     if unknown:
         raise ValueError("unknown keys: " + ", ".join(sorted(unknown)))
     layout = layout_path.read_text()
@@ -261,7 +279,7 @@ def apply(changes):
         new_layout = set_block(new_layout, "preset-column-widths", ps)
 
     files = {layout_path: (layout, new_layout)} if new_layout != layout else {}
-    if "apps" in changes or "taskmgr" in changes or "alttab" in changes or "lens" in changes:
+    if "apps" in changes or "taskmgr" in changes or "alttab" in changes or "lens" in changes or "quit" in changes:
         rules = read_apps()
         for app, w in (changes.get("apps") or {}).items():
             if not re.match(r"^[\w.+-]{1,120}$", app):
@@ -273,8 +291,9 @@ def apply(changes):
         taskmgr = changes["taskmgr"] if "taskmgr" in changes else read_taskmgr()
         alttab = bool(changes["alttab"]) if "alttab" in changes else read_alttab()
         lens = bool(changes["lens"]) if "lens" in changes else read_lens()
+        quit = bool(changes["quit"]) if "quit" in changes else read_quit()
         old_apps = apps_path.read_text() if apps_path.exists() else None
-        files[apps_path] = (old_apps, render_apps(rules, taskmgr, alttab, lens))
+        files[apps_path] = (old_apps, render_apps(rules, taskmgr, alttab, lens, quit))
         cfg = config_path.read_text()
         if 'include "./cfg/angelos-windows.kdl"' not in cfg:
             anchor = 'include "./cfg/rules.kdl"'

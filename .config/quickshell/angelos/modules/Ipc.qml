@@ -83,6 +83,52 @@ IpcHandler {
             "obs": StreamMode.obsUp ? (StreamMode.obsLive ? "live" : "up") : (StreamMode.obsAuth ? "password" : "down")
         });
     }
+    // the game (services/Story): `angelos game off` — out of the game at once (also
+    // Mod+Ctrl+Shift+Escape), on, calm on|off (no flashes, shaking or sudden loud sounds),
+    // status, reset (the save starts over); developer mode (Settings → System) or the dev
+    // stand: circle <1–9|id>, scene <id>, sin <name> [+1|-1|N], outcome stars|pact|limbo, try
+    function game(line: string): string {
+        const a = String(line || "").trim().split(/\s+/);
+        switch (a[0]) {
+        case "off":
+            return Story.setEnabled(false);
+        case "on":
+            return Story.setEnabled(true);
+        case "calm":
+            Config.game.calm = a[1] !== "off";
+            return "calm " + (Config.game.calm ? "on" : "off");
+        case "reset":
+            return Story.reset();
+        case "":
+        case "status":
+            return Story.status();
+        }
+        if (!Shell.dev && !Config.developer.enabled)
+            return "off | on | calm on|off | status | reset" + " (circle, scene, sin, outcome, try: developer mode — Settings → System)";
+        switch (a[0]) {
+        case "circle":
+            return Story.jump(a[1] || "");
+        case "scene":
+            return Novel.startScene(a[1] || "") ? "ok" : "scenes: " + Object.keys(Novel.scenes).sort().join(" ");
+        case "sin":
+            {
+                const set = {};
+                set[a[1] || "limbo"] = a[2] || "+1";
+                Story.applySet(set);
+                return JSON.stringify(Story.vars);
+            }
+        case "outcome":
+            return Story.inHell ? (Story.outcome(a[1] || "stars") ? "ok" : "no") : "not in hell";
+        case "try":
+            return Story.attempt(true);
+        case "ambient":
+            if (!Story.inHell)
+                return "not in hell";
+            HellAmbient.now();
+            return "ok";
+        }
+        return "off | on | calm on|off | status | reset | circle <1–9|id> | scene <id> | sin <name> [+1] | outcome stars|pact|limbo | try | ambient";
+    }
     // the corner helper: `angelos helper "tip | joke | hint | ask <text> | plea | status"`
     // (owner: angel — the demon leaves at once; dev or owner: prank, ascend, fx,
     // hell, throw; dev only: drag)
@@ -156,7 +202,7 @@ IpcHandler {
         else if (debug && cmd === "prank")
             return Angel.prank() ? "ok" : "not now";
         else if (debug && cmd === "ascend")
-            Angel.ascend();
+            Angel.getOut("stars");
         // the angel goes to hell only by being thrown down (AngelHelper); dev: pretend
         else if (debug && cmd === "hell")
             Angel.toHell();
@@ -177,15 +223,15 @@ IpcHandler {
         else if (cmd !== "status")
             return "summon | portal | tip | joke | hint | ask <text> | plea | menu [main|ask] | status" + (Owner.enabled ? " | angel" : "");
         return JSON.stringify({
-            "character": Config.y2k.character,
+            "character": Story.player.character,
             "shown": Angel.shown,
             "screen": Angel.screenName,
             "transition": Angel.transition,
             "realm": Theme.realm + (DesktopWidgets.burning ? " → " + DesktopWidgets.burnTo : ""),
             "cursor": Cursors.active,
-            "pleas": Angel.pleasCounted + "/" + Angel.pleasNeeded,
+            "circle": Story.circle,
             "returns": Angel.returns + "/" + Angel.returnsNeeded + (Angel.portalOpen ? " (portal open)" : ""),
-            "pranks": (Config.y2k.pranks || []).map(p => p.id + (p.undone ? " (undone)" : "")),
+            "pranks": (Story.player.pranks || []).map(p => p.id + (p.undone ? " (undone)" : "")),
             "text": Angel.talking ? Angel.text : ""
         });
     }

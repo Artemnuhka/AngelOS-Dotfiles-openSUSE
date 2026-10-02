@@ -5,9 +5,10 @@ import Quickshell
 import Quickshell.Io
 
 // How hell looks right now: its palette, the stone behind the bar, the rim of windows and
-// widgets — described as data in story/circles.json, one entry per circle ("base" is hell
-// before any circle and what every circle starts from). The story (services) sets `circle`;
-// Theme.hell* follow `palette`, so plugins that draw hell themselves change with it.
+// widgets, the dark over the wallpaper — described as data in story/circles.json, one entry
+// per circle ("base" is hell before any circle and what every circle starts from). The game
+// (services/Story) sets `circle`; Theme.hell* follow `palette`, so plugins that draw hell
+// themselves change with it.
 Singleton {
     id: root
 
@@ -104,6 +105,12 @@ Singleton {
     readonly property var bar: look.bar
     readonly property var edge: look.edge
     readonly property var backdrop: look.backdrop
+    // the circle itself: its number (0 for "base"), title, one line about it, the demon's voice
+    readonly property int number: look.n || 0
+    readonly property var title: look.name || ({})
+    readonly property var where: look.where || ({})
+    readonly property string voice: look.voice || ""
+    readonly property string ambient: backdrop && backdrop.ambient ? backdrop.ambient : ""
     // "CPU · жар": the circle's word for a reading, after its plain name
     function label(id, plain) {
         const w = look.labels ? look.labels[id] : null;
@@ -113,7 +120,8 @@ Singleton {
     // the rare thing seen from the corner of an eye (services/HellAmbient drives it): 0 → 1 → 0
     // over a few seconds, on the windows whose seed matches `eventTarget` — one at a time
     property real event: 0
-    property int eventTarget: -1
+    property int eventTarget: -1             // a window's seed % 6; -2: the ground (the wallpaper's ambient)
+    property real phase: 0                   // 0 → 1 through the event (the ambient moves with it)
     readonly property var ids: Object.keys(looks).filter(k => k !== "_comment")
 
     // WCAG contrast of two "#rrggbb" colours (tests check every circle's text roles)

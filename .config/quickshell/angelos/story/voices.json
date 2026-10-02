@@ -1,0 +1,40 @@
+{
+  "_comment": "ЧЕРНОВИК — все реплики здесь черновики Claude, финальные тексты утверждает автор. How the demon talks in a circle (story/circles.json → voice). Situations: enter (she meets you in a circle; %1 its name, %2 its number), chatter (now and then), night (1–5 am), music (%1 the artist, %2 the song), back (you came back to the computer), wait (a try to get out before the time is up; %1 minutes), hint (how out — she says it with the button), refuse (asked to call the angel). Each line [ru, en]; templates as in scenes: {name} {g:m|f|unknown} {time} {daypart} {uptime} {song}. A situation a voice lacks falls back to the demon's usual lines (services/AngelLines.js).",
+  "registry": {
+    "enter": [["Принят{g:|а|(а)}. Круг %2: %1. Ожидай.", "Admitted. Circle %2: %1. Wait."], ["Ваше дело передано в круг %2. %1. Номер в очереди не сообщается.", "Your case has been passed to circle %2. %1. Your place in the queue is not disclosed."]],
+    "chatter": [["Ожидайте. Ваше ожидание очень важно для нас.", "Please hold. Your wait is very important to us."], ["Записано.", "Noted."], ["Время приёма не установлено.", "Office hours: not set."], ["Здесь все ждут. Ты не исключение.", "Everyone waits here. You're no exception."]],
+    "night": [["{time}. Отметка о бессоннице внесена в дело.", "{time}. A note of sleeplessness has been added to your file."]],
+    "music": [["Записано: «%2». Приложено к делу.", "Noted: “%2”. Attached to your file."]],
+    "back": [["Отсутствие зафиксировано. Причина не важна.", "Absence recorded. The reason does not matter."]],
+    "wait": [["Прошение не рассматривается. Следующее — через %1 мин.", "Petition not considered. The next one in %1 min."]],
+    "hint": [["Выход один: вниз. Подавай прошение — рассмотрим.", "There is one way out: down. File a petition — we'll consider it."]],
+    "refuse": [["Ангел в этом круге не принимает.", "The angel does not receive in this circle."]]
+  },
+  "close": {
+    "enter": [["Тише. Ты здесь уже был{g:|а|(а)}. Просто не помнишь. %1.", "Hush. You've been here before. You just don't remember. %1."], ["Ближе. Ещё ближе. Вот. Это %1.", "Closer. Closer still. There. This is %1."]],
+    "chatter": [["Я рядом. Ты не оборачиваешься — и правильно.", "I'm right here. You don't turn around — good."], ["{uptime} у экрана. Я считала.", "{uptime} at the screen. I counted."], ["Ты дышишь чаще, когда думаешь, что я смотрю.", "You breathe faster when you think I'm watching."]],
+    "night": [["{time}. Все спят. Кроме нас.", "{time}. Everyone's asleep. Except us."]],
+    "music": [["Опять «%2». Здесь её тоже слышно.", "“%2” again. You can hear it here too."]],
+    "back": [["Вернул{g:ся|ась|ся(ась)}. Я никуда не уходила.", "You're back. I never left."]],
+    "wait": [["Рано. Ещё %1 мин. Посиди со мной.", "Too soon. %1 more min. Sit with me."]],
+    "hint": [["Хочешь наверх? Тогда вниз. Я покажу.", "You want to go up? Then down. I'll show you."]],
+    "refuse": [["Её здесь нет. Здесь только я.", "She isn't here. Only I am."]]
+  },
+  "scripture": {
+    "enter": [["И сош{g:ёл|ла|ёл(ла)} ты в круг %2, и имя ему — %1.", "And you went down to circle %2, and its name is %1."], ["Оставь надежду. Или не оставляй — здесь её всё равно не носят.", "Abandon hope. Or don't — nobody wears it here anyway."]],
+    "chatter": [["Сказано: всякий ждущий да ждёт.", "It is written: whoever waits shall wait."], ["Мольба записана в книгу. Книга не отвечает.", "The plea is written in the book. The book does not answer."]],
+    "night": [["Час третий по полуночи. Двери открыты.", "The third hour past midnight. The doors are open."]],
+    "music": [["Песнь «%2» внесена в списки.", "The song “%2” is entered in the rolls."]],
+    "back": [["Вернулся грешник к месту своему.", "The sinner has returned to their place."]],
+    "wait": [["Не время. Ещё %1 мин. Так записано.", "Not yet. %1 more min. So it is written."]],
+    "hint": [["Путь наверх лежит через дно. Иди.", "The way up lies through the bottom. Go."]],
+    "refuse": [["Ангелы сюда не сходят.", "Angels do not come down here."]]
+  },
+  "silent": {
+    "enter": [["…", "…"], ["%1.", "%1."]],
+    "chatter": [["…", "…"]],
+    "wait": [["…%1.", "…%1."]],
+    "hint": [["Вниз.", "Down."]],
+    "refuse": [["Нет.", "No."]]
+  }
+}

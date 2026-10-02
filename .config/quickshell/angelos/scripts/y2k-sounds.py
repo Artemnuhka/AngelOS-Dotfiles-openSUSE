@@ -95,8 +95,9 @@ def level(x, peak_db=-6.0, rms_db=-20.0):
 # RMS ceilings, dBFS: the helper speaks under everything else
 LOUDNESS = {"bark": -24.0, "voiceAngel": -25.0, "voiceDemon": -26.0, "voice": -25.0, "angel": -24.0, "demon": -25.0,
             "choir": -23.0, "crack": -25.0, "rocks": -23.0, "shatter": -23.0,
-            "key": -27.0, "key2": -27.0, "key3": -27.0, "clickRight": -22.0, "workspace": -24.0}
-PACK_VERSION = "5"
+            "key": -27.0, "key2": -27.0, "key3": -27.0, "clickRight": -22.0, "workspace": -24.0,
+            "circle": -21.0, "circleSoft": -27.0}
+PACK_VERSION = "6"
 
 
 def startup():
@@ -444,6 +445,29 @@ def shatter():
     return crunch8(buf)
 
 
+def circle(soft=False):
+    # hell's next circle, in the dark (modules/y2k/CircleTransition): one low, heavy hit —
+    # a sub thump falling from 70 to 30 Hz, a dull body of filtered noise, a deep iron
+    # resonance under it and a long dark tail, as if a door the size of a wall shut far
+    # below. `soft` (Settings → Game → calm): a slow swell instead of the blow, quieter
+    sec = 3.4
+    buf = np.zeros(int(sec * RATE))
+    t = t_axis(1.8)
+    f = 30 + 40 * np.exp(-t * 5)
+    sub = np.sin(2 * np.pi * np.cumsum(f) / RATE) * np.exp(-t * 2.2)
+    if soft:
+        sub = sub * np.clip(t / 0.35, 0, 1)
+    place(buf, sub * 1.0, 0.0)
+    if not soft:
+        body = lowpass(noise(0.3, 61), 320) * np.exp(-t_axis(0.3) * 14)
+        place(buf, body * 0.9, 0.0)
+    ring = bell(55.0, 2.6, index=0.6, ratio=2.76, decay=1.6) * (0.25 if soft else 0.35)
+    place(buf, ring, 0.02)
+    place(buf, bell(41.2, 2.8, index=0.4, ratio=1.5, decay=1.2) * 0.3, 0.05)
+    buf = lowpass(echo(buf, 0.31, 0.42, 5), 900 if soft else 1600)
+    return buf
+
+
 def pip(freq, duty, sec, drop, grit=0.0, seed=1):
     t = t_axis(sec)
     x = pulse(freq, freq * drop, sec, duty)
@@ -479,7 +503,8 @@ SOUNDS = {"startup": startup, "notify": notify, "error": error, "click": click, 
           "shatter": shatter, "voice": voice, "voiceAngel": voice_angel, "voiceDemon": voice_demon,
           "clickRight": click_right, "key": key, "key2": lambda: key(1), "key3": lambda: key(2),
           "windowOpen": window_open, "workspace": workspace, "lock": lock, "unlock": unlock,
-          "usbIn": usb_in, "usbOut": usb_out, "bark": bark}
+          "usbIn": usb_in, "usbOut": usb_out, "bark": bark, "circle": circle,
+          "circleSoft": lambda: circle(True)}
 # played by QtMultimedia's SoundEffect, which only takes .wav
 WAV_ONLY = {"voiceAngel", "voiceDemon"}
 

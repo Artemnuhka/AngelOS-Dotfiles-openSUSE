@@ -48,7 +48,8 @@ Scope {
                     "text": "",
                     "choices": []
                 })
-            readonly property bool hell: l.who === "demon"
+            // the demon's lines, and the narrator's while the demon rules, in the circle's colours
+            readonly property bool hell: l.who === "demon" || (l.who === "narrator" && Angel.demon)
             property int shown: 0
             readonly property bool typed: shown >= l.text.length
             onLChanged: {
@@ -117,8 +118,9 @@ Scope {
                     ShakyText {
                         width: parent.width
                         text: box.l.text
+                        color: box.hell ? Theme.hellText : Theme.text
                         shown: box.shown
-                        twitch: Config.y2k.textShake === "off" ? 0 : 0.04
+                        twitch: Config.y2k.textShake === "off" || Story.calm ? 0 : 0.04
                     }
                     Column {
                         width: parent.width
