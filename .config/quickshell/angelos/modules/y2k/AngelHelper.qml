@@ -210,7 +210,9 @@ Scope {
                             }
                         }
 
-                        // buttons of what she said (undo a prank, show the setting, another joke…)
+                        // buttons of what she said (undo a prank, show the setting, another joke…):
+                        // the first is the one she means; answers to her question (`choice`) all
+                        // look the same, none is singled out
                         Flow {
                             visible: !Angel.menuOpen && Angel.actions.length > 0 && typer.shown >= Angel.text.length
                             width: parent.width
@@ -222,7 +224,7 @@ Scope {
                                     required property var modelData
                                     required property int index
                                     compact: true
-                                    accent: index === 0
+                                    accent: index === 0 && !modelData.choice
                                     icon: modelData.icon || "heart"
                                     text: modelData.label
                                     onClicked: {

@@ -66,7 +66,7 @@ Singleton {
     readonly property string screenName: screen ? screen.name : ""
 
     property string text: ""
-    property var actions: []                 // [{label, icon, run}]: buttons in the bubble
+    property var actions: []                 // [{label, icon, run, choice}]: buttons in the bubble (choice: an answer, never singled out)
     property bool talking: false
     property bool menuOpen: false
     property string menuMode: "main"         // main | ask
@@ -193,7 +193,7 @@ Singleton {
         else
             tip();
     }
-    // "Let's chat": she asks, three answers as buttons, she has the last word
+    // "Let's chat": she asks, three answers as buttons (alike: `choice`), she has the last word
     function talk() {
         const list = demon ? Lines.demonTalk : [];
         if (!list.length)
@@ -203,6 +203,7 @@ Singleton {
         say(tr(q.q), q.a.map(a => ({
                     "label": en ? a[1] : a[0],
                     "icon": "chat",
+                    "choice": true,
                     "run": () => root.say(en ? a[3] : a[2])
                 })), 30000);
     }

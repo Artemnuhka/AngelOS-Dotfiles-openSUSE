@@ -126,6 +126,8 @@ Scope {
                         width: parent.width
                         spacing: Theme.u * 2
                         visible: box.typed && box.l.choices.length > 0
+                        // every answer looks the same: no colour, mark or icon tells which one
+                        // makes things worse — the tone stays in the data, for the story only
                         Repeater {
                             model: box.l.choices
                             PxButton {
@@ -133,9 +135,7 @@ Scope {
                                 required property int index
                                 width: parent.width
                                 hell: box.hell
-                                accent: modelData.tone === "positive"
-                                danger: modelData.tone === "negative"
-                                icon: modelData.tone === "silent" ? "minus" : "chat"
+                                icon: "chat"
                                 text: (index + 1) + ". " + modelData.text
                                 onClicked: Novel.choose(index)
                             }
