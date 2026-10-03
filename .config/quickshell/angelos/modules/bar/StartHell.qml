@@ -33,7 +33,7 @@ PxBox {
             });
         const right = [
             {
-                "text": I18n.t("Гримуар", "The grimoire"),
+                "text": HellLook.dressName(HellLook.settingsPick),
                 "icon": "document",
                 "hint": I18n.t("настройки", "settings"),
                 "act": () => Shell.openSettings()

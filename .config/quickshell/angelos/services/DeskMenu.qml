@@ -19,19 +19,57 @@ Singleton {
     readonly property var styles: ["list", "radial", "y2k", "tiles", "pentagram"]
     // the pentagram is hell's own: in heaven only once the portal is open (Angel.hellAllowed)
     readonly property string chosen: !styles.includes(Config.desktop.menuStyle) || (Config.desktop.menuStyle === "pentagram" && !Angel.hellAllowed) ? "list" : Config.desktop.menuStyle
-    readonly property bool hellish: Angel.demon && styles.includes(Config.y2k.hellMenu)
-    readonly property string style: hellish ? Config.y2k.hellMenu : chosen
-    // the ring, the tiles and the pentagram share one full-screen popup (RadialMenu)
-    readonly property bool overlay: style === "radial" || style === "tiles" || style === "pentagram"
-    readonly property string overlayLook: style === "tiles" ? "tiles" : style === "pentagram" ? "pentagram" : "ring"
+    // in hell (Y2K → Hell → "Right-click menu"): "circle" is the circle's own (story/circles.json
+    // → dress: the pentagram before any circle, then one of the circles' looks), or one look always
+    readonly property string hellPick: Config.y2k.hellMenu === "circle" ? HellLook.dressMenu : Config.y2k.hellMenu
+    readonly property bool hellish: Angel.demon && (styles.includes(hellPick) || HellLook.dressMenuIds.includes(hellPick))
+    readonly property string style: hellish ? hellPick : chosen
+    // the ring, the tiles, the pentagram and the circles' looks share one full-screen popup (RadialMenu)
+    readonly property bool overlay: style === "radial" || style === "tiles" || style === "pentagram" || HellLook.dressMenuIds.includes(style)
+    readonly property string overlayLook: style === "tiles" || style === "pentagram" || HellLook.dressMenuIds.includes(style) ? style : "ring"
     function styleLabel(s) {
         return ({
                 "list": I18n.t("Обычный", "Default"),
                 "radial": I18n.t("Кольцо", "Ring"),
                 "y2k": I18n.t("Y2K глянец", "Y2K gloss"),
                 "tiles": I18n.t("Плитки", "Tiles"),
-                "pentagram": I18n.t("Пентаграмма", "Pentagram")
+                "pentagram": I18n.t("Пентаграмма", "Pentagram"),
+                "circle": I18n.t("Свой у каждого круга", "Each circle's own"),
+                "queue": I18n.t("Талоны", "Tickets"),
+                "whirl": I18n.t("Вихрь", "Whirlwind"),
+                "plate": I18n.t("Тарелка", "Plate"),
+                "roulette": I18n.t("Рулетка", "Roulette"),
+                "ripples": I18n.t("Круги на воде", "Ripples"),
+                "tombs": I18n.t("Гробницы", "Tombs"),
+                "blades": I18n.t("Клинки", "Blades"),
+                "masks": I18n.t("Маски", "Masks"),
+                "shards": I18n.t("Лёд", "Ice")
             })[s] || s;
+    }
+    // the old defaults (the pentagram, the grimoire) become "circle" once; a later pick of
+    // either is the player's own and stays. A beat after Config is ready: the file's values
+    // land just after `ready`
+    Connections {
+        target: Config
+        function onReadyChanged() {
+            if (Config.ready)
+                migrateSoon.restart();
+        }
+    }
+    Component.onCompleted: if (Config.ready)
+        migrateSoon.restart()
+    Timer {
+        id: migrateSoon
+        interval: 400
+        onTriggered: {
+            if (!Config.ready || Config.y2k.hellDressByCircle)
+                return;
+            if (Config.y2k.hellMenu === "pentagram")
+                Config.y2k.hellMenu = "circle";
+            if (Config.y2k.hellSettings === "grimoire")
+                Config.y2k.hellSettings = "circle";
+            Config.y2k.hellDressByCircle = true;
+        }
     }
     // built-in entries: {label, icon, hint}; the actions are run by run(id, screen)
     readonly property var builtins: ({

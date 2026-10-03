@@ -495,6 +495,9 @@ Singleton {
     // nothing changes and nothing is looked up (PxText checks scriptWindow first).
     readonly property string fontScript: scriptFont.status === FontLoader.Ready ? scriptFont.name : fontBody
     property var scriptWindow: null
+    // the window whose content is re-inked on paper (the grimoire, a circle's dress): its
+    // pictures come out as engravings the right way round (widgets/GrimoirePhoto)
+    property var inkWindow: null
     function scriptPx(px) {
         return Math.round(px * 1.38);
     }

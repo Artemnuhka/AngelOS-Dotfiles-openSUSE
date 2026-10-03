@@ -327,8 +327,9 @@ JsonAdapter {
         property string hellPicture: ""     // "" = generated pixel hell (scripts/hell-wallpaper.py)
         property var angelSaved: null       // wallpaper + theme mode kept while the demon rules
         property bool jokes: true           // she jokes now and then, not only tips
-        property string hellMenu: "pentagram" // the right-click menu while the demon rules ("" = the usual one)
-        property string hellSettings: "grimoire" // Settings while the demon rules: grimoire (a book) | "" (the usual window)
+        property string hellMenu: "circle" // the right-click menu while the demon rules: circle (the circle's own, story/circles.json → dress) | pentagram | a circle's look (HellLook.dressMenuIds) | radial | y2k | tiles | "" (the usual one)
+        property string hellSettings: "circle" // Settings while the demon rules: circle (the circle's own) | grimoire (a book) | a circle's look (HellLook.dressSettingsIds) | "" (the usual window)
+        property bool hellDressByCircle: false // the old defaults pentagram / grimoire became "circle" once (services/DeskMenu)
         property string hellStart: "skin"   // Start while the demon rules: skin (your look, hell version + a hell Start button) | hell (StartHell) | "" (untouched)
         property bool hellWidgets: true     // desktop widgets burn over to their hell look while the demon rules
         property string hellAltTab: "hell"  // Alt+Tab while the demon rules: hell (AltTabHell, hell's own) | skin (your style re-inked in the circle's colours) | "" (untouched)

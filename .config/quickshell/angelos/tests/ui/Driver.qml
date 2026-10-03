@@ -33,7 +33,8 @@ import "../../widgets/IconSets.js" as IconSets
 //   wrap      long switch labels wrap inside a narrow group instead of running past it
 //   start     every Start look (the bodies of StartOverlay) loads, searches, walks with the keys, Esc closes
 //   hell      the built-in desktop widgets and a hell window frame load in heaven and in hell,
-//             the widgets burn over and back, the six hell cursors are in the catalog
+//             the widgets burn over and back, the six hell cursors are in the catalog; each
+//             circle's own Settings dress and right-click menu build and read
 //   game      the save (services/Story) loads, all nine circles and every scene are valid
 //             data, each circle has its trial; a fall lands on the heaviest sin, a right
 //             answer goes a circle deeper, the pact gets out with its mark; the game turns
@@ -1015,6 +1016,83 @@ Scope {
                 }
             }
             report("hell-contrast", HellLook.ids.length > 0 && weak.length === 0, weak.join(", ") || lookIds.length + " looks: text, dim, icons and the accent on the plates ≥ 4.5:1, sprites ≥ 3:1");
+            // each circle's dress (item 13, story/circles.json → dress): its own Settings and
+            // right-click menu, all nine different; every menu look lays out round a pointer,
+            // every dress builds and its page reads (ink ≥ 7:1, red ink ≥ 4.5:1 on its paper);
+            // "circle" follows the circle, a pick of one look stays
+            const dressBad = [];
+            const circleIds = HellLook.ids.filter(c => c !== "base");
+            const dressOf = c => HellLook.looks[c].dress || {};
+            const settingsSet = circleIds.map(c => dressOf(c).settings), menuSet = circleIds.map(c => dressOf(c).menu);
+            if (new Set(settingsSet).size !== circleIds.length || settingsSet.some(d => !HellLook.dressSettingsIds.includes(d)))
+                dressBad.push("settings " + settingsSet.join(" "));
+            if (new Set(menuSet).size !== circleIds.length || menuSet.some(d => !HellLook.dressMenuIds.includes(d)))
+                dressBad.push("menus " + menuSet.join(" "));
+            const cap = id => id.charAt(0).toUpperCase() + id.slice(1);
+            const fakeMenu = {
+                "k": 1,
+                "slots": ["terminal", "files", "monitor", "wallpaperPick", "settings", "view", "new", "open", "wallpaper", "more", "lock"],
+                "labels": true,
+                "cx": 400,
+                "cy": 300,
+                "reveal": 1,
+                "current": 2,
+                "fly": "",
+                "flyIndex": -1,
+                "subCurrent": -1,
+                "flyItems": [],
+                "hoveredEntry": null,
+                "clamp": (v, lo, hi) => Math.max(lo, Math.min(hi, v)),
+                "hoverEntry": i => {},
+                "activate": i => {},
+                "activateSub": j => {},
+                "walk": e => false,
+                "close": () => {}
+            };
+            for (const id of HellLook.dressMenuIds) {
+                const c = Qt.createComponent(Quickshell.shellDir + "/modules/background/circles/" + cap(id) + "Look.qml");
+                const o = c.status === Component.Ready ? c.createObject(win.contentItem, {
+                    "menu": fakeMenu
+                }) : null;
+                if (!o || !(o.reach > 0))
+                    dressBad.push(id + (c.status !== Component.Ready ? ": " + c.errorString().trim().split("\n")[0] : " lays out nothing"));
+                if (o)
+                    o.destroy();
+            }
+            for (const id of HellLook.dressSettingsIds) {
+                const c = Qt.createComponent(Quickshell.shellDir + "/modules/settings/dresses/" + cap(id) + "Dress.qml");
+                const o = c.status === Component.Ready ? c.createObject(win.contentItem, {
+                    "view": {
+                        "hostWindow": null
+                    },
+                    "width": 900,
+                    "height": 640
+                }) : null;
+                if (!o || !o.viewSlot || o.viewSlot.width <= 0)
+                    dressBad.push(id + (c.status !== Component.Ready ? ": " + c.errorString().trim().split("\n")[0] : " has no page"));
+                else if (HellLook.contrast(o.ink, o.paper) < 7 || HellLook.contrast(o.redInk, o.paper) < 4.5)
+                    dressBad.push(id + " ink " + HellLook.contrast(o.ink, o.paper).toFixed(2) + " red " + HellLook.contrast(o.redInk, o.paper).toFixed(2));
+                if (o)
+                    o.destroy();
+            }
+            const keepCircle = HellLook.circle, keepMenu = Config.y2k.hellMenu, keepSettings = Config.y2k.hellSettings;
+            HellLook.circle = "greed";
+            Config.y2k.hellMenu = "circle";
+            Config.y2k.hellSettings = "circle";
+            const follows = HellLook.dressMenu === "roulette" && HellLook.settingsPick === "ledger";
+            Config.y2k.hellSettings = "ice";
+            const picked = HellLook.settingsPick === "ice";
+            Config.y2k.hellSettings = "";
+            const usual = HellLook.settingsPick === "";
+            HellLook.circle = "base";
+            Config.y2k.hellSettings = "circle";
+            const before = HellLook.settingsPick === "grimoire" && HellLook.dressMenu === "pentagram";
+            HellLook.circle = keepCircle;
+            Config.y2k.hellMenu = keepMenu;
+            Config.y2k.hellSettings = keepSettings;
+            if (!follows || !picked || !usual || !before)
+                dressBad.push("pick: circle " + follows + ", one look " + picked + ", usual " + usual + ", before a circle " + before);
+            report("circle-dress", dressBad.length === 0, dressBad.join("; ") || circleIds.length + " circles: " + HellLook.dressSettingsIds.length + " Settings dresses, " + HellLook.dressMenuIds.length + " menus, distinct, built, readable");
             // a burn there and back (DesktopWidgets.burnPreview) must land in heaven again
             DesktopWidgets.burnPreview("hell");
             started = Date.now();

@@ -353,11 +353,21 @@ PxPage {
             hint: I18n.t("пока правит демоница; вернётся ангел — снова твоё меню", "while the demon rules; the angel brings your own menu back")
             PxCombo {
                 width: Math.min(parent.width, Theme.u * 120)
+                // each circle's own (story/circles.json → dress), the pentagram, one circle's
+                // look always, or the usual menus
                 model: [
                     {
-                        "label": I18n.t("Пентаграмма", "Pentagram"),
-                        "value": "pentagram"
+                        "label": DeskMenu.styleLabel("circle"),
+                        "value": "circle"
                     },
+                    {
+                        "label": DeskMenu.styleLabel("pentagram"),
+                        "value": "pentagram"
+                    }
+                ].concat(HellLook.ids.filter(c => c !== "base" && HellLook.looks[c].dress).map(c => ({
+                                "label": DeskMenu.styleLabel(HellLook.looks[c].dress.menu) + " · " + I18n.label(HellLook.looks[c].name),
+                                "value": HellLook.looks[c].dress.menu
+                            }))).concat([
                     {
                         "label": I18n.t("Как обычно (моё меню)", "As usual (my menu)"),
                         "value": ""
@@ -374,7 +384,7 @@ PxPage {
                         "label": I18n.t("Плитки", "Tiles"),
                         "value": "tiles"
                     }
-                ]
+                ])
                 currentValue: Config.y2k.hellMenu || ""
                 onActivated: v => Config.y2k.hellMenu = v
             }
@@ -382,18 +392,27 @@ PxPage {
         SettingRow {
             visible: Angel.hellShown
             label: I18n.t("Настройки в аду", "Settings in hell")
-            hint: I18n.t("гримуар: окно настроек становится старой книгой — оглавление слева, страницы перелистываются", "grimoire: Settings turn into an old book — contents on the left, pages that turn")
-            PxSegmented {
+            hint: I18n.t("у каждого круга своё обличье: дело в Лимбе, письмо в круге похоти, гроссбух у жадности… Гримуар — старая книга: оглавление слева, страницы перелистываются", "each circle has its own guise: a case file in limbo, a letter in lust's circle, a ledger in greed's… The grimoire is an old book: contents on the left, pages that turn")
+            PxCombo {
+                width: Math.min(parent.width, Theme.u * 120)
                 model: [
                     {
-                        "label": I18n.t("Гримуар", "Grimoire"),
-                        "value": "grimoire"
+                        "label": I18n.t("Свой у каждого круга", "Each circle's own"),
+                        "value": "circle"
                     },
+                    {
+                        "label": HellLook.dressName("grimoire"),
+                        "value": "grimoire"
+                    }
+                ].concat(HellLook.ids.filter(c => c !== "base" && HellLook.looks[c].dress).map(c => ({
+                                "label": HellLook.dressName(HellLook.looks[c].dress.settings) + " · " + I18n.label(HellLook.looks[c].name),
+                                "value": HellLook.looks[c].dress.settings
+                            }))).concat([
                     {
                         "label": I18n.t("Как обычно", "As usual"),
                         "value": ""
                     }
-                ]
+                ])
                 currentValue: Config.y2k.hellSettings || ""
                 onActivated: v => Config.y2k.hellSettings = v
             }

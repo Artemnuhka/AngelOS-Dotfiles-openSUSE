@@ -615,8 +615,10 @@ Singleton {
             const parts = [];
             if (DeskMenu.hellish)
                 parts.push(I18n.t("ПКМ по обоям теперь — " + style, "right-click on the wallpaper is a " + style + " now"));
-            if (Config.y2k.hellSettings === "grimoire")
+            if (HellLook.settingsPick === "grimoire")
                 parts.push(I18n.t("настройки — мой гримуар", "Settings are my grimoire"));
+            else if (HellLook.settingsPick)
+                parts.push(I18n.t("настройки — в обличье круга", "Settings wear the circle's guise"));
             if (Config.y2k.hellStart)
                 parts.push(I18n.t("«Пуск» — адский", "Start is hellish"));
             const mine = [];

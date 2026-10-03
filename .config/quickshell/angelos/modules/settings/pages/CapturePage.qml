@@ -75,8 +75,8 @@ PxPage {
                         Image {
                             width: parent.width
                             height: Math.round(width * 9 / 16)
-                            // in the grimoire: an engraving the right way round, not a negative
-                            layer.enabled: Theme.scriptWindow !== null && Window.window === Theme.scriptWindow
+                            // in the grimoire (or a dress): an engraving the right way round, not a negative
+                            layer.enabled: Theme.inkWindow !== null && Window.window === Theme.inkWindow
                             layer.effect: GrimoirePhoto {}
                             fillMode: Image.PreserveAspectFit
                             smooth: false

@@ -6,6 +6,7 @@ import qs.config
 import qs.services
 import qs.widgets
 import qs.modules.settings.views
+import qs.modules.settings.dresses
 
 // Settings content (frame, navigation, pages). Hosted by SettingsWindow.
 // Every page and every section is described once, here (pageList, runs) and in the pages'
@@ -24,7 +25,9 @@ import qs.modules.settings.views
 // Ctrl+Tab the pages of a section, Alt+↑ goes up, Alt+←/→ through the history.
 // The skins (Config.settingsUi.skin: classic | windose | stream) dress any view. While the
 // demon rules it is her grimoire (GrimoireBook): the sidebar becomes the book's spread, any
-// other view is written on one parchment page inside the same leather cover.
+// other view is written on one parchment page inside the same leather cover — or the
+// circle's own dress (story/circles.json → dress, modules/settings/dresses: the case file,
+// the letter, the bill of fare…), the view written on its page the same way.
 Item {
     id: win
 
@@ -32,6 +35,7 @@ Item {
         lastLoc = loc;
         Shell.settingsView = win;
         Theme.scriptWindow = scriptHost;
+        Theme.inkWindow = inkHost;
         if (typeof SettingsSearch.reload === "function")
             SettingsSearch.reload();
         else
@@ -43,6 +47,8 @@ Item {
             Shell.settingsView = null;
         if (Theme.scriptWindow === win.Window.window)
             Theme.scriptWindow = null;
+        if (Theme.inkWindow === win.Window.window)
+            Theme.inkWindow = null;
     }
     function diagnostics() {
         return {
@@ -50,6 +56,7 @@ Item {
             sub: Shell.settingsSub,
             section: sectionOf(Shell.settingsPage),
             view: viewId,
+            dress: dressId,
             viewStatus: viewLoader.status,
             atHome: atHome,
             source: String(page.source),
@@ -66,13 +73,20 @@ Item {
     readonly property alias frame: frame
     readonly property var pageItem: atHome ? null : page.item
     // while the demon rules (Y2K → Angel or demon → Settings in hell): a grimoire (GrimoireBook)
-    readonly property bool grimoire: Angel.demon && Config.y2k.hellSettings === "grimoire"
+    // or a circle's own dress (HellLook.settingsPick)
+    readonly property string dressId: Angel.demon ? HellLook.settingsPick : ""
+    readonly property bool grimoire: dressId === "grimoire"
+    readonly property bool dressed: dressId !== "" && !grimoire
+    readonly property bool hellDress: grimoire || dressed
     // …written by hand: every PxText in this window takes the grimoire's script (Theme.fontScript)
-    readonly property var scriptHost: grimoire ? win.Window.window : null
+    // (the letter, lust's dress, is handwritten too)
+    readonly property var scriptHost: grimoire || dressId === "letter" ? win.Window.window : null
     onScriptHostChanged: Theme.scriptWindow = scriptHost
+    readonly property var inkHost: hellDress ? win.Window.window : null
+    onInkHostChanged: Theme.inkWindow = inkHost
     // Classic stays the default; Windose and Stream are optional settings skins.
     readonly property string skin: ["classic", "windose", "stream"].includes(Config.settingsUi.skin) ? Config.settingsUi.skin : "classic"
-    readonly property string settingsSkin: grimoire ? "classic" : skin
+    readonly property string settingsSkin: hellDress ? "classic" : skin
     // (there is no simple view or Expert any more: every page is a click away)
     readonly property bool expert: true
 
@@ -960,21 +974,41 @@ Item {
         visible: win.grimoire
         spread: win.spread
     }
-    // the grimoire re-inks what it shows on parchment
+    // …or the circle's own dress round one page
+    Loader {
+        id: dressLoader
+        anchors.fill: parent
+        active: win.dressed
+        function load() {
+            if (win.dressed)
+                setSource(Qt.resolvedUrl("dresses/" + win.dressId.charAt(0).toUpperCase() + win.dressId.slice(1) + "Dress.qml"), {
+                    "view": win
+                });
+        }
+        Component.onCompleted: load()
+        Connections {
+            target: win
+            function onDressIdChanged() {
+                dressLoader.load();
+            }
+        }
+    }
+    // the grimoire (or the dress) re-inks what it shows on its paper
+    readonly property var inkSource: dressed && dressLoader.item ? dressLoader.item : book
     Component {
         id: inkFx
         ShaderEffect {
             fragmentShader: Qt.resolvedUrl("../../shaders/grimoire.frag.qsb")
-            property color paper: book.paper
-            property color ink: book.ink
-            property color redInk: book.redInk
+            property color paper: win.inkSource.paper
+            property color ink: win.inkSource.ink
+            property color redInk: win.inkSource.redInk
             property real invert: Theme.dark ? 1 : 0
         }
     }
 
     PxWindow {
         id: frame
-        visible: !win.grimoire
+        visible: !win.hellDress
         anchors.fill: parent
         anchors.rightMargin: Config.appearance.shadows ? Theme.u * 2 : 0
         anchors.bottomMargin: Config.appearance.shadows ? Theme.u * 2 : 0
@@ -1019,9 +1053,9 @@ Item {
     }
     Loader {
         id: viewLoader
-        parent: !win.grimoire ? viewHost : win.spread ? offstage : book.viewSlot
+        parent: !win.hellDress ? viewHost : win.spread ? offstage : win.dressed ? (dressLoader.item ? dressLoader.item.viewSlot : offstage) : book.viewSlot
         anchors.fill: parent
-        layer.enabled: win.grimoire && !win.spread
+        layer.enabled: (win.grimoire && !win.spread) || win.dressed
         layer.effect: inkFx
         function load() {
             const v = win.views.find(x => x.id === win.viewId) || win.views[0];
@@ -1206,7 +1240,7 @@ Item {
                 if (win.hasHome)
                     return "";
                 // the old home: your account in Classic, Windose and Stream keep their own
-                return win.skin === "classic" || win.grimoire || win.viewId !== "sidebar" ? "pages/AccountPage.qml" : id === "home" ? "pages/HomePage.qml" : "pages/MorePage.qml";
+                return win.skin === "classic" || win.hellDress || win.viewId !== "sidebar" ? "pages/AccountPage.qml" : id === "home" ? "pages/HomePage.qml" : "pages/MorePage.qml";
             }
             if (id.startsWith("plugin:"))
                 return "pages/PluginSettingsPage.qml";

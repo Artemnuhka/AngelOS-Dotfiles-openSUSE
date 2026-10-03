@@ -1,5 +1,5 @@
 {
-  "_comment": "How hell looks: one entry per circle (config/HellLook.qml). 'base' is hell before any circle and the defaults every circle starts from — a circle lists only what it changes. n: the circle's number (1 at the top, 9 at the bottom); name, where: its title and one line about it; sin: the story variable that leads a fall here (services/Game); voice: how the demon talks here (story/voices.json); palette: the hell tokens (Theme.hell*); bar: the stone behind the bar (shaders/hell_texture.frag: stone ash water ice iron sand pitch whirl); edge: the rim of windows and widgets (shaders/hell_edge.frag); backdrop: the dark laid over the wallpaper (shaders/hell_backdrop.frag: dim, desat, vignette 0..1, tint), its paintings from the Hell pack (pictures: landscape and portrait names — scripts/hell-wallpaper.py --prefer) and its ambient — fog wind rain dust ripple embers sand pitch ice, still but for a rare event; labels: the word after a reading on hell's widgets; cursor: the pointer while the demon rules (Config.cursor.hell \"circle\": scripts/cursors.py builds angelOS-Circle-<Circle> from its palette — primary fill, secondary shade, border — its shapes and its rare animation fx in the cursor's own frames: fog wisp drip glint boil embers blink, fxColour; still: false plays it always); breakage: what the demon's fist breaks in this circle (Config.y2k.breakage \"circle\": one of these each punch — widgets/BreakageArt, shaders/breakage.frag: glass tv burn claws sigil fog whirl ooze coin ripple spatter pitch frost); palette may also set the hell bar's roles barIcon, barHover, barActive, sprite, spriteHi (config/HellLook.qml barRoles).",
+  "_comment": "How hell looks: one entry per circle (config/HellLook.qml). 'base' is hell before any circle and the defaults every circle starts from — a circle lists only what it changes. n: the circle's number (1 at the top, 9 at the bottom); name, where: its title and one line about it; sin: the story variable that leads a fall here (services/Game); voice: how the demon talks here (story/voices.json); palette: the hell tokens (Theme.hell*); bar: the stone behind the bar (shaders/hell_texture.frag: stone ash water ice iron sand pitch whirl); edge: the rim of windows and widgets (shaders/hell_edge.frag); backdrop: the dark laid over the wallpaper (shaders/hell_backdrop.frag: dim, desat, vignette 0..1, tint), its paintings from the Hell pack (pictures: landscape and portrait names — scripts/hell-wallpaper.py --prefer) and its ambient — fog wind rain dust ripple embers sand pitch ice, still but for a rare event; labels: the word after a reading on hell's widgets; cursor: the pointer while the demon rules (Config.cursor.hell \"circle\": scripts/cursors.py builds angelOS-Circle-<Circle> from its palette — primary fill, secondary shade, border — its shapes and its rare animation fx in the cursor's own frames: fog wisp drip glint boil embers blink, fxColour; still: false plays it always); breakage: what the demon's fist breaks in this circle (Config.y2k.breakage \"circle\": one of these each punch — widgets/BreakageArt, shaders/breakage.frag: glass tv burn claws sigil fog whirl ooze coin ripple spatter pitch frost); palette may also set the hell bar's roles barIcon, barHover, barActive, sprite, spriteHi (config/HellLook.qml barRoles). dress: how hell dresses Settings and the right-click menu in this circle (Config.y2k.hellSettings / hellMenu \"circle\"): settings — grimoire (the book) or the circle's own (modules/settings/dresses: registry letter bill ledger tablet tomb thorns playbill ice), menu — pentagram or the circle's own (modules/background/circles: queue whirl plate roulette ripples tombs blades masks shards).",
   "base": {
     "name": {
       "ru": "Ад",
@@ -58,6 +58,10 @@
       "claws",
       "sigil"
     ],
+    "dress": {
+      "settings": "grimoire",
+      "menu": "pentagram"
+    },
     "labels": {
       "cpu": {
         "ru": "жар",
@@ -144,6 +148,10 @@
       "fog",
       "glass"
     ],
+    "dress": {
+      "settings": "registry",
+      "menu": "queue"
+    },
     "cursor": {
       "palette": {
         "primary": "#d0d0cf",
@@ -243,6 +251,10 @@
       "whirl",
       "claws"
     ],
+    "dress": {
+      "settings": "letter",
+      "menu": "whirl"
+    },
     "cursor": {
       "palette": {
         "primary": "#ecbfe2",
@@ -342,6 +354,10 @@
       "ooze",
       "glass"
     ],
+    "dress": {
+      "settings": "bill",
+      "menu": "plate"
+    },
     "cursor": {
       "palette": {
         "primary": "#c9d39a",
@@ -442,6 +458,10 @@
       "coin",
       "glass"
     ],
+    "dress": {
+      "settings": "ledger",
+      "menu": "roulette"
+    },
     "cursor": {
       "palette": {
         "primary": "#f3d36b",
@@ -541,6 +561,10 @@
       "ripple",
       "tv"
     ],
+    "dress": {
+      "settings": "tablet",
+      "menu": "ripples"
+    },
     "cursor": {
       "palette": {
         "primary": "#a4d9c8",
@@ -640,6 +664,10 @@
       "burn",
       "sigil"
     ],
+    "dress": {
+      "settings": "tomb",
+      "menu": "tombs"
+    },
     "cursor": {
       "palette": {
         "primary": "#ddd0c6",
@@ -738,6 +766,10 @@
       "spatter",
       "claws"
     ],
+    "dress": {
+      "settings": "thorns",
+      "menu": "blades"
+    },
     "cursor": {
       "palette": {
         "primary": "#f2cdc5",
@@ -842,6 +874,10 @@
       "pitch",
       "sigil"
     ],
+    "dress": {
+      "settings": "playbill",
+      "menu": "masks"
+    },
     "cursor": {
       "palette": {
         "primary": "#2a2622",
@@ -941,6 +977,10 @@
       "frost",
       "glass"
     ],
+    "dress": {
+      "settings": "ice",
+      "menu": "shards"
+    },
     "cursor": {
       "palette": {
         "primary": "#e8f3ff",

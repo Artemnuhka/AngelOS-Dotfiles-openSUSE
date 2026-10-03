@@ -49,8 +49,8 @@ PxPage {
                 Image {
                     anchors.centerIn: parent
                     visible: !!card.modelData.installed && source !== ""
-                    // in the grimoire: an engraving the right way round, not a negative
-                    layer.enabled: Theme.scriptWindow !== null && Window.window === Theme.scriptWindow
+                    // in the grimoire (or a dress): an engraving the right way round, not a negative
+                    layer.enabled: Theme.inkWindow !== null && Window.window === Theme.inkWindow
                     layer.effect: GrimoirePhoto {}
                     source: card.modelData.preview ? "file://" + card.modelData.preview + "?" + Cursors.catalog.length : ""
                     cache: false

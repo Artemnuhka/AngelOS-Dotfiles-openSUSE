@@ -6,10 +6,12 @@ import Quickshell.Wayland
 import qs.config
 import qs.services
 import qs.widgets
+import qs.modules.background.circles
 
 // The right-click menu on the wallpaper as a full-screen popup of the wallpaper window,
-// in one of three looks (services/DeskMenu.overlayLook): the ring around the pointer
-// (RingLook), a Control Center grid (TilesLook) and hell's pentagram (PentagramLook).
+// in one of its looks (services/DeskMenu.overlayLook): the ring around the pointer
+// (RingLook), a Control Center grid (TilesLook), hell's pentagram (PentagramLook) and each
+// circle's own (modules/background/circles: QueueLook … ShardsLook, story/circles.json → dress).
 // This host keeps what they share: the entries (slots), the open flyout, the keyboard
 // selection, opening at the pointer, running an entry. The flyouts' contents come
 // from the list menu (DesktopMenu.listFor).
@@ -23,6 +25,8 @@ PopupWindow {
     required property var listMenu          // DesktopMenu: the flyouts' contents
     readonly property string screenName: parentWindow && parentWindow.screen ? parentWindow.screen.name : ""
     readonly property string look: DeskMenu.overlayLook
+    // hell's looks open slower, over a darker veil
+    readonly property bool hellLook: look === "pentagram" || HellLook.dressMenuIds.includes(look)
 
     property real cx: 0                     // where it opened (moved in near the edges)
     property real cy: 0
@@ -150,8 +154,8 @@ PopupWindow {
         property: "reveal"
         from: 0
         to: 1
-        duration: Motion.ms(root.look === "pentagram" ? 420 : 230)
-        easing.type: root.look === "pentagram" ? Easing.OutCubic : Easing.OutBack
+        duration: Motion.ms(root.hellLook ? 420 : 230)
+        easing.type: root.hellLook ? Easing.OutCubic : Easing.OutBack
     }
     Timer {
         id: hoverTimer
@@ -192,7 +196,7 @@ PopupWindow {
     // a light veil (hell: darker, red)
     Rectangle {
         anchors.fill: parent
-        color: root.look === "pentagram" ? Qt.alpha("#1a0508", 0.35 * root.reveal) : Qt.alpha(Theme.shadow, 0.1 * root.reveal)
+        color: root.look === "pentagram" ? Qt.alpha("#1a0508", 0.35 * root.reveal) : root.hellLook ? Qt.alpha(Theme.hellBody, 0.4 * root.reveal) : Qt.alpha(Theme.shadow, 0.1 * root.reveal)
     }
     // empty space: left closes, right moves the menu
     MouseArea {
@@ -231,7 +235,19 @@ PopupWindow {
     Loader {
         id: lookLoader
         anchors.fill: parent
-        sourceComponent: root.look === "tiles" ? tilesLook : root.look === "pentagram" ? pentagramLook : ringLook
+        sourceComponent: ({
+                "tiles": tilesLook,
+                "pentagram": pentagramLook,
+                "queue": queueLook,
+                "whirl": whirlLook,
+                "plate": plateLook,
+                "roulette": rouletteLook,
+                "ripples": ripplesLook,
+                "tombs": tombsLook,
+                "blades": bladesLook,
+                "masks": masksLook,
+                "shards": shardsLook
+            })[root.look] || ringLook
     }
     Component {
         id: ringLook
@@ -248,6 +264,61 @@ PopupWindow {
     Component {
         id: pentagramLook
         PentagramLook {
+            menu: root
+        }
+    }
+    // the circles' own
+    Component {
+        id: queueLook
+        QueueLook {
+            menu: root
+        }
+    }
+    Component {
+        id: whirlLook
+        WhirlLook {
+            menu: root
+        }
+    }
+    Component {
+        id: plateLook
+        PlateLook {
+            menu: root
+        }
+    }
+    Component {
+        id: rouletteLook
+        RouletteLook {
+            menu: root
+        }
+    }
+    Component {
+        id: ripplesLook
+        RipplesLook {
+            menu: root
+        }
+    }
+    Component {
+        id: tombsLook
+        TombsLook {
+            menu: root
+        }
+    }
+    Component {
+        id: bladesLook
+        BladesLook {
+            menu: root
+        }
+    }
+    Component {
+        id: masksLook
+        MasksLook {
+            menu: root
+        }
+    }
+    Component {
+        id: shardsLook
+        ShardsLook {
             menu: root
         }
     }

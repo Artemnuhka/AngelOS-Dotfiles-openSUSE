@@ -122,6 +122,31 @@ Singleton {
         const own = (look.breakage || []).filter(k => breakageKinds.includes(k));
         return own.length ? own : ["glass"];
     }
+    // how hell dresses Settings and the right-click menu here (story/circles.json → dress;
+    // Config.y2k.hellSettings / hellMenu "circle"): the grimoire and the pentagram before any circle
+    readonly property var dressSettingsIds: ["registry", "letter", "bill", "ledger", "tablet", "tomb", "thorns", "playbill", "ice"]
+    readonly property var dressMenuIds: ["queue", "whirl", "plate", "roulette", "ripples", "tombs", "blades", "masks", "shards"]
+    readonly property string dressSettings: look.dress && dressSettingsIds.concat(["grimoire"]).includes(look.dress.settings) ? look.dress.settings : "grimoire"
+    readonly property string dressMenu: look.dress && dressMenuIds.concat(["pentagram"]).includes(look.dress.menu) ? look.dress.menu : "pentagram"
+    function dressName(id) {
+        return ({
+                "grimoire": I18n.t("Гримуар", "The grimoire"),
+                "registry": I18n.t("Дело", "The case file"),
+                "letter": I18n.t("Письмо", "The letter"),
+                "bill": I18n.t("Меню заведения", "The bill of fare"),
+                "ledger": I18n.t("Гроссбух", "The ledger"),
+                "tablet": I18n.t("Скрижаль", "The tablet"),
+                "tomb": I18n.t("Гробница", "The tomb"),
+                "thorns": I18n.t("Терновник", "The thorns"),
+                "playbill": I18n.t("Афиша", "The playbill"),
+                "ice": I18n.t("Лёд", "The ice")
+            })[id] || I18n.t("Настройки", "Settings");
+    }
+    // what Settings wear in hell by the player's pick: "" (the usual window), grimoire or a circle's look
+    readonly property string settingsPick: {
+        const p = Config.y2k.hellSettings || "";
+        return p === "circle" ? dressSettings : p === "grimoire" || dressSettingsIds.includes(p) ? p : "";
+    }
     // "CPU · жар": the circle's word for a reading, after its plain name
     function label(id, plain) {
         const w = look.labels ? look.labels[id] : null;
