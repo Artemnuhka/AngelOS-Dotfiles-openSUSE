@@ -10,8 +10,9 @@ import qs.modules.background.circles
 
 // The right-click menu on the wallpaper as a full-screen popup of the wallpaper window,
 // in one of its looks (services/DeskMenu.overlayLook): the ring around the pointer
-// (RingLook), a Control Center grid (TilesLook), hell's pentagram (PentagramLook) and each
-// circle's own (modules/background/circles: QueueLook … ShardsLook, story/circles.json → dress).
+// (RingLook), a Control Center grid (TilesLook), heaven's wings and harp (WingsLook,
+// HarpLook), hell's pentagram (PentagramLook) and each circle's own
+// (modules/background/circles: QueueLook … ShardsLook, story/circles.json → dress).
 // This host keeps what they share: the entries (slots), the open flyout, the keyboard
 // selection, opening at the pointer, running an entry. The flyouts' contents come
 // from the list menu (DesktopMenu.listFor).
@@ -27,6 +28,8 @@ PopupWindow {
     readonly property string look: DeskMenu.overlayLook
     // hell's looks open slower, over a darker veil
     readonly property bool hellLook: look === "pentagram" || HellLook.dressMenuIds.includes(look)
+    // …heaven's own over a little light instead
+    readonly property bool heavenLook: DeskMenu.heavenly.includes(look)
 
     property real cx: 0                     // where it opened (moved in near the edges)
     property real cy: 0
@@ -54,10 +57,13 @@ PopupWindow {
         return Math.max(lo, Math.min(hi, v));
     }
     function openAt(x, y) {
-        // the look says how far it reaches from its middle (the tiles place themselves)
-        const m = lookLoader.item ? lookLoader.item.reach : 0;
-        cx = m > 0 ? clamp(x, m, width - m) : x;
-        cy = m > 0 ? clamp(y, m, height - m) : y;
+        // the look says how far it reaches from its middle (the tiles place themselves); a
+        // wide one (the wings, the harp) says it apart for each way: reachX, reachY
+        const it = lookLoader.item;
+        const mx = it ? (it.reachX !== undefined ? it.reachX : it.reach) : 0;
+        const my = it ? (it.reachY !== undefined ? it.reachY : it.reach) : 0;
+        cx = mx > 0 ? clamp(x, Math.min(mx, width / 2), Math.max(width - mx, width / 2)) : x;
+        cy = my > 0 ? clamp(y, Math.min(my, height / 2), Math.max(height - my, height / 2)) : y;
         current = -1;
         fly = "";
         flyIndex = -1;
@@ -193,10 +199,10 @@ PopupWindow {
         item: lookLoader.item ? lookLoader.item.blurItem : null
     }
 
-    // a light veil (hell: darker, red)
+    // a light veil (hell: darker, red; heaven's own: a little light)
     Rectangle {
         anchors.fill: parent
-        color: root.look === "pentagram" ? Qt.alpha("#1a0508", 0.35 * root.reveal) : root.hellLook ? Qt.alpha(Theme.hellBody, 0.4 * root.reveal) : Qt.alpha(Theme.shadow, 0.1 * root.reveal)
+        color: root.look === "pentagram" ? Qt.alpha("#1a0508", 0.35 * root.reveal) : root.hellLook ? Qt.alpha(Theme.hellBody, 0.4 * root.reveal) : root.heavenLook ? Qt.alpha(Theme.face, 0.16 * root.reveal) : Qt.alpha(Theme.shadow, 0.1 * root.reveal)
     }
     // empty space: left closes, right moves the menu
     MouseArea {
@@ -237,6 +243,8 @@ PopupWindow {
         anchors.fill: parent
         sourceComponent: ({
                 "tiles": tilesLook,
+                "wings": wingsLook,
+                "harp": harpLook,
                 "pentagram": pentagramLook,
                 "queue": queueLook,
                 "whirl": whirlLook,
@@ -258,6 +266,19 @@ PopupWindow {
     Component {
         id: tilesLook
         TilesLook {
+            menu: root
+        }
+    }
+    // heaven's own
+    Component {
+        id: wingsLook
+        WingsLook {
+            menu: root
+        }
+    }
+    Component {
+        id: harpLook
+        HarpLook {
             menu: root
         }
     }

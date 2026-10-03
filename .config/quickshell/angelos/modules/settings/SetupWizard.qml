@@ -728,7 +728,7 @@ FloatingWindow {
                     width: parent.width
                     spacing: Theme.u * 4
                     Repeater {
-                        model: ["list", "radial", "y2k", "tiles"]
+                        model: ["list", "radial", "y2k", "tiles", "wings", "harp"]
                         PxButton {
                             id: menuCard
                             required property string modelData

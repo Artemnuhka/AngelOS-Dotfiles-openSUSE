@@ -45,6 +45,8 @@ PxPage {
                     "radial": I18n.t("кольцо вокруг курсора, подменю веером снаружи; 1–9 и стрелки", "a ring around the pointer, flyouts fan out outside; 1–9 and the arrows"),
                     "y2k": I18n.t("глянцевый хромовый пузырь с радугой и блёстками", "a glossy chrome bubble with a rainbow and sparkles"),
                     "tiles": I18n.t("матовая панель с плитками, как центр управления; переключатели светятся", "a frosted panel of tiles like a Control Center; toggles light up"),
+                    "wings": I18n.t("райское: под нимбом раскрываются крылья, пункты — перья; ←/→ — на другое крыло, ↑/↓ — вдоль крыла", "heaven's own: wings unfold under a halo, the entries are feathers; ←/→ to the other wing, ↑/↓ along one"),
+                    "harp": I18n.t("райское: арфа на облаке, пункты — струны; наведи — струна звенит, проведи поперёк — глиссандо", "heaven's own: a harp on a cloud, the entries are strings; hover plucks one, a sweep across is a glissando"),
                     "pentagram": I18n.t("пентаграмма ада: 5 главных на лучах, остальное — руны", "hell's pentagram: the main five on its points, the rest as runes")
                 })[DeskMenu.chosen] || ""
             Flow {
@@ -102,9 +104,9 @@ PxPage {
             }
         }
         SettingRow {
-            visible: DeskMenu.chosen === "radial" || DeskMenu.chosen === "pentagram"
-            label: I18n.t("Подписи в кольце", "Names in the ring")
-            hint: I18n.t("короткие названия под значками; полное — над серединой", "short names under the icons; the full one above the middle")
+            visible: ["radial", "wings", "harp", "pentagram"].includes(DeskMenu.chosen)
+            label: DeskMenu.heavenly.includes(DeskMenu.chosen) ? I18n.t("Подписи у значков", "Names by the icons") : I18n.t("Подписи в кольце", "Names in the ring")
+            hint: DeskMenu.heavenly.includes(DeskMenu.chosen) ? I18n.t("короткие названия у перьев и струн; полное — у середины", "short names by the feathers and strings; the full one by the middle") : I18n.t("короткие названия под значками; полное — над серединой", "short names under the icons; the full one above the middle")
             PxToggle {
                 checked: Config.desktop.menuLabels !== false
                 onToggled: c => Config.desktop.menuLabels = c

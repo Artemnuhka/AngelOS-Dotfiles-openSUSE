@@ -350,7 +350,7 @@ PxPage {
         SettingRow {
             visible: Angel.hellShown
             label: I18n.t("ПКМ в аду", "Right-click menu in hell")
-            hint: I18n.t("пока правит демоница; вернётся ангел — снова твоё меню", "while the demon rules; the angel brings your own menu back")
+            hint: DeskMenu.heavenly.includes(DeskMenu.chosen) ? I18n.t("пока правит демоница; вернётся ангел — снова твоё меню. Райское («" + DeskMenu.styleLabel(DeskMenu.chosen) + "») в ад не спускается: «как обычно» здесь — меню круга", "while the demon rules; the angel brings your own menu back. Heaven's own (“" + DeskMenu.styleLabel(DeskMenu.chosen) + "”) never comes down: “as usual” here is the circle's own") : I18n.t("пока правит демоница; вернётся ангел — снова твоё меню", "while the demon rules; the angel brings your own menu back")
             PxCombo {
                 width: Math.min(parent.width, Theme.u * 120)
                 // each circle's own (story/circles.json → dress), the pentagram, one circle's

@@ -169,7 +169,7 @@ JsonAdapter {
         property bool snap: true
         property string titleSuffix: "exe"  // every angelOS window, widget and caption ends in .exe | .sh | .bin (I18n.exe)
         // the right-click menu on the wallpaper (services/DeskMenu, Settings → Right-click menu)
-        property string menuStyle: "list"   // list (the usual, Windows 11-like) | radial (a ring) | y2k (glossy bubble) | tiles (Control Center) | pentagram
+        property string menuStyle: "list"   // list (the usual, Windows 11-like) | radial (a ring) | y2k (glossy bubble) | tiles (Control Center) | wings | harp (heaven's own; in hell the circle's own takes their place) | pentagram
         property var menuQuick: ["terminal", "files", "monitor", "wallpaperPick", "settings"] // the list's top row, the ring's first slots (up to 6)
         property var menuItems: ["view", "new", "wallpaper", "open", "sep", "displaySettings", "personalize", "more"] // the rest, in order; "sep" = a line in the list
         property var menuCustom: []         // own entries [{id: "custom:<n>", label, icon, kind: app|command|path|url, target}]
@@ -327,7 +327,7 @@ JsonAdapter {
         property string hellPicture: ""     // "" = generated pixel hell (scripts/hell-wallpaper.py)
         property var angelSaved: null       // wallpaper + theme mode kept while the demon rules
         property bool jokes: true           // she jokes now and then, not only tips
-        property string hellMenu: "circle" // the right-click menu while the demon rules: circle (the circle's own, story/circles.json → dress) | pentagram | a circle's look (HellLook.dressMenuIds) | radial | y2k | tiles | "" (the usual one)
+        property string hellMenu: "circle" // the right-click menu while the demon rules: circle (the circle's own, story/circles.json → dress) | pentagram | a circle's look (HellLook.dressMenuIds) | radial | y2k | tiles | "" (the usual one; heaven's own looks are never hell's — the circle's own takes their place)
         property string hellSettings: "circle" // Settings while the demon rules: circle (the circle's own) | grimoire (a book) | a circle's look (HellLook.dressSettingsIds) | "" (the usual window)
         property bool hellDressByCircle: false // the old defaults pentagram / grimoire became "circle" once (services/DeskMenu)
         property string hellStart: "skin"   // Start while the demon rules: skin (your look, hell version + a hell Start button) | hell (StartHell) | "" (untouched)

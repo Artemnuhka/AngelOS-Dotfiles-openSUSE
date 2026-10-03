@@ -14,25 +14,32 @@ Singleton {
 
     readonly property var flyouts: ["view", "new", "wallpaper", "open", "more"]
     // looks: list (the usual, Windows 11-like) · radial (a ring around the pointer) · y2k (a
-    // glossy chrome bubble) · tiles (a Control Center grid) · pentagram (hell's own). While the
-    // demon rules, Y2K → Hell → "Right-click menu" takes over (pentagram unless turned off).
-    readonly property var styles: ["list", "radial", "y2k", "tiles", "pentagram"]
+    // glossy chrome bubble) · tiles (a Control Center grid) · wings · harp (heaven's own) ·
+    // pentagram (hell's own). While the demon rules, Y2K → Hell → "Right-click menu" takes
+    // over (the circle's own unless turned off).
+    readonly property var styles: ["list", "radial", "y2k", "tiles", "wings", "harp", "pentagram"]
+    // heaven's own: feathers of two wings under a halo, the strings of a harp on a cloud
+    readonly property var heavenly: ["wings", "harp"]
     // the pentagram is hell's own: in heaven only once the portal is open (Angel.hellAllowed)
     readonly property string chosen: !styles.includes(Config.desktop.menuStyle) || (Config.desktop.menuStyle === "pentagram" && !Angel.hellAllowed) ? "list" : Config.desktop.menuStyle
     // in hell (Y2K → Hell → "Right-click menu"): "circle" is the circle's own (story/circles.json
     // → dress: the pentagram before any circle, then one of the circles' looks), or one look always
     readonly property string hellPick: Config.y2k.hellMenu === "circle" ? HellLook.dressMenu : Config.y2k.hellMenu
-    readonly property bool hellish: Angel.demon && (styles.includes(hellPick) || HellLook.dressMenuIds.includes(hellPick))
-    readonly property string style: hellish ? hellPick : chosen
-    // the ring, the tiles, the pentagram and the circles' looks share one full-screen popup (RadialMenu)
-    readonly property bool overlay: style === "radial" || style === "tiles" || style === "pentagram" || HellLook.dressMenuIds.includes(style)
-    readonly property string overlayLook: style === "tiles" || style === "pentagram" || HellLook.dressMenuIds.includes(style) ? style : "ring"
+    readonly property bool hellPickOk: !heavenly.includes(hellPick) && (styles.includes(hellPick) || HellLook.dressMenuIds.includes(hellPick))
+    // heaven's own looks stay in heaven: "as usual" with one of them chosen gets the circle's own
+    readonly property bool hellish: Angel.demon && (hellPickOk || heavenly.includes(chosen))
+    readonly property string style: !hellish ? chosen : hellPickOk ? hellPick : HellLook.dressMenu
+    // the ring, the tiles, heaven's and hell's own looks share one full-screen popup (RadialMenu)
+    readonly property bool overlay: style !== "list" && style !== "y2k"
+    readonly property string overlayLook: style === "radial" ? "ring" : style
     function styleLabel(s) {
         return ({
                 "list": I18n.t("Обычный", "Default"),
                 "radial": I18n.t("Кольцо", "Ring"),
                 "y2k": I18n.t("Y2K глянец", "Y2K gloss"),
                 "tiles": I18n.t("Плитки", "Tiles"),
+                "wings": I18n.t("Крылья", "Wings"),
+                "harp": I18n.t("Арфа", "Harp"),
                 "pentagram": I18n.t("Пентаграмма", "Pentagram"),
                 "circle": I18n.t("Свой у каждого круга", "Each circle's own"),
                 "queue": I18n.t("Талоны", "Tickets"),

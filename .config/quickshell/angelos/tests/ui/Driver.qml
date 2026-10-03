@@ -32,6 +32,9 @@ import "../../widgets/IconSets.js" as IconSets
 //   bar       bar widgets (Wi-Fi, Bluetooth, wired, tray, desk sprites) load, their panels open
 //   wrap      long switch labels wrap inside a narrow group instead of running past it
 //   start     every Start look (the bodies of StartOverlay) loads, searches, walks with the keys, Esc closes
+//   heaven-menus  heaven's own right-click menus (wings, harp) build round a pointer; all
+//             16 entries fit and stay apart at every size on landscape and portrait screens at
+//             scale 1–2, middle and corner; their ink reads in every heaven palette
 //   hell      the built-in desktop widgets and a hell window frame load in heaven and in hell,
 //             the widgets burn over and back, the six hell cursors are in the catalog; each
 //             circle's own Settings dress and right-click menu build and read
@@ -49,7 +52,8 @@ import "../../widgets/IconSets.js" as IconSets
 //   walls     heaven's wallpaper stays as it is in hell, a pick in hell lasts for its circle,
 //             an older save is untangled, hell's accent is its own (C2)
 //   motion    Motion off: no animation lengths, heaven ⇄ hell at once without the shows;
-//             calm is the game's calm; the old game.calm toggle migrates (C4)
+//             calm is the game's calm; the old game.calm toggle migrates (C4); heaven's own
+//             menus never show in hell
 //   cava      the cava widget (over a stand-in cava) starts, and starts again after it was
 //             hidden and shown with the same config (B4: the lock, sleep, a fullscreen game)
 //   rmb       a right-click menu opens where the button went down (B2); a right click into
@@ -933,7 +937,7 @@ Scope {
                     for (const r of ["heaven", "hell"])
                         hellSteps.push([k, r]);
                 hellSeen = [];
-                phase = "hell";
+                phase = "heaven-menus";
                 return;
             }
             const it = startStage.item;
@@ -978,6 +982,156 @@ Scope {
                 it.closeRequested.disconnect(onClose);
             }
             startSeen.push(startStage.style + (ok && closed > 0 ? " " + Math.round(it.width) + "×" + Math.round(it.height) : " FAIL" + (ok ? " (Esc did not close)" : "")));
+            return;
+        }
+        if (phase === "heaven-menus") {
+            // heaven's own right-click menus (DeskMenu.heavenly: wings, harp): each builds round
+            // a pointer; with 16 entries and names, at every menu size, on 1920×1080 at scale 1,
+            // 1.25, 1.5 and 2 and on the portrait 1080×1920 at 1 and 2, opened in the middle
+            // and pushed into a corner, every icon and name stays on the screen and off the
+            // others'; the ink of icons and names reads on what it stands on (4.5:1) in every
+            // heaven palette, light and dark
+            const heavenBad = [];
+            const heavenT0 = Date.now();
+            const cap = id => id.charAt(0).toUpperCase() + id.slice(1);
+            const sixteen = DeskMenu.catalog.filter(id => id !== "sep").slice(0, 16);
+            const fake = (cx, cy, k) => ({
+                    "k": k,
+                    "slots": sixteen,
+                    "labels": true,
+                    "cx": cx,
+                    "cy": cy,
+                    "reveal": 1,
+                    "current": -1,
+                    "fly": "",
+                    "flyIndex": -1,
+                    "subCurrent": -1,
+                    "flyItems": [],
+                    "hoveredEntry": null,
+                    "clamp": (v, lo, hi) => Math.max(lo, Math.min(hi, v)),
+                    "hoverEntry": i => {},
+                    "activate": i => {},
+                    "activateSub": j => {},
+                    "walk": e => false,
+                    "close": () => {}
+                });
+            // what an entry takes on screen: itself (an icon's plate, a string) and its name
+            const rectsOf = look => {
+                const out = [];
+                for (const c of look.children) {
+                    if (typeof c.hot !== "boolean" || c.label === undefined)
+                        continue;
+                    const p = c.mapToItem(look, 0, 0);
+                    out.push([c.index, p.x, p.y, c.width, c.height]);
+                    for (const t of c.children) {
+                        if (t.text === c.label && c.label !== "") {
+                            const q = t.mapToItem(look, 0, 0);
+                            out.push([c.index, q.x, q.y, t.width, t.height]);
+                        }
+                    }
+                }
+                return out;
+            };
+            const stage = Qt.createQmlObject("import QtQuick; Item {}", win.contentItem);
+            const screens = [[1920, 1080], [1536, 864], [1280, 720], [960, 540], [1080, 1920], [540, 960]];
+            const built = {};
+            for (const id of DeskMenu.heavenly) {
+                const c = Qt.createComponent(Quickshell.shellDir + "/modules/background/" + cap(id) + "Look.qml");
+                if (c.status !== Component.Ready) {
+                    heavenBad.push(id + ": " + c.errorString().trim().split("\n")[0]);
+                    continue;
+                }
+                built[id] = c;
+                let worst = "";
+                for (const [w, h] of screens) {
+                    stage.width = w;
+                    stage.height = h;
+                    for (const k of [0.85, 1, 1.25]) {
+                        for (const corner of [false, true]) {
+                            let o = c.createObject(stage, {
+                                "menu": fake(w / 2, h / 2, k)
+                            });
+                            if (corner) {
+                                // where RadialMenu.openAt puts a right click into the corner
+                                const mx = o.reachX, my = o.reachY;
+                                o.destroy();
+                                o = c.createObject(stage, {
+                                    "menu": fake(Math.max(Math.min(mx, w / 2), Math.min(Math.max(w - mx, w / 2), w - 1)), Math.max(Math.min(my, h / 2), Math.min(Math.max(h - my, h / 2), h - 1)), k)
+                                });
+                            }
+                            const where = w + "×" + h + " k" + k + (corner ? " corner" : "");
+                            const rs = rectsOf(o);
+                            if (!(o.reach > 0) || rs.length < sixteen.length)
+                                worst = worst || where + ": lays out " + rs.length + " pieces";
+                            for (const r of rs) {
+                                if (r[1] < -1 || r[2] < -1 || r[1] + r[3] > w + 1 || r[2] + r[4] > h + 1)
+                                    worst = worst || where + ": entry " + (r[0] + 1) + " off the screen at " + Math.round(r[1]) + "," + Math.round(r[2]);
+                            }
+                            for (let i = 0; i < rs.length && !worst; i++) {
+                                for (let j = i + 1; j < rs.length; j++) {
+                                    const a = rs[i], b = rs[j];
+                                    if (a[0] === b[0])
+                                        continue;
+                                    const ox = Math.min(a[1] + a[3], b[1] + b[3]) - Math.max(a[1], b[1]), oy = Math.min(a[2] + a[4], b[2] + b[4]) - Math.max(a[2], b[2]);
+                                    if (ox > 1 && oy > 1) {
+                                        worst = where + ": entries " + (a[0] + 1) + " and " + (b[0] + 1) + " overlap";
+                                        break;
+                                    }
+                                }
+                            }
+                            o.destroy();
+                        }
+                    }
+                }
+                if (worst)
+                    heavenBad.push(id + " " + worst);
+            }
+            const layoutMs = Date.now() - heavenT0;
+            // every palette, light and dark, read through the looks' own colours (coloursFor:
+            // switching the shell's palette 24 times re-inks everything loaded and takes ~40 s);
+            // the palette as Theme builds it — the one on screen must come out the same
+            const keepMode = Config.appearance.mode;
+            const looks = Object.keys(built).map(id => [id, built[id].createObject(stage, {
+                        "menu": fake(960, 540, 1)
+                    })]);
+            const paletteOf = (f, m) => {
+                const fl = Theme.flavors[f][m];
+                const b = fl.desk ? Object.assign({}, Theme.legacyBase, fl) : Theme.legacyBase;
+                return {
+                    "dark": m === "dark",
+                    "face": b.face,
+                    "text": b.text,
+                    "accent": fl.accent,
+                    "surface": Theme.mix(b.face, fl.accent, m === "dark" ? 0.08 : 0.04)
+                };
+            };
+            let palettes = 0;
+            for (const m of ["light", "dark"]) {
+                Config.appearance.mode = m;
+                const here = paletteOf(Config.appearance.flavor in Theme.flavors ? Config.appearance.flavor : "overdose", m);
+                const hexes = pairs => pairs.map(p => p.map(c => Theme.hex(Qt.color(c))).join("/")).join(" ");
+                if (Theme.hex(Qt.color(here.surface)) !== Theme.hex(Theme.menuSurface) || Theme.hex(Qt.color(here.text)) !== Theme.hex(Theme.text))
+                    heavenBad.push("palette read apart from Theme (" + m + "): " + here.surface + " vs " + Theme.menuSurface);
+                for (const [id, o] of looks)
+                    if (hexes(o.coloursFor(here).pairs) !== hexes(o.pairs))
+                        heavenBad.push(id + " (" + m + "): its colours on screen are not coloursFor's");
+                for (const f of Object.keys(Theme.flavors)) {
+                    palettes++;
+                    for (const [id, o] of looks) {
+                        for (const [fg, bg] of o.coloursFor(paletteOf(f, m)).pairs) {
+                            const c = HellLook.contrast(fg, bg);
+                            if (c < 4.5)
+                                heavenBad.push(id + " " + f + "/" + m + ": " + fg + " on " + bg + " " + c.toFixed(2));
+                        }
+                    }
+                }
+            }
+            Config.appearance.mode = keepMode;
+            for (const [id, o] of looks)
+                o.destroy();
+            stage.destroy();
+            report("heaven-menus", heavenBad.length === 0 && Object.keys(built).length === DeskMenu.heavenly.length, heavenBad.slice(0, 6).join("; ") || DeskMenu.heavenly.join(", ") + ": 16 entries fit and stay apart on " + screens.length + " screens × 3 sizes × middle/corner; ink ≥ 4.5:1 in " + palettes + " palettes (" + layoutMs + " + " + (Date.now() - heavenT0 - layoutMs) + " ms)");
+            phase = "hell";
             return;
         }
         if (phase === "hell") {
@@ -1435,8 +1589,29 @@ Scope {
             Angel.lastSwitchAt = 0;
             Angel.startSwap("toHell");
             const atOnce = Angel.demon && !Angel.transition && !CircleFx.active && !DesktopWidgets.burning;
+            // heaven's own menus (wings, harp) never come down: chosen as the usual menu, or even
+            // written in as hell's by hand, hell puts its own look in their place
+            const keepStyle = Config.desktop.menuStyle, keepHellMenu = Config.y2k.hellMenu;
+            const apart = [];
+            for (const h of DeskMenu.heavenly) {
+                Config.desktop.menuStyle = h;
+                Config.y2k.hellMenu = "";
+                const usual = DeskMenu.style;
+                Config.y2k.hellMenu = h;
+                const forced = DeskMenu.style;
+                if (!DeskMenu.hellish || DeskMenu.heavenly.includes(usual) || DeskMenu.heavenly.includes(forced))
+                    apart.push(h + " → " + usual + " / " + forced);
+            }
             Angel.startSwap("ascend");
             const back = !Angel.demon && !Angel.transition;
+            Config.y2k.hellMenu = keepHellMenu;
+            for (const h of DeskMenu.heavenly) {
+                Config.desktop.menuStyle = h;
+                if (DeskMenu.style !== h || DeskMenu.overlayLook !== h || !DeskMenu.overlay)
+                    apart.push("heaven lost " + h + " (" + DeskMenu.style + ")");
+            }
+            Config.desktop.menuStyle = keepStyle;
+            report("heaven-apart", apart.length === 0, apart.join("; ") || "in hell " + DeskMenu.heavenly.join(" and ") + " give way to hell's own (as the usual menu or set as hell's), in heaven they are back");
             Motion.set("calm");
             const calm = Story.calm && !Motion.still && Motion.ms(300) === 300;
             Motion.set("full");

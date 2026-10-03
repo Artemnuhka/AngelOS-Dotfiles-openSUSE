@@ -3,8 +3,8 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import qs.services
 
-// What every entry of a circle's menu look shares (modules/background/circles): which entry
-// it is, whether you're on it, and the mouse — hovering selects it (a flyout opens after a
+// What every entry of a circle's menu look shares (modules/background/circles; heaven's
+// WingsLook and HarpLook use it too): which entry it is, whether you're on it, and the mouse — hovering selects it (a flyout opens after a
 // beat, RadialMenu.hoverEntry), a click runs it. The look draws it: the children go inside,
 // the mouse covers the whole item.
 MouseArea {
