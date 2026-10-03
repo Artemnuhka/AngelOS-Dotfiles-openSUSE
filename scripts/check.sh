@@ -262,6 +262,22 @@ else
     else
       fail "installer: re-run is idempotent"
     fi
+    # fish's snippet and the LazyVim config come with a fresh install…
+    if [[ -f "$WORK/default/.config/fish/conf.d/angelos-tools.fish" &&
+          -f "$WORK/default/.config/nvim/lua/config/lazy.lua" ]]; then
+      pass "installer: fish snippet and the Neovim config installed"
+    else
+      fail "installer: fish snippet and the Neovim config installed"
+    fi
+    # …but someone's own Neovim config is left whole, never mixed with ours
+    mkdir -p "$WORK/ownnvim/.config/nvim"
+    echo '-- my own' >"$WORK/ownnvim/.config/nvim/init.lua"
+    if install_case ownnvim && grep -qx -- '-- my own' "$WORK/ownnvim/.config/nvim/init.lua" &&
+       [[ ! -e "$WORK/ownnvim/.config/nvim/lua" ]]; then
+      pass "installer: an existing ~/.config/nvim stays the user's own"
+    else
+      fail "installer: an existing ~/.config/nvim stays the user's own"
+    fi
     if grep -qx 'remote=fixture' "$WORK/default/.config/angelos/owner" &&
        grep -qx '{"setup":{"complete":true}}' "$WORK/default/.config/angelos/settings.json"; then
       pass "installer: existing angelOS settings and owner marker survive an update"
@@ -511,7 +527,7 @@ else
 fi
 
 # Inline comments in a package list would be passed to pacman verbatim.
-for list in pacman.txt sddm.txt; do
+for list in pacman.txt sddm.txt angelos.txt tools.txt; do
   if grep -Ev '^[[:space:]]*(#|$)' "$ROOT/packages/$list" | grep -q '[[:space:]#]'; then
     fail "packages/$list: package lines must contain only the name"
   else

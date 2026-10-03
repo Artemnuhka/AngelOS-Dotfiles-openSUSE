@@ -254,6 +254,13 @@ The `tech` install profile installs the lighter `niri-screenshot-region-simple` 
 - Noctalia as an alternative shell, and a shell-free fallback config.
 - An SDDM login screen: the animated [`pixel-cyberpunk`](#-login-screen-sddm) theme, installed and enabled for you.
 - Kitty, Alacritty, Foot, GTK, Fastfetch and fontconfig setups, themed to match.
+- fish (a small `conf.d/angelos-tools.fish`: `~/.local/bin` on the PATH, `n` for Neovim) and a
+  Neovim config on [LazyVim](https://lazyvim.github.io) that keeps the terminal's colours — so it
+  follows angelOS, heaven and hell. It goes in only where `~/.config/nvim` is not there yet (or
+  was put there by the installer); someone's own Neovim config is never mixed with it.
+- Small everyday tools, optional (`packages/tools.txt`, asked by the installer or `INSTALL_TOOLS=0|1`):
+  fish, btop, glances, duf, ncdu, lsd, ripgrep, tree, micro, yt-dlp, pavucontrol, helvum,
+  Mission Center, Meld, scrcpy and the like.
 - The `pixora` pixel icon theme, Cozette / Pixeloid pixel fonts and the wallpaper packs you pick.
 - Package lists — every package from Arch Linux's official repositories, no AUR.
 - One command to install, `./install.sh`: it asks everything itself (shell, game, wallpapers, voice input, login screen, keyboard), backs up anything it replaces, and is safe to re-run.
@@ -312,6 +319,7 @@ INSTALL_VOXTYPE=0 DOWNLOAD_VOXTYPE_MODEL=0 ./install.sh       # no voice input
 ENABLE_SERVICES=0 ./install.sh                                # do not enable user services
 WALLPAPER_PACKS=none ./install.sh                             # no wallpaper packs (all | none | Lain,Pixel,…)
 INSTALL_FLATPAK=1 ./install.sh                                # also the apps in packages/flatpak-apps.txt
+INSTALL_TOOLS=0 ./install.sh                                  # without the small tools in packages/tools.txt
 GITHUB_LOGIN=1 ./install.sh                                   # the author's tools (needs access; `angelos author login` later)
 ```
 

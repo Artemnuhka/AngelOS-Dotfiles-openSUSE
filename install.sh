@@ -34,6 +34,9 @@
 #   INSTALL_WALLPAPERS=0|1         older switch: 0 = no packs, 1 = all packs
 #   ENABLE_SERVICES=0|1            enable the systemd user services
 #   INSTALL_FLATPAK=0|1            install packages/flatpak-apps.txt
+#   INSTALL_TOOLS=1|0              small everyday tools from packages/tools.txt (fish, btop,
+#                                  ripgrep, yt-dlp, pavucontrol…; asked interactively, default 1;
+#                                  0 together with SKIP_PACKAGES=1)
 #   OVERWRITE_CONFIGS=0|1          1 = replace config files you changed too (backed up);
 #                                  default 0 keeps them (see below)
 #   VALIDATE_NIRI=1|0              check the installed config with `niri validate` (default 1;
@@ -71,7 +74,7 @@ VOXTYPE_FORCE="${VOXTYPE_FORCE:-0}"
 is_set() { [[ -n "${!1+x}" ]]; }
 for v in DOTFILES_MODE DESKTOP_SHELL NOCTALIA KB_LAYOUTS KB_TOGGLE INSTALL_VOXTYPE DOWNLOAD_VOXTYPE_MODEL \
          INSTALL_WALLPAPERS WALLPAPER_PACKS INSTALL_SDDM NOCTALIA_RESET_SETTINGS ANGELOS_GAME GITHUB_LOGIN \
-         INSTALL_FLATPAK; do
+         INSTALL_FLATPAK INSTALL_TOOLS; do
   is_set "$v" && declare -r "GIVEN_$v=1"
 done
 given() { local n="GIVEN_$1"; [[ -n "${!n:-}" ]]; }
@@ -105,9 +108,11 @@ if ! is_set WALLPAPER_PACKS; then
 fi
 ENABLE_SERVICES="${ENABLE_SERVICES:-1}"
 INSTALL_FLATPAK="${INSTALL_FLATPAK:-0}"
+INSTALL_TOOLS="${INSTALL_TOOLS:-1}"
 INSTALL_SDDM="${INSTALL_SDDM:-1}"
 # A config-only run (SKIP_PACKAGES=1) leaves the system alone unless asked to.
 [[ "$SKIP_PACKAGES" == 1 ]] && ! given INSTALL_SDDM && INSTALL_SDDM=0
+[[ "$SKIP_PACKAGES" == 1 ]] && ! given INSTALL_TOOLS && INSTALL_TOOLS=0
 KB_LAYOUTS="${KB_LAYOUTS:-us,ru}"
 KB_TOGGLE="${KB_TOGGLE:-alt_shift}"
 KB_VARIANT="${KB_VARIANT:-}"
@@ -362,6 +367,13 @@ ask_profile() {
                  'Поставить экран входа SDDM с темой pixel-cyberpunk?')" "$( ((INSTALL_SDDM)) && echo y || echo n)" \
       && INSTALL_SDDM=1 || INSTALL_SDDM=0
   fi
+  if ! given INSTALL_TOOLS && [[ "$SKIP_PACKAGES" != 1 && -s "$ROOT/packages/tools.txt" ]]; then
+    local tools
+    tools="$(grep -Ev '^[[:space:]]*(#|$)' "$ROOT/packages/tools.txt" | head -8 | paste -sd',' - | sed 's/,/, /g')…"
+    confirm "$(_ "Also install small everyday tools ($tools, packages/tools.txt)?" \
+                 "Поставить ещё мелкие утилиты на каждый день ($tools, packages/tools.txt)?")" "$( ((INSTALL_TOOLS)) && echo y || echo n)" \
+      && INSTALL_TOOLS=1 || INSTALL_TOOLS=0
+  fi
   if [[ "$MODE" == 1 || "$MODE" == full ]] && ! given INSTALL_FLATPAK && [[ -s "$ROOT/packages/flatpak-apps.txt" ]]; then
     confirm "$(_ "Also install these apps from Flathub: $(grep -Ev '^[[:space:]]*(#|$)' "$ROOT/packages/flatpak-apps.txt" | sed 's/.*\.//' | paste -sd, -)?" \
                  "Поставить ещё и эти программы из Flathub: $(grep -Ev '^[[:space:]]*(#|$)' "$ROOT/packages/flatpak-apps.txt" | sed 's/.*\.//' | paste -sd, -)?")" n \
@@ -465,6 +477,9 @@ pacman_install() {
   if [[ "$INSTALL_SDDM" == 1 ]]; then
     mapfile -t -O "${#packages[@]}" packages < <(grep -Ev '^[[:space:]]*(#|$)' "$ROOT/packages/sddm.txt")
   fi
+  if [[ "$INSTALL_TOOLS" == 1 && -f "$ROOT/packages/tools.txt" ]]; then
+    mapfile -t -O "${#packages[@]}" packages < <(grep -Ev '^[[:space:]]*(#|$)' "$ROOT/packages/tools.txt")
+  fi
 
   # OCR language packs follow the chosen keyboard layouts.
   for code in "${KB_LIST[@]}"; do
@@ -551,6 +566,7 @@ STATE_DIR="${XDG_STATE_HOME:-$HOME_DIR/.local/state}/angelos"
 MANIFEST="$STATE_DIR/installed-files.sha256"
 PARKED_DIR="$STATE_DIR/kept-updates"
 declare -A PREV_SUM=() NEW_SUM=()
+NVIM_OURS=0
 
 sed_escape() { printf '%s' "$1" | sed -e 's/[\/&|\\]/\\&/g'; }
 
@@ -695,6 +711,9 @@ destination() {
       [[ "$ENABLE_SERVICES" == 1 ]] || return 0 ;;
     .config/voxtype/*)
       [[ "$INSTALL_VOXTYPE" == 1 || -x "$HOME_DIR/.local/bin/voxtype" ]] || return 0 ;;
+    # Neovim with LazyVim: a whole config or nothing — never mixed into someone's own
+    .config/nvim/*)
+      [[ "$NVIM_OURS" == 1 ]] || return 0 ;;
     # Helper scripts: tech uses the light GTK variants, full the overlay ones.
     .local/bin/*-simple)
       [[ "$MODE" == tech ]] || return 0 ;;
@@ -710,6 +729,14 @@ install_configs() {
   say "$(_ 'Installing configuration…' 'Установка конфигурации…')"
   load_manifest
   rm -rf -- "$PARKED_DIR"
+  # the Neovim config goes in only where there is none yet, or where it is the one we put there
+  if [[ ! -e "$HOME_DIR/.config/nvim" || -n "${PREV_SUM[.config/nvim/init.lua]:-}" ]]; then
+    NVIM_OURS=1
+  else
+    NVIM_OURS=0
+    say "$(_ 'The LazyVim config is not installed: ~/.config/nvim is your own' \
+             'Конфиг LazyVim не ставится: ~/.config/nvim — ваш')"
+  fi
 
   while IFS= read -r -d '' src; do
     rel="${src#"$ROOT/"}"
