@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtMultimedia
 import qs.config
 import qs.services
 import qs.widgets
@@ -10,7 +11,9 @@ import qs.modules.background.circles
 // a string — the first by the pillar, the longest — with its icon on a pearl where the string
 // meets the soundboard and its name hanging under the board, so the names climb with it like
 // steps. The whole string listens: hover plucks it (it trembles and rings out), so a sweep of
-// the pointer across the harp is a glissando; it opens string by string the same way. Flyouts
+// the pointer across the harp is a glissando; it opens string by string the same way, and as
+// it opens a glissando runs up the strings. They sound (Sounds "harp", System sounds): C Lydian
+// up from middle C, the first the lowest (scripts/y2k-sounds.py → harp1…16). Flyouts
 // open beside the harp. The crown on the pillar (the logo) closes. ←/→ walk the strings.
 // The frame is painted once in pixels of the shell's size, in the palette's accent; the
 // pearls are pale in any palette, with dark ink.
@@ -136,6 +139,35 @@ Item {
     }
     anchors.fill: parent
 
+    // the strings' voices: loaded while the sounds are on (quiet in stream mode)
+    readonly property bool voiced: Sounds.enabled("harp") && !StreamMode.quiet && Sounds.ready
+    readonly property real voiceVolume: Sounds.volumeOf("harp")
+    // opening: a glissando up the strings, one every 34 ms, each plucked as it sounds
+    Connections {
+        // (the self-test's menu is a plain object, without the signal)
+        target: typeof look.menu.opened === "function" ? look.menu : null
+        function onOpened() {
+            if (!look.voiced || Sounds.quietNow())
+                return;
+            gliss.step = 0;
+            gliss.restart();
+        }
+    }
+    Timer {
+        id: gliss
+        property int step: 0
+        interval: 34
+        repeat: true
+        onTriggered: {
+            const s = strings.itemAt(step);
+            if (s)
+                s.ring();
+            step++;
+            if (step >= look.n || !look.menu.visible)
+                stop();
+        }
+    }
+
     TextMetrics {
         id: metrics
         font.family: Theme.fontTitle
@@ -249,6 +281,7 @@ Item {
 
     // the strings: each the whole strip from the neck to the board, its pearl and its name
     Repeater {
+        id: strings
         model: look.menu.slots
         CircleEntry {
             id: entry
@@ -262,7 +295,28 @@ Item {
             property real pluck: 1
             readonly property real wobble: Math.round(Math.sin(pluck * Math.PI * 9) * (1 - pluck) * look.px * 2)
             onHotChanged: if (hot)
-                pluckAnim.restart()
+                ring()
+            // plucked: it trembles and sounds its note; two voices take turns, so a string
+            // plucked again rings over its own tail
+            function ring() {
+                pluckAnim.restart();
+                if (!look.voiced || Sounds.quietNow())
+                    return;
+                (turn ? voiceB : voiceA).play();
+                turn = 1 - turn;
+            }
+            property int turn: 0
+            readonly property url clip: look.voiced ? "file://" + Sounds.dir + "/" + Sounds.harpStrings[index % Sounds.harpStrings.length] + ".wav" : ""
+            SoundEffect {
+                id: voiceA
+                source: entry.clip
+                volume: look.voiceVolume
+            }
+            SoundEffect {
+                id: voiceB
+                source: entry.clip
+                volume: look.voiceVolume
+            }
             NumberAnimation {
                 id: pluckAnim
                 target: entry

@@ -15,7 +15,8 @@ import qs.config
 // demon's voice, and the effects crack/choir/rocks/shatter (always synthesised;
 // rocks: the demon's 8-bit rockfall, shatter: the screen breaking when the
 // angel and the demon swap; circle: the low hit in the dark between hell's circles,
-// circleSoft its calm version). Quiet in stream mode (StreamMode.quiet).
+// circleSoft its calm version; harp: the harp menu's strings, HarpLook). Quiet in stream
+// mode (StreamMode.quiet).
 // Settings → System sounds (SfxPage) tunes each one (Config.y2k.soundTweaks,
 // {event: {on, vol, sound, vary}}): on/off, its own volume, another event's sound
 // ("notify") or a file ("file:/path", e.g. from sounds/custom), and for the input
@@ -24,19 +25,24 @@ import qs.config
 Singleton {
     id: root
 
-    readonly property var events: ["startup", "notify", "error", "click", "shutdown", "angel", "wallpaper", "open", "toggle", "screenshot", "volume", "windowClose", "demon", "crack", "choir", "rocks", "shatter", "voice", "clickRight", "key", "windowOpen", "workspace", "lock", "unlock", "usbIn", "usbOut", "bark", "circle", "circleSoft"]
+    readonly property var events: ["startup", "notify", "error", "click", "shutdown", "angel", "wallpaper", "open", "toggle", "screenshot", "volume", "windowClose", "demon", "crack", "choir", "rocks", "shatter", "voice", "clickRight", "key", "windowOpen", "workspace", "lock", "unlock", "usbIn", "usbOut", "bark", "circle", "circleSoft", "harp"]
     // off until switched on in System sounds (typing and such would surprise)
     readonly property var optIn: ["clickRight", "key", "windowOpen", "workspace", "lock", "unlock"]
     // the input ones: quiet over a fullscreen window (games) when asked
     readonly property var input: ["click", "clickRight", "key"]
     // the helper's Undertale "pips", one per letter (AngelHelper plays them as
     // SoundEffect, so they stay .wav); "voice" above is their switch and preview;
-    // key2 key3: the typing variants; voiceFallen1…5: her broken voice's syllables (the story's)
+    // key2 key3: the typing variants; voiceFallen1…5: her broken voice's syllables (the story's);
+    // harp1…16: the harp menu's strings, low to high (HarpLook plays them as SoundEffect too;
+    // "harp" above is their switch, volume and preview, a glissando)
     readonly property var fallenVoice: ["voiceFallen1", "voiceFallen2", "voiceFallen3", "voiceFallen4", "voiceFallen5"]
-    readonly property var extra: ["voiceAngel", "voiceDemon", "key2", "key3"].concat(fallenVoice)
+    readonly property var harpStrings: Array.from({
+            "length": 16
+        }, (_, i) => "harp" + (i + 1))
+    readonly property var extra: ["voiceAngel", "voiceDemon", "key2", "key3"].concat(fallenVoice).concat(harpStrings)
     readonly property string customDir: base + "/custom"
     readonly property var cute: ["open", "toggle", "screenshot", "volume", "windowClose"]
-    readonly property var effects: ["crack", "choir", "rocks", "shatter", "voice", "bark", "circle", "circleSoft"]
+    readonly property var effects: ["crack", "choir", "rocks", "shatter", "voice", "bark", "circle", "circleSoft", "harp"]
     // heaven ⇄ hell's sounds: never piled up (story/game.json → pace.soundGap)
     readonly property var transitions: ["crack", "choir", "rocks", "shatter", "circle", "circleSoft"]
     // the helper's own sounds follow "Her voice" (Config.y2k.helperVolume) on top of the volume
@@ -119,7 +125,7 @@ Singleton {
         }
     }
     // scripts/y2k-sounds.py PACK_VERSION: an older pack is synthesised again
-    readonly property string packVersion: "7"
+    readonly property string packVersion: "8"
     readonly property string base: Config.home + "/.local/share/angelos/sounds"
     readonly property string dir: base + "/y2k"
     readonly property string pack: Config.y2k.soundPack === "overdose" ? "overdose" : "y2k"

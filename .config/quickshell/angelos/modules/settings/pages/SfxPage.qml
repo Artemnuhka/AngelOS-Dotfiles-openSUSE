@@ -43,7 +43,8 @@ PxPage {
             "crack": [I18n.t("Удар по стеклу", "The glass punch"), ""],
             "rocks": [I18n.t("Тряска и камни", "Quake and rocks"), ""],
             "shatter": [I18n.t("Экран ломается", "The screen breaks"), ""],
-            "bark": [I18n.t("Цербер лает", "Cerberus barks"), I18n.t("когда Колесо Ада выпускает щенка", "When the Wheel of Hell lets the puppy out")]
+            "bark": [I18n.t("Цербер лает", "Cerberus barks"), I18n.t("когда Колесо Ада выпускает щенка", "When the Wheel of Hell lets the puppy out")],
+            "harp": [I18n.t("Арфа", "The harp"), I18n.t("ПКМ-меню «Арфа»: струна звенит под курсором, при открытии — глиссандо", "The Harp right-click menu: a string rings under the pointer, a glissando as it opens")]
         })
     function labelOf(id) {
         return (labels[id] || [id])[0];
@@ -329,7 +330,7 @@ PxPage {
         title: I18n.t("События системы", "System events")
         icon: "bell"
         Repeater {
-            model: ["startup", "notify", "error", "windowOpen", "windowClose", "workspace", "usbIn", "usbOut", "open", "toggle", "screenshot", "volume", "wallpaper", "lock", "unlock", "shutdown"]
+            model: ["startup", "notify", "error", "windowOpen", "windowClose", "workspace", "usbIn", "usbOut", "open", "toggle", "harp", "screenshot", "volume", "wallpaper", "lock", "unlock", "shutdown"]
             delegate: eventRow
         }
     }

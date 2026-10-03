@@ -52,6 +52,8 @@ PopupWindow {
     }
     readonly property var flyItems: fly && listMenu ? listMenu.listFor(fly).filter(x => !x.separator) : []
     readonly property var hoveredEntry: current >= 0 ? DeskMenu.entry(slots[current]) : null
+    // opened, or moved by a right click elsewhere (the harp runs a glissando)
+    signal opened
 
     function clamp(v, lo, hi) {
         return Math.max(lo, Math.min(hi, v));
@@ -75,6 +77,7 @@ PopupWindow {
         } else {
             reveal = 1;
         }
+        opened();
         Qt.callLater(() => keys.forceActiveFocus());
     }
     function close() {

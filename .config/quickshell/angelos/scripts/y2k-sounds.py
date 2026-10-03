@@ -6,9 +6,10 @@
                                demon crack choir rocks shatter voice, the input and
                                system ones clickRight key (+ key2 key3, typing
                                variety) windowOpen workspace lock unlock usbIn
-                               usbOut bark as .ogg
+                               usbOut bark harp as .ogg
                                (.wav without ffmpeg) and the pips voiceAngel
-                               voiceDemon, and voiceFallen1…5 as .wav, prints JSON
+                               voiceDemon, voiceFallen1…5 and the harp's strings
+                               harp1…16 as .wav, prints JSON
 
 Chimes are FM bells and detuned triangle pads with a small echo, levelled to
 about -6 dBFS peak and at most -20 dBFS RMS so they sit under music and voice.
@@ -98,7 +99,9 @@ LOUDNESS = {"bark": -24.0, "voiceAngel": -25.0, "voiceDemon": -26.0, "voice": -2
             "choir": -23.0, "crack": -25.0, "rocks": -23.0, "shatter": -23.0,
             "key": -27.0, "key2": -27.0, "key3": -27.0, "clickRight": -22.0, "workspace": -24.0,
             "circle": -21.0, "circleSoft": -27.0}
-PACK_VERSION = "7"
+# peaks, dBFS: the harp's strings ring together (a glissando stacks them)
+PEAKS = {"harp%d" % (i + 1): -10.0 for i in range(16)}
+PACK_VERSION = "8"
 
 
 def startup():
@@ -539,6 +542,55 @@ def voice_fallen(i):
     return lowpass(lowpass(x, 2400), 2600) * env(n, 0.004, 0.04)
 
 
+# the harp menu's strings (modules/background/HarpLook): C Lydian up from middle C, heaven's
+# mode (the raised fourth), the first string — by the pillar, the longest — the lowest
+HARP = (60, 62, 64, 66, 67, 69, 71, 72, 74, 76, 78, 79, 81, 83, 84, 86)
+
+
+def pluck(freq, seed=1):
+    """a plucked string (Karplus–Strong): a burst of soft noise in a delay line one period
+    long, averaged with itself on every pass — the highs die first and the string rings out.
+    Plucked by a finger, not a pick (the burst low-passed), a third of the way along (a
+    comb thins those harmonics), the soundboard's warmth under it (its fundamental); the
+    low strings ring longer (to -60 dB in ~2.6 s, the top one in ~1 s)"""
+    t60 = 2.6 - 1.6 * min(1.0, max(0.0, (freq - 260) / 900))
+    sec = min(2.2, t60 * 0.7 + 0.35)
+    n = int(sec * RATE)
+    p = max(2, int(round(RATE / freq - 0.5)))      # the averaging adds half a sample
+    g = 10 ** (-3 * (p + 0.5) / RATE / t60)
+    y = np.zeros(n + p + 1)
+    burst = lowpass(noise((p + 1) / RATE, seed), 2600)[:p + 1]
+    y[:len(burst)] = burst - burst.mean()
+    k = p + 1
+    while k < len(y):
+        # a period at a time: every sample of it reads the period before
+        i = np.arange(k, min(len(y), k + p))
+        y[i] = g * 0.5 * (y[i - p] + y[i - p - 1])
+        k += p
+    y = y[:n]
+    b = max(1, int(round(p * 0.3)))
+    y[b:] = y[b:] - 0.6 * y[:-b]
+    t = t_axis(sec)
+    body = np.sin(2 * np.pi * freq * t) * np.exp(-t * 6.9 / t60) * 0.35 * np.max(np.abs(y))
+    return echo((y + body) * env(n, 0.002, 0.3), 0.11, 0.18, 2)
+
+
+def harp_string(i):
+    return pluck(note(HARP[i]), seed=40 + i)
+
+
+def harp():
+    # the preview in Settings: a glissando up all sixteen, as the menu plays it when it
+    # opens (one string every 34 ms), from the strings as levelled; turned down only if
+    # they pile up past -3 dBFS
+    notes = [level(harp_string(i), PEAKS["harp%d" % (i + 1)], LOUDNESS.get("harp%d" % (i + 1), -20.0)) for i in range(16)]
+    buf = np.zeros(int((0.034 * 15 + max(len(x) for x in notes) / RATE) * RATE))
+    for i, x in enumerate(notes):
+        place(buf, x, i * 0.034)
+    m = np.max(np.abs(buf)) or 1.0
+    return buf * min(1.0, 10 ** (-3 / 20) / m)
+
+
 def voice():
     # the preview in Settings: "pip pip pip" of each
     buf = np.zeros(int(1.0 * RATE))
@@ -559,9 +611,12 @@ SOUNDS = {"startup": startup, "notify": notify, "error": error, "click": click, 
           "clickRight": click_right, "key": key, "key2": lambda: key(1), "key3": lambda: key(2),
           "windowOpen": window_open, "workspace": workspace, "lock": lock, "unlock": unlock,
           "usbIn": usb_in, "usbOut": usb_out, "bark": bark, "circle": circle,
-          "circleSoft": lambda: circle(True)}
+          "circleSoft": lambda: circle(True), "harp": harp}
+SOUNDS.update({"harp%d" % (i + 1): (lambda i=i: harp_string(i)) for i in range(16)})
 # played by QtMultimedia's SoundEffect, which only takes .wav
-WAV_ONLY = {"voiceAngel", "voiceDemon", "voiceFallen1", "voiceFallen2", "voiceFallen3", "voiceFallen4", "voiceFallen5"}
+WAV_ONLY = {"voiceAngel", "voiceDemon", "voiceFallen1", "voiceFallen2", "voiceFallen3", "voiceFallen4", "voiceFallen5"} | {"harp%d" % (i + 1) for i in range(16)}
+# levelled already (the harp's glissando: its strings as they are)
+AS_IS = {"harp"}
 
 
 def write_wav(path, x):
@@ -583,7 +638,7 @@ def main():
     for name, fn in SOUNDS.items():
         if only and name not in only:
             continue
-        x = level(fn(), rms_db=LOUDNESS.get(name, -20.0))
+        x = fn() if name in AS_IS else level(fn(), PEAKS.get(name, -6.0), LOUDNESS.get(name, -20.0))
         wav = out / (name + ".wav")
         write_wav(wav, x)
         if ffmpeg and name not in WAV_ONLY:
