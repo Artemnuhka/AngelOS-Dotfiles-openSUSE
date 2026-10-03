@@ -265,14 +265,31 @@ Scope {
                                 text: Angel.demon ? I18n.t("Пошути", "Joke") : I18n.t("Шутка", "A joke")
                                 onClicked: Angel.joke()
                             }
-                            // the demon asks something, three answers to pick from
+                            // the demon asks something, three answers to pick from; in a circle
+                            // it is her talk with the player instead (Story → closeness, item 12)
                             PxButton {
                                 hell: Angel.demon
                                 visible: Angel.demon
                                 compact: true
                                 icon: "chat"
-                                text: I18n.t("Поболтаем", "Let's chat")
-                                onClicked: Angel.talk()
+                                text: Story.circle ? I18n.t("Поговорить", "Talk") : I18n.t("Поболтаем", "Let's chat")
+                                onClicked: Story.circle ? Angel.demonDo("talk") : Angel.talk()
+                            }
+                            PxButton {
+                                hell: Angel.demon
+                                visible: Angel.demon && !!Story.circle
+                                compact: true
+                                icon: "heartHorns"
+                                text: I18n.t("Подарок: ", "Gift: ") + Story.giftName()
+                                onClicked: Angel.demonDo("gift")
+                            }
+                            PxButton {
+                                hell: Angel.demon
+                                visible: Angel.demon && !!Story.circle
+                                compact: true
+                                icon: "pin"
+                                text: I18n.t("Остаться", "Stay")
+                                onClicked: Angel.demonDo("stay")
                             }
                             PxButton {
                                 hell: Angel.demon

@@ -220,6 +220,21 @@ Singleton {
                     "run": () => root.say(en ? a[3] : a[2])
                 })), 30000);
     }
+    // her menu in a circle (story/game.json → closeness, item 12): a word, a gift her sin
+    // loves, or staying a while; a new step of closeness has its own scene
+    function demonDo(kind) {
+        if (!demon)
+            return;
+        const r = Story.demonAct(kind);
+        if (!r.ok) {
+            if (r.wait > 0)
+                say((Story.demonLine("wait") || I18n.t("Рано. Ещё %m мин.", "Too soon. %m more min.")).replace("%m", r.wait));
+            return;
+        }
+        if (r.stepUp && Novel.playScene("close"))
+            return;
+        say(Story.demonLine(kind, r.step));
+    }
     // the demon hints how out — down — with the button right there
     property double lastHint: 0
     function hint() {

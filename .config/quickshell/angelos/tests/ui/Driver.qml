@@ -1117,6 +1117,26 @@ Scope {
             // in hell without the show; the clock is moved, never waited for
             Story.player.character = "demon";
             Story.fell("limbo");
+            // the circle's demon and the player (item 12): a word, then too soon; a gift
+            // (+2 and her sin) makes them acquainted and has its scene; staying puts the next
+            // try off; your own, she has her words and the cursor its animation
+            const sinBefore = Story.vars.limbo || 0;
+            const talk = Story.demonAct("talk");
+            const again = Story.demonAct("talk");
+            const gift = Story.demonAct("gift");
+            const stepScene = Novel.sceneFor("close");
+            Story.player.lastPlea = 0;
+            const stay = Story.demonAct("stay");
+            const putOff = Story.nextTry > Story.now();
+            Story.hell.close = {
+                "limbo": {
+                    "points": 15
+                }
+            };
+            const own = Story.demonStep === 3 && Cursors.mood === "alive";
+            const ownLine = Story.demonLine("talk", 3);
+            Story.hell.close = ({});
+            report("demon-close", talk.ok && talk.step === 0 && !again.ok && again.wait === 30 && gift.stepUp && gift.step === 1 && stepScene === "close-limbo-1" && stay.ok && putOff && own && !!ownLine && (Story.vars.limbo || 0) === sinBefore + 1, "talk " + JSON.stringify(talk) + ", again " + JSON.stringify(again) + ", gift " + JSON.stringify(gift) + " → " + stepScene + ", stay puts the try off " + putOff + ", your own " + own + " (mood " + Cursors.mood + ")");
             Story.player.lastPlea = Story.now();
             const early = Story.attempt(false);
             Story.clockShift += 11 * 60000;

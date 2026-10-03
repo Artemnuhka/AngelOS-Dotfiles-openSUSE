@@ -97,6 +97,72 @@ Singleton {
         repeat: true
         onTriggered: root.thaw()
     }
+    // ---- each circle's demon and the player (story/game.json → closeness, item 12) ----
+    // 0 a stranger · 1 acquainted · 2 close · 3 your own — her own count, kept across falls
+    readonly property var closeRules: rules.closeness || ({})
+    readonly property var closeSteps: closeRules.steps && closeRules.steps.length === 3 ? closeRules.steps : [3, 8, 15]
+    function closePoints(cid) {
+        const c = (hell.close || {})[cid || circle];
+        return c ? (c.points || 0) : 0;
+    }
+    function closeStepOf(points) {
+        return points >= closeSteps[2] ? 3 : points >= closeSteps[1] ? 2 : points >= closeSteps[0] ? 1 : 0;
+    }
+    readonly property int demonStep: inHell && circle ? closeStepOf(closePoints(circle)) : 0
+    function giftName(cid) {
+        const g = (closeRules.gifts || {})[cid || circle];
+        return g ? I18n.label(g) : I18n.t("подарок", "a gift");
+    }
+    // talk | gift | stay with the demon of this circle: {ok, step, stepUp} or {ok: false, wait (min)}
+    function demonAct(kind) {
+        const a = (rules.actions || {})["demon." + kind];
+        if (!enabled || !ready || !inHell || !circle || !a)
+            return {
+                "ok": false,
+                "wait": 0
+            };
+        const rec = Object.assign({}, (hell.close || {})[circle] || {});
+        const left = (a.every || 0) * 60000 - (now() - (rec[kind + "At"] || 0));
+        if (left > 0)
+            return {
+                "ok": false,
+                "wait": Math.ceil(left / 60000)
+            };
+        const before = closeStepOf(rec.points || 0);
+        rec.points = (rec.points || 0) + (a.close || 0);
+        rec[kind + "At"] = now();
+        const all = Object.assign({}, hell.close || {});
+        all[circle] = rec;
+        save.hell.close = all;
+        const look = HellLook.looks[circle] || {};
+        if (a.sin && look.sin) {
+            const set = {};
+            set[look.sin] = "+" + a.sin;
+            applySet(set);
+        }
+        if (a.costsTry)
+            save.player.lastPlea = now();
+        const after = closeStepOf(rec.points);
+        return {
+            "ok": true,
+            "step": after,
+            "stepUp": after > before
+        };
+    }
+    // her line for an action at her step (story/voices.json → demons → circle → kind)
+    function demonLine(kind, step) {
+        const d = ((voices.demons || {})[circle] || {})[kind];
+        if (!d)
+            return "";
+        const list = Array.isArray(d[0]) && Array.isArray(d[0][0]) ? (d[Math.min(step === undefined ? demonStep : step, d.length - 1)] || []) : d;
+        if (!list.length)
+            return "";
+        const l = list[Math.floor(Math.random() * list.length)];
+        // the gift may open the line: "монета? …" → "Монета? …"
+        const s = render(Array.isArray(l) ? (I18n.english ? l[1] : l[0]) : l).replace("%1", giftName(circle));
+        return s.charAt(0).toUpperCase() + s.slice(1);
+    }
+
     // her line for the step she is at (story/angel.json → <step> → kind), "" when warm or none
     function angelLine(kind) {
         if (inHell || angelStep === 0)
@@ -369,6 +435,9 @@ Singleton {
             "chill": chill,
             "warmth": angelStep,
             "coldRoute": !!player.coldRoute,
+            // this circle's demon and the player: closeness 0 a stranger … 3 your own, points
+            "closeness": inHell && circle ? closeStepOf(closePoints(circle)) : 0,
+            "closePoints": inHell && circle ? closePoints(circle) : 0,
             "pact": !!hell.pact,
             "pactAfter": pactAfter,
             "limboAfter": limboAfter,
@@ -735,6 +804,7 @@ Singleton {
             "falls": hell.falls || 0,
             "returns": player.returns || 0,
             "angel": angelStepName + " (chill " + chill + (player.coldRoute ? ", cold route" : "") + ")",
+            "close": hell.close || {},
             "pact": !!hell.pact,
             "limbo": !!hell.limbo,
             "outcomes": (hell.outcomes || []).map(o => o.kind + "@" + o.circle),
@@ -772,6 +842,7 @@ Singleton {
         save.novel = null;
         for (const k of ["path", "fallCircles", "outcomes"])
             save.hell[k] = [];
+        save.hell.close = ({});
         save.hell.circle = "";
         save.hell.falls = 0;
         save.hell.attempts = 0;

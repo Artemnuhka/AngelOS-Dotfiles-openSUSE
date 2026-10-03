@@ -15,7 +15,25 @@
     "steps": [1, 2, 3],
     "thawHours": 24
   },
+  "closeness": {
+    "_comment": "Each circle's demon and the player (services/Story → closeness): her own count of points, in the save (hell.close). steps: the points from which she is acquainted, close, and your own (0 below: a stranger); each step up plays her scene (story/scenes, trigger \"close\", cond circle and closeness). The actions are demon.talk, demon.gift, demon.stay below — close: points, every: minutes between two of them (with her), sin: the gift feeds her circle's sin, costsTry: staying puts off the next try to get out. gifts: what her sin loves, the gift button's word. Her lines for them: story/voices.json → demons.",
+    "steps": [3, 8, 15],
+    "gifts": {
+      "limbo": {"ru": "минута тишины", "en": "a minute of silence"},
+      "lust": {"ru": "письмо", "en": "a letter"},
+      "gluttony": {"ru": "пирожное", "en": "a pastry"},
+      "greed": {"ru": "монета", "en": "a coin"},
+      "wrath": {"ru": "камень", "en": "a stone"},
+      "heresy": {"ru": "запретная книга", "en": "a forbidden book"},
+      "violence": {"ru": "осколок", "en": "a shard"},
+      "fraud": {"ru": "маска", "en": "a mask"},
+      "treachery": {"ru": "чужой секрет", "en": "someone's secret"}
+    }
+  },
   "actions": {
+    "demon.talk": {"close": 1, "every": 30, "realm": "hell", "note": "“Talk” in the demon's menu: a word with her"},
+    "demon.gift": {"close": 2, "every": 1440, "realm": "hell", "sin": 1, "note": "a gift her sin loves: closer, and the circle's sin +1"},
+    "demon.stay": {"close": 1, "every": 60, "realm": "hell", "costsTry": true, "note": "stay in her circle a while: closer, and the next try to get out waits"},
     "throw.fling": {"set": {"wrath": "+1"}, "chill": 1, "note": "the angel flung down hard"},
     "throw.push": {"set": {"treachery": "+1"}, "chill": 1, "note": "the angel pushed down slowly, on purpose"},
     "wheel.spin": {"set": {"greed": "+1"}, "note": "a spin of the Wheel of Hell"},

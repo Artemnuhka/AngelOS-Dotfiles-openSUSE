@@ -130,7 +130,7 @@ IpcHandler {
         }
         return "off | on | calm on|off | status | reset | circle <1–9|id> | scene <id> | sin <name> [+1] | outcome stars|pact|limbo | try | ambient";
     }
-    // the corner helper: `angelos helper "tip | joke | hint | ask <text> | plea | status"`
+    // the corner helper: `angelos helper "tip | joke | hint | ask <text> | plea | talk | gift | stay | status"`
     // (owner: angel — the demon leaves at once; dev or owner: prank, ascend, fx,
     // hell, throw; dev only: drag)
     // the novel (services/Novel, ~/AngelOs-Nov): start [chapter] | reset | reload | status |
@@ -198,6 +198,9 @@ IpcHandler {
             Angel.answer(arg);
         else if (cmd === "plea")
             Angel.plea();
+        // the demon of a circle: a word, a gift her sin loves, staying (Story → closeness)
+        else if (cmd === "talk" || cmd === "gift" || cmd === "stay")
+            Angel.demonDo(cmd);
         else if (cmd === "menu")
             Angel.openMenu(arg || "main");
         else if (debug && cmd === "prank")
@@ -222,7 +225,7 @@ IpcHandler {
         else if (debug && cmd === "realm")
             return "burning to " + DesktopWidgets.burnPreview(arg);
         else if (cmd !== "status")
-            return "summon | portal | tip | joke | hint | ask <text> | plea | menu [main|ask] | status" + (Owner.enabled ? " | angel" : "");
+            return "summon | portal | tip | joke | hint | ask <text> | plea | talk | gift | stay | menu [main|ask] | status" + (Owner.enabled ? " | angel" : "");
         return JSON.stringify({
             "character": Story.player.character,
             "shown": Angel.shown,

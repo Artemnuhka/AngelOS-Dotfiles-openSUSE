@@ -50,6 +50,7 @@ JsonAdapter {
         property bool pact: false           // signed: something of hers stays in heaven
         property bool amnesty: false        // fell under the old rules (before the circles): let out at the next start
         property var outcomes: []           // [{kind: stars|pact|limbo|amnesty, circle, at}]
+        property var close: ({})            // each circle's demon and the player: {circle: {points, talkAt, giftAt, stayAt}}
     }
 
     // every choice the player made: [{scene, node, choice, tone, at}] (the last 400)

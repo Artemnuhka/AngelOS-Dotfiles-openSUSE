@@ -9,8 +9,9 @@ import qs.config
 // scripts/cursors.py downloads/builds the themes and writes every config.
 // Hell: while the demon rules the pointer is Config.cursor.hell — "circle" (the default): the
 // circle's own (story/circles.json → cursor, angelOS-Circle-<Circle>), changing as she takes you
-// from circle to circle, in the variation of the mood (`mood`: "" | "tip" | "alive" — set by
-// the game, closer is livelier); or one hell theme always. Built on first use, put on only
+// from circle to circle, in the variation of the mood (`mood`: "" | "tip" | "alive" — how close
+// the player is to this circle's demon, Story.demonStep: close is the accent tip, your own a
+// rare animation); or one hell theme always. Built on first use, put on only
 // when it changes (a new circle, a new mood step: cursors.py apply rewrites niri, GTK, X11…).
 // The angel brings yours back. Your own pick stays in Config.cursor.theme the whole time. If
 // you never picked one, the cursor that was there before (niri's) is kept in
@@ -23,7 +24,8 @@ Singleton {
     // the theme on screen right now: the demon's while she rules
     readonly property bool hellOn: Config.ready && Angel.demon && !!Config.cursor.hell
     // the mood's variation of the circle's cursor: "" (as it is) | "tip" | "alive"
-    property string mood: ""
+    readonly property int demonStep: Story.ready && Story.inHell ? Story.demonStep : 0
+    readonly property string mood: demonStep >= 3 ? "alive" : demonStep >= 2 ? "tip" : ""
     readonly property bool byCircle: Config.cursor.hell === "circle"
     // the circle's own theme now (hell before any circle: angelOS Hell)
     readonly property string circleTheme: {
