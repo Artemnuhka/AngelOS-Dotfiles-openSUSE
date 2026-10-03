@@ -339,7 +339,7 @@ JsonAdapter {
         property bool hellLyrics: true      // the bar's lyrics while the demon rules: hell's blackletter in the circle's colour, no typewriter, no animation
         property string angelLook: "glitch" // glitch (cracked halo, pictures) | ophanim (many-eyed golden wheels, pictures) | chibi (the first pictures) | adult (30×40 pixels) | mini (the first 20×21)
         property string demonLook: "glitch" // the same for the demon (glitch: the sleepless neon one)
-        property real helperScale: 1.0      // 1.00–1.15: Ctrl + mouse wheel over her, 5 % a notch (Y2K → Helper → Size)
+        property real helperScale: 1.0      // 0.75–2.00: Ctrl + mouse wheel, 5 % a notch; rendered size capped to screen (Y2K → Helper → Size)
     }
 
     // the game: angelOS is a story played over the real desktop (services/Story, story/).

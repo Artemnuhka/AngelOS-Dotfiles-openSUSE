@@ -200,8 +200,8 @@ Column {
         DebugNum {
             label: I18n.t("Размер, %", "Size, %")
             value: Math.round((Config.y2k.helperScale || 1) * 100)
-            from: 100
-            to: 115
+            from: 75
+            to: 200
             step: 5
             onMoved: v => Config.y2k.helperScale = v / 100
         }

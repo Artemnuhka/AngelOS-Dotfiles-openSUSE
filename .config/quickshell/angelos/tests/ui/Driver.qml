@@ -27,7 +27,7 @@ import "../../widgets/IconSets.js" as IconSets
 //   previews  every preview scene loads and plays through its frames
 //   search    settings search: 40 typical queries, average and worst time
 //   rig       the helper's pictures (SpriteRig): both figures read, sized as
-//             their rig.json says, swapped and played through without errors
+//             their rig.json says, all nine circle skins, swapped and played through without errors
 //   alttab    the Alt+Tab switcher styles (and hell's own) load and follow the pick
 //   bar       bar widgets (Wi-Fi, Bluetooth, wired, tray, desk sprites) load, their panels open
 //   wrap      long switch labels wrap inside a narrow group instead of running past it
@@ -807,14 +807,17 @@ Scope {
             // flips `who` in one go: with the figures' looks apart (the helper: an ophanim
             // angel and a glitch demon) both are read up front, so the flip ("!") needs no wait;
             // every frame of every part gets shown
-            const steps = [["", "", "angel"], ["", "", "demon"], ["glitch", "glitch", "angel"], ["glitch", "glitch", "demon"], ["", "", "demon"], ["ophanim", "glitch", "angel"], ["ophanim", "glitch", "demon!"], ["ophanim", "glitch", "angel!"]];
+            const steps = [["", "", "angel"], ["", "", "demon"], ["glitch", "glitch", "angel"], ["glitch", "glitch", "demon"], ["", "", "demon"], ["ophanim", "glitch", "angel"], ["ophanim", "glitch", "demon!"], ["ophanim", "glitch", "angel!"]]
+                .concat(["limbo", "lust", "gluttony", "greed", "wrath", "heresy", "violence", "fraud", "treachery"].map(s => ["ophanim", "glitch", "demon", s]))
+                .concat([["ophanim", "glitch", "demon", "__missing__"], ["ophanim", "glitch", "angel!"]]);
             if (rigStep < steps.length) {
-                const [av, dv, w] = steps[rigStep];
+                const [av, dv, w, skin] = steps[rigStep];
                 const who = w.replace("!", ""), atOnce = w.endsWith("!"), variant = who === "angel" ? av : dv;
                 if (!rigAsked) {
                     rig.angelVariant = av;
                     rig.demonVariant = dv;
                     rig.who = who;
+                    rig.skin = skin || "";
                     rigAsked = true;
                     started = Date.now();
                     if (!atOnce)
@@ -825,20 +828,24 @@ Scope {
                 rigAsked = false;
                 rigStep++;
                 const r = rig.rig;
-                const name = (variant ? variant + " " : "") + who;
-                const folder = who + (variant ? "-" + variant : "");
+                const name = (skin || variant ? (skin || variant) + " " : "") + who;
+                const circleSkin = who === "demon" && skin && skin !== "__missing__";
+                const folder = circleSkin ? "demon-" + skin : who + (variant ? "-" + variant : "");
                 if (!rig.ready || rig.file.name !== folder || rig.file.loadedPath !== rig.file.path)
                     rigSeen.push(name + " FAIL: " + (rig.ready ? "still " + rig.file.loadedPath.replace(/.*sprites\//, "") : "no rig"));
                 else if (rig.implicitWidth !== r.size[0] * rig.px || rig.implicitHeight !== r.size[1] * rig.px || rig.body.width !== r.body.w * rig.px)
                     rigSeen.push(name + " FAIL: " + rig.implicitWidth + "×" + rig.implicitHeight + " for " + r.size);
                 else
                     rigSeen.push(name + " " + r.size[0] + "×" + r.size[1] + " " + Object.keys(r.parts).join("+"));
+                // every circle's demon has both wings and the tail (and may have more: gluttony's belly)
+                if (circleSkin && r && !["tail", "wing_left", "wing_right"].every(k => !!r.parts[k]))
+                    rigSeen.push(name + " FAIL: missing animated wing or tail");
                 for (let i = 0; i < 16; i++) {
                     rig.tick = i;
                     rig.blink = i % 3 === 0;
                     rig.talk = i % 2 === 0;
-                    // the ophanim's eye is its face: a blink hides the talking; the girls do both
-                    if (rig.blink && rig.talk && rig.talking !== (variant !== "ophanim"))
+                    // Overlapping face patches must let the blink win (including circle skins).
+                    if (rig.blink && rig.talk && rig.talking !== !(r && r.blinkCoversTalk))
                         rigSeen.push(name + " FAIL: blink and talk at once → talking " + rig.talking);
                 }
                 rig.flutter = !rig.flutter;

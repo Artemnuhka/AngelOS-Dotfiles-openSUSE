@@ -61,11 +61,11 @@ PxPage {
         }
         SettingRow {
             label: I18n.t("Размер", "Size")
-            hint: I18n.t("или Ctrl + колёсико мыши над ней — по 5 %, до +15 %", "Or Ctrl + mouse wheel over her: 5 % a notch, up to +15 %")
+            hint: I18n.t("75–200 %; Ctrl + колёсико мыши над ней — по 5 %. Размер ограничен шириной и 55 % высоты экрана", "75–200%; Ctrl + mouse wheel over her: 5% a notch. Size is capped by the screen width and 55% of its height")
             PxSlider {
                 width: Math.min(parent.width, Theme.u * 120)
-                from: 100
-                to: 115
+                from: 75
+                to: 200
                 stepSize: 5
                 value: Math.round((Config.y2k.helperScale || 1) * 100)
                 suffix: "%"

@@ -40,7 +40,11 @@ Scope {
             exclusionMode: ExclusionMode.Normal
             exclusiveZone: 0
             color: "transparent"
-            implicitWidth: Theme.u * 160
+            readonly property real availableWidth: Math.max(1, screen.width - margins.right - Theme.u * 6)
+            readonly property real spritePadding: Math.min(Theme.u * 12, availableWidth / 4)
+            readonly property real maxSpriteWidth: Math.max(1, Math.floor(availableWidth - spritePadding))
+            readonly property real maxSpriteHeight: Math.max(1, Math.floor(screen.height * 0.55))
+            implicitWidth: Math.min(availableWidth, Math.max(Theme.u * 160, sprite.width + spritePadding))
             // room above her for the one coming down from the sky, or while she is held
             readonly property int headroom: Angel.transition ? Theme.u * 70 : grab.held ? Theme.u * 30 : Novel.wantsClick ? Theme.u * 16 : 0
             implicitHeight: body.height + headroom
@@ -59,16 +63,25 @@ Scope {
             // ---- 8 fps clock: wings, bobbing, blinking, talking ----
             // The demon keeps still: in hell the clock runs only while she talks, is held,
             // swaps, or stirs — once every few minutes, for a moment (the thing seen from the
-            // corner of an eye). The rest of the time nothing ticks at all.
+            // corner of an eye). Gluttony's authored belly mouth keeps its regular clock
+            // at rest, unless calm motion is selected — the belly alone: her wings, tail and
+            // eyes rest like any demon's (`swing` stands still while only the belly ticks).
             property int tick: 0
+            property int swing: 0
             readonly property bool still: demonArt && !Angel.transition
+            readonly property bool bellyClock: sprite.circleSkin && sprite.skin === "gluttony" && !Motion.calm
             property bool stirring: false
-            readonly property bool clockOn: win.visible && !Shell.hiddenScreen(Angel.screenName) && (!still || stirring || Angel.talking || Angel.menuOpen || grab.held || Novel.wantsClick)
+            readonly property bool awake: !still || stirring || Angel.talking || Angel.menuOpen || grab.held || Novel.wantsClick
+            readonly property bool clockOn: win.visible && !Shell.hiddenScreen(Angel.screenName) && (awake || bellyClock)
             Timer {
                 interval: 125
                 running: win.clockOn
                 repeat: true
-                onTriggered: win.tick++
+                onTriggered: {
+                    win.tick++;
+                    if (win.awake)
+                        win.swing++;
+                }
             }
             Timer {
                 id: stirWait
@@ -89,7 +102,7 @@ Scope {
             }
             // the swap flips the sprite halfway through (Angel.becomeDemon/becomeAngel)
             readonly property bool demonArt: Angel.demon
-            readonly property bool blinking: clockOn && tick % 29 === 0
+            readonly property bool blinking: clockOn && awake && tick % 29 === 0
             readonly property bool mouthOpen: Angel.talking && typer.shown < Angel.text.length && tick % 2 === 0
             // Settings → Y2K → Looks, each of them apart: glitch (the cracked-halo angel /
             // the sleepless neon demon, SpriteRig), ophanim (the angel only: many-eyed golden
@@ -99,8 +112,8 @@ Scope {
             readonly property string demonLook: ["glitch", "chibi", "adult", "mini"].includes(Config.y2k.demonLook) ? Config.y2k.demonLook : "glitch"
             readonly property string look: demonArt ? demonLook : angelLook
             readonly property bool mini: look === "mini"
-            // her size: Ctrl + mouse wheel over her, 100…115 % in 5 % steps (Config.y2k.helperScale)
-            readonly property real zoom: Math.max(1, Math.min(1.15, Config.y2k.helperScale || 1))
+            // her requested size: 75…200 % in 5 % steps; screen bounds cap the rendered size
+            readonly property real zoom: Math.max(0.75, Math.min(2, Config.y2k.helperScale || 1))
             readonly property var art: mini ? (demonArt ? DemonMini : AngelMini) : (demonArt ? DemonArt : AngelArt)
             readonly property var frame: {
                 if (mouthOpen)
@@ -573,6 +586,7 @@ Scope {
                             height: ready ? implicitHeight : pixelArt.height
                             who: win.demonArt ? "demon" : "angel"
                             tick: win.tick
+                            swingTick: win.swing
                             blink: win.blinking
                             talk: win.mouthOpen
                             flutter: grab.held
@@ -584,24 +598,15 @@ Scope {
                             // the circle's own demon, once her pictures are cut (sprite-rig.py skins);
                             // the debug panel may stand any circle's demon here
                             skin: !win.demonArt ? "" : GameDebug.skin === "-" ? "" : GameDebug.skin || (Story.inHell ? HellLook.circle : "")
-                            // one screen pixel per art pixel at the default size (~120 px tall)
-                            px: Math.max(1, Theme.u / 2) * win.zoom
+                            // At Theme.u=2, the 236px circle body is ~271px at 115%.
+                            // Bound the whole rig, including wings, without changing the saved zoom.
+                            px: ready ? Math.min(Math.max(1, Theme.u / 2) * win.zoom,
+                                                 win.maxSpriteWidth / Math.max(1, rig.size[0]),
+                                                 win.maxSpriteHeight / Math.max(1, rig.size[1]))
+                                      : Math.max(1, Theme.u / 2) * win.zoom
 
-                            // in hell: her own pictures in the circle's few colours, the dark
-                            // rising from her feet (shaders/hell_shade.frag) — no neon
-                            layer.enabled: win.demonArt && width > 0
-                            layer.smooth: false
-                            layer.effect: ShaderEffect {
-                                readonly property real artPx: sprite.ready ? sprite.px : pixelArt.pixel
-                                readonly property size cells: Qt.size(Math.max(1, Math.round(sprite.width / artPx)), Math.max(1, Math.round(sprite.height / artPx)))
-                                readonly property real shadow: 0.38
-                                readonly property color cEdge: Theme.hellEdge
-                                readonly property color cRim: Theme.hellRim
-                                readonly property color cDim: Theme.hellTextDim
-                                readonly property color cText: Theme.hellText
-                                readonly property color cAccent: Theme.hellAccent
-                                fragmentShader: Qt.resolvedUrl("../../shaders/hell_shade.frag.qsb")
-                            }
+                            // in hell too she is drawn in her own colours, as the author painted her:
+                            // no recolouring into the circle's palette (each circle has its own girl)
 
                             // without the pictures: the 30×40 pixel sprite, 3 screen
                             // pixels each at the default size; the mini ones 4 each
@@ -610,7 +615,9 @@ Scope {
                                 visible: !sprite.ready
                                 bitmap: sprite.ready ? null : win.frame
                                 pixel: win.mini ? Theme.u * 2 : Math.max(2, Math.round(Theme.u * 1.5))
-                                exactPixel: win.zoom > 1 ? pixel * win.zoom : 0
+                                exactPixel: Math.min(pixel * win.zoom,
+                                                     win.maxSpriteWidth / Math.max(1, win.frame.reduce((w, row) => Math.max(w, row.length), 0)),
+                                                     win.maxSpriteHeight / Math.max(1, win.frame.length))
                                 // the mini ones: the colours they had, from the theme
                                 ink: win.demonArt ? "#1a0a14" : (Theme.dark ? Theme.text : Theme.edge)
                                 body: win.demonArt ? "#f7d9e3" : "#ffd9c7"
@@ -737,7 +744,7 @@ Scope {
                             dragging = false;
                             spring.start();
                         }
-                        // Ctrl + wheel: a little bigger or back, 5 % a notch up to +15 %
+                        // Ctrl + wheel: 75…200 %, 5 % a notch
                         property real wheelRest: 0
                         onWheel: w => {
                             if (!(w.modifiers & Qt.ControlModifier)) {
@@ -749,7 +756,7 @@ Scope {
                             if (!notches)
                                 return;
                             wheelRest -= notches;
-                            const next = Math.max(1, Math.min(1.15, Math.round((win.zoom + notches * 0.05) * 100) / 100));
+                            const next = Math.max(0.75, Math.min(2, Math.round((win.zoom + notches * 0.05) * 100) / 100));
                             if (next !== Config.y2k.helperScale)
                                 Config.y2k.helperScale = next;
                             sizeNote.show();

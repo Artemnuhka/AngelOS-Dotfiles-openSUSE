@@ -28,9 +28,16 @@ How a sheet is cut (the same steps the sprites in the shell were made with):
   3. the wings and the tail are rotated around their pivot on the full-size sheet for every
      angle, only then shrunk (clean outlines), cropped to what all frames cover and put into
      the unrotated part's colours: a strip of frames; `at` is where the pivot sits on the body.
-A recipe (JSON): {"sheet", "block", "mask", "boxes": {part: [x0, y0, x1, y1]},
+A recipe (JSON): {"sheet", "block", "mask", "cell"?, "boxes": {part: [x0, y0, x1, y1]},
 "overlays": {"eyes"|"mouth": {"scale", "x", "y", "clip"?, "thr"?}},
 "parts": {part: {"pivot", "at", "angles", "every", "under"?}}}.
+"colors": optional palette size (48 by default). A part may use "sequence": [box, ...]
+and optional "scale" instead of a pivot and angles: authored frames, placed at "at"; "key": N
+makes a flat dark background around them transparent (from each frame's edge inwards, the
+pixels whose R+G+B is at most N — a frame drawn on an opaque black card).
+"cell": the grid (sheet pixels) the blobs are found on — 8 unless said; a sheet whose parts
+nearly touch (a tail a few pixels under the boots, a wing against the hair) needs a finer one,
+4 or 2, or the parts merge into one blob. `guess` goes down by itself while the tail isn't found.
 Needs Pillow and numpy.
 """
 import json
@@ -87,11 +94,11 @@ def palette(res, n=48):
     return np.dstack([np.asarray(q), a])
 
 
-def blobs(a):
-    """the sheet's opaque blobs on a CELL grid: label array (cells), count"""
+def blobs(a, cell=CELL):
+    """the sheet's opaque blobs on a grid of `cell` pixels: label array (cells), count"""
     m = a[..., 3] >= 200
     H, W = m.shape
-    g = m[:H - H % CELL, :W - W % CELL].reshape(H // CELL, CELL, W // CELL, CELL).any(axis=(1, 3))
+    g = m[:H - H % cell, :W - W % cell].reshape(H // cell, cell, W // cell, cell).any(axis=(1, 3))
     lab = np.zeros(g.shape, int)
     n = 0
     for y in range(g.shape[0]):
@@ -111,11 +118,11 @@ def blobs(a):
     return lab, n
 
 
-def masked_crop(a, box, lab):
+def masked_crop(a, box, lab, cell=CELL):
     """the box, keeping only its biggest blob (grown by 2 cells, for loose glitch bits)
     and nothing that belongs to another blob"""
     x0, y0, x1, y1 = box
-    sub = lab[y0 // CELL:(y1 + CELL - 1) // CELL, x0 // CELL:(x1 + CELL - 1) // CELL]
+    sub = lab[y0 // cell:(y1 + cell - 1) // cell, x0 // cell:(x1 + cell - 1) // cell]
     ids, counts = np.unique(sub[sub > 0], return_counts=True)
     own = ids[np.argmax(counts)]
     mine = lab == own
@@ -124,7 +131,7 @@ def masked_crop(a, box, lab):
         p = np.pad(grown, 1)
         grown = p[1:-1, 1:-1] | p[:-2, 1:-1] | p[2:, 1:-1] | p[1:-1, :-2] | p[1:-1, 2:]
     keep = grown & ((lab == 0) | mine)
-    full = np.kron(keep, np.ones((CELL, CELL), bool))
+    full = np.kron(keep, np.ones((cell, cell), bool))
     full = np.pad(full, ((0, a.shape[0] - full.shape[0]), (0, a.shape[1] - full.shape[1])))
     out = a[y0:y1, x0:x1].copy()
     out[..., 3] = np.where(full[y0:y1, x0:x1], out[..., 3], 0)
@@ -161,17 +168,18 @@ class Sheet:
     def __init__(self, recipe):
         self.r = recipe
         self.a = key_out(np.asarray(Image.open(expand(recipe["sheet"])).convert("RGBA")))
-        self.lab = blobs(self.a)[0] if recipe.get("mask") else None
+        self.cell = recipe.get("cell", CELL)
+        self.lab = blobs(self.a, self.cell)[0] if recipe.get("mask") else None
 
     def part(self, name):
         box = self.r["boxes"][name]
         if self.lab is not None:
-            return masked_crop(self.a, box, self.lab)
+            return masked_crop(self.a, box, self.lab, self.cell)
         x0, y0, x1, y1 = box
         return self.a[y0:y1, x0:x1]
 
     def small(self, name):
-        return palette(shrink(self.part(name), 1 / self.r["block"]))
+        return palette(shrink(self.part(name), 1 / self.r["block"]), self.r.get("colors", 48))
 
 
 # ---------- step 2: blink and talk ----------
@@ -239,6 +247,42 @@ def swing_frames(sheet, name, cfg, small0):
     return frames, (pivot[0] - x0, pivot[1] - y0)
 
 
+def key_dark(a, limit):
+    """the frame's dark card gone: from the edge inwards, every transparent pixel and every
+    pixel no brighter than `limit` (R+G+B) that touches one becomes transparent"""
+    dark = (a[..., 3] < 200) | (a[..., :3].astype(int).sum(2) <= limit)
+    H, W = dark.shape
+    seen = np.zeros_like(dark)
+    q = deque((y, x) for y in range(H) for x in (0, W - 1) if dark[y, x])
+    q.extend((y, x) for x in range(W) for y in (0, H - 1) if dark[y, x])
+    for y, x in q:
+        seen[y, x] = True
+    while q:
+        y, x = q.popleft()
+        for ny, nx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
+            if 0 <= ny < H and 0 <= nx < W and dark[ny, nx] and not seen[ny, nx]:
+                seen[ny, nx] = True
+                q.append((ny, nx))
+    out = a.copy()
+    out[..., 3] = np.where(seen, 0, out[..., 3])
+    return out
+
+
+def sequence_frames(sheet, cfg):
+    """An artist's separate poses, aligned at their common top-left origin."""
+    frames = []
+    for x0, y0, x1, y1 in cfg["sequence"]:
+        crop = sheet.a[y0:y1, x0:x1]
+        if cfg.get("key"):
+            crop = key_dark(crop, cfg["key"])
+        frames.append(patch_art(crop, cfg.get("scale", 1), sheet.r["block"]))
+    height = max(f.shape[0] for f in frames)
+    width = max(f.shape[1] for f in frames)
+    frames = [np.pad(f, ((0, height - f.shape[0]), (0, width - f.shape[1]), (0, 0)))
+              for f in frames]
+    return quantize_to(frames, np.concatenate(frames, axis=1))
+
+
 def build(recipe, out):
     out = Path(out)
     sheet = Sheet(recipe)
@@ -246,11 +290,14 @@ def build(recipe, out):
     bh, bw = body.shape[:2]
     parts = {}
     for name, pc in recipe["parts"].items():
-        frames, (pvx, pvy) = swing_frames(sheet, name, pc, sheet.small(name))
+        if "sequence" in pc:
+            frames, (pvx, pvy) = sequence_frames(sheet, pc), (0, 0)
+        else:
+            frames, (pvx, pvy) = swing_frames(sheet, name, pc, sheet.small(name))
         fh, fw = frames[0].shape[:2]
         ax, ay = pc["at"]
         parts[name] = dict(frames=frames, w=fw, h=fh, x=round(ax - pvx), y=round(ay - pvy),
-                           pivot=[round(float(pvx), 1), round(float(pvy), 1)], angles=pc["angles"],
+                           pivot=[round(float(pvx), 1), round(float(pvy), 1)], angles=pc.get("angles", []),
                            under=pc.get("under", True), every=pc.get("every", 1))
     x0 = min([0] + [p["x"] for p in parts.values()])
     y0 = min([0] + [p["y"] for p in parts.values()])
@@ -318,19 +365,20 @@ def check(rig, parts, body, out, overlays=()):
 
 
 # ---------- guess: a first recipe for a new sheet ----------
-def find_parts(a):
+def find_parts(a, cell=CELL):
     """the parts by where the sheets put them (the prompt asks for this layout): the body is
     the tallest blob, on the left; the two big blobs right of it in the upper half are the
-    wings (left one first); low on the sheet, left to right, the tail under the body, the
-    closed eyes and the open mouth. → {part: box}"""
-    lab, n = blobs(a)
+    wings (left one first); low on the sheet the tail — the widest blob lying under the body,
+    wider than tall — and, right of it, the closed eyes and the open mouth: the two topmost there, left to
+    right (more pictures further down, a belly's mouth say, are left alone). → {part: box}"""
+    lab, n = blobs(a, cell)
     H, W = a.shape[:2]
     found = []
     for i in range(1, n + 1):
         ys, xs = np.nonzero(lab == i)
-        if len(ys) < 12:
+        if len(ys) * cell * cell < 12 * CELL * CELL:
             continue
-        box = [int(xs.min() * CELL), int(ys.min() * CELL), int(min(W, (xs.max() + 1) * CELL)), int(min(H, (ys.max() + 1) * CELL))]
+        box = [int(xs.min() * cell), int(ys.min() * cell), int(min(W, (xs.max() + 1) * cell)), int(min(H, (ys.max() + 1) * cell))]
         found.append({"box": box, "area": len(ys), "w": box[2] - box[0], "h": box[3] - box[1],
                       "cx": (box[0] + box[2]) / 2, "cy": (box[1] + box[3]) / 2})
     if not found:
@@ -338,10 +386,11 @@ def find_parts(a):
     body = max(found, key=lambda b: (b["h"], b["area"]))
     big = [b for b in found if b is not body and b["area"] >= body["area"] * 0.04]
     upper = sorted([b for b in big if b["cy"] < H * 0.55 and b["cx"] > body["box"][2]], key=lambda b: -b["area"])[:2]
-    # low on the sheet, left to right: the tail under the body, then the two faces
-    lower = sorted([b for b in big if b not in upper and b["cy"] > H * 0.55], key=lambda b: b["cx"])
-    tail = lower[0] if len(lower) >= 3 else None
-    faces = lower[-2:] if len(lower) >= 2 else []
+    # low on the sheet: the tail under the body, then the two faces right of it, topmost
+    lower = [b for b in big if b not in upper and b["cy"] > H * 0.55]
+    under = [b for b in lower if b["box"][0] < body["box"][2] and b["w"] > b["h"]]
+    tail = max(under, key=lambda b: b["w"]) if under and len(lower) >= 3 else None
+    faces = sorted([b for b in lower if b is not tail], key=lambda b: b["cy"])[:2]
     parts = {"body": body["box"]}
     if len(upper) == 2:
         left, right = sorted(upper, key=lambda b: b["cx"])
@@ -386,10 +435,21 @@ def guess(sheet_path, like):
     ref = json.load(open(like))
     ref_sheet = Sheet(ref)
     ref_body = ref_sheet.small("body")
-    boxes = find_parts(a)
+    # parts that nearly touch merge on the usual grid (the tail into the body): finer ones
+    for cell in (CELL, CELL // 2, CELL // 4):
+        try:
+            boxes = find_parts(a, cell)
+        except SystemExit:
+            if cell == CELL // 4:
+                raise
+            continue
+        if "tail" not in ref["parts"] or "tail" in boxes:
+            break
     # the same figure height as the reference: the art pixel from the body's height
     block = round((boxes["body"][3] - boxes["body"][1]) / ref_body.shape[0], 3)
     recipe = {"sheet": tilde(sheet_path), "block": block, "mask": True, "boxes": boxes, "overlays": {}, "parts": {}}
+    if cell != CELL:
+        recipe["cell"] = cell
     sheet = Sheet(recipe)
     body = sheet.small("body")
     bh, bw = body.shape[:2]

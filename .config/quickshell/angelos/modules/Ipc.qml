@@ -132,7 +132,8 @@ IpcHandler {
         return "off | on | calm on|off | status | reset | circle <1–9|id> | scene <id> | sin <name> [+1] | outcome stars|pact|limbo | try | ambient";
     }
     // the game's debug panel (services/GameDebug), developer mode or the dev stand only:
-    // `angelos debug open | close | toggle | snapshot | restore | restart | tab <id> | status`
+    // `angelos debug open | close | toggle | snapshot | restore | restart | tab <id> | status`,
+    // and what its buttons do: hell [circle] | heaven (at once) | skin <circle|-|> | look <circle|base|>
     function debug(line: string): string {
         if (!GameDebug.allowed)
             return "developer mode only (Settings → System)";
@@ -157,6 +158,15 @@ IpcHandler {
             return GameDebug.restore();
         case "restart":
             return GameDebug.restart();
+        case "hell":
+            return GameDebug.toHellNow(a[1] || "");
+        case "heaven":
+            return GameDebug.toHeavenNow();
+        case "skin":
+            GameDebug.skin = a[1] || "";
+            return "skin: " + (GameDebug.skin || "the circle's");
+        case "look":
+            return a[1] ? GameDebug.lookCircle(a[1]) : GameDebug.lookAsStory();
         case "status":
             return JSON.stringify({
                 "open": GameDebug.shown,
@@ -167,7 +177,7 @@ IpcHandler {
                 "log": GameDebug.log
             });
         }
-        return "open | close | toggle | snapshot | restore | restart | tab <id> | status";
+        return "open | close | toggle | snapshot | restore | restart | tab <id> | hell [circle] | heaven | skin <circle|-|> | look <circle|base|> | status";
     }
     // the corner helper: `angelos helper "tip | joke | hint | ask <text> | plea | talk | gift | stay | status"`
     // (owner: angel — the demon leaves at once; dev or owner: prank, ascend, fx,

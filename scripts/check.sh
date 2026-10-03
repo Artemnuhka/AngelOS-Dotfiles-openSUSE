@@ -59,6 +59,12 @@ else
   fail "Plugin Studio: offline integration tests"
 fi
 
+if python3 "$ROOT/.config/quickshell/angelos/tests/sprites/test_sprite_rig.py" >/dev/null 2>&1; then
+  pass "sprite-rig: authored frame strips"
+else
+  fail "sprite-rig: authored frame strips (tests/sprites/test_sprite_rig.py)"
+fi
+
 if python3 "$ROOT/.config/quickshell/angelos/tests/audio/test_audio_tap.py"; then
   pass "cava's audio tap: no hangs (stand-ins for cava and pw-record)"
 else

@@ -24,6 +24,9 @@ Item {
     property string demonVariant: variant
     property string skin: ""
     property int tick: 0
+    // the clock of the swinging parts (wings, tail); authored frame strips (a belly's mouth)
+    // keep `tick` — the helper rests the one while the other plays
+    property int swingTick: tick
     property bool blink: false
     property bool talk: false
     // held by the pointer: the wings beat twice as fast
@@ -37,6 +40,7 @@ Item {
     readonly property RigFile file: who === "demon" ? (skin && skinRig.rig ? skinRig : demonRig) : angelRig
     readonly property var rig: file.rig
     readonly property bool ready: use && !!rig
+    readonly property bool circleSkin: ready && who === "demon" && file === skinRig
     // the talk overlay is shown; a figure whose eye is its face (rig.json blinkCoversTalk):
     // the blink wins
     readonly property bool talking: talk && !(blink && !!rig && !!rig.blinkCoversTalk)
@@ -53,26 +57,27 @@ Item {
 
     component RigFile: FileView {
         required property string name
-        readonly property string dir: Quickshell.shellDir + "/modules/y2k/sprites/" + name + "/"
-        property var rig: null
-        // the path rig was read from (another folder is read in the background)
-        property string loadedPath: ""
-        path: name ? dir + "rig.json" : ""
+        // Keep the layout and its image directory together while the next skin loads.
+        // `name` changes first; using it for images would mix the old rig with new files.
+        property var loaded: ({path: "", dir: "", rig: null})
+        readonly property var rig: loaded.rig
+        readonly property string loadedPath: loaded.path
+        readonly property string dir: loaded.dir
+        path: name ? Quickshell.shellDir + "/modules/y2k/sprites/" + name + "/rig.json" : ""
         printErrors: false
         // read at once: no frame of the pixel sprite before the pictures
         blockLoading: true
         onLoaded: {
+            let parsed = null;
             try {
-                rig = JSON.parse(text());
+                parsed = JSON.parse(text());
             } catch (e) {
                 console.warn("SpriteRig:", path, e);
-                rig = null;
             }
-            loadedPath = path;
+            loaded = {path: path, dir: path.slice(0, path.lastIndexOf("/") + 1), rig: parsed};
         }
         onLoadFailed: {
-            rig = null;
-            loadedPath = path;
+            loaded = {path: path, dir: "", rig: null};
         }
     }
     RigFile {
@@ -90,7 +95,7 @@ Item {
     // the parts of one layer; each carries its own picture, so the old figure's
     // parts never look into the new one's folder while the swap swaps them
     function partsUnder(under) {
-        const r = rig, dir = file.dir;
+        const data = file.loaded, r = data.rig, dir = data.dir;
         return !r ? [] : Object.keys(r.parts).filter(k => !!r.parts[k].under === under).map(k => Object.assign({
                 "src": "file://" + dir + k + ".png"
             }, r.parts[k]));
@@ -101,7 +106,7 @@ Item {
         id: part
         required property var modelData
         readonly property var p: modelData
-        readonly property int step: Math.floor(root.tick * (root.flutter && p.every === 1 ? 2 : 1) / p.every)
+        readonly property int step: Math.floor((p.angles && p.angles.length ? root.swingTick : root.tick) * (root.flutter && p.every === 1 ? 2 : 1) / p.every)
         readonly property int period: Math.max(1, (p.frames - 1) * 2)
         // back and forth: 0 1 2 3 4 3 2 1 …
         readonly property int frame: {
@@ -135,21 +140,21 @@ Item {
         height: root.body.height
         Image {
             anchors.fill: parent
-            source: root.ready ? "file://" + root.file.dir + "body.png" : ""
+            source: root.use && root.file.loaded.rig ? "file://" + root.file.loaded.dir + "body.png" : ""
             smooth: false
             mipmap: false
         }
         Image {
             anchors.fill: parent
             visible: root.blink
-            source: root.ready ? "file://" + root.file.dir + "eyes.png" : ""
+            source: root.use && root.file.loaded.rig ? "file://" + root.file.loaded.dir + "eyes.png" : ""
             smooth: false
             mipmap: false
         }
         Image {
             anchors.fill: parent
             visible: root.talking
-            source: root.ready ? "file://" + root.file.dir + "mouth.png" : ""
+            source: root.use && root.file.loaded.rig ? "file://" + root.file.loaded.dir + "mouth.png" : ""
             smooth: false
             mipmap: false
         }
