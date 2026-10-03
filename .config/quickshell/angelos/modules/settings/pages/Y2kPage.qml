@@ -144,7 +144,7 @@ PxPage {
         }
     }
 
-    // the helper's versions (four each, and the angel's ophanim), for each of them apart
+    // the helper's versions (four each), for each of them apart
     component LookCard: PxButton {
         id: card
         required property var modelData
@@ -165,10 +165,10 @@ PxPage {
             width: parent.width - Theme.u * 6
             height: parent.height - lookLabel.height - Theme.u * 10
             SpriteRig {
-                visible: card.modelData.value === "chibi" || card.modelData.value === "glitch" || card.modelData.value === "ophanim"
+                visible: card.modelData.value === "chibi" || card.modelData.value === "glitch"
                 anchors.centerIn: parent
                 who: card.who
-                variant: card.modelData.value === "glitch" || card.modelData.value === "ophanim" ? card.modelData.value : ""
+                variant: card.modelData.value === "glitch" ? "glitch" : ""
                 px: Math.max(0.5, Theme.u / 4)
                 width: implicitWidth
                 height: implicitHeight
@@ -210,7 +210,7 @@ PxPage {
             width: parent.width
             wrapMode: Text.Wrap
             dim: true
-            text: Angel.demon ? I18n.t("Нынешняя неоновая демоница без сна, прошлая чиби, суккуб 30×40 или чертёнок 20×21.", "Today's sleepless neon demon, the earlier chibi, a 30×40 succubus or a 20×21 imp.") : Angel.hellShown ? I18n.t("Нынешние глитч-девочки (ангел с треснувшим нимбом и неоновая демоница), офаним — ангел из золотых колёс с глазами, прошлые чиби, взрослые пиксельные 30×40 или самые первые малышки 20×21. Ангел и демоница выбираются отдельно.", "Today's glitch girls (the cracked-halo angel and the neon demon), the ophanim — an angel of golden wheels full of eyes, the earlier chibi, the adult 30×40 pixel ones or the very first 20×21 minis. The angel and the demon are picked apart.") : I18n.t("Нынешняя глитч-девочка (ангел с треснувшим нимбом), офаним — ангел из золотых колёс с глазами, прошлая чиби, взрослая пиксельная 30×40 или самая первая малышка 20×21.", "Today's glitch girl (the cracked-halo angel), the ophanim — an angel of golden wheels full of eyes, the earlier chibi, the adult 30×40 pixel one or the very first 20×21 mini.")
+            text: Angel.demon ? I18n.t("Нынешняя неоновая демоница без сна, прошлая чиби, суккуб 30×40 или чертёнок 20×21.", "Today's sleepless neon demon, the earlier chibi, a 30×40 succubus or a 20×21 imp.") : Angel.hellShown ? I18n.t("Нынешние глитч-девочки (ангел с треснувшим нимбом и неоновая демоница), прошлые чиби, взрослые пиксельные 30×40 или самые первые малышки 20×21. Ангел и демоница выбираются отдельно.", "Today's glitch girls (the cracked-halo angel and the neon demon), the earlier chibi, the adult 30×40 pixel ones or the very first 20×21 minis. The angel and the demon are picked apart.") : I18n.t("Нынешняя глитч-девочка (ангел с треснувшим нимбом), прошлая чиби, взрослая пиксельная 30×40 или самая первая малышка 20×21.", "Today's glitch girl (the cracked-halo angel), the earlier chibi, the adult 30×40 pixel one or the very first 20×21 mini.")
         }
         SettingRow {
             visible: !Angel.demon
@@ -223,10 +223,6 @@ PxPage {
                         {
                             "value": "glitch",
                             "label": I18n.t("Треснувший нимб (сейчас)", "Cracked halo (now)")
-                        },
-                        {
-                            "value": "ophanim",
-                            "label": I18n.t("Офаним", "Ophanim")
                         },
                         {
                             "value": "chibi",

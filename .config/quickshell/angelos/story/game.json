@@ -13,7 +13,15 @@
   "angel": {
     "_comment": "How the angel cools towards the player (services/Story → angelStep): every throw into hell adds its `chill` (actions below), and she is a step colder when she comes back — steps: chill from which she is reserved, cool, and cold (the cold route: from then on for good, until `angelos game reset`). thawHours: a day without a throw gives one step back (not out of the cold route). The player sees no number anywhere: only how she talks (story/angel.json) and her cursor.",
     "steps": [1, 2, 3],
-    "thawHours": 24
+    "thawHours": 24,
+    "fallen": {
+      "_comment": "Her step past cold (Story → angelStep 4, \"fallen\"). A fall into hell that begins while she is already on the cold route (coldRoute: true), or after more than `moreThan` betrayals — the actions in `betrayal` — marks the trip; when the player comes back from it, she has changed: from then on for good, until `angelos game reset`. She shows as `look` whatever look Settings pick (the pick is kept), speaks in her broken voice, cries, and talks by herself oftener — her timer × `talkEvery` (not in calm motion). Her lines: story/angel.json → fallen. Nothing on screen counts or hints at any of it.",
+      "coldRoute": true,
+      "moreThan": 5,
+      "betrayal": ["throw.fling", "throw.push"],
+      "look": "ophanim",
+      "talkEvery": 0.3
+    }
   },
   "closeness": {
     "_comment": "Each circle's demon and the player (services/Story → closeness): her own count of points, in the save (hell.close). steps: the points from which she is acquainted, close, and your own (0 below: a stranger); each step up plays her scene (story/scenes, trigger \"close\", cond circle and closeness). The actions are demon.talk, demon.gift, demon.stay below — close: points, every: minutes between two of them (with her), sin: the gift feeds her circle's sin, costsTry: staying puts off the next try to get out. gifts: what her sin loves, the gift button's word. Her lines for them: story/voices.json → demons.",

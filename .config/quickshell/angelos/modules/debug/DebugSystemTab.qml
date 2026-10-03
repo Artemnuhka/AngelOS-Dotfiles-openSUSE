@@ -24,7 +24,7 @@ Column {
                 const s = GameDebug.snapInfo;
                 if (!s)
                     return I18n.t("Снимка нет.", "No snapshot.");
-                return I18n.t("Снимок от ", "Snapshot of ") + new Date(s.at).toLocaleString(Qt.locale(), "dd.MM HH:mm:ss") + " · " + (s.realm === "hell" ? I18n.t("ад ", "hell ") + s.circle : I18n.t("рай", "heaven")) + I18n.t(" · холод ", " · chill ") + s.chill + (s.coldRoute ? I18n.t(" (холодный рут)", " (cold route)") : "") + I18n.t(" · падений ", " · falls ") + s.falls + I18n.t(" · возвращений ", " · returns ") + s.returns + I18n.t(" · грехов ", " · sins ") + s.sins;
+                return I18n.t("Снимок от ", "Snapshot of ") + new Date(s.at).toLocaleString(Qt.locale(), "dd.MM HH:mm:ss") + " · " + (s.realm === "hell" ? I18n.t("ад ", "hell ") + s.circle : I18n.t("рай", "heaven")) + I18n.t(" · холод ", " · chill ") + s.chill + (s.coldRoute ? I18n.t(" (холодный рут)", " (cold route)") : "") + (s.fallen ? I18n.t(" · изменилась", " · changed") : "") + I18n.t(" · падений ", " · falls ") + s.falls + I18n.t(" · возвращений ", " · returns ") + s.returns + I18n.t(" · грехов ", " · sins ") + s.sins;
             }
         }
         PxText {

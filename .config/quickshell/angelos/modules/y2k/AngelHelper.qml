@@ -105,10 +105,10 @@ Scope {
             readonly property bool blinking: clockOn && awake && tick % 29 === 0
             readonly property bool mouthOpen: Angel.talking && typer.shown < Angel.text.length && tick % 2 === 0
             // Settings → Y2K → Looks, each of them apart: glitch (the cracked-halo angel /
-            // the sleepless neon demon, SpriteRig), ophanim (the angel only: many-eyed golden
-            // wheels, SpriteRig), chibi (the first pictures), adult (the 30×40 pixel sprite,
-            // also when the pictures are missing) or mini (20×21)
-            readonly property string angelLook: ["glitch", "ophanim", "chibi", "adult", "mini"].includes(Config.y2k.angelLook) ? Config.y2k.angelLook : "glitch"
+            // the sleepless neon demon, SpriteRig), chibi (the first pictures), adult (the 30×40
+            // pixel sprite, also when the pictures are missing) or mini (20×21); the angel's own
+            // past cold is the story's (Angel.angelLook: story/game.json → angel.fallen.look)
+            readonly property string angelLook: Angel.angelLook
             readonly property string demonLook: ["glitch", "chibi", "adult", "mini"].includes(Config.y2k.demonLook) ? Config.y2k.demonLook : "glitch"
             readonly property string look: demonArt ? demonLook : angelLook
             readonly property bool mini: look === "mini"
@@ -439,8 +439,9 @@ Scope {
                     repeat: true
                     onTriggered: {
                         typer.shown = Math.min(Angel.text.length, typer.shown + 1);
-                        if (/[0-9A-Za-zÀ-ɏЀ-ӿ]/.test(Angel.text.charAt(typer.shown - 1)))
-                            voice.pip();
+                        const c = Angel.text.charAt(typer.shown - 1);
+                        if (/[0-9A-Za-zÀ-ɏЀ-ӿ]/.test(c))
+                            voice.pip(c);
                     }
                 }
                 Connections {
@@ -458,9 +459,45 @@ Scope {
                     // loaded once the pack is ready: an older, louder pack is synthesised again first
                     readonly property url clip: Sounds.ready ? "file://" + Sounds.dir + "/" + (Angel.demon ? "voiceDemon" : "voiceAngel") + ".wav" : ""
                     property int next: 0
-                    function pip() {
+                    // past cold (story/game.json → angel.fallen) her voice is broken: no pips — a
+                    // syllable on each vowel, one of five, never the same twice running, not on
+                    // top of the last one's start (Sounds.fallenVoice, scripts/y2k-sounds.py)
+                    readonly property bool broken: !Angel.demon && Story.angelFallen
+                    property int lastSyllable: -1
+                    property int turn: 0
+                    property double sungAt: 0
+                    function syllable(c) {
+                        if (!/[аеёиоуыэюяaeiouy]/i.test(c) || Date.now() - sungAt < 90)
+                            return;
+                        let v = Math.floor(Math.random() * 5);
+                        if (v === lastSyllable)
+                            v = (v + 1 + Math.floor(Math.random() * 4)) % 5;
+                        lastSyllable = v;
+                        sungAt = Date.now();
+                        turn = 1 - turn;
+                        const it = syllables.itemAt(v + 5 * turn);
+                        if (it)
+                            it.fx.play();
+                    }
+                    Repeater {
+                        id: syllables
+                        model: voice.broken ? 10 : 0
+                        Item {
+                            id: syl
+                            required property int index
+                            property alias fx: fx
+                            SoundEffect {
+                                id: fx
+                                source: Sounds.ready ? "file://" + Sounds.dir + "/" + Sounds.fallenVoice[syl.index % 5] + ".wav" : ""
+                                volume: Sounds.volumeOf(Sounds.fallenVoice[syl.index % 5])
+                            }
+                        }
+                    }
+                    function pip(c) {
                         if (!on)
                             return;
+                        if (broken)
+                            return syllable(c);
                         const s = [v0, v1, v2][next];
                         next = (next + 1) % 3;
                         s.play();
@@ -590,6 +627,8 @@ Scope {
                             blink: win.blinking
                             talk: win.mouthOpen
                             flutter: grab.held
+                            // past cold she cries (story/game.json → angel.fallen); motion off: no drops
+                            tears: !win.demonArt && Story.angelFallen && !Motion.still
                             use: win.look === "chibi" || win.look === "glitch" || win.look === "ophanim"
                             // each figure's pictures, both read up front: the swap flips at once
                             // even when the angel's look and the demon's differ

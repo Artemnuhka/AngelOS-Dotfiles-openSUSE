@@ -31,15 +31,16 @@ Singleton {
     readonly property var input: ["click", "clickRight", "key"]
     // the helper's Undertale "pips", one per letter (AngelHelper plays them as
     // SoundEffect, so they stay .wav); "voice" above is their switch and preview;
-    // key2 key3: the typing variants
-    readonly property var extra: ["voiceAngel", "voiceDemon", "key2", "key3"]
+    // key2 key3: the typing variants; voiceFallen1…5: her broken voice's syllables (the story's)
+    readonly property var fallenVoice: ["voiceFallen1", "voiceFallen2", "voiceFallen3", "voiceFallen4", "voiceFallen5"]
+    readonly property var extra: ["voiceAngel", "voiceDemon", "key2", "key3"].concat(fallenVoice)
     readonly property string customDir: base + "/custom"
     readonly property var cute: ["open", "toggle", "screenshot", "volume", "windowClose"]
     readonly property var effects: ["crack", "choir", "rocks", "shatter", "voice", "bark", "circle", "circleSoft"]
     // heaven ⇄ hell's sounds: never piled up (story/game.json → pace.soundGap)
     readonly property var transitions: ["crack", "choir", "rocks", "shatter", "circle", "circleSoft"]
     // the helper's own sounds follow "Her voice" (Config.y2k.helperVolume) on top of the volume
-    readonly property var helperSounds: ["angel", "demon", "crack", "choir", "rocks", "shatter", "voice", "voiceAngel", "voiceDemon", "bark"]
+    readonly property var helperSounds: ["angel", "demon", "crack", "choir", "rocks", "shatter", "voice", "voiceAngel", "voiceDemon", "bark"].concat(fallenVoice)
     function volumeOf(name) {
         const v = Math.max(0, Math.min(1, Config.y2k.soundVolume));
         const own = Math.max(0, Math.min(1.5, Number(tweak(name).vol === undefined ? 1 : tweak(name).vol)));
@@ -118,7 +119,7 @@ Singleton {
         }
     }
     // scripts/y2k-sounds.py PACK_VERSION: an older pack is synthesised again
-    readonly property string packVersion: "6"
+    readonly property string packVersion: "7"
     readonly property string base: Config.home + "/.local/share/angelos/sounds"
     readonly property string dir: base + "/y2k"
     readonly property string pack: Config.y2k.soundPack === "overdose" ? "overdose" : "y2k"

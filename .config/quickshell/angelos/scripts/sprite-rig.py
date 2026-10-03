@@ -24,7 +24,8 @@ How a sheet is cut (the same steps the sprites in the shell were made with):
   2. the closed eyes and the open mouth are patches of the face: scaled, laid on the body at
      x, y, and only the pixels that differ from the body under them are kept (clipped to
      `clip`) — the blink and talk overlays, the body's size; where they overlap (a figure
-     whose eye is its face) rig.json says blinkCoversTalk and the blink wins;
+     whose eye is its face) rig.json says blinkCoversTalk and the blink wins; where tears
+     would run from — the low edge of each closed eye — goes into rig.json as `tears`;
   3. the wings and the tail are rotated around their pivot on the full-size sheet for every
      angle, only then shrunk (clean outlines), cropped to what all frames cover and put into
      the unrotated part's colours: a strip of frames; `at` is where the pivot sits on the body.
@@ -319,9 +320,42 @@ def build(recipe, out):
     # a blink hides the talking for its moment, the two never show at once
     if ((ovs[0][..., 3] > 0) & (ovs[1][..., 3] > 0)).any():
         rig["blinkCoversTalk"] = True
+    rig["tears"] = tear_points(ovs[0], bw)
     json.dump(rig, open(out / "rig.json", "w"), indent=1)
     check(rig, parts, body, out, ovs)
     return rig
+
+
+def tear_points(eyes, body_w):
+    """where tears run from: the lowest pixel of each closed eye (a blob of the blink overlay),
+    a third and two thirds across a wide one (a single great eye), in the middle of a small one"""
+    m = eyes[..., 3] > 0
+    H, W = m.shape
+    lab = np.zeros(m.shape, int)
+    n, points = 0, []
+    for y in range(H):
+        for x in range(W):
+            if m[y, x] and not lab[y, x]:
+                n += 1
+                q, cells = deque([(y, x)]), []
+                lab[y, x] = n
+                while q:
+                    cy, cx = q.popleft()
+                    cells.append((cy, cx))
+                    for ny, nx in ((cy + 1, cx), (cy - 1, cx), (cy, cx + 1), (cy, cx - 1)):
+                        if 0 <= ny < H and 0 <= nx < W and m[ny, nx] and not lab[ny, nx]:
+                            lab[ny, nx] = n
+                            q.append((ny, nx))
+                if len(cells) < 6:
+                    continue
+                ys, xs = np.array([c[0] for c in cells]), np.array([c[1] for c in cells])
+                x0, x1 = xs.min(), xs.max()
+                cols = [x0 + (x1 - x0) / 3, x0 + 2 * (x1 - x0) / 3] if x1 - x0 > body_w * 0.3 else [(x0 + x1) / 2]
+                for cx in cols:
+                    cx = int(round(cx))
+                    near = ys[np.abs(xs - cx) <= 1]
+                    points.append([cx, int((near.max() if len(near) else ys.max()) + 1)])
+    return sorted(points)
 
 
 def check(rig, parts, body, out, overlays=()):

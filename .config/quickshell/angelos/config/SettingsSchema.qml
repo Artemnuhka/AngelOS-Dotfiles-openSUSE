@@ -337,7 +337,7 @@ JsonAdapter {
         property bool hellApps: true        // GTK and Qt apps in hell's colours while the demon rules (gtk-live.py, qt-theme.py)
         property bool hellBar: true         // the bar while the demon rules: each style's hell version (HellBarFrame: the circle's stone at the edges, calm plates under the content; the dock stays as it is)
         property bool hellLyrics: true      // the bar's lyrics while the demon rules: hell's blackletter in the circle's colour, no typewriter, no animation
-        property string angelLook: "glitch" // glitch (cracked halo, pictures) | ophanim (many-eyed golden wheels, pictures) | chibi (the first pictures) | adult (30×40 pixels) | mini (the first 20×21)
+        property string angelLook: "glitch" // glitch (cracked halo, pictures) | chibi (the first pictures) | adult (30×40 pixels) | mini (the first 20×21); kept as picked while the story shows her otherwise (Angel.angelLook)
         property string demonLook: "glitch" // the same for the demon (glitch: the sleepless neon one)
         property real helperScale: 1.0      // 0.75–2.00: Ctrl + mouse wheel, 5 % a notch; rendered size capped to screen (Y2K → Helper → Size)
     }

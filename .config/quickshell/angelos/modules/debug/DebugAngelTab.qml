@@ -42,6 +42,36 @@ Column {
                 onToggled: c => Story.player.coldSeen = c
             }
         }
+        // past cold (story/game.json → angel.fallen): what changes her, and the change itself
+        DebugNum {
+            label: I18n.t("Предательства", "Betrayals")
+            value: Story.player.betrayals || 0
+            to: 50
+            note: I18n.t("больше ", "more than ") + (Story.fallenRules.moreThan === undefined ? 5 : Story.fallenRules.moreThan) + " · " + (Story.fallenRules.betrayal || []).join(", ")
+            onMoved: v => Story.player.betrayals = v
+        }
+        Flow {
+            width: parent.width
+            spacing: Theme.u * 6
+            PxToggle {
+                text: I18n.t("Изменилась (облик ", "Changed (look ") + Story.fallenLook + ")"
+                checked: Story.angelFallen
+                onToggled: c => {
+                    Story.player.fallen = c;
+                    Story.player.fallenSince = c ? Story.now() : 0;
+                }
+            }
+            PxToggle {
+                text: I18n.t("Изменится, когда вернётся", "Will change when back")
+                checked: !!Story.player.fallenDue
+                onToggled: c => Story.player.fallenDue = c
+            }
+            PxToggle {
+                text: I18n.t("Первые слова сказаны", "First words said")
+                checked: !!Story.player.fallenSeen
+                onToggled: c => Story.player.fallenSeen = c
+            }
+        }
         Flow {
             width: parent.width
             spacing: Theme.u * 3

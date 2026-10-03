@@ -8,7 +8,7 @@
                                variety) windowOpen workspace lock unlock usbIn
                                usbOut bark as .ogg
                                (.wav without ffmpeg) and the pips voiceAngel
-                               voiceDemon as .wav, prints JSON
+                               voiceDemon, and voiceFallen1…5 as .wav, prints JSON
 
 Chimes are FM bells and detuned triangle pads with a small echo, levelled to
 about -6 dBFS peak and at most -20 dBFS RMS so they sit under music and voice.
@@ -94,10 +94,11 @@ def level(x, peak_db=-6.0, rms_db=-20.0):
 
 # RMS ceilings, dBFS: the helper speaks under everything else
 LOUDNESS = {"bark": -24.0, "voiceAngel": -25.0, "voiceDemon": -26.0, "voice": -25.0, "angel": -24.0, "demon": -25.0,
+            "voiceFallen1": -27.0, "voiceFallen2": -27.0, "voiceFallen3": -27.0, "voiceFallen4": -27.0, "voiceFallen5": -27.0,
             "choir": -23.0, "crack": -25.0, "rocks": -23.0, "shatter": -23.0,
             "key": -27.0, "key2": -27.0, "key3": -27.0, "clickRight": -22.0, "workspace": -24.0,
             "circle": -21.0, "circleSoft": -27.0}
-PACK_VERSION = "6"
+PACK_VERSION = "7"
 
 
 def startup():
@@ -487,6 +488,57 @@ def voice_demon():
     return pip(300, 0.5, 0.055, 0.85, grit=0.18, seed=5)
 
 
+# her broken voice past cold (story/game.json → angel.fallen; AngelHelper plays one on each
+# vowel she types): a short syllable — a consonant's onset, then a sung vowel with a whining
+# pitch that trembles and sags, as in the choir (formant-shaped harmonics) — driven through a
+# hard waveshaper and an 8-bit crush, ring-modulated a little (the wrong, metallic edge), then
+# the fizz cut off: two low-passes at ~2.4 kHz. Unpleasant in kind, not in level: LOUDNESS
+# keeps it under her pips' level on a whole sentence.
+FALLEN = (
+    # onset, vowel formants (F1, F2, F3), start Hz → end Hz, length s
+    ("m", ((800, 1200, 2800)), 330, 255, 0.15),   # "ma"
+    ("n", ((560, 2050, 2850)), 360, 290, 0.13),   # "ne"
+    ("h", ((520, 880, 2600)), 300, 230, 0.17),    # "ho"
+    ("m", ((390, 900, 2500)), 345, 300, 0.14),    # "mu"
+    ("n", ((360, 2500, 3100)), 390, 310, 0.12),   # "ni"
+)
+
+
+def voice_fallen(i):
+    onset, formants, f_start, f_end, sec = FALLEN[i]
+    n = int(sec * RATE)
+    t = np.arange(n) / RATE
+    rng = np.random.default_rng(70 + i)
+    # the whine: a glide down with a sob in it (a quick tremble that widens as it sags)
+    f0 = f_start * (f_end / f_start) ** (t / sec)
+    f0 = f0 * (1 + (0.012 + 0.03 * t / sec) * np.sin(2 * np.pi * 9.5 * t + rng.uniform(0, 6.28)))
+    phase = 2 * np.pi * np.cumsum(f0) / RATE
+    vowel = np.zeros(n)
+    for k in range(1, 30):
+        fk = f_start * k
+        if fk > 5000:
+            break
+        amp = sum(g / (1 + ((fk - fc) / bw) ** 2) for fc, bw, g in zip(formants, (90, 120, 200), (1.0, 0.55, 0.25)))
+        vowel += np.sin(k * phase) * amp / k ** 0.2
+    on = int(0.035 * RATE)
+    if onset == "h":
+        # a breath before the vowel
+        head = lowpass(noise(0.05, 80 + i), 1800) * 0.5
+        vowel[:len(head)] = vowel[:len(head)] * np.linspace(0, 1, len(head)) + head * np.linspace(1, 0.2, len(head))
+    else:
+        # a hum through the nose: the fundamental and a low formant, closed mouth
+        hum = np.sin(phase[:on]) * 0.8 + np.sin(2 * phase[:on]) * 0.3
+        vowel[:on] = vowel[:on] * np.linspace(0.05, 1, on) + hum * np.linspace(1, 0, on)
+    x = vowel * env(n, 0.006, 0.05)
+    x = x / (np.max(np.abs(x)) or 1)
+    # broken: overdriven, crushed, a little ring modulation
+    x = np.tanh(x * 5.0) + 0.25 * np.sign(x) * (np.abs(x) > 0.6)
+    x = crunch8(x, levels=24, hold=3)
+    x = x * (1 - 0.3 + 0.3 * np.sin(2 * np.pi * 63 * t))
+    # the harsh top after the distortion cut off
+    return lowpass(lowpass(x, 2400), 2600) * env(n, 0.004, 0.04)
+
+
 def voice():
     # the preview in Settings: "pip pip pip" of each
     buf = np.zeros(int(1.0 * RATE))
@@ -501,12 +553,15 @@ SOUNDS = {"startup": startup, "notify": notify, "error": error, "click": click, 
           "wallpaper": wallpaper, "open": open_, "toggle": toggle, "screenshot": screenshot, "volume": volume,
           "windowClose": window_close, "demon": demon, "crack": crack, "choir": choir, "rocks": rocks,
           "shatter": shatter, "voice": voice, "voiceAngel": voice_angel, "voiceDemon": voice_demon,
+          "voiceFallen1": lambda: voice_fallen(0), "voiceFallen2": lambda: voice_fallen(1),
+          "voiceFallen3": lambda: voice_fallen(2), "voiceFallen4": lambda: voice_fallen(3),
+          "voiceFallen5": lambda: voice_fallen(4),
           "clickRight": click_right, "key": key, "key2": lambda: key(1), "key3": lambda: key(2),
           "windowOpen": window_open, "workspace": workspace, "lock": lock, "unlock": unlock,
           "usbIn": usb_in, "usbOut": usb_out, "bark": bark, "circle": circle,
           "circleSoft": lambda: circle(True)}
 # played by QtMultimedia's SoundEffect, which only takes .wav
-WAV_ONLY = {"voiceAngel", "voiceDemon"}
+WAV_ONLY = {"voiceAngel", "voiceDemon", "voiceFallen1", "voiceFallen2", "voiceFallen3", "voiceFallen4", "voiceFallen5"}
 
 
 def write_wav(path, x):

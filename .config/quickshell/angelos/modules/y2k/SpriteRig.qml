@@ -31,6 +31,9 @@ Item {
     property bool talk: false
     // held by the pointer: the wings beat twice as fast
     property bool flutter: false
+    // she cries: pixel drops run from under her closed eyes (rig.json → tears, found by
+    // sprite-rig.py on the blink overlay) and fall, on the same clock as the rest of her
+    property bool tears: false
     property real px: 1
     // false: Settings → Y2K → Looks picked a pixel version, the helper draws that instead
     property bool use: true
@@ -162,5 +165,56 @@ Item {
     Repeater {
         model: root.partsUnder(false)
         Part {}
+    }
+
+    // ---- tears: three drops a source, apart in time, falling faster as they go ----
+    // a drop is 3×4 art pixels — a dark blue rim round a light core, a white glint — so it
+    // reads over gold and white alike; a wet trail runs behind it from the eye
+    Repeater {
+        model: root.tears && root.ready && root.rig.tears ? root.rig.tears.length * 3 : 0
+        Item {
+            id: drop
+            required property int index
+            // (the figure may change under it — the swap — before the model follows)
+            readonly property var from: (root.rig && root.rig.tears && root.rig.tears[Math.floor(index / 3)]) || [0, 0]
+            readonly property int period: 18
+            // ticks into this drop's fall; it wells up for a moment, then drops
+            readonly property int t: (root.tick + Math.floor(index / 3) * 5 + (index % 3) * 6) % period
+            readonly property int fall: t < 2 ? 0 : Math.round(0.3 * (t - 2) * (t - 2))
+            visible: t < 13
+            opacity: t < 10 ? 1 : (13 - t) / 4
+            x: root.body.x + root.at(from[0] - 1)
+            y: root.body.y + root.at(from[1])
+            Rectangle {
+                x: root.at(1)
+                width: Math.max(1, root.at(1))
+                height: root.at(drop.fall)
+                color: "#7cc4ff"
+                opacity: 0.45
+            }
+            Item {
+                y: root.at(drop.fall)
+                Rectangle {
+                    width: root.at(3)
+                    height: root.at(drop.t < 2 ? 2 : 4)
+                    color: "#2b63b8"
+                }
+                Rectangle {
+                    x: root.at(1)
+                    y: root.at(1)
+                    width: root.at(1)
+                    height: root.at(drop.t < 2 ? 1 : 2)
+                    color: "#bfe9ff"
+                }
+                Rectangle {
+                    x: root.at(1)
+                    y: root.at(1)
+                    width: root.at(1)
+                    height: root.at(1)
+                    visible: drop.t >= 2
+                    color: "#ffffff"
+                }
+            }
+        }
     }
 }

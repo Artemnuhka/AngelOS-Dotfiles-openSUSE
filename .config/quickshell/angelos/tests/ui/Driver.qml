@@ -1373,6 +1373,50 @@ Scope {
                 return t.indexOf("♡") < 0;
             })();
             report("angel-chill", JSON.stringify(steps) === "[0,1,0,3,3]" && !!reservedLine && !!coldLine && Story.player.coldRoute && heartless, "steps " + JSON.stringify(steps) + " (warm → a throw → a day → three more → three days), lines " + !!reservedLine + "/" + !!coldLine + ", no hearts when cold " + heartless);
+            // past cold (story/game.json → angel.fallen): the fall the cold route's own throw
+            // starts doesn't change her; the next trip down does, by the return — a return that
+            // counts (the game switched off is none); more than five betrayals, then a trip
+            // down, too. She then shows as the story's look whatever is picked (the pick kept),
+            // her lines never twice running; a reset undoes it all
+            const ride = () => {
+                Story.player.character = "demon";
+                Story.fell("limbo");
+                const due = !!Story.player.fallenDue;
+                Story.player.character = "angel";
+                Story.rose();
+                return due;
+            };
+            Story.reset();
+            const picked = Config.y2k.angelLook;
+            Story.act("throw.fling");
+            Story.act("throw.fling");
+            Story.act("throw.fling");
+            const coldTrip = ride();
+            const coldStill = Story.angelStep === 3 && !Story.angelFallen && Angel.angelLook !== Story.fallenLook;
+            Story.player.character = "demon";
+            Story.fell("lust");
+            const offTrip = !!Story.player.fallenDue;
+            Story.player.character = "angel";
+            Story.rose(false);
+            const waits = !Story.angelFallen && Story.player.fallenDue;
+            Story.rose();
+            const changed = Story.angelFallen && Story.angelStep === 4 && Story.angelStepName === "fallen" && Angel.angelLook === Story.fallenLook && Config.y2k.angelLook === picked;
+            const said = [];
+            for (let i = 0; i < 12; i++)
+                said.push(Story.angelLine("chatter"));
+            const repeats = said.some((l, i) => i > 0 && l === said[i - 1]);
+            const first = Story.angelLine("first");
+            Story.reset();
+            const undone = !Story.angelFallen && !Story.player.fallenDue && (Story.player.betrayals || 0) === 0;
+            for (let i = 0; i < 6; i++) {
+                Story.player.chill = 0;
+                Story.act(i % 2 ? "throw.push" : "throw.fling");
+            }
+            const sixthTrip = ride();
+            Story.player.chill = 0;
+            const seventhTrip = ride();
+            const betrayed = Story.angelFallen && !Story.player.coldRoute && Story.player.betrayals === 6;
+            report("angel-fallen", !coldTrip && coldStill && offTrip && waits && changed && !repeats && !!first && !!said[0] && undone && !sixthTrip && seventhTrip && betrayed, "the cold route's own trip " + coldTrip + ", cold " + coldStill + "; next trip marked " + offTrip + ", waits for a counted return " + waits + ", changed " + changed + " (look " + Angel.angelLook + ", pick kept), chatter twice running " + repeats + "; reset " + undone + "; 6th betrayal's trip " + sixthTrip + ", the next " + seventhTrip + " → changed " + betrayed);
             Story.reset();
             phase = "game-exit";
             return;

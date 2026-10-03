@@ -61,6 +61,9 @@ Singleton {
         return true;
     }
     property bool _portal: false
+    // her look (Settings → Y2K → Looks): the pick, unless the story changed her past cold
+    // (story/game.json → angel.fallen) — then that one, whatever is picked; the pick is kept
+    readonly property string angelLook: Story.angelFallen ? Story.fallenLook : ["glitch", "chibi", "adult", "mini"].includes(Config.y2k.angelLook) ? Config.y2k.angelLook : "glitch"
     // the main screen, her own one (Y2K → Screen; unplugged → the main one), or where the focus is
     readonly property var screen: StreamMode.angelScreen(Config.y2k.helperScreen === "focus" ? Shell.focusedScreen : Shell.screenByName(Config.y2k.helperScreen) || Shell.primaryScreen)
     readonly property string screenName: screen ? screen.name : ""
@@ -194,9 +197,12 @@ Singleton {
                 tip();
             return;
         }
-        // as she cools she says her own things more and jokes less; cold, often nothing at all
+        // as she cools she says her own things more and jokes less; cold, often nothing at all;
+        // past cold only her own, and oftener (the timer below)
         const step = Story.angelStep;
         const own = Story.angelLine("chatter");
+        if (step >= 4 && own)
+            return say(own);
         if (step >= 3 && Math.random() < 0.4)
             return;
         if (own && Math.random() < [0, 0.3, 0.5, 0.7][step])
@@ -508,7 +514,7 @@ Singleton {
         liftCurse(false);
         Story.player.character = "angel";
         Story.player.pranks = [];
-        Story.rose();
+        Story.rose(counted);
         // every comeback from hell counts (not the game switched off); the third one opens the portal
         const before = Story.player.returns || 0;
         if (counted !== false)
@@ -721,6 +727,13 @@ Singleton {
             if (Story.player.coldRoute && !Story.player.coldSeen && Novel.playScene("cold")) {
                 Story.player.coldSeen = true;
                 return;
+            }
+            // changed past cold, the first time back: her first words in it (story/angel.json → fallen.first)
+            if (Story.angelFallen && !Story.player.fallenSeen) {
+                Story.player.fallenSeen = true;
+                const first = Story.angelLine("first");
+                if (first)
+                    return root.say(first);
             }
             const cool = Story.angelLine("back");
             if (cool)
@@ -1307,7 +1320,9 @@ Singleton {
     }
     property string nightSaid: ""
     Timer {
-        interval: (Config.y2k.helperTips === "often" ? 6 : 20) * 60000 * (root.demon ? 0.5 : 1)
+        // past cold she talks by herself oftener (story/game.json → angel.fallen.talkEvery) — not
+        // in calm motion; the rest of the quiet (fullscreen, the lock, the stream) as always
+        interval: (Config.y2k.helperTips === "often" ? 6 : 20) * 60000 * (root.demon ? 0.5 : 1) * (!root.demon && Story.angelFallen && !Motion.calm ? Story.fallenTalk : 1)
         running: root.present && Config.y2k.helperTips !== "off"
         repeat: true
         onTriggered: if (!root.talking && !root.menuOpen && !root.transition && !Shell.hiddenScreen(root.screenName))

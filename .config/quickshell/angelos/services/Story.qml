@@ -62,13 +62,40 @@ Singleton {
     readonly property bool inHell: player.character === "demon"
 
     // ---- the angel's warmth (story/game.json → angel) ----
-    // 0 warm · 1 reserved · 2 cool · 3 cold (the cold route, for good). Every throw adds its
-    // chill; a day without one gives a step back; nothing on screen says so.
+    // 0 warm · 1 reserved · 2 cool · 3 cold (the cold route, for good) · 4 fallen (past cold, for
+    // good: angel.fallen). Every throw adds its chill; a day without one gives a step back;
+    // nothing on screen says so.
     readonly property var angelRules: rules.angel || ({})
     readonly property var chillSteps: angelRules.steps && angelRules.steps.length === 3 ? angelRules.steps : [1, 2, 3]
     readonly property int chill: player.chill || 0
-    readonly property int angelStep: player.coldRoute ? 3 : chill >= chillSteps[2] ? 3 : chill >= chillSteps[1] ? 2 : chill >= chillSteps[0] ? 1 : 0
-    readonly property string angelStepName: ["warm", "reserved", "cool", "cold"][angelStep]
+    readonly property int angelStep: player.fallen ? 4 : player.coldRoute ? 3 : chill >= chillSteps[2] ? 3 : chill >= chillSteps[1] ? 2 : chill >= chillSteps[0] ? 1 : 0
+    readonly property string angelStepName: ["warm", "reserved", "cool", "cold", "fallen"][angelStep]
+    // past cold: a trip down that begins with her on the cold route, or after more than
+    // `moreThan` betrayals, changes her by the time the player is back (fell() marks it, rose()
+    // turns her); she then shows as `look` whatever Settings pick
+    readonly property var fallenRules: angelRules.fallen || ({})
+    readonly property bool angelFallen: !!player.fallen
+    readonly property string fallenLook: fallenRules.look || "ophanim"
+    readonly property real fallenTalk: fallenRules.talkEvery > 0 ? fallenRules.talkEvery : 1
+    function isBetrayal(name) {
+        return (fallenRules.betrayal || ["throw.fling", "throw.push"]).includes(name);
+    }
+    // where she stood before this throw (act() keeps it for the fall it starts)
+    property var _beforeThrow: null
+    function markDescent() {
+        // the throw that starts this fall was a moment ago (a stale one is no part of it)
+        const thrown = _beforeThrow && Date.now() - _beforeThrow.at < 15000;
+        const was = thrown ? _beforeThrow : {
+            "cold": !!player.coldRoute,
+            "betrayals": player.betrayals || 0
+        };
+        _beforeThrow = null;
+        if (player.fallen || player.fallenDue)
+            return;
+        const limit = fallenRules.moreThan === undefined ? 5 : fallenRules.moreThan;
+        if ((was.cold && fallenRules.coldRoute !== false) || was.betrayals > limit)
+            save.player.fallenDue = true;
+    }
     function chillBy(n) {
         if (!n)
             return;
@@ -163,14 +190,26 @@ Singleton {
         return s.charAt(0).toUpperCase() + s.slice(1);
     }
 
-    // her line for the step she is at (story/angel.json → <step> → kind), "" when warm or none
+    // her line for the step she is at (story/angel.json → <step> → kind), "" when warm or none;
+    // past cold, a situation without her own lines takes the cold ones. Never the same line
+    // twice in a row
+    property var _lastLine: ({})
     function angelLine(kind) {
         if (inHell || angelStep === 0)
             return "";
-        const list = (angelVoice[angelStepName] || {})[kind];
+        let step = angelStepName, list = (angelVoice[step] || {})[kind];
+        if ((!list || !list.length) && step === "fallen") {
+            step = "cold";
+            list = (angelVoice.cold || {})[kind];
+        }
         if (!list || !list.length)
             return "";
-        const l = list[Math.floor(Math.random() * list.length)];
+        const key = step + "/" + kind;
+        let i = Math.floor(Math.random() * list.length);
+        if (list.length > 1 && i === _lastLine[key])
+            i = (i + 1 + Math.floor(Math.random() * (list.length - 1))) % list.length;
+        _lastLine[key] = i;
+        const l = list[i];
         return render(Array.isArray(l) ? (I18n.english ? l[1] : l[0]) : l);
     }
     readonly property string circle: hell.circle || ""
@@ -435,6 +474,8 @@ Singleton {
             "chill": chill,
             "warmth": angelStep,
             "coldRoute": !!player.coldRoute,
+            "fallen": !!player.fallen,
+            "betrayals": player.betrayals || 0,
             // this circle's demon and the player: closeness 0 a stranger … 3 your own, points
             "closeness": inHell && circle ? closeStepOf(closePoints(circle)) : 0,
             "closePoints": inHell && circle ? closePoints(circle) : 0,
@@ -474,6 +515,15 @@ Singleton {
         if (a.every && t - (_actedAt[name] || 0) < a.every * 60000)
             return false;
         _actedAt[name] = t;
+        // a betrayal (a throw): counted, and where she stood before it is kept for the fall
+        if (isBetrayal(name)) {
+            _beforeThrow = {
+                "cold": !!player.coldRoute,
+                "betrayals": player.betrayals || 0,
+                "at": Date.now()
+            };
+            save.player.betrayals = (player.betrayals || 0) + 1;
+        }
         applySet(a.set);
         chillBy(a.chill || 0);
         return true;
@@ -539,11 +589,19 @@ Singleton {
         save.hell.attempts = 0;
         save.hell.silences = 0;
         save.hell.limbo = false;
+        markDescent();
         setCircle(c);
         return c;
     }
-    // the angel is back (Angel.becomeAngel): hell is over for this time
-    function rose() {
+    // the angel is back (Angel.becomeAngel): hell is over for this time. `counted` false: the
+    // game switched off, no comeback — what was to change her waits for a real one
+    function rose(counted) {
+        // the trip that was to change her is over: she comes back changed
+        if (counted !== false && player.fallenDue) {
+            save.player.fallenDue = false;
+            save.player.fallen = true;
+            save.player.fallenSince = now();
+        }
         save.hell.path = [];
         save.hell.attempts = 0;
         save.hell.silences = 0;
@@ -787,6 +845,7 @@ Singleton {
 
     // ---- dev: Settings → System (developer mode), `angelos game …` ----
     function status() {
+        const dev = Shell.dev || Config.developer.enabled;
         const sins = {};
         for (const id of order)
             sins[id] = Number(vars[id]) || 0;
@@ -803,7 +862,8 @@ Singleton {
             "silences": hell.silences || 0,
             "falls": hell.falls || 0,
             "returns": player.returns || 0,
-            "angel": angelStepName + " (chill " + chill + (player.coldRoute ? ", cold route" : "") + ")",
+            // past cold is the story's secret: only developer mode sees it (and the betrayals)
+            "angel": (angelStep > 3 && !dev ? "cold" : angelStepName) + " (chill " + chill + (player.coldRoute ? ", cold route" : "") + (dev ? ", betrayals " + (player.betrayals || 0) + (player.fallenDue ? ", fallen when back" : "") : "") + ")",
             "close": hell.close || {},
             "pact": !!hell.pact,
             "limbo": !!hell.limbo,
@@ -859,6 +919,12 @@ Singleton {
         save.player.coldRoute = false;
         save.player.coldSince = 0;
         save.player.coldSeen = false;
+        save.player.betrayals = 0;
+        save.player.fallenDue = false;
+        save.player.fallen = false;
+        save.player.fallenSince = 0;
+        save.player.fallenSeen = false;
+        _beforeThrow = null;
         setCircle("");
         Novel.reset();
         return "save reset";

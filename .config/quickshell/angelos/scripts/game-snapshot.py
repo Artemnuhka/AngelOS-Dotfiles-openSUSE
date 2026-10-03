@@ -7,7 +7,7 @@ copied aside, and put back the way they were.
   game-snapshot.py restore   the snapshot's files back in place (each written whole, then
                              renamed over the old one: never half a file)
   game-snapshot.py info      what the snapshot there is holds
-Prints JSON: {"ok": true, "snapshot": {at, realm, circle, chill, coldRoute, falls, returns,
+Prints JSON: {"ok": true, "snapshot": {at, realm, circle, chill, coldRoute, fallen, falls, returns,
 sins}} or {"error": "…"}. The shell restarts after a restore (the panel does it).
 """
 import json
@@ -28,7 +28,8 @@ def summary(save, at):
     p, h, v = save.get("player") or {}, save.get("hell") or {}, save.get("vars") or {}
     return {"at": at, "realm": "hell" if p.get("character") == "demon" else "heaven",
             "circle": h.get("circle") or "", "chill": p.get("chill") or 0,
-            "coldRoute": bool(p.get("coldRoute")), "falls": h.get("falls") or 0, "returns": p.get("returns") or 0,
+            "coldRoute": bool(p.get("coldRoute")), "fallen": bool(p.get("fallen")),
+            "falls": h.get("falls") or 0, "returns": p.get("returns") or 0,
             "sins": sum(x for x in v.values() if isinstance(x, (int, float)))}
 
 

@@ -31,6 +31,13 @@ JsonAdapter {
         property bool coldRoute: false
         property double coldSince: 0
         property bool coldSeen: false       // the cold route's scene has played
+        // her step past cold (story/game.json → angel.fallen): the betrayals counted, a trip down
+        // that will change her (marked as it begins), changed (for good) and since when
+        property int betrayals: 0
+        property bool fallenDue: false
+        property bool fallen: false
+        property double fallenSince: 0
+        property bool fallenSeen: false     // her first words after it have been said
     }
 
     // the story's variables: the sins the player's choices weigh (limbo lust gluttony greed
