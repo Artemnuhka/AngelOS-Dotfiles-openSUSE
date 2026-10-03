@@ -11,7 +11,10 @@ pixel frame on buttons and fields — a 2 px outline with corners stepped in by 
 a 2 px bevel, the same frame GTK gets (templates/gtk3.css); the accent for selections) and
 Fusion underneath. The frames are small nine-slice PNGs next to the stylesheet; the stylesheet
 names a hash of them, so new frames change its text and qt6ct reloads it.
-qt6ct watches its folder, so running Qt apps change on the fly, heaven ↔ hell included.
+qt6ct watches its folder — only the folder itself, not qss/ or colors/ — so after a change a
+stamp is written there (.angelos-stamp) and running Qt apps take the new look on the fly
+(qt6ct waits 3 s), heaven ↔ hell included. Telegram draws its own fields: the stylesheet
+leaves them to it (its theme follows angelOS too, scripts/telegram-theme.py).
 Apps only use qt6ct with QT_QPA_PLATFORMTHEME=qt6ct: this sets it in niri's environment
 block (cfg/misc.kdl, the old value kept in a comment), in systemd's user manager and
 D-Bus activation; the shell itself stays on its own (bin/angelos), apps started from
@@ -211,6 +214,16 @@ QGroupBox::title { subcontrol-origin: margin; left: 8px; padding: 0 4px; color: 
 QSlider::groove:horizontal { height: 4px; background: %(sunken)s; border: 1px solid %(lo)s; }
 QSlider::handle:horizontal { width: 10px; margin: -6px 0; background: %(face)s; border: 2px solid; border-color: %(hi)s %(lo)s %(lo)s %(hi)s; }
 QSlider::sub-page:horizontal { background: %(accent)s; }
+/* Telegram (and its forks) draws its own fields — background, underline, its focus — in its own
+   theme, which follows angelOS on the fly (scripts/telegram-theme.py). The field box above would
+   sit inside them as a frame of other colours (the ones the app started with). Its widgets are
+   Ui::RpWidget; its text fields have no class name of their own, so: any field inside one */
+Ui--RpWidget QTextEdit, Ui--RpWidget QLineEdit, Ui--MaskedInputField {
+    background: transparent; color: palette(text);
+    border: none; border-image: none; border-radius: 0px; padding: 0px;
+    selection-background-color: palette(highlight); selection-color: palette(highlighted-text);
+}
+Ui--RpWidget QTextEdit:focus, Ui--RpWidget QLineEdit:focus, Ui--MaskedInputField:focus { border: none; border-image: none; }
 """ % dict(c, realm=p.get("appsRealm", "heaven"))
     return css
 
@@ -354,8 +367,11 @@ def main():
         print(json.dumps({"qt": "off"}))
         return
     p = dict(pal, **(pal.get("apps") or {}))
-    write(SCHEME, colours(p))
-    write(QSS, stylesheet(p, frames(p)))
+    changed = write(SCHEME, colours(p))
+    changed = write(QSS, stylesheet(p, frames(p))) or changed
+    # qt6ct reloads on a change in its folder only: a stamp there tells running apps
+    if changed:
+        write(QT6CT / ".angelos-stamp", hashlib.sha1((SCHEME.read_text() + QSS.read_text()).encode()).hexdigest() + "\n")
     set_conf(True)
     if niri_env(True) == "set":
         session_env("qt6ct")

@@ -23,6 +23,6 @@
                "~/.var/app/com.valvesoftware.Steam/.local/share/Steam/millennium/themes/angelOS/{skin.json,angelos.css,angelos.js,colors.json,colors.css,webkit.css,.angelos}"] },
   { "id": "qt",        "name": "Qt: qt6ct (рай/ад, пиксельный стиль)", "command": "python3 {{shellDir}}/scripts/qt-theme.py {{paletteFile}}",
     "writes": ["~/.config/qt6ct/colors/angelos.conf", "~/.config/qt6ct/qss/angelos.qss", "~/.config/qt6ct/qt6ct.conf",
-               "~/.config/qt6ct/qss/angelos-frame-{raised,sunken,default,focus}.png"] },
+               "~/.config/qt6ct/qss/angelos-frame-{raised,sunken,default,focus}.png", "~/.config/qt6ct/.angelos-stamp"] },
   { "id": "niri",      "name": "niri (рамки окон)", "template": "niri.kdl", "target": "~/.config/niri/angelos.kdl" }
 ]

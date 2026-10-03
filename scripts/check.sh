@@ -72,6 +72,13 @@ else
   fail "browser themes: tests/browsers/test_browser_theme.py"
 fi
 
+if python3 "$ROOT/.config/quickshell/angelos/tests/qt/test_qt_theme.py" >"$WORK/qt.log" 2>&1; then
+  pass "Qt look: Telegram's own fields left to it, running apps told (throw-away HOME)"
+else
+  sed 's/^/    /' "$WORK/qt.log" >&2
+  fail "Qt look: tests/qt/test_qt_theme.py"
+fi
+
 if bash "$ROOT/.config/quickshell/angelos/tests/author/run.sh" >"$WORK/author.log" 2>&1; then
   pass "author's tools: only for an account GitHub lets in (stand-in gh)"
 else

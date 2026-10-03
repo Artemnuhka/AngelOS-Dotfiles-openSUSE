@@ -19,6 +19,10 @@ resolved) recoloured — its greys onto angelOS's surfaces and text by brightnes
 onto the accent, the rest (names, file icons, red and green) left alone. The chat
 background is a tile of faint pixel hearts on the desk colour; in hell, embers and
 pentagrams on obsidian.
+
+Telegram draws its own text fields with these keys (historyComposeArea*, inputBorderFg,
+activeLineFg, filterInput*); a box around its message field was never one of them but
+angelOS's Qt stylesheet (scripts/qt-theme.py), which now leaves Telegram's fields alone.
 """
 import colorsys
 import io
