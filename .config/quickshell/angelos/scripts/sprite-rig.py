@@ -23,7 +23,8 @@ How a sheet is cut (the same steps the sprites in the shell were made with):
      hard alpha) and reduced to 48 colours;
   2. the closed eyes and the open mouth are patches of the face: scaled, laid on the body at
      x, y, and only the pixels that differ from the body under them are kept (clipped to
-     `clip`) — the blink and talk overlays, the body's size;
+     `clip`) — the blink and talk overlays, the body's size; where they overlap (a figure
+     whose eye is its face) rig.json says blinkCoversTalk and the blink wins;
   3. the wings and the tail are rotated around their pivot on the full-size sheet for every
      angle, only then shrunk (clean outlines), cropped to what all frames cover and put into
      the unrotated part's colours: a strip of frames; `at` is where the pivot sits on the body.
@@ -267,6 +268,10 @@ def build(recipe, out):
     for name in ("eyes", "mouth"):
         ovs.append(overlay(sheet, body, name))
         Image.fromarray(ovs[-1], "RGBA").save(out / (name + ".png"))
+    # a figure whose eye is its face (the closed eye and the talking one are the same spot):
+    # a blink hides the talking for its moment, the two never show at once
+    if ((ovs[0][..., 3] > 0) & (ovs[1][..., 3] > 0)).any():
+        rig["blinkCoversTalk"] = True
     json.dump(rig, open(out / "rig.json", "w"), indent=1)
     check(rig, parts, body, out, ovs)
     return rig
@@ -292,13 +297,17 @@ def check(rig, parts, body, out, overlays=()):
         bg.alpha_composite(im)
         tiles.append(bg.resize((W * 3, H * 3), Image.NEAREST))
     bh, bw = body.shape[:2]
+    # the face: the body's upper half, or down past the lowest overlay pixel (a girl's face is
+    # up there, a figure's eye may sit lower)
+    low = max([int(np.nonzero(ov[..., 3].any(axis=1))[0].max()) + 4 for ov in overlays if ov[..., 3].any()] or [0])
+    fh = min(bh, max(int(bh * 0.55), low))
     for ov in (None,) + tuple(overlays):
         im = Image.fromarray(body, "RGBA")
         if ov is not None:
             im.alpha_composite(Image.fromarray(ov, "RGBA"))
         bg = Image.new("RGBA", im.size, (60, 40, 70, 255))
         bg.alpha_composite(im)
-        face = bg.crop((0, 0, bw, int(bh * 0.55)))
+        face = bg.crop((0, 0, bw, fh))
         tiles.append(face.resize((face.width * 3, face.height * 3), Image.NEAREST))
     s = Image.new("RGBA", (sum(t.width + 12 for t in tiles), max(t.height for t in tiles)), (20, 20, 20, 255))
     x = 0

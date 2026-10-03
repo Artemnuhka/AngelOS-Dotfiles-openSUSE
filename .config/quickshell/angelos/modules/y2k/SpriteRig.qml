@@ -8,7 +8,9 @@ import Quickshell.Io
 // pre-rendered swing frames, played back and forth on the helper's 8 fps
 // clock. rig.json holds the layout in art pixels; `px` screen pixels each.
 // `variant`: which pictures — "" the chibi ones (sprites/<who>/), "glitch" the
-// cracked-halo angel and the sleepless neon demon (sprites/<who>-glitch/).
+// cracked-halo angel and the sleepless neon demon (sprites/<who>-glitch/), "ophanim" the
+// many-eyed golden wheels (the angel's only: sprites/angel-ophanim/). `angelVariant` and
+// `demonVariant` set it apart for each figure (the helper: the angel's look and the demon's).
 // `skin`: the demon of a circle of hell (sprites/demon-<skin>/, cut by
 // scripts/sprite-rig.py skins from the author's sheets) — until a circle has one, the
 // demon of `variant` stands in.
@@ -18,6 +20,8 @@ Item {
 
     property string who: "angel"
     property string variant: ""
+    property string angelVariant: variant
+    property string demonVariant: variant
     property string skin: ""
     property int tick: 0
     property bool blink: false
@@ -33,6 +37,9 @@ Item {
     readonly property RigFile file: who === "demon" ? (skin && skinRig.rig ? skinRig : demonRig) : angelRig
     readonly property var rig: file.rig
     readonly property bool ready: use && !!rig
+    // the talk overlay is shown; a figure whose eye is its face (rig.json blinkCoversTalk):
+    // the blink wins
+    readonly property bool talking: talk && !(blink && !!rig && !!rig.blinkCoversTalk)
     // where the body is inside the rig (the figure without wings and tail)
     // px may be fractional (the helper's Ctrl+wheel size): edges are rounded to whole
     // screen pixels, so the parts still meet without seams
@@ -48,6 +55,8 @@ Item {
         required property string name
         readonly property string dir: Quickshell.shellDir + "/modules/y2k/sprites/" + name + "/"
         property var rig: null
+        // the path rig was read from (another folder is read in the background)
+        property string loadedPath: ""
         path: name ? dir + "rig.json" : ""
         printErrors: false
         // read at once: no frame of the pixel sprite before the pictures
@@ -59,16 +68,20 @@ Item {
                 console.warn("SpriteRig:", path, e);
                 rig = null;
             }
+            loadedPath = path;
         }
-        onLoadFailed: rig = null
+        onLoadFailed: {
+            rig = null;
+            loadedPath = path;
+        }
     }
     RigFile {
         id: angelRig
-        name: root.variant === "glitch" ? "angel-glitch" : "angel"
+        name: root.angelVariant === "glitch" || root.angelVariant === "ophanim" ? "angel-" + root.angelVariant : "angel"
     }
     RigFile {
         id: demonRig
-        name: root.variant === "glitch" ? "demon-glitch" : "demon"
+        name: root.demonVariant === "glitch" ? "demon-glitch" : "demon"
     }
     RigFile {
         id: skinRig
@@ -135,7 +148,7 @@ Item {
         }
         Image {
             anchors.fill: parent
-            visible: root.talk
+            visible: root.talking
             source: root.ready ? "file://" + root.file.dir + "mouth.png" : ""
             smooth: false
             mipmap: false

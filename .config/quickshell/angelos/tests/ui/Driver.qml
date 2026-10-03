@@ -64,6 +64,9 @@ Scope {
     id: root
 
     property int failures: 0
+    property int rigStep: 0                 // the sprite-rig phase: which look, asked yet, what it saw
+    property bool rigAsked: false
+    property var rigSeen: []
     function report(name, ok, detail) {
         if (!ok)
             failures++;
@@ -799,27 +802,48 @@ Scope {
             return;
         }
         if (phase === "rig") {
-            // the swap flips `who` in one go; every frame of every part gets shown
-            const seen = [];
-            // the chibi pictures and the glitch ones (the default look), both figures each
-            for (const [variant, who] of [["", "angel"], ["", "demon"], ["", "angel"], ["glitch", "angel"], ["glitch", "demon"], ["", "demon"]]) {
-                rig.variant = variant;
-                rig.who = who;
+            // one look a tick: another folder's rig.json is read in the background. The swap
+            // flips `who` in one go: with the figures' looks apart (the helper: an ophanim
+            // angel and a glitch demon) both are read up front, so the flip ("!") needs no wait;
+            // every frame of every part gets shown
+            const steps = [["", "", "angel"], ["", "", "demon"], ["glitch", "glitch", "angel"], ["glitch", "glitch", "demon"], ["", "", "demon"], ["ophanim", "glitch", "angel"], ["ophanim", "glitch", "demon!"], ["ophanim", "glitch", "angel!"]];
+            if (rigStep < steps.length) {
+                const [av, dv, w] = steps[rigStep];
+                const who = w.replace("!", ""), atOnce = w.endsWith("!"), variant = who === "angel" ? av : dv;
+                if (!rigAsked) {
+                    rig.angelVariant = av;
+                    rig.demonVariant = dv;
+                    rig.who = who;
+                    rigAsked = true;
+                    started = Date.now();
+                    if (!atOnce)
+                        return;
+                }
+                if (!atOnce && rig.file.loadedPath !== rig.file.path && Date.now() - started < 2000)
+                    return;
+                rigAsked = false;
+                rigStep++;
                 const r = rig.rig;
                 const name = (variant ? variant + " " : "") + who;
-                if (!rig.ready)
-                    seen.push(name + " FAIL: no rig");
+                const folder = who + (variant ? "-" + variant : "");
+                if (!rig.ready || rig.file.name !== folder || rig.file.loadedPath !== rig.file.path)
+                    rigSeen.push(name + " FAIL: " + (rig.ready ? "still " + rig.file.loadedPath.replace(/.*sprites\//, "") : "no rig"));
                 else if (rig.implicitWidth !== r.size[0] * rig.px || rig.implicitHeight !== r.size[1] * rig.px || rig.body.width !== r.body.w * rig.px)
-                    seen.push(name + " FAIL: " + rig.implicitWidth + "×" + rig.implicitHeight + " for " + r.size);
+                    rigSeen.push(name + " FAIL: " + rig.implicitWidth + "×" + rig.implicitHeight + " for " + r.size);
                 else
-                    seen.push(name + " " + r.size[0] + "×" + r.size[1] + " " + Object.keys(r.parts).join("+"));
+                    rigSeen.push(name + " " + r.size[0] + "×" + r.size[1] + " " + Object.keys(r.parts).join("+"));
                 for (let i = 0; i < 16; i++) {
                     rig.tick = i;
                     rig.blink = i % 3 === 0;
                     rig.talk = i % 2 === 0;
+                    // the ophanim's eye is its face: a blink hides the talking; the girls do both
+                    if (rig.blink && rig.talk && rig.talking !== (variant !== "ophanim"))
+                        rigSeen.push(name + " FAIL: blink and talk at once → talking " + rig.talking);
                 }
                 rig.flutter = !rig.flutter;
+                return;
             }
+            const seen = rigSeen;
             report("sprite-rig", seen.every(s => s.indexOf("FAIL") < 0), seen.join(", "));
             console.log("TEST-PAGE alttab");
             AltTab.items = [1, 2, 3, 4, 5].map(i => ({

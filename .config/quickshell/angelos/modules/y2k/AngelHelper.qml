@@ -92,12 +92,12 @@ Scope {
             readonly property bool blinking: clockOn && tick % 29 === 0
             readonly property bool mouthOpen: Angel.talking && typer.shown < Angel.text.length && tick % 2 === 0
             // Settings → Y2K → Looks, each of them apart: glitch (the cracked-halo angel /
-            // the sleepless neon demon, SpriteRig), chibi (the first pictures), adult (the
-            // 30×40 pixel sprite, also when the pictures are missing) or mini (20×21)
-            readonly property string look: {
-                const l = demonArt ? Config.y2k.demonLook : Config.y2k.angelLook;
-                return ["glitch", "chibi", "adult", "mini"].includes(l) ? l : "glitch";
-            }
+            // the sleepless neon demon, SpriteRig), ophanim (the angel only: many-eyed golden
+            // wheels, SpriteRig), chibi (the first pictures), adult (the 30×40 pixel sprite,
+            // also when the pictures are missing) or mini (20×21)
+            readonly property string angelLook: ["glitch", "ophanim", "chibi", "adult", "mini"].includes(Config.y2k.angelLook) ? Config.y2k.angelLook : "glitch"
+            readonly property string demonLook: ["glitch", "chibi", "adult", "mini"].includes(Config.y2k.demonLook) ? Config.y2k.demonLook : "glitch"
+            readonly property string look: demonArt ? demonLook : angelLook
             readonly property bool mini: look === "mini"
             // her size: Ctrl + mouse wheel over her, 100…115 % in 5 % steps (Config.y2k.helperScale)
             readonly property real zoom: Math.max(1, Math.min(1.15, Config.y2k.helperScale || 1))
@@ -576,8 +576,11 @@ Scope {
                             blink: win.blinking
                             talk: win.mouthOpen
                             flutter: grab.held
-                            use: win.look === "chibi" || win.look === "glitch"
-                            variant: win.look === "glitch" ? "glitch" : ""
+                            use: win.look === "chibi" || win.look === "glitch" || win.look === "ophanim"
+                            // each figure's pictures, both read up front: the swap flips at once
+                            // even when the angel's look and the demon's differ
+                            angelVariant: win.angelLook === "glitch" || win.angelLook === "ophanim" ? win.angelLook : ""
+                            demonVariant: win.demonLook === "glitch" ? "glitch" : ""
                             // the circle's own demon, once her pictures are cut (sprite-rig.py skins)
                             skin: win.demonArt && Story.inHell ? HellLook.circle : ""
                             // one screen pixel per art pixel at the default size (~120 px tall)
