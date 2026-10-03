@@ -32,6 +32,8 @@ Singleton {
     // what this punch broke: glass | tv | burn | claws | sigil
     readonly property var kinds: HellLook.breakageKinds
     property string kind: "glass"
+    // the next punch breaks this kind whatever the settings say (the debug panel), once
+    property string forceKind: ""
     // one of `from`, not the one there is now if there is another
     function oneOf(from) {
         const others = from.filter(k => k !== kind);
@@ -164,7 +166,8 @@ Singleton {
         function onPunched(name, sound) {
             root.screenName = name;
             root.seed = Math.floor(Math.random() * 100000) + 1;
-            root.kind = root.pickKind();
+            root.kind = root.kinds.includes(root.forceKind) ? root.forceKind : root.pickKind();
+            root.forceKind = "";
             root.place();
             root.falling = false;
             root.fall = 0;

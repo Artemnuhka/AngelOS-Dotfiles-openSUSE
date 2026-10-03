@@ -279,7 +279,11 @@ Singleton {
         const heaven = !Angel.hellShown;
         const out = [];
         const seenPages = {};
+        const developer = Config.developer.enabled;
         for (const raw of entries) {
+            // developer mode's own groups and rows (the game's tools) only while it is on
+            if (raw.developer && !developer)
+                continue;
             const e = heaven && raw.kind !== "page" ? _inHeaven(raw) : raw;
             if (!e)
                 continue;

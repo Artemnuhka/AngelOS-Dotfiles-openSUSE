@@ -8,6 +8,8 @@
 Every I18n.t("…", "…") pair is picked up: page headings and subtitles, PxGroup
 titles, SettingRow labels and hints, and the texts inside a row or group
 (options, buttons) as extra words. New settings become searchable by themselves.
+A group or row shown only in developer mode (`shown:`/`visible: Config.developer.enabled`)
+is marked "developer": true, its rows too — the search leaves them out while the mode is off.
 """
 import json
 import re
@@ -17,6 +19,7 @@ from pathlib import Path
 PAIR = re.compile(r'I18n\.t\(\s*"((?:[^"\\]|\\.)*)"\s*,\s*"((?:[^"\\]|\\.)*)"\s*\)')
 PROP = re.compile(r'^\s*"?(heading|subtitle|title|label|hint|text|placeholder)"?\s*:\s*(.*)$')
 OPEN = re.compile(r"^\s*([A-Z][\w.]*)\s*\{")
+DEV = re.compile(r"^\s*(shown|visible)\s*:\s*Config\.developer\.enabled\s*$")
 
 
 def unescape(s):
@@ -54,9 +57,13 @@ def index_page(path):
                 grp = next((e for c, _, e in reversed(stack) if c == "PxGroup" and e), None)
                 entry = {"page": pid, "kind": "row", "ru": "", "en": "", "hint": {"ru": "", "en": ""}, "words": {"ru": [], "en": []},
                          "group": {"ru": grp["ru"], "en": grp["en"]} if grp else {"ru": "", "en": ""}}
+                if grp and grp.get("developer"):
+                    entry["developer"] = True
             if entry is not None:
                 out.append(entry)
             stack.append((comp, depth, entry))
+        if DEV.match(code) and stack and stack[-1][2] is not None and stack[-1][0] in ("PxGroup", "SettingRow"):
+            stack[-1][2]["developer"] = True
         p = PROP.match(code)
         pairs = [(unescape(a), unescape(b)) for a, b in PAIR.findall(code)]
         if p and pairs:

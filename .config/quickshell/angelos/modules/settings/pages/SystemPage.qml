@@ -63,114 +63,20 @@ PxPage {
         }
     }
 
-    // ---- developer mode: see and steer the story (Story, `angelos game …`) ----
+    // ---- developer mode: see and steer the story — the game's debug panel (GameDebug) ----
     PxGroup {
-        id: gameDev
         title: I18n.t("Игра: инструменты разработчика", "The game: developer tools")
         advanced: true
         shown: Config.developer.enabled
         icon: "chip"
         width: parent.width
-        property string info: ""
-        property string circle: "limbo"
-        property string scene: ""
-        property bool armed: false
-        function refresh() {
-            info = Story.status();
-        }
-        Component.onCompleted: refresh()
-        Timer {
-            interval: 2000
-            repeat: true
-            running: gameDev.visible && Config.developer.enabled
-            onTriggered: gameDev.refresh()
-        }
-        PxText {
-            width: parent.width
-            kind: "mono"
-            dim: true
-            wrapMode: Text.WrapAnywhere
-            text: gameDev.info
-        }
         SettingRow {
-            label: I18n.t("Перейти в круг", "Go to a circle")
-            hint: I18n.t("из рая ангел сначала падает; переход — с затемнением и ударом, как в игре", "from heaven the angel falls first; with the dark and the blow, as in the game")
-            Flow {
-                width: parent.width
-                spacing: Theme.u * 3
-                PxCombo {
-                    width: Theme.u * 90
-                    model: Story.order.map(id => ({
-                                "label": Theme.roman(Story.circleN(id)) + " · " + Story.circleName(id),
-                                "value": id
-                            }))
-                    currentValue: gameDev.circle
-                    onActivated: v => gameDev.circle = v
-                }
-                PxButton {
-                    icon: "play"
-                    text: I18n.t("Перейти", "Go")
-                    onClicked: {
-                        Story.jump(gameDev.circle);
-                        gameDev.refresh();
-                    }
-                }
-            }
-        }
-        SettingRow {
-            label: I18n.t("Запустить сцену", "Play a scene")
-            hint: I18n.t("сцены — story/scenes/*.json; условия события не проверяются", "Scenes are story/scenes/*.json; the event's condition isn't checked")
-            Flow {
-                width: parent.width
-                spacing: Theme.u * 3
-                PxCombo {
-                    width: Theme.u * 90
-                    model: Object.keys(Novel.scenes).sort()
-                    currentValue: gameDev.scene
-                    onActivated: v => gameDev.scene = v
-                }
-                PxButton {
-                    icon: "play"
-                    enabled: !!gameDev.scene
-                    text: I18n.t("Запустить", "Play")
-                    onClicked: {
-                        Novel.startScene(gameDev.scene);
-                        gameDev.refresh();
-                    }
-                }
-            }
-        }
-        SettingRow {
-            label: I18n.t("Сохранение", "The save")
-            hint: Story.file
-            Flow {
-                width: parent.width
-                spacing: Theme.u * 3
-                PxButton {
-                    icon: "refresh"
-                    danger: gameDev.armed
-                    text: gameDev.armed ? I18n.t("Точно сбросить?", "Really reset?") : I18n.t("Сбросить сохранение", "Reset the save")
-                    onClicked: {
-                        if (!gameDev.armed) {
-                            gameDev.armed = true;
-                            disarm.restart();
-                            return;
-                        }
-                        gameDev.armed = false;
-                        Story.reset();
-                        gameDev.refresh();
-                    }
-                    Timer {
-                        id: disarm
-                        interval: 4000
-                        onTriggered: gameDev.armed = false
-                    }
-                }
-                PxButton {
-                    icon: "folder"
-                    text: I18n.t("Открыть файл", "Open the file")
-                    onClicked: Shell.openPath(Story.file)
-                }
+            label: I18n.t("Панель отладки игры", "The game's debug panel")
+            hint: I18n.t("Всё состояние игры и любая переменная, любой круг и сцена, эффекты, облики и звуки, снимок сохранения — в отдельном окне. Или `angelos debug`.", "The whole state of the game and every variable, any circle and scene, the effects, looks and sounds, a snapshot of the save — in a window of its own. Or `angelos debug`.")
+            PxButton {
+                icon: "chip"
+                text: I18n.t("Открыть", "Open")
+                onClicked: GameDebug.open = true
             }
         }
     }

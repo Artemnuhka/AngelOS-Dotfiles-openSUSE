@@ -27,6 +27,7 @@ import qs.modules.cursor
 import qs.modules.lens
 import qs.modules.decor
 import qs.modules.novel
+import qs.modules.debug
 import qs.widgets
 
 // angelOS — pixel pink shell for niri.
@@ -64,6 +65,7 @@ ShellRoot {
     ShakeCursor {}
     LensOverlay {}
     WindowDecor {}
+    GameDebugWindow {}
     Ipc {}
 
     // Keep dynamically loaded settings pages visible to Quickshell's static

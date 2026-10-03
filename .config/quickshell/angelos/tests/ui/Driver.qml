@@ -47,6 +47,7 @@ import "../../widgets/IconSets.js" as IconSets
 //             the future, a scene that no longer exists, limbo across a restart, a player
 //             stuck under the old rules (a broken plea counter) — none blocks the way out;
 //             pleas are understood in any wording, with typos and the wrong layout
+//   debug     the game's debug panel: every tab builds, its writes and overrides take
 //   pace      into hell through the portal shows the circle; back and forth within
 //             story/game.json's pace.quickSwitch is instant, later the whole show again (C1)
 //   walls     heaven's wallpaper stays as it is in hell, a pick in hell lasts for its circle,
@@ -1487,6 +1488,34 @@ Scope {
                 return;
             report("exit-amnesty", !Story.inHell && !Story.hell.amnesty && Story.player.returns === 1 && (Story.hell.outcomes || []).some(o => o.kind === "amnesty"), "let out in " + (Date.now() - started) + " ms, returns " + Story.player.returns);
             Story.clockShift = 0;
+            Story.reset();
+            phase = "debug";
+            return;
+        }
+        if (phase === "debug") {
+            // the game's debug panel (GameDebug): each tab builds from the data, its writes
+            // land in the save, its overrides (a circle's look, a kind of breakage) take
+            const bad = [];
+            for (const t of ["DebugStateTab", "DebugAngelTab", "DebugDemonsTab", "DebugScenesTab", "DebugFxTab", "DebugLooksTab", "DebugSoundsTab", "DebugSystemTab"]) {
+                const c = Qt.createComponent(Qt.resolvedUrl("../../modules/debug/" + t + ".qml"));
+                const o = c.status === Component.Ready ? c.createObject(win.contentItem, {
+                    "width": 800
+                }) : null;
+                if (!o || !o.children.length)
+                    bad.push(t + (c.status === Component.Error ? ": " + c.errorString() : ""));
+                if (o)
+                    o.destroy();
+            }
+            GameDebug.setSin("wrath", 7);
+            GameDebug.setClose("lust", 9);
+            const wrote = Story.vars.wrath === 7 && Story.closePoints("lust") === 9 && Story.closeStepOf(Story.closePoints("lust")) === 2;
+            GameDebug.lookCircle("treachery");
+            const looked = HellLook.circle === "treachery" && GameDebug.lookOverridden;
+            GameDebug.lookAsStory();
+            GameDebug.punch("frost");
+            const punched = Cracks.on && Cracks.kind === "frost" && Cracks.forceKind === "";
+            Cracks.on = false;
+            report("debug-panel", GameDebug.allowed && bad.length === 0 && wrote && looked && HellLook.circle === "base" && punched, (bad.length ? "tabs failed: " + bad.join("; ") : "8 tabs build") + ", writes " + wrote + ", a circle's look " + looked + ", frost on demand " + punched);
             Story.reset();
             // C1: into hell through the portal, with the show and the circle's splash
             paceRuns = CircleFx.runs;

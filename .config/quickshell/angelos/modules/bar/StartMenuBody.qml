@@ -59,6 +59,13 @@ PxBox {
             "act": () => Shell.openSettings("studio")
         },
         {
+            "text": I18n.t("Отладка игры…", "Game debug…"),
+            "extra": true,
+            "icon": "chip",
+            "show": GameDebug.allowed,
+            "act": () => GameDebug.open = true
+        },
+        {
             "text": "Dotfiles",
             "extra": true,
             "icon": "package",

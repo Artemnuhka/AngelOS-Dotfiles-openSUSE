@@ -581,8 +581,9 @@ Scope {
                             // even when the angel's look and the demon's differ
                             angelVariant: win.angelLook === "glitch" || win.angelLook === "ophanim" ? win.angelLook : ""
                             demonVariant: win.demonLook === "glitch" ? "glitch" : ""
-                            // the circle's own demon, once her pictures are cut (sprite-rig.py skins)
-                            skin: win.demonArt && Story.inHell ? HellLook.circle : ""
+                            // the circle's own demon, once her pictures are cut (sprite-rig.py skins);
+                            // the debug panel may stand any circle's demon here
+                            skin: !win.demonArt ? "" : GameDebug.skin === "-" ? "" : GameDebug.skin || (Story.inHell ? HellLook.circle : "")
                             // one screen pixel per art pixel at the default size (~120 px tall)
                             px: Math.max(1, Theme.u / 2) * win.zoom
 

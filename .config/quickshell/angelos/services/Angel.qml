@@ -1211,7 +1211,19 @@ Singleton {
             joke();
             return false;
         }
-        const p = options[Math.floor(Math.random() * options.length)];
+        doPrank(options[Math.floor(Math.random() * options.length)]);
+        return true;
+    }
+    // the debug panel: this prank now, done before or not (her in the corner is enough)
+    function prankNow(id) {
+        const p = pranks.find(x => x.id === id);
+        if (!p || !demon || transition || !present)
+            return false;
+        undoPrank(id, false);
+        doPrank(p);
+        return true;
+    }
+    function doPrank(p) {
         const rec = {
             "id": p.id,
             "at": Date.now()

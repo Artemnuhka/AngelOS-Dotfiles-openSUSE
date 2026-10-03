@@ -114,7 +114,8 @@ IpcHandler {
         case "sin":
             {
                 const set = {};
-                set[a[1] || "limbo"] = a[2] || "+1";
+                // "N" sets it, "+N" / "-N" moves it (a plain number stays a number in the save)
+                set[a[1] || "limbo"] = /^\d+(\.\d+)?$/.test(a[2] || "") ? Number(a[2]) : a[2] || "+1";
                 Story.applySet(set);
                 return JSON.stringify(Story.vars);
             }
@@ -129,6 +130,44 @@ IpcHandler {
             return "ok";
         }
         return "off | on | calm on|off | status | reset | circle <1–9|id> | scene <id> | sin <name> [+1] | outcome stars|pact|limbo | try | ambient";
+    }
+    // the game's debug panel (services/GameDebug), developer mode or the dev stand only:
+    // `angelos debug open | close | toggle | snapshot | restore | restart | tab <id> | status`
+    function debug(line: string): string {
+        if (!GameDebug.allowed)
+            return "developer mode only (Settings → System)";
+        const a = String(line || "").trim().split(/\s+/);
+        switch (a[0]) {
+        case "":
+        case "toggle":
+            return GameDebug.toggle();
+        case "open":
+            GameDebug.open = true;
+            return "open";
+        case "close":
+            GameDebug.open = false;
+            return "closed";
+        case "tab":
+            GameDebug.tab = a[1] || "state";
+            GameDebug.open = true;
+            return "ok";
+        case "snapshot":
+            return GameDebug.snapshot();
+        case "restore":
+            return GameDebug.restore();
+        case "restart":
+            return GameDebug.restart();
+        case "status":
+            return JSON.stringify({
+                "open": GameDebug.shown,
+                "tab": GameDebug.tab,
+                "snapshot": GameDebug.snapInfo,
+                "skin": GameDebug.skin,
+                "look": HellLook.circle,
+                "log": GameDebug.log
+            });
+        }
+        return "open | close | toggle | snapshot | restore | restart | tab <id> | status";
     }
     // the corner helper: `angelos helper "tip | joke | hint | ask <text> | plea | talk | gift | stay | status"`
     // (owner: angel — the demon leaves at once; dev or owner: prank, ascend, fx,

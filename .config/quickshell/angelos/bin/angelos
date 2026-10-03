@@ -227,6 +227,10 @@ case "$1" in
     # the game: off | on | calm on|off | status | reset (+ dev: circle, scene, sin, outcome, try)
     shift
     exec qs -c angelos ipc call angelos game "$*" ;;
+  debug)
+    # the game's debug panel (developer mode): open | close | toggle | snapshot | restore | restart | tab <id> | status
+    shift
+    exec qs -c angelos ipc call angelos debug "$*" ;;
   lens)
     # the lens at the pointer (niri keys Mod+Alt+= / - / 0): the shell's socket, else qs ipc
     what="$(printf '%s' "${2:-toggle}" | tr -cd 'a-z')"
