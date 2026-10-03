@@ -110,6 +110,9 @@ Singleton {
     function say(msg, acts, ms, silent) {
         if (!shown || !msg)
             return;
+        // cooled towards the player (Story.angelStep, item 11): no more hearts from her
+        if (!demon && Story.angelStep >= 2)
+            msg = String(msg).replace(/\s*♡/g, "");
         text = msg;
         actions = !acts ? [] : Array.isArray(acts) ? acts : [acts];
         menuOpen = false;
@@ -159,6 +162,9 @@ Singleton {
     }
     function joke() {
         const list = demon ? (I18n.english ? Lines.demonJokesEn : Lines.demonJokesRu) : (I18n.english ? Lines.jokesEn : Lines.jokesRu);
+        // cold for good: a joke now and then, never "another"
+        if (!demon && Story.angelStep >= 3)
+            return say(pick(list, "joke" + demon));
         say(pick(list, "joke" + demon), {
             "label": I18n.t("Ещё!", "Another!"),
             "icon": "star",
@@ -188,7 +194,14 @@ Singleton {
                 tip();
             return;
         }
-        if (Config.y2k.jokes && Math.random() < 0.4)
+        // as she cools she says her own things more and jokes less; cold, often nothing at all
+        const step = Story.angelStep;
+        const own = Story.angelLine("chatter");
+        if (step >= 3 && Math.random() < 0.4)
+            return;
+        if (own && Math.random() < [0, 0.3, 0.5, 0.7][step])
+            return say(own);
+        if (Config.y2k.jokes && Math.random() < 0.4 / (1 + step))
             joke();
         else
             tip();
@@ -238,18 +251,20 @@ Singleton {
             return showContract();
         if (demon && (Intents.strong(s, "plea") || (!settingsIntent && Intents.weak(s, "plea"))))
             return plea();
+        // the angel cooled towards the player answers in her step's words (story/angel.json)
+        const cool = k => demon ? "" : Story.angelLine(k);
         if (/^(привет|здравств|хай|хей|ку\b|добр|hello|hi\b|hey|yo\b)/.test(s))
-            return say(line(L.hello, "hello" + demon));
+            return say(cool("hello") || line(L.hello, "hello" + demon));
         if (/как дела|как ты|как жизнь|how are you|what'?s up|sup\b/.test(s))
-            return say(line(L.how, "how" + demon));
+            return say(cool("how") || line(L.how, "how" + demon));
         if (/кто ты|ты кто|who are you|what are you/.test(s))
-            return say(line(L.who, "who" + demon));
+            return say(cool("who") || line(L.who, "who" + demon));
         if (/люблю|love you|i love/.test(s)) {
             Story.act("ask.love");
-            return say(line(L.love, "love" + demon));
+            return say(cool("love") || line(L.love, "love" + demon));
         }
         if (/спасиб|благодар|thank/.test(s))
-            return say(line(L.thanks, "thanks" + demon));
+            return say(cool("thanks") || line(L.thanks, "thanks" + demon));
         if (!demon && /(^|\s)ад(\s|$)|демон|hell|demon/.test(s))
             return say(tr(Lines.angel.hell));
         if (/совет|подсказ|помоги|помощь|help|tip|advice/.test(s))
@@ -438,7 +453,7 @@ Singleton {
             return "refused";
         }
         lastReaction = Date.now();
-        say(tr(pick(Lines.angel.summoned, "summoned")));
+        say(Story.angelLine("summoned") || tr(pick(Lines.angel.summoned, "summoned")));
         return "ok";
     }
     // the game switched off (`angelos game off`, Settings): out of hell at once — no show,
@@ -684,6 +699,15 @@ Singleton {
             }
             const how = root._escape;
             root._escape = "";
+            // cold for good, the first time back: her scene (story/scenes/angel-cold.json);
+            // cooler than warm: her step's words instead of the warm welcome
+            if (Story.player.coldRoute && !Story.player.coldSeen && Novel.playScene("cold")) {
+                Story.player.coldSeen = true;
+                return;
+            }
+            const cool = Story.angelLine("back");
+            if (cool)
+                return root.say(cool);
             // (drafts — the author's lines replace them)
             if (how === "limbo")
                 root.say(Story.render(I18n.t("Я тебя нашла. Ты так долго сидел{g:|а|(а)} в сером… Пойдём домой ♡", "I found you. You sat in the grey so long… Let's go home ♡")));

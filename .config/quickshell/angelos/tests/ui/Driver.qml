@@ -1083,7 +1083,33 @@ Scope {
             Story.setEnabled(true);
             report("game-off", off && Story.enabled, "off: no angel, demon or novel; on again");
             Story.reset();
-            report("game-reset", Object.keys(Story.vars).length === 0 && !Story.hell.pact && (Story.hell.outcomes || []).length === 0, "the save starts over");
+            report("game-reset", Object.keys(Story.vars).length === 0 && !Story.hell.pact && (Story.hell.outcomes || []).length === 0 && Story.chill === 0 && !Story.player.coldRoute, "the save starts over");
+            // the angel's warmth (item 11): a throw cools her a step, a day without one warms
+            // her back a step, the cold route stays; her step's words replace the warm ones
+            const steps = [Story.angelStep];
+            Story.act("throw.fling");
+            steps.push(Story.angelStep);
+            const reservedLine = Story.angelLine("back");
+            Story.player.lastThrow = Story.now() - 25 * 3600000;
+            Story.player.thawAt = 0;
+            Story.thaw();
+            steps.push(Story.angelStep);
+            Story.act("throw.fling");
+            Story.act("throw.push");
+            Story.act("throw.fling");
+            steps.push(Story.angelStep);
+            Story.player.lastThrow = Story.now() - 72 * 3600000;
+            Story.thaw();
+            steps.push(Story.angelStep);
+            const coldLine = Story.angelLine("love");
+            const heartless = (() => {
+                Angel.say("тест ♡");
+                const t = Angel.text;
+                Angel.hush();
+                return t.indexOf("♡") < 0;
+            })();
+            report("angel-chill", JSON.stringify(steps) === "[0,1,0,3,3]" && !!reservedLine && !!coldLine && Story.player.coldRoute && heartless, "steps " + JSON.stringify(steps) + " (warm → a throw → a day → three more → three days), lines " + !!reservedLine + "/" + !!coldLine + ", no hearts when cold " + heartless);
+            Story.reset();
             phase = "game-exit";
             return;
         }

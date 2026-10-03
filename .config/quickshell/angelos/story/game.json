@@ -10,9 +10,14 @@
     "quickSwitch": 60,
     "soundGap": 2
   },
+  "angel": {
+    "_comment": "How the angel cools towards the player (services/Story → angelStep): every throw into hell adds its `chill` (actions below), and she is a step colder when she comes back — steps: chill from which she is reserved, cool, and cold (the cold route: from then on for good, until `angelos game reset`). thawHours: a day without a throw gives one step back (not out of the cold route). The player sees no number anywhere: only how she talks (story/angel.json) and her cursor.",
+    "steps": [1, 2, 3],
+    "thawHours": 24
+  },
   "actions": {
-    "throw.fling": {"set": {"wrath": "+1"}, "note": "the angel flung down hard"},
-    "throw.push": {"set": {"treachery": "+1"}, "note": "the angel pushed down slowly, on purpose"},
+    "throw.fling": {"set": {"wrath": "+1"}, "chill": 1, "note": "the angel flung down hard"},
+    "throw.push": {"set": {"treachery": "+1"}, "chill": 1, "note": "the angel pushed down slowly, on purpose"},
     "wheel.spin": {"set": {"greed": "+1"}, "note": "a spin of the Wheel of Hell"},
     "joke.more": {"set": {"gluttony": "+1"}, "every": 3, "note": "“Another!” — one more joke"},
     "ask.love": {"set": {"lust": "+1"}, "every": 10, "note": "“I love you” to her"},

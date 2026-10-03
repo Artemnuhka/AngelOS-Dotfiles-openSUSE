@@ -34,9 +34,26 @@ Singleton {
         return base + (mood === "tip" ? "-Tip" : mood === "alive" ? "-Alive" : "");
     }
     readonly property string hellTheme: byCircle ? circleTheme : Config.cursor.hell
-    readonly property string active: hellOn ? hellTheme : theme
+    // heaven's in the angel's mood (Story.angelStep): cooling, angelOS Glitter loses its
+    // sparkle (angelOS Pixel); cold for good, angelOS's own arrow frosts over (angelOS Frost).
+    // Someone else's theme stays as it is.
+    readonly property int angelStep: Story.ready ? Story.angelStep : 0
+    readonly property string heavenTheme: {
+        const own = theme === "angelOS-Pixel" || theme === "angelOS-Glitter";
+        if (angelStep >= 3 && own)
+            return "angelOS-Frost";
+        if (angelStep >= 1 && theme === "angelOS-Glitter")
+            return "angelOS-Pixel";
+        return theme;
+    }
+    readonly property string active: hellOn ? hellTheme : heavenTheme
+    // her mood changed in heaven: the cursor follows, then — only when it does
+    onHeavenThemeChanged: if (!hellOn && Config.cursor.theme && _listed) {
+        _attempt = "";
+        Qt.callLater(sync);
+    }
     property var catalog: []
-    readonly property var heavenly: catalog.filter(c => c.realm !== "hell")
+    readonly property var heavenly: catalog.filter(c => c.realm !== "hell" && !c.hidden)
     // the hell themes one can pick: the six and the circles' own (not their mood variations)
     readonly property var hellish: catalog.filter(c => c.realm === "hell" && !c.hidden)
     property var other: []              // cursor themes found on the system
@@ -163,11 +180,16 @@ Singleton {
                 "size": sz
             };
         const now = status.niri ? status.niri[0] : "";
+        if (Config.cursor.theme && now !== heavenTheme && (now === Config.cursor.theme || now === "angelOS-Frost" || now === "angelOS-Pixel" || now === "angelOS-Glitter"))
+            return {
+                "theme": heavenTheme,
+                "size": sz
+            };
         if (!_pending && !isHell(now))
             return null;
         if (Config.cursor.theme)
             return {
-                "theme": Config.cursor.theme,
+                "theme": heavenTheme,
                 "size": sz
             };
         return Config.cursor.beforeHell ? {
@@ -242,7 +264,8 @@ Singleton {
                 else if (r.theme && worker.after) {
                     // freshly built: apply it (a size nudge makes niri reload the same theme name)
                     const t = r.theme, sz = Config.cursor.size || 24;
-                    const hell = root.hellOn && t === root.hellTheme;
+                    // the demon's, or heaven's in the angel's mood (Frost): put on, never made the pick
+                    const hell = (root.hellOn && t === root.hellTheme) || (!root.hellOn && t === root.heavenTheme && t !== Config.cursor.theme);
                     Qt.callLater(() => {
                         if (Shell.dev)
                             return;

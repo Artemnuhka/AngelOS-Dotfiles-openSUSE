@@ -73,6 +73,11 @@ CATALOG = [
      "about": "black-and-white pixel set with a skull", "license": "BSD-3-Clause (da0ab/Pixel-Linux-Cursor)",
      "url": "https://codeload.github.com/da0ab/Pixel-Linux-Cursor/tar.gz/fdef33f8c87bff22812048c6060d6f36a12f1aaa",
      "sha256": "6039f887cec4d32de0b5cea9b87a55c009a9e2975fde1e87211ee57b57dbe55a"},
+    # the angel cold towards the player for good (Story.angelStep, Cursors.heavenTheme): angelOS
+    # Pixel in ice, frost along its upper rim — put on instead of angelOS's own, never listed
+    {"id": "frost", "theme": "angelOS-Frost", "name": "angelOS Frost", "about": "angelOS Pixel in ice, frost on the rim",
+     "license": "GPL-3.0 (mikaeladev/pixel-cursors)", "build": "pixel", "hidden": True, "frostRim": "#d8ecff",
+     "palette": {"primary": "#eef6ff", "secondary": "#a9cbe8", "border": "#2c4560"}},
     # ---- hell: while the demon rules (pixel-cursors, GPL-3.0) ----
     {"id": "hell", "theme": "angelOS-Hell", "name": "angelOS Hell", "realm": "hell",
      "about": "blood and obsidian; the arrow grew a devil's tail", "license": "GPL-3.0 (mikaeladev/pixel-cursors)",
@@ -465,6 +470,8 @@ def build_pixel(entry, accent=None, edge=None, light=None):
                 rest = 900 if entry.get("variant") == "alive" else 2600
                 pairs = fx_frames(entry["fx"], frames[0], hex_rgb(entry.get("fxColour", "#ffffff")), rest, hex_rgb(palette["primary"]))
                 frames, delays = [f for f, _ in pairs], [d for _, d in pairs]
+            if entry.get("frostRim"):
+                frames = [frost_rim(f, hex_rgb(entry["frostRim"])) for f in frames]
             # the mood: closer, the tip takes her accent (Tip); closest, that and the animation (Alive)
             if entry.get("variant") in ("tip", "alive"):
                 frames = [tip_accent(f, hx, hy, hex_rgb(entry["accent"])) for f in frames]
@@ -542,6 +549,17 @@ def tip_accent(img, hx, hy, accent):
             r, g, b, a = px[x, y]
             if a and abs(x - hx) + abs(y - hy) <= 3 and (r, g, b) != border[1]:
                 px[x, y] = accent + (a,)
+    return out
+
+
+def frost_rim(img, colour):
+    """frost along the upper and left rim: outline pixels with nothing above or left of them"""
+    out = img.copy()
+    px = out.load()
+    for y in range(out.height):
+        for x in range(out.width):
+            if px[x, y][3] and (y == 0 or not px[x, y - 1][3] or x == 0 or not px[x - 1, y][3]) and (x + y) % 2 == 0:
+                px[x, y] = colour + (px[x, y][3],)
     return out
 
 

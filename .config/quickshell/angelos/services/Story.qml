@@ -48,6 +48,7 @@ Singleton {
     // ---- the rules and the voices (story/game.json, story/voices.json, story/contract.json) ----
     property var rules: ({})
     property var voices: ({})
+    property var angelVoice: ({})          // story/angel.json: her lines as she cools
     readonly property var order: rules.order && rules.order.length ? rules.order : ["limbo", "lust", "gluttony", "greed", "wrath", "heresy", "violence", "fraud", "treachery"]
     readonly property int attemptMinutes: rules.attempt || 10
     readonly property int pactAfter: rules.pactAfter || 3
@@ -59,6 +60,53 @@ Singleton {
     readonly property int soundGapMs: ((rules.pace || {}).soundGap || 2) * 1000
 
     readonly property bool inHell: player.character === "demon"
+
+    // ---- the angel's warmth (story/game.json → angel) ----
+    // 0 warm · 1 reserved · 2 cool · 3 cold (the cold route, for good). Every throw adds its
+    // chill; a day without one gives a step back; nothing on screen says so.
+    readonly property var angelRules: rules.angel || ({})
+    readonly property var chillSteps: angelRules.steps && angelRules.steps.length === 3 ? angelRules.steps : [1, 2, 3]
+    readonly property int chill: player.chill || 0
+    readonly property int angelStep: player.coldRoute ? 3 : chill >= chillSteps[2] ? 3 : chill >= chillSteps[1] ? 2 : chill >= chillSteps[0] ? 1 : 0
+    readonly property string angelStepName: ["warm", "reserved", "cool", "cold"][angelStep]
+    function chillBy(n) {
+        if (!n)
+            return;
+        save.player.chill = Math.max(0, chill + n);
+        save.player.lastThrow = Date.now();
+        if (!player.coldRoute && player.chill >= chillSteps[2]) {
+            save.player.coldRoute = true;
+            save.player.coldSince = Date.now();
+        }
+    }
+    // a day without a throw: one step warmer (never out of the cold route)
+    function thaw() {
+        if (!ready || player.coldRoute || chill <= 0)
+            return;
+        const day = (angelRules.thawHours || 24) * 3600000;
+        const since = Math.max(player.lastThrow || 0, player.thawAt || 0);
+        const days = Math.floor((now() - since) / day);
+        if (days <= 0 || since <= 0)
+            return;
+        save.player.chill = Math.max(0, chill - days);
+        save.player.thawAt = since + days * day;
+    }
+    Timer {
+        running: root.ready && root.chill > 0 && !root.player.coldRoute
+        interval: 3600000
+        repeat: true
+        onTriggered: root.thaw()
+    }
+    // her line for the step she is at (story/angel.json → <step> → kind), "" when warm or none
+    function angelLine(kind) {
+        if (inHell || angelStep === 0)
+            return "";
+        const list = (angelVoice[angelStepName] || {})[kind];
+        if (!list || !list.length)
+            return "";
+        const l = list[Math.floor(Math.random() * list.length)];
+        return render(Array.isArray(l) ? (I18n.english ? l[1] : l[0]) : l);
+    }
     readonly property string circle: hell.circle || ""
     readonly property int depth: (hell.path || []).length
     // the pact's mark: something of hers stays in heaven (the emblem keeps its horns)
@@ -139,6 +187,7 @@ Singleton {
             return;
         ready = true;
         repairClock();
+        thaw();
         HellLook.circle = inHell && circle ? circle : "base";
         if (inHell && (hell.amnesty || limboOver()))
             freeSoon.restart();
@@ -266,6 +315,18 @@ Singleton {
         }
     }
     FileView {
+        path: Quickshell.shellDir + "/story/angel.json"
+        watchChanges: true
+        onFileChanged: reload()
+        onLoaded: {
+            try {
+                root.angelVoice = JSON.parse(text());
+            } catch (e) {
+                console.warn("story/angel.json: " + e);
+            }
+        }
+    }
+    FileView {
         path: Quickshell.shellDir + "/story/contract.json"
         watchChanges: true
         onFileChanged: reload()
@@ -304,6 +365,10 @@ Singleton {
             "silences": hell.silences || 0,
             "falls": hell.falls || 0,
             "returns": player.returns || 0,
+            // the angel's warmth: chill (the throws, thawing), warmth 0 warm … 3 cold, coldRoute
+            "chill": chill,
+            "warmth": angelStep,
+            "coldRoute": !!player.coldRoute,
             "pact": !!hell.pact,
             "pactAfter": pactAfter,
             "limboAfter": limboAfter,
@@ -341,6 +406,7 @@ Singleton {
             return false;
         _actedAt[name] = t;
         applySet(a.set);
+        chillBy(a.chill || 0);
         return true;
     }
     // a scene's answer (services/Novel): the log, and silence in hell is counted
@@ -668,6 +734,7 @@ Singleton {
             "silences": hell.silences || 0,
             "falls": hell.falls || 0,
             "returns": player.returns || 0,
+            "angel": angelStepName + " (chill " + chill + (player.coldRoute ? ", cold route" : "") + ")",
             "pact": !!hell.pact,
             "limbo": !!hell.limbo,
             "outcomes": (hell.outcomes || []).map(o => o.kind + "@" + o.circle),
@@ -715,6 +782,12 @@ Singleton {
         save.player.wheelAt = 0;
         save.player.returns = 0;
         save.player.pranks = [];
+        save.player.chill = 0;
+        save.player.lastThrow = 0;
+        save.player.thawAt = 0;
+        save.player.coldRoute = false;
+        save.player.coldSince = 0;
+        save.player.coldSeen = false;
         setCircle("");
         Novel.reset();
         return "save reset";

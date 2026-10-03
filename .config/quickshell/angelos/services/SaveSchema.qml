@@ -23,6 +23,14 @@ JsonAdapter {
         property int returns: 0             // times the angel came back from hell; 3 open the portal
         property var angelSaved: null       // the theme mode kept while the demon rules ({mode}; older saves: heaven's wallpaper too)
         property var hellWall: null         // hell's wallpaper {circle, picked, fallback, outputs, workspaces}: the circle's painting or the player's pick in it (C2)
+        // how cold the angel is towards the player (story/game.json → angel): the throws' chill,
+        // the last throw and the last thaw (ms), the cold route (for good) and when it began
+        property int chill: 0
+        property double lastThrow: 0
+        property double thawAt: 0
+        property bool coldRoute: false
+        property double coldSince: 0
+        property bool coldSeen: false       // the cold route's scene has played
     }
 
     // the story's variables: the sins the player's choices weigh (limbo lust gluttony greed
