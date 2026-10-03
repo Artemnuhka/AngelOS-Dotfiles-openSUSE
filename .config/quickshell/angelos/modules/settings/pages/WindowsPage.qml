@@ -317,6 +317,59 @@ PxPage {
                 }
             }
         }
+        // Steam (scripts/steam-theme.py): a Millennium theme that follows on its own; only
+        // with Millennium there (angelOS installs neither Steam nor Millennium)
+        SettingRow {
+            id: steamRow
+            property string said: ""
+            visible: steamStatus.info.millennium === true
+            label: "Steam"
+            hint: I18n.t("тема angelOS для Steam через Millennium: рай, ад и каждый круг, светлая и тёмная — на лету, в открытом Steam тоже. Один раз выбери её: Steam → Millennium → Темы → angelOS, или закрой Steam и нажми «Сделать активной». Магазин и сообщество — чужие сайты: у них только рамка и выделение в цветах темы", "angelOS's theme for Steam through Millennium: heaven, hell and every circle, light and dark — on the fly, in an open Steam too. Pick it once: Steam → Millennium → Themes → angelOS, or close Steam and press “Make it active”. The store and the community are other sites: only their frame and selection take the theme's colours")
+            Flow {
+                width: parent.width
+                spacing: Theme.u * 2
+                PxButton {
+                    compact: true
+                    accent: !steamStatus.info.active
+                    icon: "sparkle"
+                    text: steamStatus.info.active ? I18n.t("Активна ♡", "Active ♡") : steamRow.said || I18n.t("Сделать активной", "Make it active")
+                    onClicked: if (!steamStatus.info.active)
+                        steamApply.running = true
+                }
+                PxButton {
+                    compact: true
+                    icon: "folder"
+                    text: I18n.t("Папка темы", "Theme folder")
+                    onClicked: Quickshell.execDetached(["xdg-open", String((steamStatus.info.installed || [])[0] || steamStatus.info.theme || "")])
+                }
+            }
+            Process {
+                id: steamApply
+                command: ["python3", Quickshell.shellDir + "/scripts/steam-theme.py", "apply"]
+                stdout: StdioCollector {
+                    onStreamFinished: {
+                        try {
+                            const r = JSON.parse(text);
+                            steamRow.said = r.ok ? "" : r.error === "steam running" ? I18n.t("Сначала закрой Steam", "Close Steam first") : I18n.t("Не вышло — выбери в Steam", "Didn't work — pick it in Steam");
+                        } catch (e) {}
+                        steamStatus.running = true;
+                    }
+                }
+            }
+            Process {
+                id: steamStatus
+                property var info: ({})
+                running: true
+                command: ["python3", Quickshell.shellDir + "/scripts/steam-theme.py", "status"]
+                stdout: StdioCollector {
+                    onStreamFinished: {
+                        try {
+                            steamStatus.info = JSON.parse(text);
+                        } catch (e) {}
+                    }
+                }
+            }
+        }
     }
 
     PxGroup {

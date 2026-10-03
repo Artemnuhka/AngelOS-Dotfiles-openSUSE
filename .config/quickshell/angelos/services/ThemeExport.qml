@@ -32,7 +32,7 @@ Singleton {
     function apply() {
         if (!Config.appearance.themeApps || Shell.dev)
             return;
-        paletteWriter.setText(JSON.stringify(Object.assign(Theme.exportPalette(), decorPalette(), terminalPalette(), appsPalette()), null, 2));
+        paletteWriter.setText(JSON.stringify(Object.assign(Theme.exportPalette(), decorPalette(), terminalPalette(), appsPalette(), hellPalette()), null, 2));
     }
 
     // window decorations (templates gtk3-decor/gtk4-decor, scripts/gtk-live.py, Helium):
@@ -180,6 +180,36 @@ Singleton {
                 "lo": h(Theme.hellLo),
                 "edge": h(Theme.hellEdge),
                 "select": h(Theme.mix(Theme.hellRim, Theme.hellBlood, 0.5))
+            }
+        };
+    }
+
+    // the circle's whole palette while the demon rules (scripts/steam-theme.py): the apps that
+    // follow the realm on their own, whatever Y2K → Apps in hell says
+    function hellPalette() {
+        if (!Angel.demon)
+            return {
+                "hell": ({})
+            };
+        return {
+            "hell": {
+                "circle": HellLook.circle,
+                "body": h(Theme.hellBody),
+                "face": h(Theme.hellFace),
+                "faceAlt": h(Theme.hellFaceAlt),
+                "sunken": h(Theme.hellSunken),
+                "hi": h(Theme.hellHi),
+                "lo": h(Theme.hellLo),
+                "edge": h(Theme.hellEdge),
+                "rim": h(Theme.hellRim),
+                "text": h(Theme.hellText),
+                "textDim": h(Theme.hellTextDim),
+                "accent": h(Theme.hellAccent),
+                "blood": h(Theme.hellBlood),
+                "flame": h(Theme.hellFlame),
+                "ember": h(Theme.hellEmber),
+                "gold": h(Theme.hellGold),
+                "ok": ash("#6f8f3a", 0.35)
             }
         };
     }
