@@ -510,7 +510,7 @@ FloatingWindow {
                                 text: modelData[2]
                                 color: Theme.text
                                 font.family: family
-                                font.pixelSize: Theme.crisp(modelData[1], family) * Theme.fs
+                                font.pixelSize: Theme.fontPx(modelData[1], family)
                                 renderType: Text.NativeRendering
                             }
                         }

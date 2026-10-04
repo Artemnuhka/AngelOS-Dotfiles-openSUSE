@@ -60,17 +60,28 @@ PxPage {
             PxText {
                 width: parent.width
                 wrapMode: Text.Wrap
-                color: Updates.available ? Theme.accent : Theme.textDim
-                text: Updates.state === "checking" ? I18n.t("проверяю…", "checking…") : Updates.error ? "✕ " + Updates.error : Updates.available ? I18n.t("доступно изменений: ", "changes available: ") + Updates.behind : I18n.t("у тебя последняя версия ♡", "you are up to date ♡")
+                color: Updates.error || Updates.failedUpdate ? Theme.danger : Updates.available ? Theme.accent : Theme.textDim
+                // a failed attempt that wasn't undone moved the repository, not the system:
+                // "up to date" would be a lie then
+                text: Updates.state === "checking" ? I18n.t("проверяю…", "checking…") : Updates.error ? "✕ " + Updates.error : Updates.available ? I18n.t("доступно изменений: ", "changes available: ") + Updates.behind : Updates.failedUpdate ? I18n.t("последнее обновление не установилось — см. ниже", "the last update did not install — see below") : I18n.t("у тебя последняя версия ♡", "you are up to date ♡")
             }
         }
-        // stopped before the snapshot: nothing was changed, but say why
-        PxText {
+        // stopped before the snapshot: nothing was changed, but say where, why and what next
+        Column {
             visible: Updates.lastRun === "failed" && !Updates.canRestore && !!Updates.failure
             width: parent.width
-            wrapMode: Text.Wrap
-            color: Theme.danger
-            text: "✕ " + Updates.failure
+            spacing: Theme.u * 2
+            PxText {
+                width: parent.width
+                wrapMode: Text.Wrap
+                color: Theme.danger
+                text: "✕ " + Updates.failureText(Updates.failedStage, Updates.failure)
+            }
+            PxText {
+                width: parent.width
+                wrapMode: Text.Wrap
+                text: Updates.nextStep(Updates.failedStage)
+            }
         }
         PxText {
             visible: !Updates.trusted && !!Updates.repo
@@ -84,7 +95,15 @@ PxPage {
             width: parent.width
             wrapMode: Text.Wrap
             color: Theme.accent3
-            text: I18n.t("В папке репозитория есть свои правки (" + Updates.dirty + "). Обновление остановится, чтобы их не потерять.", "The repository folder has local edits (" + Updates.dirty + "). The update stops so they are not lost.")
+            text: I18n.t("В папке репозитория свои правки (файлов: " + Updates.dirty + ") — обновление их бы потеряло, поэтому выключено. Закоммить или отложи их (git stash -u) либо откати, потом нажми «Проверить».", "The repository folder has edits of its own (" + Updates.dirty + " files) — an update would lose them, so it is off. Commit or put them aside (git stash -u), or drop them, then press Check.")
+        }
+        // a developer's working clone: commits GitHub doesn't have
+        PxText {
+            visible: Updates.ahead > 0
+            width: parent.width
+            wrapMode: Text.Wrap
+            color: Theme.accent3
+            text: Updates.behind > 0 ? I18n.t("Ветка разошлась с " + (Updates.upstream || "origin") + ": своих коммитов " + Updates.ahead + ", новых " + Updates.behind + " — перемотать нельзя, обновление выключено. Перенеси свои коммиты поверх новых (git pull --rebase) и нажми «Проверить».", "The branch went its own way from " + (Updates.upstream || "origin") + ": " + Updates.ahead + " commits of its own, " + Updates.behind + " new — it can't be fast-forwarded, so updating is off. Put your commits on top of the new ones (git pull --rebase) and press Check.") : I18n.t("В репозитории своих коммитов: " + Updates.ahead + ", которых нет в " + (Updates.upstream || "origin") + ", а нового там нет — обновлять нечего. Свою версию ставь её установщиком (./install.sh).", "The repository has " + Updates.ahead + " commits of its own that " + (Updates.upstream || "origin") + " doesn't have, and nothing new came — there is nothing to update. Install your version with its installer (./install.sh).")
         }
         Flow {
             visible: !!Updates.repo
@@ -99,7 +118,7 @@ PxPage {
             PxButton {
                 icon: "download"
                 accent: Updates.available
-                enabled: !Updates.busy && Updates.dirty === 0 && Updates.trusted
+                enabled: !Updates.busy && !Updates.blocked
                 text: Updates.state === "updating" ? I18n.t("обновляю…", "updating…") : I18n.t("Обновить", "Update")
                 onClicked: Updates.update()
             }
@@ -141,12 +160,19 @@ PxPage {
             width: parent.width
             wrapMode: Text.Wrap
             color: Theme.danger
-            text: "✕ " + (Updates.lastStatus === "restore-failed" ? "" : Updates.stageText(Updates.failedStage) + (Updates.failure && Updates.failure !== Updates.stageText(Updates.failedStage) ? ": " : "")) + (Updates.failure && Updates.failure !== Updates.stageText(Updates.failedStage) ? Updates.failure : "")
+            text: "✕ " + (Updates.lastStatus === "restore-failed" ? Updates.failure : Updates.failureText(Updates.failedStage, Updates.failure))
+        }
+        PxText {
+            visible: Updates.lastStatus !== "restored" && Updates.lastStatus !== "restore-failed"
+            width: parent.width
+            wrapMode: Text.Wrap
+            text: Updates.nextStep(Updates.failedStage)
         }
         PxText {
             visible: Updates.lastStatus !== "restored"
             width: parent.width
             wrapMode: Text.Wrap
+            color: Theme.textDim
             text: Updates.lastStatus === "restore-failed" ? I18n.t("Снимок цел, ничего из него не потеряно. Подробности — в журнале ниже; можно поправить и попробовать ещё раз.", "The snapshot is intact, nothing from it is lost. Details are in the log below; fix it and try again.") : I18n.t("Часть файлов могла уже смениться. Перед обновлением всё, что оно трогает, сохранено — можно вернуть систему к состоянию до этой попытки. Файлы, которые ты успел изменить после неё, останутся как есть.", "Some files may already have changed. Everything the update touches was saved first — you can put the system back to how it was before this attempt. Files you changed after it stay as they are.")
         }
         SettingRow {

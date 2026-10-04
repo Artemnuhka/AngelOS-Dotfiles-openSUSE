@@ -14,7 +14,7 @@ PanelWindow {
     readonly property bool compact: Config.bar.compactOnVertical && modelData.width < 1300
 
     readonly property bool hell: BarLayout.hell
-    readonly property int barHeight: Theme.u * 16
+    readonly property int barHeight: Theme.fit(16)
     readonly property int headroom: 0
     readonly property bool fxLive: !Shell.fullscreenOn(modelData.name)
 
@@ -75,7 +75,7 @@ PanelWindow {
             barWindow: win
             style: "top"
             compact: win.compact
-            itemHeight: Theme.u * 12
+            itemHeight: Theme.fit(12)
         }
     }
 

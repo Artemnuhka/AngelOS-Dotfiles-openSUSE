@@ -103,8 +103,11 @@ Item {
     }
     width: Math.round(frame.width * zoom)
     height: Math.round(frame.height * zoom)
-    x: dragging ? DesktopWidgets.drag.x : widget ? clampX(widget.x < 0 ? area.width + widget.x - width : widget.x) : 0
-    y: dragging ? DesktopWidgets.drag.y : widget ? clampY(widget.y < 0 ? area.height + widget.y - height : widget.y) : 0
+    // where it was put (negative: from the right or the bottom), then clear of the widgets
+    // before it (DesktopWidgets.settledPlace: sizes grow with the art pixel and the fonts)
+    readonly property point place: widget ? DesktopWidgets.settledPlace(uid, screenName, clampX(widget.x < 0 ? area.width + widget.x - width : widget.x), clampY(widget.y < 0 ? area.height + widget.y - height : widget.y), width, height, area.width, area.height) : Qt.point(0, 0)
+    x: dragging ? DesktopWidgets.drag.x : place.x
+    y: dragging ? DesktopWidgets.drag.y : place.y
 
     Component.onCompleted: {
         face ? DesktopWidgets.registerFace(uid, host) : DesktopWidgets.registerHost(uid, host);

@@ -18,7 +18,7 @@ PanelWindow {
     required property var modelData
     readonly property bool compact: Config.bar.compactOnVertical && modelData.width < 1300
     readonly property bool hell: BarLayout.hell
-    readonly property int capHeight: Theme.u * 15
+    readonly property int capHeight: Theme.fit(15)
     readonly property int drop: Theme.u * 3                             // from the screen's edge to a capsule
     readonly property int pad: Theme.u * 5                              // a capsule around its section
     readonly property bool fxLive: !Shell.fullscreenOn(modelData.name)
@@ -132,7 +132,7 @@ PanelWindow {
         barWindow: win
         style: "capsules"
         compact: win.compact
-        itemHeight: Theme.u * 12
+        itemHeight: Theme.fit(12)
     }
 
     RightClickGuard {}

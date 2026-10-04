@@ -149,6 +149,16 @@ Variants {
 
         Loader {
             id: body
+            // the room the look has on this screen, before its own zoom: a look taller than that
+            // (big fonts, a big art pixel, a small or 2× screen) fits itself in (`room` of the
+            // looks: fewer rows, a scrolling list) instead of running off the screen
+            readonly property real room: (win.full ? win.height : win.spot ? win.height * 0.75 : win.above ? win.button.y - Theme.u * 4 : win.height - win.button.y - win.button.height - Theme.u * 4) / Math.max(0.25, win.full ? 1 : win.prefs.zoom || 1)
+            Binding {
+                target: body.item
+                property: "room"
+                value: body.room
+                when: !!body.item && body.item.room !== undefined
+            }
             // Settings → Bar → Start: auto keeps classic at the button and win11 centred;
             // left / center / right pin either of them there. Fullscreen fills.
             readonly property real restY: win.above ? win.button.y - height - Theme.u * 2 : win.button.y + win.button.height + Theme.u * 2

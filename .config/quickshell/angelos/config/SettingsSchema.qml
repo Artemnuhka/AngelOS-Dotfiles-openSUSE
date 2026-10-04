@@ -18,7 +18,7 @@ JsonAdapter {
         property real opacity: 0.84         // panel background opacity (blur shows through)
         property bool blur: true
         property int px: 2                  // size of one "art pixel" in screen pixels
-        property int fontScale: 1           // 1 or 2 keeps pixel fonts crisp
+        property real fontScale: 1          // ×1 … ×2 in quarters; Theme.fontPx keeps each font on its pixel grid
         property bool shadows: true         // hard pixel drop shadows
         property bool themeApps: true       // render templates for kitty/foot/gtk/niri
         property var disabledTemplates: []

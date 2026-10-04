@@ -145,7 +145,7 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
             text: Qt.formatTime(clock.date, "HH") + (clock.date.getSeconds() % 2 || !root.reactions ? ":" : " ") + Qt.formatTime(clock.date, "mm")
             font.family: Theme.fontTitle
-            font.pixelSize: Theme.crisp(72, Theme.fontTitle) * Theme.fs
+            font.pixelSize: Theme.fontPx(72, Theme.fontTitle)
             color: "#ffffff"
             style: Text.Outline
             styleColor: Theme.edge

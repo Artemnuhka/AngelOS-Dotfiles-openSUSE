@@ -26,7 +26,7 @@ PanelWindow {
         left: true
         right: true
     }
-    implicitHeight: Theme.u * 20
+    implicitHeight: Theme.barHeight
     exclusionMode: Shell.dev ? ExclusionMode.Ignore : ExclusionMode.Auto
     color: "transparent"
     WlrLayershell.namespace: "angelos-bar"
@@ -111,7 +111,7 @@ PanelWindow {
             barWindow: win
             style: "windose"
             compact: win.compact
-            itemHeight: Theme.u * 14
+            itemHeight: Theme.fit(14)
         }
     }
 

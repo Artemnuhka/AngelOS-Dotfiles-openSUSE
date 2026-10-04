@@ -20,7 +20,11 @@ PxBox {
     readonly property var prefs: StartPrefs.of("win11")
     readonly property real sizeFactor: prefs.size
     readonly property int columns: prefs.columns > 0 ? Math.max(3, Math.min(10, prefs.columns)) : Math.max(4, Math.min(10, Math.round(6 * sizeFactor)))
-    readonly property int rows: Math.max(1, Math.min(6, prefs.rows > 0 ? prefs.rows : 3))
+    property real room: 0                       // StartOverlay: the screen's room for it
+    // the pinned rows that fit in it (big fonts, a big art pixel, a small screen): the menu
+    // gives up rows rather than run off the screen
+    readonly property int fitRows: room > 0 ? Math.floor((room - footer.height - Theme.u * 10 - (field.visible ? field.height : 0) - head.implicitHeight - (recHead.visible ? recHead.implicitHeight + recFlow.implicitHeight : 0) - col.spacing * 4) / grid.cellHeight) : 6
+    readonly property int rows: Math.max(1, Math.min(6, fitRows, prefs.rows > 0 ? prefs.rows : 3))
     readonly property color accentColor: prefs.accentColor
     readonly property var appList: StartPrefs.sorted("win11", StartApps.apps)
     // typing turns the grid into a Windows 11-like list: the calculator, apps and settings by relevance
@@ -264,7 +268,7 @@ PxBox {
                 readonly property bool sel: root.current === index
                 readonly property bool isCalc: modelData.kind === "calc"
                 width: resultList.width
-                height: isCalc ? Theme.u * 22 : Theme.u * 16
+                height: isCalc ? Theme.fit(22) : Theme.fit(16)
                 color: sel ? Qt.alpha(root.accentColor, 0.3) : hm.containsMouse ? Qt.alpha(root.accentColor, 0.14) : "transparent"
                 border.width: sel ? Math.max(1, Theme.u / 2) : 0
                 border.color: root.accentColor
@@ -342,7 +346,7 @@ PxBox {
             width: parent.width
             height: cellHeight * Math.max(1, Math.min(root.rows, Math.ceil(count / root.columns)))
             cellWidth: width / root.columns
-            cellHeight: Math.round(Theme.u * (root.prefs.labels ? 30 : 22) * Math.max(0.8, root.prefs.icons))
+            cellHeight: Math.round(Theme.u * 22 * Math.max(0.8, root.prefs.icons)) + (root.prefs.labels ? Theme.fit(8) : 0)
             interactive: count > root.columns * root.rows
             clip: true
             model: grid.visible ? root.shown : []
@@ -378,7 +382,7 @@ PxBox {
                 id: row
                 y: li.first ? letterText.implicitHeight + Theme.u * 2 : 0
                 width: allList.width
-                height: Theme.u * 14
+                height: Theme.fit(14)
                 color: root.current === li.index ? Qt.alpha(root.accentColor, 0.3) : lm.containsMouse ? Qt.alpha(root.accentColor, 0.14) : "transparent"
                 Row {
                     x: Theme.u * 3
@@ -425,7 +429,7 @@ PxBox {
                     id: rec
                     required property var modelData
                     width: (recFlow.width - recFlow.spacing) / 2
-                    height: Theme.u * 17
+                    height: Theme.fit(17)
                     color: rm.containsMouse ? Qt.alpha(root.accentColor, 0.14) : "transparent"
                     Row {
                         x: Theme.u * 3

@@ -294,6 +294,47 @@ Singleton {
     function uidsFor(screen) {
         return widgets.filter(w => screenOf(w) === screen).map(w => w.uid);
     }
+    // Widgets never cover each other (translucent, one's text would show through the other's).
+    // Their places are kept in pixels while their sizes follow the art pixel and the fonts, and
+    // the screen may be smaller than the one they were placed on (a 2× monitor): a widget that
+    // would land on one placed before it on its screen (the list's order) goes to the nearest
+    // free place next to one of them (below, above, beside), inside the screen. The saved place
+    // stays as it is, so the old sizes bring the old layout back. No free place at all (more
+    // widgets than screen): it stays where it was put.
+    function settledPlace(uid, screen, x, y, w, h, aw, ah) {
+        const gap = Theme.u * 2;
+        const before = [];
+        for (const o of widgets) {
+            if (o.uid === uid)
+                break;
+            if (screenOf(o) !== screen)
+                continue;
+            const f = faces[o.uid];
+            if (f && f.visible && f.width > 0)
+                before.push([f.x, f.y, f.width, f.height]);
+        }
+        const free = (px, py) => !before.some(r => px < r[0] + r[2] + gap && px + w + gap > r[0] && py < r[1] + r[3] + gap && py + h + gap > r[1]);
+        if (free(x, y))
+            return Qt.point(x, y);
+        const cx = v => Math.max(0, Math.min(aw - w, v)), cy = v => Math.max(0, Math.min(ah - h, v));
+        // the edges of the others (and of the screen) are where a free place can start
+        const xs = [x, 0, aw - w], ys = [y, 0, ah - h];
+        for (const r of before) {
+            xs.push(r[0], r[0] + r[2] + gap, r[0] - gap - w);
+            ys.push(r[1], r[1] + r[3] + gap, r[1] - gap - h);
+        }
+        let best = null, bestD = Infinity;
+        for (const px0 of xs)
+            for (const py0 of ys) {
+                const px = cx(px0), py = cy(py0);
+                const d = (px - x) * (px - x) + (py - y) * (py - y);
+                if (d < bestD && free(px, py)) {
+                    best = Qt.point(px, py);
+                    bestD = d;
+                }
+            }
+        return best || Qt.point(x, y);
+    }
     // Settings → Monitor → "Move every widget here": all of them onto one screen, as they are
     function moveAllTo(screen) {
         if (!screen)

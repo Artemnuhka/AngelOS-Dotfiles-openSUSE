@@ -51,7 +51,7 @@ PanelWindow {
     readonly property int peek: Math.max(2, Theme.u)
 
     readonly property bool hell: BarLayout.hell
-    readonly property int barHeight: Theme.u * 20
+    readonly property int barHeight: Theme.barHeight
     readonly property int headroom: 0
 
     screen: modelData
@@ -129,7 +129,7 @@ PanelWindow {
             barWindow: win
             style: "taskbar"
             compact: win.compact
-            itemHeight: Theme.u * 15
+            itemHeight: Theme.fit(15)
         }
     }
 

@@ -64,15 +64,21 @@ Item {
         sunken: true
         color: Theme.sunken
     }
-    Row {
+    // the crumbs; short of room (big fonts) the start of the path gives way, the page stays
+    Item {
         id: crumbRow
         anchors.left: arrows.right
         anchors.leftMargin: Theme.u * (root.address ? 7 : 4)
         anchors.right: root.searchWidth > 0 ? searchSlot.left : undoBtn.visible ? undoBtn.left : parent.right
         anchors.rightMargin: Theme.u * (root.address ? 7 : 3)
         anchors.verticalCenter: parent.verticalCenter
-        spacing: Theme.u * 2
+        height: crumbInner.implicitHeight
         clip: true
+    Row {
+        id: crumbInner
+        x: Math.min(0, crumbRow.width - implicitWidth)
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: Theme.u * 2
         PxIcon {
             visible: root.address
             anchors.verticalCenter: parent.verticalCenter
@@ -111,6 +117,7 @@ Item {
                 }
             }
         }
+    }
     }
 
     Item {

@@ -315,6 +315,7 @@ PxPage {
         }
         SettingRow {
             label: I18n.t("Масштаб", "Scale")
+            hint: page.d && Math.abs(page.d.scale - Math.round(page.d.scale)) > 0.001 ? I18n.t("Дробный масштаб размывает пиксельные шрифты и рамки angelOS: их пиксели ложатся между пикселями экрана. Чётко — целый масштаб (1, 2), а крупнее — размером пикселя и масштабом шрифтов (Внешний вид → Стекло и пиксели).", "A fractional scale blurs angelOS's pixel fonts and frames: their pixels fall between the screen's. Crisp: a whole scale (1, 2), and bigger with the pixel size and the font scale (Appearance → Glass and pixels).") : ""
             PxSpin {
                 from: 0.5
                 to: 3

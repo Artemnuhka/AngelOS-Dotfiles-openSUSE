@@ -326,7 +326,7 @@ PxPage {
         }
         SettingRow {
             label: I18n.t("Размер пикселя", "Pixel size")
-            hint: I18n.t("1 арт-пиксель = N экранных", "1 art pixel = N screen pixels")
+            hint: I18n.t("1 арт-пиксель = N экранных; только целые — половинка размазала бы каждую рамку", "1 art pixel = N screen pixels; whole ones only — a half would smear every frame")
             PxSpin {
                 from: 1
                 to: 4
@@ -337,18 +337,12 @@ PxPage {
         }
         SettingRow {
             label: I18n.t("Масштаб шрифтов", "Font scale")
-            hint: I18n.t("×1 или ×2, чтобы глифы оставались чёткими", "Use 1× or 2× to keep glyphs crisp")
+            hint: I18n.t("Пиксельный шрифт чёток только в целое число своих клеток, поэтому шрифты растут ступенями, каждый в свой момент: на ×1.25 крупнеют заголовки, на ×1.5 — и основной текст. Строки, панель и меню растут вместе с текстом.", "A pixel font is crisp only at a whole number of its cells, so the fonts grow in steps, each at its own: at 1.25× the headings grow, at 1.5× the body text too. Rows, the bar and the menus grow with the text.")
             PxSegmented {
-                model: [
-                    {
-                        "label": "×1",
-                        "value": 1
-                    },
-                    {
-                        "label": "×2",
-                        "value": 2
-                    }
-                ]
+                model: [1, 1.25, 1.5, 1.75, 2].map(v => ({
+                            "label": "×" + v,
+                            "value": v
+                        }))
                 currentValue: Config.appearance.fontScale
                 onActivated: v => Config.appearance.fontScale = v
             }

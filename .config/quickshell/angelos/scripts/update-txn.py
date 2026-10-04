@@ -20,7 +20,7 @@
 
 Output lines for the shell: "» text" for the log, then RESTORED <files> <conflicts>
 <shell 0|1>, CONFLICT <path>, RESTORE-FAILED <reason> <text>, REPO <commit>,
-LAST <status> <stage> <dir> <old> <new>, MESSAGE <text>.
+LAST <status> <stage> <dir> <old> <new>, MESSAGE <text>, CHANGED <files> <shell 0|1>.
 """
 import argparse
 import fcntl
@@ -249,6 +249,9 @@ def cmd_finish(a):
                 finished=time.strftime("%Y-%m-%dT%H:%M:%S"), changed=len(changed))
     write_json(d / "meta.json", meta)
     say(f"обновление изменило файлов: {len(changed)}")
+    # the shell's own files changed (a run over the same commit after a failed one too):
+    # the running shell keeps the old code until it restarts
+    out("CHANGED", len(changed), int(any("/.config/quickshell/angelos/" in p for p in changed)))
 
 
 # ---- restore ----

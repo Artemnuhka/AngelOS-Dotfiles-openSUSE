@@ -114,8 +114,9 @@ Rectangle {
         return true;
     }
 
+    property real room: 0                       // StartOverlay: the screen's room for it
     width: Math.round(Theme.u * 170 * sizeFactor)
-    height: Math.round(Theme.u * 230 * prefs.tall)
+    height: Math.round(Math.min(Theme.u * 230 * prefs.tall, room > 0 ? room : Infinity))
     color: ink
     // Fine-tune → Opacity: the paper shows the desktop through
     opacity: prefs.opacity > 0 ? Math.max(0.4, prefs.opacity / 100) : 1
@@ -139,7 +140,7 @@ Rectangle {
         x: Theme.u
         y: Theme.u
         width: parent.width - Theme.u * 2
-        height: Theme.u * 13
+        height: Theme.fit(13)
         gradient: Gradient {
             orientation: Gradient.Horizontal
             GradientStop {
@@ -197,7 +198,8 @@ Rectangle {
         id: banner
         x: Theme.u * 2
         y: titleBar.y + titleBar.height + Theme.u
-        width: Theme.u * 15
+        // the title runs up it: as wide as the title is tall
+        width: Theme.fit(15)
         height: footer.y - y - Theme.u
         gradient: Gradient {
             GradientStop {
@@ -213,9 +215,15 @@ Rectangle {
                 color: root.pink
             }
         }
+        // runs up the strip below the stickers; on a short strip (big fonts) it elides
         PxText {
-            anchors.centerIn: parent
+            readonly property real room: parent.height - bannerMarks.y - bannerMarks.height - Theme.u * 6
+            x: (parent.width - width) / 2
+            y: bannerMarks.y + bannerMarks.height + Theme.u * 3 + (room - height) / 2
+            width: Math.max(0, room)
             rotation: -90
+            horizontalAlignment: Text.AlignHCenter
+            elide: Text.ElideRight
             kind: "title"
             font.bold: true
             color: "#ffffff"
@@ -224,6 +232,7 @@ Rectangle {
             text: "angelOS ♡ Windose"
         }
         Column {
+            id: bannerMarks
             anchors.horizontalCenter: parent.horizontalCenter
             y: Theme.u * 4
             spacing: Theme.u * 3
@@ -393,7 +402,7 @@ Rectangle {
                 required property int index
                 readonly property bool sel: index === root.current || rm.containsMouse
                 width: list.width
-                height: Math.round(Theme.u * 13 * Math.max(1, root.prefs.icons))
+                height: Math.round(Theme.fit(13) * Math.max(1, root.prefs.icons))
                 radius: height / 2
                 color: sel ? Qt.alpha(root.pink, 0.75) : "transparent"
                 PxIcon {
@@ -483,7 +492,7 @@ Rectangle {
         x: Theme.u * 2
         y: parent.height - height - Theme.u * 2
         width: parent.width - Theme.u * 4
-        height: Theme.u * 18
+        height: Theme.fit(18)
         color: Theme.mix(root.paper, root.pink, 0.35)
         border.width: Math.max(1, Theme.u / 2)
         border.color: root.ink

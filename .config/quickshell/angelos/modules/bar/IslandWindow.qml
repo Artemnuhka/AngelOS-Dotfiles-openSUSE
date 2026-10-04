@@ -21,7 +21,7 @@ PanelWindow {
     margins.top: Theme.u * 4
     implicitWidth: modelData.width - Theme.u * 8
     readonly property bool hell: BarLayout.hell
-    readonly property int barHeight: Theme.u * 20
+    readonly property int barHeight: Theme.barHeight
     implicitHeight: barHeight
     mask: Region {
         item: box
@@ -83,7 +83,7 @@ PanelWindow {
                 style: "island"
                 compact: win.compact
                 inline: true
-                itemHeight: Theme.u * 13
+                itemHeight: Theme.fit(13)
             }
         }
     }

@@ -150,5 +150,21 @@ else
   ok "no QML errors, binding loops, JS exceptions or missing images"
 fi
 
+# the theme export to the apps (tests/theme): heaven ⇄ hell in any order and timing, the last
+# state is the one on disk (window borders stayed hell's after a return "as in the game")
+if out=$(bash "$DIR/tests/theme/run.sh" "$DIR" 2>&1); then
+  ok "theme export: the last state reaches the apps (late realm, toggles during a render, late hell accent)"
+else
+  bad "theme export (tests/theme/run.sh):"; printf '%s\n' "$out" | grep -v '✓' | head -20 | sed 's/^/      /'
+fi
+
+# the scale matrix (tests/scale): Settings, the Start looks, the bar and a notification at art
+# pixel 1–4 and fonts ×1, ×1.5 (the step between) and ×2 — nothing runs over, out of its box or off
+if out=$(bash "$DIR/tests/scale/run.sh" "$DIR" 2>&1); then
+  ok "scale matrix: px 2 ×2, px 1, px 4, px 3 ×1.5, px 4 ×2 — no text over text, cut or overflowing"
+else
+  bad "scale matrix (tests/scale/run.sh):"; printf '%s\n' "$out" | grep -v '✓' | head -30 | sed 's/^/      /'
+fi
+
 if ((fail)); then echo "» UI SELF-TEST FAILED"; exit 1; fi
 echo "» UI self-test passed ♡"
