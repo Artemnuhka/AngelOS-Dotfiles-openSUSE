@@ -10,7 +10,7 @@ Win98 windows, pixel hearts, a bar that sings along, and a desktop you can right
 
 ![niri](https://img.shields.io/badge/niri-26.04-ff5cad?style=flat-square&labelColor=241432)
 ![quickshell](https://img.shields.io/badge/quickshell-0.3-4fe3ff?style=flat-square&labelColor=241432)
-![cachyos](https://img.shields.io/badge/openSUSE%20Tumbleweed-♡-b36bff?style=flat-square&labelColor=241432)
+![openSUSE Tumbleweed](https://img.shields.io/badge/openSUSE%20Tumbleweed-♡-b36bff?style=flat-square&labelColor=241432)
 ![stress](https://img.shields.io/badge/stress-0%25-57e3a2?style=flat-square&labelColor=241432)
 ![love](https://img.shields.io/badge/love-100%25-ff5cad?style=flat-square&labelColor=241432)
 
@@ -350,7 +350,7 @@ Run the repository check before installing. Besides syntax and hygiene checks it
 ./scripts/check.sh
 ```
 
-`./scripts/ci-local.sh` runs the GitHub check itself (`.github/workflows/angelos.yml`) in the same `archlinux` container with Docker or Podman — what passes there passes on GitHub.
+`./scripts/ci-local.sh` runs the GitHub check itself (`.github/workflows/angelos.yml`) in an `opensuse/tumbleweed` container with Docker or Podman. The local runner is available for reproducing the workflow; see the testing report for checks actually run in the VM.
 
 <details>
 <summary>♡ Prefer Noctalia?</summary>
@@ -370,7 +370,7 @@ Before anything changes, every file the installer may write is copied to `~/.loc
 Installs made before this page existed need one manual update to get it:
 
 ```bash
-cd AngelOS-Dotfiles
+cd AngelOS-Dotfiles-openSUSE
 git pull
 ./install.sh
 ```
