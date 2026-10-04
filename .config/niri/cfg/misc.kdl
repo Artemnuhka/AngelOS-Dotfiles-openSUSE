@@ -2,7 +2,7 @@
     screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
 
     environment {
-        PATH "@HOME@/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/var/lib/flatpak/exports/bin:/usr/bin/site_perl:/usr/bin/vendor_perl:/usr/bin/core_perl"
+        PATH "@HOME@/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/var/lib/flatpak/exports/bin"
         ELECTRON_OZONE_PLATFORM_HINT "auto"
         QT_QPA_PLATFORM "wayland"
         QT_QPA_PLATFORMTHEME "gtk3"
@@ -14,7 +14,7 @@
     }
 
     cursor {
-        xcursor-theme "capitaine-cursors"
+        xcursor-theme "Adwaita"
         xcursor-size 24
     }
 

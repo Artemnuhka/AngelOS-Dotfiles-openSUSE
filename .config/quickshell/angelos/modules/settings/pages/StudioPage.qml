@@ -384,7 +384,7 @@ PxPage {
                     width: parent.width
                     wrapMode: Text.Wrap
                     color: PluginStudio.hasKey ? Theme.ok : Theme.textDim
-                    text: !PluginStudio.cliState.installed ? (Config.developer.provider === "codex-cli" ? I18n.t("Codex CLI не найден. Установи: sudo pacman -S openai-codex (или npm i -g @openai/codex).", "Codex CLI not found. Install it: sudo pacman -S openai-codex (or npm i -g @openai/codex).") : I18n.t("Claude Code не найден. Установи его: https://claude.com/claude-code", "Claude Code not found. Install it from https://claude.com/claude-code")) : PluginStudio.cliState.loggedIn ? I18n.t("Вход выполнен", "Signed in") + (PluginStudio.cliState.method ? " (" + PluginStudio.cliState.method + ")" : "") + " ♡" : I18n.t("Не выполнен вход.", "Not signed in.")
+                    text: !PluginStudio.cliState.installed ? (Config.developer.provider === "codex-cli" ? I18n.t("Codex CLI не найден. Установи: npm i -g @openai/codex.", "Codex CLI not found. Install it: npm i -g @openai/codex.") : I18n.t("Claude Code не найден. Установи его: https://claude.com/claude-code", "Claude Code not found. Install it from https://claude.com/claude-code")) : PluginStudio.cliState.loggedIn ? I18n.t("Вход выполнен", "Signed in") + (PluginStudio.cliState.method ? " (" + PluginStudio.cliState.method + ")" : "") + " ♡" : I18n.t("Не выполнен вход.", "Not signed in.")
                 }
                 Flow {
                     width: parent.width

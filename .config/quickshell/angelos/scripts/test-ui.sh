@@ -78,7 +78,7 @@ if cmp -s "$DIR/shaders/lens.frag.qsb" "$DIR/extras/lens-live/lens.frag.qsb"; th
 # the text-layout checks need real glyphs: with no system font at all (a bare CI
 # image) Russian labels have no width, and toggle-wrap fails for no visible reason
 if command -v fc-list >/dev/null && [[ -z "$(fc-list 2>/dev/null | head -n1)" ]]; then
-  bad "no system fonts (fc-list is empty): install noto-fonts, angelOS's Cyrillic fallback"
+  bad "no system fonts (fc-list is empty): install google-noto-sans-fonts, angelOS's Cyrillic fallback"
 fi
 
 # a short runtime dir: Quickshell's IPC socket path must fit in 108 bytes
@@ -125,12 +125,15 @@ chmod +x "$T/bin/cava"
 log="${ANGELOS_TEST_LOG:-$T/qs.log}"
 runner=()
 command -v dbus-run-session >/dev/null && runner=(dbus-run-session --)
+test_budget="${ANGELOS_TEST_TIMEOUT_MS:-100000}"
+[[ "$test_budget" =~ ^[0-9]+$ && "$test_budget" -ge 100000 && "$test_budget" -le 900000 ]] || { echo "ANGELOS_TEST_TIMEOUT_MS must be between 100000 and 900000"; exit 2; }
+test_seconds=$((test_budget / 1000 + 50))
 env -i PATH="$T/bin:$PATH" LANG=C.UTF-8 HOME="$T/home" USER="${USER:-angel}" \
   XDG_CONFIG_HOME="$T/home/.config" XDG_STATE_HOME="$T/home/.local/state" \
   XDG_CACHE_HOME="$T/home/.cache" XDG_DATA_HOME="$T/home/.local/share" XDG_RUNTIME_DIR="$T/rt" \
   QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME= LD_LIBRARY_PATH="$LIB" QML_IMPORT_PATH="$QML" \
-  ANGELOS_DEV=1 ANGELOS_SCREENS=__none__ ANGELOS_TEST=1 ANGELOS_TEST_SHOTS="${ANGELOS_TEST_SHOTS:-}" QS_NO_RELOAD_POPUP=1 QS_DISABLE_CRASH_HANDLER=1 \
-  "${runner[@]}" timeout 150 "$QS" -p "$T/root" >"$log" 2>&1
+  ANGELOS_DEV=1 ANGELOS_SCREENS=__none__ ANGELOS_TEST=1 ANGELOS_TEST_TIMEOUT_MS="$test_budget" ANGELOS_TEST_SHOTS="${ANGELOS_TEST_SHOTS:-}" QS_NO_RELOAD_POPUP=1 QS_DISABLE_CRASH_HANDLER=1 \
+  "${runner[@]}" timeout "$test_seconds" "$QS" -p "$T/root" >"$log" 2>&1
 code=$?
 
 # results of the driver

@@ -422,7 +422,7 @@ Scope {
     }
     // a whole run must not hang CI
     Timer {
-        interval: 100000
+        interval: Math.max(100000, Number(Quickshell.env("ANGELOS_TEST_TIMEOUT_MS") || 100000))
         running: true
         onTriggered: {
             root.report("timeout", false, "phase " + root.phase);

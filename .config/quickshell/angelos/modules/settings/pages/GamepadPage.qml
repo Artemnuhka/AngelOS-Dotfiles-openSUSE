@@ -151,7 +151,7 @@ PxPage {
         }
         stderr: StdioCollector {
             onStreamFinished: if (text.includes("ModuleNotFoundError"))
-                page.error = I18n.t("нужен python-evdev: sudo pacman -S python-evdev", "python-evdev is needed: sudo pacman -S python-evdev")
+                page.error = I18n.t("нужен python-evdev: ", "python-evdev is needed: ") + SystemInfo.pythonInstallHint("evdev")
         }
     }
 

@@ -51,7 +51,7 @@ if [[ -f "$PIDFILE" ]]; then
 fi
 
 command -v wf-recorder >/dev/null 2>&1 || {
-  notify "Нет wf-recorder" "sudo pacman -S wf-recorder"
+  notify "Нет wf-recorder" "sudo zypper install wf-recorder"
   exit 1
 }
 

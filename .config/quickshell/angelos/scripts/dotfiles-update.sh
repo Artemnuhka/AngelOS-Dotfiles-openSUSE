@@ -137,6 +137,11 @@ say "git fetch ($branch)"
 git fetch --quiet 2>&1 || fail_early pull "git fetch не прошёл — сеть или доступ к репозиторию" 6
 old="$(git rev-parse HEAD)"
 new="$(git rev-parse '@{u}' 2>/dev/null)" || fail_early pull "у ветки $branch нет upstream" 6
+# The original remote is an Arch installer. Never replace this Tumbleweed port
+# with an upstream tree that does not contain the zypper manifests.
+if [[ -f packages/zypper.txt ]] && ! git cat-file -e "$new:packages/zypper.txt" 2>/dev/null; then
+  fail_early pull "upstream не содержит порт openSUSE: перенесите изменения вручную, установщик zypper сохранён" 6
+fi
 git merge-base --is-ancestor "$old" "$new" ||
   fail_early pull "локальная ветка разошлась с $(git rev-parse --abbrev-ref '@{u}') — обнови вручную" 6
 

@@ -4,7 +4,7 @@
 # user, 4 CPUs, `bash -e` per step, the first failing step ends the job. The steps
 # before actions/checkout set the machine up (packages) and are baked into a cached
 # image — rebuilt when they change or when it is a day old, since the workflow
-# installs from the rolling archlinux:latest. A tool the workflow doesn't install
+# installs from the rolling opensuse/tumbleweed:latest. A tool the workflow doesn't install
 # is missing here as well, so "passes on my machine, fails on GitHub" shows up
 # before the push.
 #
@@ -14,8 +14,6 @@
 #   CI_IMAGE_MAX_AGE=24 …          hours before the package image is rebuilt
 #   CI_REBUILD=1 …                 rebuild the package image now
 #   CI_CPUS=4 …                    CPUs for the job (GitHub's ubuntu-latest has 4)
-#   CI_MIRRORLIST=/etc/pacman.d/mirrorlist …   pacman mirrors for the package image (default:
-#                                  this machine's, when it has one; "none" keeps the image's)
 #   CI_NETWORK=host …              container network (host: a VPN's tun route on this
 #                                  machine is used by the container as well)
 set -Eeuo pipefail
@@ -128,21 +126,14 @@ for ((j = 0; j < njobs; j++)); do
   age_h=999999
   [[ -n "$created" ]] && age_h=$(( ($(date +%s) - $(date -d "$created" +%s)) / 3600 ))
   if [[ "${CI_REBUILD:-0}" == 1 || "$age_h" -ge "$MAX_AGE_H" ]]; then
-    say "job $JOB: building the package image $TAG from $IMAGE (setup steps, pacman -Syu)…"
+    say "job $JOB: building the package image $TAG from $IMAGE (setup steps, zypper dup)…"
     mkdir -p "$W/ctx"
     cp "$W/$JOB-setup.sh" "$W/ctx/setup.sh"
     printf 'FROM %s\nLABEL angelos-ci=1\n' "$IMAGE" >"$W/ctx/Containerfile"
-    # the mirrors that work from here (the image's default ones may be slow or blocked
-    # on this network); the packages are the same Arch packages either way
-    mirrors="${CI_MIRRORLIST:-/etc/pacman.d/mirrorlist}"
-    if [[ "$mirrors" != none && -f "$mirrors" ]] && grep -q '^Server' "$mirrors"; then
-      grep '^Server' "$mirrors" >"$W/ctx/mirrorlist"
-      printf 'COPY mirrorlist /etc/pacman.d/mirrorlist\n' >>"$W/ctx/Containerfile"
-    fi
-    printf 'COPY setup.sh /tmp/angelos-ci-setup.sh\nRUN bash -e /tmp/angelos-ci-setup.sh && rm -f /tmp/angelos-ci-setup.sh && rm -rf /var/cache/pacman/pkg/*\n' >>"$W/ctx/Containerfile"
+    printf 'COPY setup.sh /tmp/angelos-ci-setup.sh\nRUN bash -e /tmp/angelos-ci-setup.sh && rm -f /tmp/angelos-ci-setup.sh && zypper clean --all\n' >>"$W/ctx/Containerfile"
     if ! "$ENGINE" build --network "${CI_NETWORK:-host}" --pull --force-rm -q -t "$TAG" -f "$W/ctx/Containerfile" "$W/ctx" >"$W/build.log" 2>&1; then
       tail -40 "$W/build.log" >&2
-      die "job $JOB: the setup steps failed — a wrong package in the workflow fails on GitHub too, a mirror/network error doesn't (try again, or CI_MIRRORLIST=…)"
+      die "job $JOB: the setup steps failed — a wrong package in the workflow fails on GitHub too, a mirror/network error doesn't (try again)"
     fi
     # older package images of this job (other setup steps) are no longer needed
     "$ENGINE" images --format '{{.Repository}}:{{.Tag}}' angelos-ci 2>/dev/null | grep "^angelos-ci:$JOB-" | grep -vx "$TAG" \

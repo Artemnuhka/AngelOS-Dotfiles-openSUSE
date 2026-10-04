@@ -1,16 +1,16 @@
 <div align="center">
 
-# ♡ PixelStreetArt ✧ angelOS ♡
+# ♡ PixelStreetArt ✧ angelOS ♡ — openSUSE Tumbleweed
 
 **`~ welcome back, internet angel ~`**
 
-A pixel-pink **CachyOS + [Niri](https://github.com/YaLTeR/niri)** rice with its own desktop shell, **angelOS**,
+A pixel-pink **openSUSE Tumbleweed + [Niri](https://github.com/YaLTeR/niri)** rice with its own desktop shell, **angelOS**,
 built on [Quickshell](https://quickshell.org) in the spirit of *NEEDY GIRL OVERDOSE*:
 Win98 windows, pixel hearts, a bar that sings along, and a desktop you can right-click like it's 2001.
 
 ![niri](https://img.shields.io/badge/niri-26.04-ff5cad?style=flat-square&labelColor=241432)
 ![quickshell](https://img.shields.io/badge/quickshell-0.3-4fe3ff?style=flat-square&labelColor=241432)
-![cachyos](https://img.shields.io/badge/CachyOS%20%2F%20Arch-♡-b36bff?style=flat-square&labelColor=241432)
+![cachyos](https://img.shields.io/badge/openSUSE%20Tumbleweed-♡-b36bff?style=flat-square&labelColor=241432)
 ![stress](https://img.shields.io/badge/stress-0%25-57e3a2?style=flat-square&labelColor=241432)
 ![love](https://img.shields.io/badge/love-100%25-ff5cad?style=flat-square&labelColor=241432)
 
@@ -262,25 +262,36 @@ The `tech` install profile installs the lighter `niri-screenshot-region-simple` 
   fish, btop, glances, duf, ncdu, lsd, ripgrep, tree, micro, yt-dlp, pavucontrol, helvum,
   Mission Center, Meld, scrcpy and the like.
 - The `pixora` pixel icon theme, Cozette / Pixeloid pixel fonts and the wallpaper packs you pick.
-- Package lists — every package from Arch Linux's official repositories, no AUR.
+- Tumbleweed package manifests with zypper; Noctalia v5 and Quickshell use the OBS repositories recommended by their upstream documentation.
 - One command to install, `./install.sh`: it asks everything itself (shell, game, wallpapers, voice input, login screen, keyboard), backs up anything it replaces, and is safe to re-run.
 
 ## ✧ Requirements
 
-- **Arch Linux or CachyOS.** The installer reads `/etc/os-release` and refuses anything else before a file changes — Arch-based distributions too, since their own repositories may differ (`DOTFILES_FORCE_DISTRO=1` runs it anyway, at your own risk). Every package it installs is in Arch's official `core`/`extra` repositories (`scripts/check-packages.sh` asks archlinux.org).
+- **openSUSE Tumbleweed.** This port refuses other distributions before changing files. `DOTFILES_FORCE_DISTRO=1` only allows config-only runs with `SKIP_PACKAGES=1`.
 - A Wayland session
 - `sudo` for the optional package step
 - `git` and `curl`
 
-`install.sh` installs Niri and the rest of the rice from `packages/pacman.txt`, angelOS's own packages from `packages/angelos.txt` (`quickshell`, `cava`, `wlsunset`, `speedtest-cli`, …) and SDDM from `packages/sddm.txt`, with `sudo pacman -Syu --needed`, so the system is brought up to date in the same step: Arch does not support partial upgrades, and a plain `pacman -S` against a stale package database fails halfway. It does not install browsers, chat clients, games, development tools, or unrelated personal applications. No AUR packages are required.
+`install.sh` refreshes signed repositories, updates Tumbleweed with `sudo zypper dup --no-recommends`, and installs the selected packages with `sudo zypper install --no-recommends`. It uses `packages/zypper.txt`, `angelos-zypper.txt`, `sddm-zypper.txt` and `tools-zypper.txt`. Python module names follow the actual default interpreter. The original Arch manifests are retained only as upstream reference. `ZYPPER_DUP=0` skips the system update; `ADD_SHELL_REPOS=0` uses repositories you configured yourself.
+
+For both shells in one install:
+
+```bash
+INSTALL_BOTH_SHELLS=1 DESKTOP_SHELL=angelos ./install.sh
+# In the running Niri session:
+angelos switch noctalia
+angelos switch angelos
+```
+
+See [openSUSE port notes](docs/OPENSUSE.md) for package sources, testing and recovery.
 
 The helper scripts use `grim` and `slurp` (screenshots), `wf-recorder` (recording), `tesseract` and `wl-clipboard` (OCR), Python GTK, Cairo and GtkLayerShell (overlays), and `voxtype` with the `large-v3-turbo` Whisper model (voice input).
 
 ## ✧ Installation
 
 ```bash
-git clone https://github.com/MixaDoDs/AngelOS-Dotfiles.git
-cd AngelOS-Dotfiles
+git clone https://github.com/Artemnuhka/AngelOS-Dotfiles-openSUSE.git
+cd AngelOS-Dotfiles-openSUSE
 ./install.sh
 ```
 
@@ -310,7 +321,7 @@ WALLPAPER_PACKS=Lain,Pixel INSTALL_VOXTYPE=1 DOWNLOAD_VOXTYPE_MODEL=1 \
 Other switches (run `./install.sh --help` for the full list):
 
 ```bash
-SKIP_PACKAGES=1 ./install.sh                                  # config only: no pacman, no SDDM, no sudo
+SKIP_PACKAGES=1 ./install.sh                                  # config only: no zypper, no SDDM, no sudo
 DESKTOP_SHELL=noctalia ./install.sh                           # Noctalia instead of angelOS
 DESKTOP_SHELL=none ./install.sh                               # plain Niri, no shell
 ANGELOS_GAME=0 ./install.sh                                   # angelOS as plain dotfiles, without its game
@@ -370,7 +381,7 @@ The installer sets up [SDDM](https://github.com/sddm/sddm) with **pixel-cyberpun
 
 What `INSTALL_SDDM=1` (the default) does:
 
-1. Installs `sddm` and exactly the Qt modules the theme imports (`packages/sddm.txt`): without `qt6-5compat` the theme cannot load at all, and without `qt6-multimedia-ffmpeg` the background stays black.
+1. Installs `sddm-qt6` and the Qt modules the theme imports (`packages/sddm-zypper.txt`), including `qt6-qt5compat-imports` and `qt6-multimedia-imports` for the theme and animated background.
 2. Copies the theme to `/usr/share/sddm/themes/pixel-cyberpunk` (world-readable, since the greeter runs as the `sddm` user).
 3. Selects it in `/etc/sddm.conf.d/zz-pixelstreetart.conf`. A `Current=` theme in `/etc/sddm.conf`, which SDDM reads last and which would override the drop-in, is commented out with a backup.
 4. Enables `sddm.service`. If another login manager (GDM, LightDM, ly, greetd, …) is enabled it asks before switching; unattended runs only switch when you pass `INSTALL_SDDM=1` explicitly.
@@ -390,8 +401,8 @@ sddm-greeter-qt6 --test-mode --theme /usr/share/sddm/themes/pixel-cyberpunk
 | --- | --- |
 | Boots to a text console | No login manager is enabled, or the boot target is `multi-user.target`. Re-run the installer, or: `sudo systemctl enable --force sddm && sudo systemctl set-default graphical.target` |
 | `Failed to enable unit … display-manager.service already exists` | Another login manager owns the slot: `sudo systemctl disable gdm` (or `lightdm`, `ly@tty2`, `greetd`), then enable SDDM as above |
-| Plain grey/blue SDDM instead of the pixel theme | The theme is not selected or cannot load. Check `grep -r Current= /etc/sddm.conf /etc/sddm.conf.d/` and install `qt6-5compat` |
-| Theme loads but the background is black | Missing video backend: `sudo pacman -S qt6-multimedia qt6-multimedia-ffmpeg` |
+| Plain grey/blue SDDM instead of the pixel theme | The theme is not selected or cannot load. Check `grep -r Current= /etc/sddm.conf /etc/sddm.conf.d/` and install `qt6-qt5compat-imports` |
+| Theme loads but the background is black | Missing video backend: `sudo zypper install qt6-multimedia-imports libQt6Multimedia6` |
 | Anything else | `journalctl -b -u sddm` shows the greeter's errors |
 
 To go back to another login manager: `sudo systemctl disable sddm && sudo systemctl enable <other>`.
@@ -449,13 +460,13 @@ Review and adjust for your system:
 .local/bin/                  Wayland helper scripts
 .local/share/                Optional icon theme and pixel fonts
 Pictures/                    The three default wallpapers (the packs live in PixelStreetArt_Wallpapers)
-packages/                    Arch, AUR and Flatpak package lists (angelos.txt, sddm.txt)
+packages/                    Tumbleweed manifests and upstream Arch reference lists
 sddm/                        SDDM pixel-cyberpunk theme and its config drop-in
 scripts/check.sh             Repository check, including end-to-end installer tests
 scripts/ci-local.sh          The GitHub check, run locally in its own container
 docs/screenshots/            Static preview images
 docs/demo/                   GIFs used in this README
-install.sh                   The installer: asks everything, backs up, Arch Linux / CachyOS only
+install.sh                   The installer: asks everything, backs up, openSUSE Tumbleweed only
 LICENSE                      MIT, for the dotfiles and angelOS
 THIRD-PARTY.md, LICENSES/    What others made, under which license (and what is unclear)
 ```

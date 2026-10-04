@@ -87,7 +87,7 @@ Singleton {
             } else if (root.phase !== "idle") {
                 root.phase = "error";
                 if (!root.error)
-                    root.error = code === 127 ? I18n.t("speedtest-cli не найден: sudo pacman -S speedtest-cli", "Install speedtest-cli: sudo pacman -S speedtest-cli") : "тест прервался (код " + code + ")";
+                    root.error = code === 127 ? I18n.t("speedtest-cli не найден: sudo zypper install speedtest-cli", "Install speedtest-cli: sudo zypper install speedtest-cli") : "тест прервался (код " + code + ")";
             }
         }
     }

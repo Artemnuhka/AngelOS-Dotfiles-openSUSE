@@ -80,7 +80,6 @@ wallpaper_scheme = "m3-content"
 start = [ "launcher", "wallpaper", "workspaces" ]
 center = [ "cat", "audio_visualizer", "lyrics_2" ]
 end = [
-    "speedtest-widget",
     "media",
     "tray",
     "notifications",
@@ -88,7 +87,6 @@ end = [
     "bluetooth",
     "volume",
     "control-center",
-    "pill",
     "clock",
     "session"
 ]
@@ -126,11 +124,9 @@ max_length = 121
 [widget.network]
 show_label = false
 
-[widget.pill]
-type = "jrohland/claudecode:pill"
-
-[widget.speedtest-widget]
-type = "nilsonlinux/speedtest-meter:speedtest-widget"
+# Extra bar widgets can be added after their plugins have been installed and
+# checked against this Noctalia version. Claude Code's current plugin needs
+# plugin API 26, newer than the packaged Noctalia 5.2.1.
 
 # ── Plugins ─────────────────────────────────────────────────────────────────
 # Noctalia clones the sources and fetches the enabled plugins by itself on the
@@ -142,9 +138,7 @@ enabled = [
     "dotnetrob/cat",
     "h465855hgg/lyrics",
     "notfinaldev/web-search",
-    "lowcache/claude-companion",
-    "nilsonlinux/speedtest-meter",
-    "jrohland/claudecode"
+    "lowcache/claude-companion"
 ]
 
     [[plugins.source]]

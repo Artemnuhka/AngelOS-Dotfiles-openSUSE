@@ -755,14 +755,14 @@ polkit работают всегда.
 ## Установка / переключение
 
 ```sh
-sudo pacman -S --needed quickshell
+sudo zypper install quickshell
 ln -sfn ~/.config/quickshell/angelos/bin/angelos ~/.local/bin/angelos
 angelos switch angelos      # бэкап, правка niri/тем приложений, запуск (Noctalia остановится)
 angelos switch noctalia     # вернуть как было из бэкапа
 ```
 
 Если пакета quickshell ещё нет, `~/.local/bin/qs` запускает локальную копию из
-`~/.local/opt/quickshell` (так же `wlsunset`); после `pacman -S quickshell wlsunset`
+`~/.local/opt/quickshell` (так же `wlsunset`); после `sudo zypper install quickshell wlsunset`
 обёртки сами переключаются на системные версии — их можно удалить.
 
 ## Хоткеи (после switch)

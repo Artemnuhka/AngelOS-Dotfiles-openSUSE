@@ -28,10 +28,10 @@ PxPage {
         }
         Repeater {
             model: [
-                [I18n.t("Расширения Nautilus (python)", "Nautilus python extensions"), !!NautilusSetup.status.python, I18n.t("sudo pacman -S nautilus-python", "sudo pacman -S nautilus-python")],
+                [I18n.t("Расширения Nautilus (python)", "Nautilus python extensions"), !!NautilusSetup.status.python, SystemInfo.pythonInstallHint("nautilus")],
                 [I18n.t("Открыть в терминале", "Open in terminal"), !!NautilusSetup.status.extensions && NautilusSetup.status.extensions["angelos_open_terminal.py"], ""],
                 ["mediafix", !!NautilusSetup.status.extensions && NautilusSetup.status.extensions["angelos_mediafix.py"], ""],
-                ["ffmpeg (mediafix)", !!NautilusSetup.status.ffmpeg, "sudo pacman -S ffmpeg"],
+                ["ffmpeg (mediafix)", !!NautilusSetup.status.ffmpeg, "sudo zypper install ffmpeg"],
                 [I18n.t("Настройки Nautilus", "Nautilus preferences"), !!NautilusSetup.status.prefsApplied, ""]
             ]
             SettingRow {

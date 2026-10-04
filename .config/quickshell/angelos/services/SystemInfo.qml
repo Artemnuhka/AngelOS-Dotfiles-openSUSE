@@ -9,6 +9,11 @@ Singleton {
 
     property var info: ({})
     property string powerProfile: ""
+    readonly property string pythonFlavor: /^python[0-9]+$/.test(String(info.pythonFlavor || "")) ? info.pythonFlavor : "python3"
+
+    function pythonInstallHint(module) {
+        return "sudo zypper install " + pythonFlavor + "-" + module;
+    }
     // popular keyboards / mice / microphones worth over $100 that are plugged in
     // (scripts/gear.py, data/premium-gear.json) — Settings → System, fastfetch
     property var gear: []
@@ -52,6 +57,7 @@ echo "uptime=$(uptime -p 2>/dev/null | sed 's/^up //')"
 echo "niri=$(niri --version 2>/dev/null)"
 echo "qs=$(qs --version 2>/dev/null | head -1)"
 echo "shell=$(basename "$SHELL")"
+echo "pythonFlavor=$(python3 -c 'import sys; print("python%d%d" % sys.version_info[:2])')"
 echo "power=$(powerprofilesctl get 2>/dev/null)"
 `]
         stdout: StdioCollector {

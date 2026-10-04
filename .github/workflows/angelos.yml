@@ -35,25 +35,20 @@ on:
 jobs:
   checks:
     runs-on: ubuntu-latest
-    container: archlinux:latest
+    container: opensuse/tumbleweed:latest
     steps:
-      # noto-fonts: the image has no fonts at all, and a real install always has this
-      # Cyrillic fallback (packages/pacman.txt) — without it Russian labels get no
-      # glyphs (the bundled Jacquard is Latin only) and the text-layout checks fail.
-      # qt6-declarative also brings Qt 6 qmlformat (/usr/lib/qt6/bin), which Plugin
-      # Studio's checks need; shellcheck and ripgrep make check.sh run in full.
-      # diffutils: the image has no diff/cmp, which the installer and the update
-      # tests use. qt6-multimedia: the harp menu (and the angel's voice) import
-      # QtMultimedia, as on a real install (packages/angelos.txt).
-      # scripts/ci-local.sh runs this job locally in the same image —
-      # the publish script and the pre-push hook do that before every push.
       - name: Packages
         run: |
-          pacman -Syu --noconfirm --needed git dbus diffutils python python-pillow python-numpy \
-            quickshell qt6-declarative qt6-5compat qt6-imageformats qt6-svg qt6-multimedia \
-            qt6-multimedia-ffmpeg niri noto-fonts \
-            shellcheck ripgrep
-          test -x /usr/lib/qt6/bin/qmlformat
+          zypper --non-interactive addrepo --refresh --priority 110 https://download.opensuse.org/repositories/home:/AvengeMedia:/danklinux/openSUSE_Tumbleweed/ angelos-quickshell
+          zypper --non-interactive --gpg-auto-import-keys refresh
+          zypper --non-interactive dup --no-recommends
+          zypper --non-interactive install --no-recommends git dbus-1-tools dbus-1-daemon diffutils python3 quickshell \
+            qt6-declarative-imports qt6-declarative-tools qt6-qt5compat-imports qt6-imageformats \
+            libQt6Svg6 qt6-multimedia-imports libQt6Multimedia6 niri google-noto-sans-fonts \
+            ShellCheck ripgrep
+          FLAVOUR="$(python3 -c 'import sys; print("python%d%d" % sys.version_info[:2])')"
+          zypper --non-interactive install --no-recommends "${FLAVOUR}-Pillow" "${FLAVOUR}-numpy"
+          test -x /usr/lib64/qt6/bin/qmlformat
       - uses: actions/checkout@v5
       # the checkout belongs to another user than the container's root
       - name: Git

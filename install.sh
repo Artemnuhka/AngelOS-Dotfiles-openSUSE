@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Installer for the PixelStreetArt Niri rice (CachyOS / Arch).
+# Installer for the PixelStreetArt Niri rice (openSUSE Tumbleweed port).
 #
 # Run it with no arguments for the interactive setup, or drive it with
 # environment variables (everything has a default, so it also works unattended):
@@ -8,6 +8,8 @@
 #   DESKTOP_SHELL=angelos|noctalia|none
 #                                  desktop shell (default angelos; tech defaults to none).
 #                                  angelOS = the pixel Quickshell shell shipped in .config/quickshell/angelos
+#   INSTALL_BOTH_SHELLS=0|1        install both shells and their defaults; DESKTOP_SHELL
+#                                  still chooses the active shell (default 0)
 #   ANGELOS_GAME=1|0               angelOS is also a game played over the desktop (an angel, a demon,
 #                                  a story that follows your choices); 0 = plain dotfiles without it.
 #                                  Asked interactively; unattended runs leave the current choice alone.
@@ -22,7 +24,14 @@
 #   VOXTYPE_LANGUAGE=ru            dictation language (default: derived from KB_LAYOUTS)
 #   INSTALL_SDDM=1|0               SDDM login screen with the pixel-cyberpunk theme
 #                                  (default 1, or 0 together with SKIP_PACKAGES=1)
-#   SKIP_PACKAGES=0|1              skip `pacman -Syu`
+#   SKIP_PACKAGES=0|1              skip zypper and repository changes
+#   ZYPPER_DUP=1|0                 update Tumbleweed with `zypper dup` first (default 1)
+#   ADD_SHELL_REPOS=1|0            add the upstream-recommended OBS shell repositories
+#                                  (default 1; priority 110, signed packages)
+#   INSTALL_VM_DRIVERS=1|0         VirtualBox guests only: guest tools and a full kernel
+#                                  when the minimal kernel lacks vmwgfx (default 1)
+#   GRANT_INPUT_ACCESS=0|1         allow all user processes to read input devices for
+#                                  the optional Meta-tap gesture (default 0)
 #   INSTALL_VOXTYPE=0|1            voice input binary (checksum-verified download)
 #   DOWNLOAD_VOXTYPE_MODEL=0|1     Whisper large-v3-turbo model (~1.6 GB)
 #   WALLPAPER_PACKS=all|none|Lain,Pixel,…
@@ -44,8 +53,8 @@
 #                                  passes 0 and validates itself, after wiring the shell
 #   DOTFILES_STAMP=YYYYMMDD-HHMMSS suffix of this run's *.bak.<stamp> backups (default: now);
 #                                  Settings → Updates passes the stamp of its snapshot
-#   DOTFILES_FORCE_DISTRO=0|1      run on a distribution other than Arch Linux or CachyOS anyway
-#                                  (refused by default: the packages come from Arch's repositories)
+#   DOTFILES_FORCE_DISTRO=0|1      allow config-only runs on another distribution
+#                                  Package installation still requires Tumbleweed.
 #   GITHUB_LOGIN=0|1               angelOS: log in to GitHub (gh) and fetch the author's tools
 #                                  (the chapter editor) if this account can see the author's
 #                                  private repository. Only the author has use for it; for
@@ -89,9 +98,14 @@ if ! is_set DESKTOP_SHELL && is_set NOCTALIA; then
   [[ "$NOCTALIA" == 1 ]] && DESKTOP_SHELL=noctalia || DESKTOP_SHELL=none
 fi
 DESKTOP_SHELL="${DESKTOP_SHELL:-angelos}"
+INSTALL_BOTH_SHELLS="${INSTALL_BOTH_SHELLS:-0}"
 NOCTALIA=0
 NOCTALIA_RESET_SETTINGS="${NOCTALIA_RESET_SETTINGS:-0}"
 SKIP_PACKAGES="${SKIP_PACKAGES:-0}"
+ZYPPER_DUP="${ZYPPER_DUP:-1}"
+ADD_SHELL_REPOS="${ADD_SHELL_REPOS:-1}"
+INSTALL_VM_DRIVERS="${INSTALL_VM_DRIVERS:-1}"
+GRANT_INPUT_ACCESS="${GRANT_INPUT_ACCESS:-0}"
 INSTALL_VOXTYPE="${INSTALL_VOXTYPE:-1}"
 DOWNLOAD_VOXTYPE_MODEL="${DOWNLOAD_VOXTYPE_MODEL:-1}"
 INSTALL_WALLPAPERS="${INSTALL_WALLPAPERS:-1}"
@@ -156,27 +170,27 @@ confirm() {
 
 # ── The distribution ─────────────────────────────────────────────────────────
 
-# Arch Linux and CachyOS only: every package comes from Arch's official repositories (CachyOS
-# uses them too), the AUR is not needed. Others — even Arch-based ones with repositories of
-# their own — are refused before anything changes. DOTFILES_OS_RELEASE: another file, for tests.
+# This port uses Tumbleweed package names and repositories. The override is
+# deliberately limited to config-only runs. DOTFILES_OS_RELEASE is a test hook.
 check_distro() {
-  local file="${DOTFILES_OS_RELEASE:-/etc/os-release}" id="" like="" name=""
-  [[ -r "$file" ]] && { id=$(sed -n 's/^ID=//p' "$file" | tr -d '"'); like=$(sed -n 's/^ID_LIKE=//p' "$file" | tr -d '"');
+  local file="${DOTFILES_OS_RELEASE:-/etc/os-release}" id="" name=""
+  [[ -r "$file" ]] && { id=$(sed -n 's/^ID=//p' "$file" | tr -d '"');
                         name=$(sed -n 's/^PRETTY_NAME=//p' "$file" | tr -d '"'); }
-  case "$id" in arch|cachyos) return 0 ;; esac
-  [[ "${DOTFILES_FORCE_DISTRO:-0}" == 1 ]] && { warn "$(_ "${name:-This system} is not supported; going on because DOTFILES_FORCE_DISTRO=1" \
+  case "$id" in opensuse-tumbleweed) return 0 ;; esac
+  [[ "${DOTFILES_FORCE_DISTRO:-0}" == 1 && "$SKIP_PACKAGES" == 1 ]] && { warn "$(_ "${name:-This system} is not supported; going on because DOTFILES_FORCE_DISTRO=1 (config only)" \
                                                         "${name:-Эта система} не поддерживается; продолжаю, потому что DOTFILES_FORCE_DISTRO=1")"; return 0; }
-  if [[ " $like " == *" arch "* ]]; then
-    die "$(_ "${name:-This system} is based on Arch, but only Arch Linux and CachyOS are supported: its own repositories may differ. DOTFILES_FORCE_DISTRO=1 runs it anyway, at your own risk." \
-             "${name:-Эта система} основана на Arch, но поддерживаются только Arch Linux и CachyOS: её репозитории могут отличаться. DOTFILES_FORCE_DISTRO=1 — запустить всё равно, на свой риск.")"
-  fi
-  die "$(_ "Only Arch Linux and CachyOS are supported (this is ${name:-${id:-an unknown system}}). Nothing was changed." \
-           "Поддерживаются только Arch Linux и CachyOS (а здесь ${name:-${id:-неизвестная система}}). Ничего не изменено.")"
+  die "$(_ "Only openSUSE Tumbleweed is supported (this is ${name:-${id:-an unknown system}}). Nothing was changed." \
+           "Поддерживается только openSUSE Tumbleweed (а здесь ${name:-${id:-неизвестная система}}). Ничего не изменено.")"
 }
 check_distro
 
 [[ "$STAMP" =~ ^[0-9]{8}-[0-9]{6}(-[0-9]+)?$ ]] || die "DOTFILES_STAMP must look like 20260101-120000 (got: $STAMP)"
 [[ "$VALIDATE_NIRI" == 0 || "$VALIDATE_NIRI" == 1 ]] || die "VALIDATE_NIRI must be 0 or 1"
+[[ "$ZYPPER_DUP" == 0 || "$ZYPPER_DUP" == 1 ]] || die "ZYPPER_DUP must be 0 or 1"
+[[ "$ADD_SHELL_REPOS" == 0 || "$ADD_SHELL_REPOS" == 1 ]] || die "ADD_SHELL_REPOS must be 0 or 1"
+[[ "$INSTALL_VM_DRIVERS" == 0 || "$INSTALL_VM_DRIVERS" == 1 ]] || die "INSTALL_VM_DRIVERS must be 0 or 1"
+[[ "$GRANT_INPUT_ACCESS" == 0 || "$GRANT_INPUT_ACCESS" == 1 ]] || die "GRANT_INPUT_ACCESS must be 0 or 1"
+[[ "$INSTALL_BOTH_SHELLS" == 0 || "$INSTALL_BOTH_SHELLS" == 1 ]] || die "INSTALL_BOTH_SHELLS must be 0 or 1"
 [[ -z "${GITHUB_LOGIN:-}" || "$GITHUB_LOGIN" == 0 || "$GITHUB_LOGIN" == 1 ]] || die "GITHUB_LOGIN must be 0 or 1"
 
 # ── Keyboard layouts ─────────────────────────────────────────────────────────
@@ -463,53 +477,95 @@ normalize_mode() {
 
 # ── Packages ─────────────────────────────────────────────────────────────────
 
-pacman_install() {
-  local list="$ROOT/packages/pacman.txt" pkg code
-  command -v pacman >/dev/null 2>&1 || { warn "$(_ 'pacman not found; skipping system packages' 'pacman не найден; системные пакеты пропущены')"; return 0; }
+add_shell_repo() {
+  local url="$1" alias="$2"
+  # Match the URL too: an already configured repo may have another alias.
+  if ! zypper --non-interactive lr -u | grep -Fq -- "$url"; then
+    sudo zypper --non-interactive addrepo --refresh --priority 110 "$url" "$alias"
+    # Import a new key only for the repository this installer just added.
+    sudo zypper --non-interactive --gpg-auto-import-keys refresh "$alias"
+  fi
+}
+
+prepare_virtualbox() {
+  [[ "$INSTALL_VM_DRIVERS" == 1 ]] || return 0
+  command -v systemd-detect-virt >/dev/null 2>&1 || return 0
+  [[ "$(systemd-detect-virt 2>/dev/null || true)" == oracle ]] || return 0
+  sudo zypper --non-interactive --no-refresh install --no-recommends virtualbox-guest-tools
+  if rpm -q kernel-default-base >/dev/null 2>&1 && ! /usr/sbin/modinfo vmwgfx >/dev/null 2>&1; then
+    say "$(_ 'The minimal VM kernel lacks the VirtualBox GPU driver; installing kernel-default…' \
+             'В минимальном ядре ВМ нет драйвера GPU VirtualBox; установка kernel-default…')"
+    # One solver transaction: never remove the bootable kernel in a separate step.
+    sudo zypper --non-interactive --no-refresh install --no-recommends -- kernel-default -kernel-default-base
+    warn "$(_ 'Reboot this VM before starting Niri: the new graphics driver is not active yet.' \
+              'Перезагрузите ВМ перед запуском Niri: новый графический драйвер пока не активен.')"
+  fi
+}
+
+zypper_install() {
+  local list="$ROOT/packages/zypper.txt" pkg code python_flavor
   [[ "$SKIP_PACKAGES" == 1 ]] && { say "$(_ 'SKIP_PACKAGES=1: packages skipped' 'SKIP_PACKAGES=1: пакеты пропущены')"; return 0; }
+  command -v zypper >/dev/null 2>&1 || die "$(_ 'zypper is required' 'Нужен zypper')"
   command -v sudo >/dev/null 2>&1 || die "$(_ 'sudo is required to install packages' 'Для установки пакетов нужен sudo')"
 
+  if [[ "$ADD_SHELL_REPOS" == 1 ]]; then
+    [[ "$INSTALL_ANGELOS" != 1 ]] || add_shell_repo \
+      'https://download.opensuse.org/repositories/home:/AvengeMedia:/danklinux/openSUSE_Tumbleweed/' angelos-quickshell
+    [[ "$INSTALL_NOCTALIA" != 1 ]] || add_shell_repo \
+      'https://download.opensuse.org/repositories/home:/neifua:/Noctalia/openSUSE_Tumbleweed/' angelos-noctalia
+  fi
+  say "$(_ 'Refreshing signed zypper repositories…' 'Обновление подписанных репозиториев zypper…')"
+  sudo zypper --non-interactive refresh
+  if [[ "$ZYPPER_DUP" == 1 ]]; then
+    say "$(_ 'Updating Tumbleweed (zypper dup)…' 'Обновление Tumbleweed (zypper dup)…')"
+    sudo zypper --non-interactive dup --no-recommends
+  fi
+  # Tumbleweed names Python extension packages after the interpreter flavour.
+  # Resolve it after dup so imports use the same interpreter as /usr/bin/python3.
+  command -v python3 >/dev/null 2>&1 || sudo zypper --non-interactive install --no-recommends python3
+  python_flavor="$(python3 -c 'import sys; print("python%d%d" % sys.version_info[:2])')"
   mapfile -t packages < <(grep -Ev '^[[:space:]]*(#|$)' "$list")
-  [[ "$NOCTALIA" == 0 ]] && mapfile -t packages < <(printf '%s\n' "${packages[@]}" | grep -Ev '^noctalia$')
-  if [[ "$DESKTOP_SHELL" == angelos && -f "$ROOT/packages/angelos.txt" ]]; then
-    mapfile -t -O "${#packages[@]}" packages < <(grep -Ev '^[[:space:]]*(#|$)' "$ROOT/packages/angelos.txt")
+  [[ "$INSTALL_NOCTALIA" == 0 ]] || packages+=(noctalia)
+  if [[ "$INSTALL_ANGELOS" == 1 ]]; then
+    mapfile -t -O "${#packages[@]}" packages < <(grep -Ev '^[[:space:]]*(#|$)' "$ROOT/packages/angelos-zypper.txt")
   fi
   if [[ "$INSTALL_SDDM" == 1 ]]; then
-    mapfile -t -O "${#packages[@]}" packages < <(grep -Ev '^[[:space:]]*(#|$)' "$ROOT/packages/sddm.txt")
+    mapfile -t -O "${#packages[@]}" packages < <(grep -Ev '^[[:space:]]*(#|$)' "$ROOT/packages/sddm-zypper.txt")
   fi
-  if [[ "$INSTALL_TOOLS" == 1 && -f "$ROOT/packages/tools.txt" ]]; then
-    mapfile -t -O "${#packages[@]}" packages < <(grep -Ev '^[[:space:]]*(#|$)' "$ROOT/packages/tools.txt")
+  if [[ "$INSTALL_TOOLS" == 1 ]]; then
+    mapfile -t -O "${#packages[@]}" packages < <(grep -Ev '^[[:space:]]*(#|$)' "$ROOT/packages/tools-zypper.txt")
   fi
 
   # OCR language packs follow the chosen keyboard layouts.
   for code in "${KB_LIST[@]}"; do
     pkg="${KB_TESS[$code]:-}"
     [[ -n "$pkg" ]] || continue
-    if pacman -Si "tesseract-data-$pkg" >/dev/null 2>&1; then
-      packages+=("tesseract-data-$pkg")
+    if zypper --non-interactive --no-refresh info "tesseract-ocr-traineddata-$pkg" >/dev/null 2>&1; then
+      packages+=("tesseract-ocr-traineddata-$pkg")
     else
-      warn "$(_ "No OCR language pack for '$code' (tesseract-data-$pkg)" "Нет языкового пакета OCR для '$code' (tesseract-data-$pkg)")"
+      warn "$(_ "No OCR language pack for '$code' (tesseract-ocr-traineddata-$pkg)" "Нет языкового пакета OCR для '$code' (tesseract-ocr-traineddata-$pkg)")"
     fi
   done
 
-  # -Syu, not -S: Arch does not support partial upgrades, and with a stale
-  # package database a plain -S fails with 404s halfway through.
-  say "$(_ 'Updating the system and installing packages (pacman -Syu)…' \
-           'Обновление системы и установка пакетов (pacman -Syu)…')"
-  sudo pacman -Syu --needed "${packages[@]}"
-  # angelOS Meta tap reads the keyboards via evdev (issue #6); the group applies after re-login
-  [[ "$DESKTOP_SHELL" == angelos ]] && ! id -nG "$USER" | grep -qw input && sudo usermod -aG input "$USER" || true
+  for pkg in "${!packages[@]}"; do packages[pkg]="${packages[pkg]//@PYTHON@/$python_flavor}"; done
+  mapfile -t packages < <(printf '%s\n' "${packages[@]}" | sort -u)
+  say "$(_ 'Installing packages (zypper install)…' 'Установка пакетов (zypper install)…')"
+  sudo zypper --non-interactive install --no-recommends "${packages[@]}"
+  prepare_virtualbox
+  # Granting input also lets other processes of this user read keyboards.
+  # Ordinary Niri shortcuts keep working without this optional Meta-tap gesture.
+  if [[ "$INSTALL_ANGELOS" == 1 && "$GRANT_INPUT_ACCESS" == 1 ]] && ! id -nG "$USER" | grep -qw input; then
+    sudo usermod -aG input "$USER"
+  fi
 }
 
 install_noctalia() {
-  [[ "$NOCTALIA" == 0 ]] && return 0
-  if command -v noctalia >/dev/null 2>&1 || command -v noctalia-shell >/dev/null 2>&1 ||
-     (command -v pacman >/dev/null 2>&1 && pacman -Q cachyos-niri-noctalia >/dev/null 2>&1); then
+  [[ "$INSTALL_NOCTALIA" == 0 ]] && return 0
+  if command -v noctalia >/dev/null 2>&1; then
     return 0
   fi
   [[ "$SKIP_PACKAGES" == 1 ]] && { warn "$(_ 'Noctalia is not installed (SKIP_PACKAGES=1)' 'Noctalia не установлена (SKIP_PACKAGES=1)')"; return 0; }
-  command -v pacman >/dev/null 2>&1 || die "$(_ 'Noctalia needs pacman' 'Для Noctalia нужен pacman')"
-  sudo pacman -S --needed noctalia || sudo pacman -S --needed cachyos-niri-noctalia
+  die "$(_ 'Noctalia v5 was not installed by zypper' 'Noctalia v5 не установлена через zypper')"
 }
 
 # ── Voxtype ──────────────────────────────────────────────────────────────────
@@ -567,6 +623,7 @@ MANIFEST="$STATE_DIR/installed-files.sha256"
 PARKED_DIR="$STATE_DIR/kept-updates"
 declare -A PREV_SUM=() NEW_SUM=()
 NVIM_OURS=0
+FIRST_USER_DIRS=0
 
 sed_escape() { printf '%s' "$1" | sed -e 's/[\/&|\\]/\\&/g'; }
 
@@ -704,7 +761,7 @@ destination() {
       [[ "$DESKTOP_SHELL" == none ]] || return 0
       rel="${rel/-no-noctalia/}" ;;
     .config/niri/noctalia.kdl|.config/noctalia/*)
-      [[ "$NOCTALIA" == 1 ]] || return 0 ;;
+      [[ "$INSTALL_NOCTALIA" == 1 ]] || return 0 ;;
     .config/quickshell/angelos/*)
       [[ "$DESKTOP_SHELL" != none ]] || return 0 ;;
     .config/systemd/user/*)
@@ -725,6 +782,7 @@ destination() {
 
 install_configs() {
   local src rel dest
+  [[ -e "$HOME_DIR/.config/user-dirs.dirs" ]] || FIRST_USER_DIRS=1
   mkdir -p -- "$HOME_DIR/.config" "$HOME_DIR/.local/bin"
   say "$(_ 'Installing configuration…' 'Установка конфигурации…')"
   load_manifest
@@ -766,14 +824,19 @@ install_assets() {
   fi
   install_wallpaper_packs
   command -v fc-cache >/dev/null 2>&1 && { fc-cache -f "$HOME_DIR/.local/share/fonts" >/dev/null 2>&1 || true; }
-  command -v xdg-user-dirs-update >/dev/null 2>&1 && { xdg-user-dirs-update || true; }
+  if command -v xdg-user-dirs-update >/dev/null 2>&1; then
+    # A minimal Tumbleweed VM has no desktop folders yet. The regular update
+    # would reset the newly seeded paths to HOME instead of creating them.
+    if [[ "$FIRST_USER_DIRS" == 1 ]]; then xdg-user-dirs-update --force || true
+    else xdg-user-dirs-update || true; fi
+  fi
   return 0
 }
 
 # Noctalia takes its colours from the wallpaper, so the default one is installed
 # even when the collection is skipped (or in the tech profile).
 install_noctalia_defaults() {
-  [[ "$NOCTALIA" == 1 ]] || return 0
+  [[ "$INSTALL_NOCTALIA" == 1 ]] || return 0
   local rel overrides
   rel="$(sed -n 's|^path = "@HOME@/\(.*\)"$|\1|p' "$ROOT/.config/noctalia/config.toml" | head -n 1)"
   if [[ -n "$rel" && -f "$ROOT/$rel" && ! -e "$HOME_DIR/$rel" ]]; then
@@ -810,13 +873,14 @@ as_root() {
 # The theme fails to load without Qt5Compat, and shows no video without the
 # multimedia backend. Only reachable with SKIP_PACKAGES=1 or a broken install.
 sddm_check_modules() {
-  local qml=/usr/lib/qt6/qml missing=()
-  [[ -d "$qml/Qt5Compat/GraphicalEffects" ]] || missing+=(qt6-5compat)
+  local qml=/usr/lib64/qt6/qml missing=()
+  [[ -d "$qml" ]] || qml=/usr/lib/qt6/qml
+  [[ -d "$qml/Qt5Compat/GraphicalEffects" ]] || missing+=(qt6-qt5compat-imports)
   [[ -d "$qml/QtMultimedia" ]] || missing+=(qt6-multimedia)
-  compgen -G '/usr/lib/qt6/plugins/multimedia/*ffmpeg*' >/dev/null || missing+=(qt6-multimedia-ffmpeg)
+  compgen -G "${qml%/qml}/plugins/multimedia/*ffmpeg*" >/dev/null || missing+=(libQt6Multimedia6)
   ((${#missing[@]})) || return 0
-  warn "$(_ "The SDDM theme needs: ${missing[*]}  →  sudo pacman -S ${missing[*]}" \
-           "Теме SDDM не хватает: ${missing[*]}  →  sudo pacman -S ${missing[*]}")"
+  warn "$(_ "The SDDM theme needs: ${missing[*]}  →  sudo zypper install ${missing[*]}" \
+           "Теме SDDM не хватает: ${missing[*]}  →  sudo zypper install ${missing[*]}")"
 }
 
 # /etc/sddm.conf is read after /etc/sddm.conf.d/, so a Current= there would
@@ -907,6 +971,9 @@ install_sddm() {
 
   as_root mkdir -p -- "$confd"
   if ! cmp -s -- "$ROOT/sddm/$SDDM_CONF" "$confd/$SDDM_CONF"; then
+    if [[ -e "$confd/$SDDM_CONF" ]]; then
+      as_root cp -a -- "$confd/$SDDM_CONF" "$confd/$SDDM_CONF.bak.$STAMP"
+    fi
     as_root install -m 0644 -- "$ROOT/sddm/$SDDM_CONF" "$confd/$SDDM_CONF"
   fi
   sddm_unpin_main_conf
@@ -963,10 +1030,14 @@ PY
 install_shell() {
   local shell_dir="$HOME_DIR/.config/quickshell/angelos"
   [[ "$DESKTOP_SHELL" != none && -d "$shell_dir" ]] || return 0
+  local cli="$HOME_DIR/.local/bin/angelos"
+  if [[ ! -L "$cli" || "$(readlink -- "$cli")" != "$shell_dir/bin/angelos" ]]; then
+    backup "$cli"
+    ln -s -- "$shell_dir/bin/angelos" "$cli"
+  fi
   if [[ "$DESKTOP_SHELL" == angelos ]]; then
     say "$(_ 'Setting up angelOS…' 'Настройка angelOS…')"
     apply_game_choice
-    ln -sfn "$shell_dir/bin/angelos" "$HOME_DIR/.local/bin/angelos"
     mkdir -p -- "$HOME_DIR/.config/angelos"
     printf 'angelos\n' > "$HOME_DIR/.config/angelos/active"
     # where Settings → Updates pulls from
@@ -1116,9 +1187,15 @@ normalize_mode
 [[ "$MODE" == tech ]] && ! given DESKTOP_SHELL && ! given NOCTALIA && DESKTOP_SHELL=none
 [[ "$DESKTOP_SHELL" =~ ^(angelos|noctalia|none)$ ]] || die "DESKTOP_SHELL must be angelos, noctalia or none"
 [[ "$DESKTOP_SHELL" == noctalia ]] && NOCTALIA=1 || NOCTALIA=0
+INSTALL_ANGELOS=0 INSTALL_NOCTALIA=0
+[[ "$DESKTOP_SHELL" != angelos ]] || INSTALL_ANGELOS=1
+[[ "$DESKTOP_SHELL" != noctalia ]] || INSTALL_NOCTALIA=1
+if [[ "$INSTALL_BOTH_SHELLS" == 1 && "$DESKTOP_SHELL" != none ]]; then
+  INSTALL_ANGELOS=1 INSTALL_NOCTALIA=1
+fi
 choose_keyboard
 
-pacman_install
+zypper_install
 install_noctalia
 install_configs
 install_shell

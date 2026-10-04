@@ -128,7 +128,7 @@ for file in \
   .local/bin/niri-ocr .local/bin/voxtype-indicator \
   .config/systemd/user/niri-game-mode.service .config/systemd/user/voxtype.service \
   .config/systemd/user/voxtype-indicator.service \
-  packages/pacman.txt packages/sddm.txt sddm/zz-pixelstreetart.conf \
+  packages/zypper.txt packages/sddm-zypper.txt sddm/zz-pixelstreetart.conf \
   sddm/themes/pixel-cyberpunk/metadata.desktop sddm/themes/pixel-cyberpunk/Main.qml \
   sddm/themes/pixel-cyberpunk/BackgroundVideo.qml sddm/themes/pixel-cyberpunk/theme.conf \
   sddm/themes/pixel-cyberpunk/bg.mp4 sddm/themes/pixel-cyberpunk/LICENSE \
@@ -175,15 +175,15 @@ else
   fail "SDDM: theme font is missing"
 fi
 # Every QML module the theme imports must come from a package in sddm.txt.
-declare -A qml_pkg=([QtQuick]=qt6-declarative [QtQuick.Window]=qt6-declarative
-                    [Qt.labs.folderlistmodel]=qt6-declarative [Qt5Compat.GraphicalEffects]=qt6-5compat
-                    [QtMultimedia]=qt6-multimedia [SddmComponents]=sddm)
+declare -A qml_pkg=([QtQuick]=qt6-declarative-imports [QtQuick.Window]=qt6-declarative-imports
+                    [Qt.labs.folderlistmodel]=qt6-declarative-imports [Qt5Compat.GraphicalEffects]=qt6-qt5compat-imports
+                    [QtMultimedia]=qt6-multimedia-imports [SddmComponents]=sddm-qt6)
 while read -r module; do
   pkg="${qml_pkg[$module]:-}"
-  if [[ -n "$pkg" ]] && grep -qx "$pkg" "$ROOT/packages/sddm.txt"; then
+  if [[ -n "$pkg" ]] && grep -qx "$pkg" "$ROOT/packages/sddm-zypper.txt"; then
     pass "SDDM: QML import $module is provided by $pkg"
   else
-    fail "SDDM: QML import $module has no package in packages/sddm.txt"
+    fail "SDDM: QML import $module has no package in packages/sddm-zypper.txt"
   fi
 done < <(sed -n 's/^import[[:space:]]\+\([A-Za-z0-9_.]\+\).*/\1/p' "$theme_dir"/*.qml | sort -u)
 
@@ -379,6 +379,17 @@ else
     fail "installer: single layout"
   fi
 
+  if install_case both INSTALL_BOTH_SHELLS=1 DESKTOP_SHELL=angelos &&
+     [[ -f "$WORK/both/.config/noctalia/config.toml" &&
+        -f "$WORK/both/.config/niri/noctalia.kdl" &&
+        -f "$WORK/both/.config/quickshell/angelos/shell.qml" &&
+        -L "$WORK/both/.local/bin/angelos" ]] &&
+     grep -qx angelos "$WORK/both/.config/angelos/active"; then
+    pass "installer: both shells installed, angelOS selected"
+  else
+    fail "installer: both shells"
+  fi
+
   if install_case tech DOTFILES_MODE=tech; then
     if [[ ! -e "$WORK/tech/.local/share" && ! -e "$WORK/tech/.config/noctalia" && ! -e "$WORK/tech/Pictures" ]] &&
        ! grep -q noctalia "$WORK/tech/.config/niri/config.kdl"; then
@@ -459,18 +470,18 @@ else
     rm -rf "${WORK:?}/bad"
   done
 
-  # Arch Linux and CachyOS only: anything else is refused before a file changes
+  # Tumbleweed only: other distributions are refused before a file changes
   printf 'NAME="Ubuntu"\nID=ubuntu\nID_LIKE=debian\nPRETTY_NAME="Ubuntu 26.04 LTS"\n' > "$WORK/os-ubuntu"
   printf 'NAME="EndeavourOS"\nID=endeavouros\nID_LIKE=arch\nPRETTY_NAME="EndeavourOS"\n' > "$WORK/os-eos"
-  printf 'NAME="Arch Linux"\nID=arch\nPRETTY_NAME="Arch Linux"\n' > "$WORK/os-arch"
-  if ! install_case distro DOTFILES_OS_RELEASE="$WORK/os-ubuntu" && grep -q 'Only Arch Linux and CachyOS are supported' "$WORK/distro.log" &&
+  printf 'NAME="openSUSE Tumbleweed"\nID=opensuse-tumbleweed\nPRETTY_NAME="openSUSE Tumbleweed"\n' > "$WORK/os-tw"
+  if ! install_case distro DOTFILES_OS_RELEASE="$WORK/os-ubuntu" && grep -q 'Only openSUSE Tumbleweed is supported' "$WORK/distro.log" &&
      [[ -z "$(find "$WORK/distro" -mindepth 1 -print -quit)" ]]; then
     pass "installer refuses Ubuntu, nothing written"
   else
     fail "installer refuses Ubuntu, nothing written"; sed 's/^/    /' "$WORK/distro.log" >&2
   fi
   rm -rf "${WORK:?}/distro"
-  if ! install_case distro DOTFILES_OS_RELEASE="$WORK/os-eos" && grep -q 'based on Arch, but only Arch Linux and CachyOS' "$WORK/distro.log"; then
+  if ! install_case distro DOTFILES_OS_RELEASE="$WORK/os-eos" && grep -q 'Only openSUSE Tumbleweed is supported' "$WORK/distro.log"; then
     pass "installer refuses an Arch-based distribution with its own repositories (EndeavourOS)"
   else
     fail "installer refuses EndeavourOS"; sed 's/^/    /' "$WORK/distro.log" >&2
@@ -478,16 +489,16 @@ else
   rm -rf "${WORK:?}/distro"
   # forced past the check (then stopped by bad input, so the run stays short)
   if ! install_case distro DOTFILES_OS_RELEASE="$WORK/os-ubuntu" DOTFILES_FORCE_DISTRO=1 KB_TOGGLE=nonsense &&
-     grep -q 'going on because DOTFILES_FORCE_DISTRO=1' "$WORK/distro.log" && ! grep -q 'Only Arch Linux' "$WORK/distro.log"; then
+     grep -q 'going on because DOTFILES_FORCE_DISTRO=1' "$WORK/distro.log" && ! grep -q 'Only openSUSE' "$WORK/distro.log"; then
     pass "installer: DOTFILES_FORCE_DISTRO=1 goes on with a warning"
   else
     fail "installer: DOTFILES_FORCE_DISTRO=1"; sed 's/^/    /' "$WORK/distro.log" >&2
   fi
   rm -rf "${WORK:?}/distro"
-  if install_case distro DOTFILES_OS_RELEASE="$WORK/os-arch" KB_TOGGLE=nonsense; grep -qE 'Only Arch|not supported' "$WORK/distro.log"; then
-    fail "installer accepts Arch Linux"
+  if install_case distro DOTFILES_OS_RELEASE="$WORK/os-tw" KB_TOGGLE=nonsense; grep -qE 'Only openSUSE|not supported' "$WORK/distro.log"; then
+    fail "installer accepts openSUSE Tumbleweed"
   else
-    pass "installer accepts Arch Linux"
+    pass "installer accepts openSUSE Tumbleweed"
   fi
   rm -rf "${WORK:?}/distro"
 fi
@@ -533,14 +544,14 @@ else
 fi
 
 if grep -Eq '^(bitwarden|discord|firefox|helium-browser-bin|telegram-desktop|steam|spotify-launcher|throne-bin|openai-codex-bin)$' \
-     "$ROOT/packages/pacman.txt" "$ROOT/packages/aur.txt" 2>/dev/null; then
+     "$ROOT/packages/zypper.txt" "$ROOT/packages/angelos-zypper.txt" 2>/dev/null; then
   fail "non-rice applications found in the default package manifests"
 else
   pass "default package manifests stay rice-focused"
 fi
 
-# Inline comments in a package list would be passed to pacman verbatim.
-for list in pacman.txt sddm.txt angelos.txt tools.txt; do
+# Inline comments in a package list would be passed to zypper verbatim.
+for list in zypper.txt sddm-zypper.txt angelos-zypper.txt tools-zypper.txt; do
   if grep -Ev '^[[:space:]]*(#|$)' "$ROOT/packages/$list" | grep -q '[[:space:]#]'; then
     fail "packages/$list: package lines must contain only the name"
   else

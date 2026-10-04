@@ -1,0 +1,10 @@
+# Qt 6 greeter and imports for the pixel-cyberpunk login theme.
+sddm-qt6
+qt6-declarative-imports
+qt6-qt5compat-imports
+qt6-multimedia
+qt6-multimedia-imports
+libQt6Multimedia6
+# The default greeter display server is X11, also on minimal VM images.
+xorg-x11-server
+xauth

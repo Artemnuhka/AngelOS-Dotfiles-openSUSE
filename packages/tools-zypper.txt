@@ -1,0 +1,28 @@
+# Optional everyday tools; openSUSE names.
+fish
+bash-completion
+btop
+@PYTHON@-Glances
+duf
+ncdu
+lsd
+ripgrep
+tree
+micro-editor
+less
+man
+man-pages
+plocate
+pv
+rsync
+wget
+unzip
+unrar
+yt-dlp
+ffmpegthumbnailer
+pavucontrol
+helvum
+# Tumbleweed's official task manager replaces the unavailable mission-center package.
+gnome-system-monitor
+meld
+scrcpy

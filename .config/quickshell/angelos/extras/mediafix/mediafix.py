@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any
 
 VIDEO_EXTENSIONS = {".mp4", ".mkv", ".mov", ".avi", ".mxf", ".webm", ".ts", ".mts", ".m2ts", ".flv", ".wmv", ".mpg", ".mpeg", ".m4v", ".3gp"}
-INSTALL_HINT = "sudo pacman -S ffmpeg"
+INSTALL_HINT = "sudo zypper install ffmpeg"
 
 
 class DrfixError(Exception):
@@ -76,7 +76,7 @@ def require_tools() -> None:
     missing = [x for x in ("ffmpeg", "ffprobe") if shutil.which(x) is None]
     if missing:
         print("Не найдены: " + ", ".join(missing))
-        print(f"Установите их в Arch Linux / CachyOS: {INSTALL_HINT}")
+        print(f"Установите их в openSUSE Tumbleweed: {INSTALL_HINT}")
         raise SystemExit(1)
 
 

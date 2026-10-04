@@ -122,7 +122,7 @@ Item {
     PxText {
         visible: root.missing
         anchors.centerIn: parent
-        text: I18n.t("нужен cava: sudo pacman -S cava", "needs cava: sudo pacman -S cava")
+        text: I18n.t("нужен cava: sudo zypper install cava", "needs cava: sudo zypper install cava")
         dim: true
     }
 

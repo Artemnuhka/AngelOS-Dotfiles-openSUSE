@@ -562,7 +562,7 @@ def validate_files(files, directory, spec, taken, edit=False):
         errors.append("manifest.menu must be an array of objects")
     formatter = qml_formatter()
     if not formatter:
-        errors.append("Qt 6 qmlformat is required to check QML (install qt6-declarative)")
+        errors.append("Qt 6 qmlformat is required to check QML (install qt6-declarative-tools)")
     for name, text in files.items():
         suffix = Path(name).suffix
         try:

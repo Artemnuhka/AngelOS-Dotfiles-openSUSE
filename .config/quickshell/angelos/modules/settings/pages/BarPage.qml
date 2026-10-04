@@ -189,7 +189,7 @@ PxPage {
             color: MetaTap.status === "noperm" || MetaTap.status === "noevdev" || MetaTap.status === "error" ? Theme.danger : Theme.textDim
             text: ({
                     "noperm": I18n.t("Нет доступа к клавиатурам. Добавь себя в группу input: sudo usermod -aG input $USER и перезайди.", "No access to keyboards. Join the input group: sudo usermod -aG input $USER, then log in again."),
-                    "noevdev": I18n.t("Нужен python-evdev: sudo pacman -S python-evdev", "python-evdev is required: sudo pacman -S python-evdev"),
+                    "noevdev": I18n.t("Нужен python-evdev: ", "python-evdev is required: ") + SystemInfo.pythonInstallHint("evdev"),
                     "error": I18n.t("Слушатель клавиши остановился, перезапускаю…", "The key listener stopped; restarting…"),
                     "off": Shell.dev ? I18n.t("В dev-режиме выключено (ANGELOS_DEV_TAP=1 включит)", "Off in dev mode (set ANGELOS_DEV_TAP=1)") : "",
                     "starting": "…"

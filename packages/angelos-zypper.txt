@@ -1,0 +1,26 @@
+# Quickshell comes from the repository recommended in upstream's installation guide.
+quickshell
+qt6-declarative-imports
+qt6-declarative-tools
+qt6-qt5compat-imports
+qt6-imageformats
+qt6-multimedia
+qt6-multimedia-imports
+libQt6Multimedia6
+libQt6Svg6
+qt6-wayland
+cmake
+gcc-c++
+pkgconf
+patch
+jq
+NetworkManager
+bluez
+@PYTHON@-evdev
+socat
+bubblewrap
+@PYTHON@-Pillow
+@PYTHON@-numpy
+cava
+wlsunset
+speedtest-cli
