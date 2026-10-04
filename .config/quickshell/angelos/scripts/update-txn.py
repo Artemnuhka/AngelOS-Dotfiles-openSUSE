@@ -41,6 +41,9 @@ MANIFEST = "installed-files.sha256"
 REPO_ROOTS = (".config/", ".local/bin/", ".local/share/", "Pictures/")
 # written by install_shell, switch.py and render-templates.py besides the repository's files
 EXTRAS = [
+    # Theme hooks call gsettings: minimal installs may use its keyfile backend,
+    # while ordinary desktop installs use dconf. Both are outside REPO_ROOTS.
+    ".config/glib-2.0/settings/keyfile", ".config/dconf/user",
     ".local/bin/angelos", ".config/angelos/active", ".config/angelos/dotfiles-source",
     ".config/niri/config.kdl", ".config/niri/cfg/autostart.kdl", ".config/niri/cfg/keybinds.kdl",
     ".config/niri/cfg/rules.kdl", ".config/niri/noctalia.kdl", ".config/niri/angelos.kdl",

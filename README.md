@@ -20,6 +20,12 @@ Win98 windows, pixel hearts, a bar that sings along, and a desktop you can right
 
 </div>
 
+**Порт для openSUSE Tumbleweed:** [установка, выбор оболочки и восстановление](docs/OPENSUSE.md). Исходный проект — [MixaDoDs/AngelOS-Dotfiles](https://github.com/MixaDoDs/AngelOS-Dotfiles).
+
+Проверено в VirtualBox: AngelOS и Noctalia, переключение в обе стороны, 1920×1080, повторная установка и откат обновления. Полный набор проверок и расширенный UI-тест прошли. [Результаты, скриншоты и ограничения](docs/TESTING-OPENSUSE.md).
+
+Для первого запуска на основном компьютере сделайте снимок Snapper и копию `/home`. `INSTALL_BOTH_SHELLS=1` ставит AngelOS и Noctalia; `DESKTOP_SHELL` выбирает активную. `INSTALL_SDDM=0` сохраняет текущий экран входа, `ZYPPER_DUP=0` отключает полное обновление внутри установщика. Пакеты оболочек идут из двух репозиториев сообщества OBS. Проверка в ВМ не гарантирует совместимость вашего GPU и остальных устройств.
+
 > [!NOTE]
 > The screenshots are of a clean install in a nested session (a generated wallpaper, no personal data); the GIFs show angelOS in use. Wallpaper, widget placement, language and theme are configurable; the first-run wizard helps you choose your setup. The helper-tools illustration and SDDM test preview are labelled separately below.
 > In a nested session Niri uses `Alt` as `Mod`; on real hardware `Mod` is the **Super / Windows** key, and that is what the tables use.

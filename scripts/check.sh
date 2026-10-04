@@ -174,7 +174,7 @@ if compgen -G "$theme_dir/font/*.ttf" >/dev/null; then
 else
   fail "SDDM: theme font is missing"
 fi
-# Every QML module the theme imports must come from a package in sddm.txt.
+# Every QML module the theme imports must come from sddm-zypper.txt.
 declare -A qml_pkg=([QtQuick]=qt6-declarative-imports [QtQuick.Window]=qt6-declarative-imports
                     [Qt.labs.folderlistmodel]=qt6-declarative-imports [Qt5Compat.GraphicalEffects]=qt6-qt5compat-imports
                     [QtMultimedia]=qt6-multimedia-imports [SddmComponents]=sddm-qt6)
@@ -244,8 +244,17 @@ if [[ "${SKIP_INSTALL_TEST:-0}" == 1 ]]; then
 else
   input=".config/niri/cfg/input.kdl"
 
+  mkdir -p "$WORK/default/.local/bin"
+  printf 'original user wrapper\n' > "$WORK/default/.local/bin/angelos"
+
   if install_case default; then
     pass "installer: default run"
+    if compgen -G "$WORK/default/.local/bin/angelos.bak.*" >/dev/null &&
+       grep -qx 'original user wrapper' "$WORK/default"/.local/bin/angelos.bak.*; then
+      pass "installer: an existing angelos CLI is backed up"
+    else
+      fail "installer: an existing angelos CLI is backed up"
+    fi
     if [[ -L "$WORK/default/.local/bin/angelos" &&
           -f "$WORK/default/.config/quickshell/angelos/shell.qml" &&
           ! -e "$WORK/default/.config/angelos/owner" ]] &&
@@ -440,9 +449,16 @@ else
   # SDDM: theme and drop-in land in a fake system root; a theme pinned in
   # /etc/sddm.conf (read last by SDDM) gets commented out with a backup.
   sysroot="$WORK/sysroot"
-  mkdir -p "$sysroot/etc"
+  mkdir -p "$sysroot/etc/sddm.conf.d"
+  printf '[Theme]\nCurrent=original-test-theme\n' > "$sysroot/etc/sddm.conf.d/zz-pixelstreetart.conf"
   printf '[Autologin]\nUser=\n\n[Theme]\nCurrent=breeze\n\n[Users]\nCurrent=keep-me\n' >"$sysroot/etc/sddm.conf"
   if install_case sddm INSTALL_SDDM=1 SYSROOT="$sysroot"; then
+    if compgen -G "$sysroot/etc/sddm.conf.d/zz-pixelstreetart.conf.bak.*" >/dev/null &&
+       grep -qx 'Current=original-test-theme' "$sysroot"/etc/sddm.conf.d/zz-pixelstreetart.conf.bak.*; then
+      pass "installer: an existing SDDM drop-in is backed up"
+    else
+      fail "installer: an existing SDDM drop-in is backed up"
+    fi
     if diff -rq "$ROOT/sddm/themes/pixel-cyberpunk" "$sysroot/usr/share/sddm/themes/pixel-cyberpunk" >/dev/null &&
        cmp -s "$ROOT/sddm/zz-pixelstreetart.conf" "$sysroot/etc/sddm.conf.d/zz-pixelstreetart.conf"; then
       pass "installer: SDDM theme and drop-in installed"

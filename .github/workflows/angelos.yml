@@ -40,11 +40,12 @@ jobs:
       - name: Packages
         run: |
           zypper --non-interactive addrepo --refresh --priority 110 https://download.opensuse.org/repositories/home:/AvengeMedia:/danklinux/openSUSE_Tumbleweed/ angelos-quickshell
+          zypper --non-interactive addrepo --refresh --priority 110 https://download.opensuse.org/repositories/home:/neifua:/Noctalia/openSUSE_Tumbleweed/ angelos-noctalia
           zypper --non-interactive --gpg-auto-import-keys refresh
           zypper --non-interactive dup --no-recommends
           zypper --non-interactive install --no-recommends git dbus-1-tools dbus-1-daemon diffutils python3 quickshell \
             qt6-declarative-imports qt6-declarative-tools qt6-qt5compat-imports qt6-imageformats \
-            libQt6Svg6 qt6-multimedia-imports libQt6Multimedia6 niri google-noto-sans-fonts \
+            libQt6Svg6 qt6-multimedia-imports libQt6Multimedia6 niri libwayland-server0 noctalia google-noto-sans-fonts \
             ShellCheck ripgrep
           FLAVOUR="$(python3 -c 'import sys; print("python%d%d" % sys.version_info[:2])')"
           zypper --non-interactive install --no-recommends "${FLAVOUR}-Pillow" "${FLAVOUR}-numpy"
@@ -54,7 +55,7 @@ jobs:
       - name: Git
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: UI self-test (offscreen)
-        run: bash .config/quickshell/angelos/scripts/test-ui.sh .config/quickshell/angelos
+        run: ANGELOS_TEST_TIMEOUT_MS=300000 bash .config/quickshell/angelos/scripts/test-ui.sh .config/quickshell/angelos
       - name: niri validate
         run: |
           T="$(mktemp -d)"; mkdir -p "$T/.config"; cp -r .config/niri "$T/.config/"

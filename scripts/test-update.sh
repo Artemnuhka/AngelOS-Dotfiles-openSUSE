@@ -217,6 +217,19 @@ fingerprint >"$W/after"
 check "invalid niri: after the restore every file is as before the update" diff -u "$W/before" "$W/after"
 check "invalid niri: repository back on v1" head_is "$V1"
 
+# An upstream Arch tree must not replace the Tumbleweed port's installer.
+new_case arch-origin
+v2_edits
+rm -- "$W/work/packages/zypper.txt"
+publish "v2 without the openSUSE port"
+fingerprint >"$W/before"
+update
+check "Arch upstream: refused before snapshot or installation" \
+  bash -c "[[ $RC == 6 ]] && grep -q '^FAILED pull ' '$W/$CASE.out' && ! grep -q '^BACKUP ' '$W/$CASE.out'"
+fingerprint >"$W/after"
+check "Arch upstream: installed files and repository unchanged" \
+  bash -c "diff -q '$W/before' '$W/after' >/dev/null && [[ \$(git -C '$REPO' rev-parse HEAD) == $V1 ]]"
+
 # ── 4. niri is not installed: the update cannot be confirmed ─────────────────
 new_case niri-missing
 v2_edits
