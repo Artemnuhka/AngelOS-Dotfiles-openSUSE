@@ -15,7 +15,7 @@ PanelWindow {
 
     required property var modelData
     readonly property bool compact: Config.bar.compactOnVertical && modelData.width < 1300
-    readonly property int dockHeight: Theme.u * 22
+    readonly property int dockHeight: Theme.fit(22)
     readonly property int gap: Theme.u * 4               // between the shelf and the screen's edge
     readonly property int headroom: Theme.u * 12          // the grown icons rise into it
 
@@ -86,7 +86,7 @@ PanelWindow {
             style: "dock"
             compact: win.compact
             inline: true
-            itemHeight: Theme.u * 18
+            itemHeight: Theme.fit(18)
         }
     }
 

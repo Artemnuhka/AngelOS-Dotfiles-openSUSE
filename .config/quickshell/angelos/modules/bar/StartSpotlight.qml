@@ -21,7 +21,9 @@ Item {
     readonly property var prefs: StartPrefs.of("spotlight")
     readonly property color accentColor: prefs.accentColor
     readonly property real sizeFactor: prefs.size
-    readonly property int maxRows: 9
+    property real room: 0                       // StartOverlay: the screen's room for it
+    // nine results, or what the screen has room for
+    readonly property int maxRows: room > 0 ? Math.max(3, Math.min(9, Math.floor((room - pill.height - footer.height - Theme.fit(11) * 2 - Theme.u * 12) / Theme.fit(22)))) : 9
 
     function matches(label, q) {
         return String(label).toLowerCase().indexOf(q) >= 0;
@@ -141,7 +143,7 @@ Item {
     Rectangle {
         id: pill
         width: parent.width
-        height: Theme.u * 30
+        height: Theme.fit(30)
         radius: height / 2
         color: Qt.alpha(Theme.panel, root.prefs.opacity > 0 ? root.prefs.alpha : Math.max(0.88, Theme.panelAlpha))
         border.width: Math.max(1, Theme.u / 2)
@@ -191,7 +193,7 @@ Item {
         visible: root.rows.length > 0
         y: pill.height + Theme.u * 4
         width: parent.width
-        height: Math.min(root.rows.length, root.maxRows) * Theme.u * 22 + sectionsShown * Theme.u * 11 + Theme.u * 6
+        height: Math.min(root.rows.length, root.maxRows) * Theme.fit(22) + sectionsShown * Theme.fit(11) + Theme.u * 6
         readonly property int sectionsShown: {
             const seen = [];
             for (const r of root.rows.slice(0, root.maxRows))
@@ -223,7 +225,7 @@ Item {
                 // a section's name over its first row
                 readonly property bool head: index === 0 || root.rows[index - 1].section !== modelData.section
                 width: list.width
-                height: row.height + (head ? Theme.u * 11 : 0)
+                height: row.height + (head ? Theme.fit(11) : 0)
                 PxText {
                     visible: cell.head
                     x: Theme.u * 6
@@ -238,9 +240,9 @@ Item {
                     readonly property var modelData: cell.modelData
                     readonly property int index: cell.index
                     readonly property bool sel: index === root.current
-                    y: cell.head ? Theme.u * 11 : 0
+                    y: cell.head ? Theme.fit(11) : 0
                     width: list.width
-                    height: Theme.u * 22
+                    height: Theme.fit(22)
                     radius: Theme.u * 6
                     color: sel ? Qt.alpha(root.accentColor, Theme.dark ? 0.3 : 0.22) : rm.containsMouse ? Qt.alpha(root.accentColor, 0.1) : "transparent"
                     Item {

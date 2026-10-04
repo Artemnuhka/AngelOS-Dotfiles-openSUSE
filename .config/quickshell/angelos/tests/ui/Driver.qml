@@ -406,7 +406,6 @@ Scope {
     property int cavaFirst: 0
     property int paceRuns: 0
     property bool paceSlow: false
-    property int undoSteps: 0
     // views: [view, skin] cases and where in one case the driver is
     property var viewCases: []
     property int viewCase: -1
@@ -773,17 +772,19 @@ Scope {
             }
             report("nav-back", navNote === "sound" && Shell.settingsPage === "sfx" && view.sectionOf("sfx") === "sound", "bar›Иконки → ◀ ◀ " + navNote + " → ▶ " + Shell.settingsPage + " (section " + view.sectionOf(Shell.settingsPage) + ")");
             // settings undo puts a changed setting back
+            Config.flush();
             const before = Config.appearance.shadows;
             phase = "undo";
             started = Date.now();
-            undoSteps = Config.undoStack.length;
             Config.appearance.shadows = !before;
             undoFrom = before;
+            Config.flush();
             return;
         }
         if (phase === "undo") {
-            // wait for the save (debounced) that records the step
-            if (Config.undoStack.length <= undoSteps && !undoDone && Date.now() - started < 3000)
+            // History is capped at 40: its length need not grow for a new step.
+            const recorded = Config.lastStep && Config.lastStep.changes.some(c => c.path === "appearance.shadows" && c.old === undoFrom && c.new === !undoFrom);
+            if (!recorded && !undoDone && Date.now() - started < 3000)
                 return;
             if (phase === "undo" && !undoDone) {
                 undoDone = true;

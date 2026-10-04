@@ -143,7 +143,7 @@ PxPage {
                         text: page.sample
                         color: Theme.text
                         font.family: card.modelData.families[0]
-                        font.pixelSize: Theme.crisp(16, card.modelData.families[0]) * Theme.fs
+                        font.pixelSize: Theme.fontPx(16, card.modelData.families[0])
                         font.hintingPreference: Font.PreferFullHinting
                         renderType: Text.NativeRendering
                     }

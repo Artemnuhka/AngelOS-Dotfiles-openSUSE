@@ -133,6 +133,9 @@ PxScroll {
                 font.bold: true
             }
             PxText {
+                // a long heading in big fonts wraps instead of running off the page
+                width: Math.min(implicitWidth, parent.width)
+                wrapMode: Text.Wrap
                 text: root.focusGroup || root.heading
                 kind: "big"
                 color: root.headingColor

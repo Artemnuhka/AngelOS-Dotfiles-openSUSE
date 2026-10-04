@@ -155,8 +155,14 @@ PxBox {
         e.accepted = true;
     }
 
+    property real room: 0                       // StartOverlay: the screen's room for it
     width: Math.round(Theme.u * 160 * prefs.size)
-    height: brand.height + userRow.height + Theme.u * 4 + col.implicitHeight + footer.height + inset * 2
+    height: brand.height + userRow.height + Theme.u * 4 + colView.height + footer.height + inset * 2
+    // the selected entry stays in view when the list scrolls
+    onCurrentChanged: if (current >= 0 && col.children[current]) {
+        const it = col.children[current];
+        colView.contentY = Math.max(0, Math.min(colView.contentHeight - colView.height, it.y < colView.contentY ? it.y : it.y + it.height > colView.contentY + colView.height ? it.y + it.height - colView.height : colView.contentY));
+    }
     color: Qt.alpha(Theme.menuSurface, prefs.alpha)
     edgeColor: Theme.menuBorder
     flat: true
@@ -165,7 +171,7 @@ PxBox {
     Rectangle {
         id: brand
         width: parent.width
-        height: Theme.u * 27
+        height: Theme.fit(27)
         color: root.prefs.accent ? Theme.mix(Theme.menuHeader, root.prefs.accentColor, 0.45) : Theme.menuHeader
         AngelLogo {
             anchors.centerIn: parent
@@ -202,9 +208,18 @@ PxBox {
         }
     }
 
+    // the entries; on a screen too short for all of them (big fonts, a big art pixel) they scroll
+    Flickable {
+        id: colView
+        y: brand.height + userRow.height + Theme.u * 2
+        width: parent.width
+        height: root.room > 0 ? Math.max(Theme.fit(14), Math.min(col.implicitHeight, root.room - brand.height - userRow.height - Theme.u * 4 - footer.height - root.inset * 2)) : col.implicitHeight
+        contentHeight: col.implicitHeight
+        interactive: contentHeight > height
+        clip: interactive
+        boundsBehavior: Flickable.StopAtBounds
     Column {
         id: col
-        y: brand.height + userRow.height + Theme.u * 2
         width: parent.width
         Repeater {
             model: root.entries
@@ -222,6 +237,7 @@ PxBox {
                 onTriggered: root.run(index)
             }
         }
+    }
     }
 
     PxText {

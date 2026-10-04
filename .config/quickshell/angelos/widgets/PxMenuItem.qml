@@ -133,6 +133,9 @@ Item {
             text: root.text
             color: root.lit ? Theme.selectText : Theme.text
             anchors.verticalCenter: parent.verticalCenter
+            // never under the hint (bigger fonts, a narrow menu): it elides instead
+            width: Math.max(0, Math.min(implicitWidth, root.width - x - row.anchors.leftMargin - (hintText.visible ? hintText.implicitWidth + Theme.u * 9 : Theme.u * 5)))
+            elide: Text.ElideRight
         }
     }
     PxText {

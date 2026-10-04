@@ -33,7 +33,7 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
             text: I18n.time(clock.date, root.seconds)
             font.family: Theme.fontTitle
-            font.pixelSize: 54 * Theme.fs
+            font.pixelSize: Theme.fontPx(54, Theme.fontTitle)
             color: Theme.dark ? Theme.text : Theme.edge
             style: Text.Outline
             styleColor: Qt.alpha(Theme.accent, 0.6)

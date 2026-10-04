@@ -8,15 +8,29 @@ import "AngelLines.js" as Lines
 import "../widgets/Logos.js" as Logos
 
 // Pushes the current palette to other apps through templates (kitty, foot, gtk, niri…).
+// The last state always wins: whatever the palette depends on re-renders when it changes,
+// one render runs at a time, and a change during a render is rendered right after it.
 Singleton {
     id: root
 
     readonly property string paletteFile: Config.cacheDir + "/palette.json"
-    // the realm (the demon rules: hell's decorations for GTK and Helium) and the window
-    // decoration settings re-render too
-    readonly property string signature: Config.appearance.customAccent + "|" + Theme.dark + "|" + Config.appearance.flavor + "|" + Config.appearance.themeApps + "|" + (Config.appearance.disabledTemplates || []).join(",") + "|" + Angel.demon + "|" + Config.decor.gtkButtons + "|" + Config.decor.gtkLayout + "|" + Config.y2k.hellTerminal + "|" + Config.y2k.hellApps + "|" + Config.appearance.qtStyle + "|" + I18n.english + "|" + (Angel.demon ? JSON.stringify(HellLook.palette) + HellLook.circle : "") + "|" + Config.bar.logoEmblem + "|" + Config.bar.logoFastfetch
+    // the palette itself, as it would be written: everything it depends on is in it, so any
+    // change re-renders — also the ones that come late: Theme.realm turns midway through the
+    // widgets' burn, after Angel.demon (a return "as in the game" used to render heaven's
+    // file with hell's accent and stay so); hell's wallpaper accent lands a beat after the circle
+    readonly property string paletteText: JSON.stringify(Object.assign(Theme.exportPalette(), decorPalette(), terminalPalette(), appsPalette(), hellPalette()), null, 2)
+    readonly property string disabled: (Config.appearance.disabledTemplates || []).join(",")
+    readonly property string signature: Config.appearance.themeApps + "|" + disabled + "|" + paletteText
     property string lastLog: ""
     property var entries: []
+    // tests (test-ui) put a stand-in renderer here: the real one reloads kitty and gsettings
+    readonly property string stub: Quickshell.env("ANGELOS_TEST") === "1" ? (Quickshell.env("ANGELOS_RENDER_STUB") || "") : ""
+    readonly property bool live: !Shell.dev || stub !== ""
+    property string rendered: ""                  // the signature the last finished render had
+    property string _running: ""                  // the one of the render going on
+    property bool _force: false                   // a render asked for by hand while one ran
+    // nothing waiting, nothing running, the files are the current palette's (debug panel, checks)
+    readonly property bool settled: !render.running && !debounce.running && (rendered === signature || !Config.appearance.themeApps)
 
     onSignatureChanged: if (Config.ready)
         debounce.restart()
@@ -29,10 +43,27 @@ Singleton {
         onTriggered: root.apply()
     }
 
+    // render now, even when nothing changed (Settings → Appearance → apply)
     function apply() {
-        if (!Config.appearance.themeApps || Shell.dev)
+        sync(true);
+    }
+    function sync(force) {
+        if (!Config.appearance.themeApps || !live)
             return;
-        paletteWriter.setText(JSON.stringify(Object.assign(Theme.exportPalette(), decorPalette(), terminalPalette(), appsPalette(), hellPalette()), null, 2));
+        if (render.running) {
+            // next after it (onExited). Quickshell would restart a running process asked to run
+            // too, but then palette.json would change under the hooks of the render going on
+            _force = _force || !!force;
+            return;
+        }
+        if (!force && signature === rendered)
+            return;
+        _force = false;
+        _running = signature;
+        // the renderer writes the palette file itself before anything reads it: the hooks of
+        // a render see its palette, never the next one half-way
+        render.command = ["python3", stub || Quickshell.shellDir + "/scripts/render-templates.py", paletteFile, disabled, "--palette", paletteText];
+        render.running = true;
     }
 
     // window decorations (templates gtk3-decor/gtk4-decor, scripts/gtk-live.py, Helium):
@@ -217,18 +248,7 @@ Singleton {
     Timer {
         id: debounce
         interval: 500
-        onTriggered: root.apply()
-    }
-
-    FileView {
-        id: paletteWriter
-        path: root.paletteFile
-        preload: false
-        atomicWrites: true
-        onSaved: {
-            render.command = ["python3", Quickshell.shellDir + "/scripts/render-templates.py", root.paletteFile, (Config.appearance.disabledTemplates || []).join(",")];
-            render.running = true;
-        }
+        onTriggered: root.sync(false)
     }
 
     Process {
@@ -239,6 +259,12 @@ Singleton {
         stderr: StdioCollector {
             onStreamFinished: if (text)
                 console.warn("angelOS templates:", text)
+        }
+        // what changed while it ran goes next: the last state is the one on disk
+        onExited: {
+            root.rendered = root._running;
+            if (root._force || root.signature !== root.rendered)
+                Qt.callLater(() => root.sync(root._force));
         }
     }
 

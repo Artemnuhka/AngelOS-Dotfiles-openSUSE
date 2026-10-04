@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Render angelOS theme templates.
 
-usage: render-templates.py PALETTE.json [DISABLED_IDS_COMMA_SEPARATED]
+usage: render-templates.py PALETTE.json [DISABLED_IDS_COMMA_SEPARATED] [--palette JSON]
+
+With --palette (services/ThemeExport) the palette is written to PALETTE.json first
+(atomically), then rendered: the hooks that read the file see this render's palette.
 
 Templates are listed in <shell>/templates/templates.json and in
 ~/.config/angelos/templates/*.json (user entries override by id).
@@ -56,7 +59,21 @@ def render(text, pal, quote=None):
 
 
 def main():
-    pal = json.loads(Path(sys.argv[1]).read_text())
+    args = sys.argv[1:]
+    text = None
+    if "--palette" in args:
+        i = args.index("--palette")
+        text = args[i + 1]
+        del args[i:i + 2]
+    path = Path(args[0])
+    if text is not None:
+        json.loads(text)                   # a broken palette never replaces a good one
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(path.suffix + ".angelos-tmp")
+        tmp.write_text(text)
+        tmp.replace(path)
+    sys.argv[1:] = args
+    pal = json.loads(path.read_text())
     pal["gtkSuffix"] = "-dark" if pal.get("mode") == "dark" else ""
     # for the entries that run angelOS's own scripts on the same palette
     pal["shellDir"] = str(SHELL)

@@ -84,6 +84,14 @@ Scope {
                 report("page-shows-stage-and-backup", (shownText("установщик завершился") || shownText("the installer failed")) && shownText("20260101-120000-update"));
                 report("page-offers-restore", !!find(pageLoader.item, it => it.visible && it.text === I18n.t("Вернуть как было до обновления", "Restore the state before the update")));
                 report("page-no-restart-offer", !shownText("Новая версия установлена") && !shownText("The new version is installed"));
+                // what to do next is on the page, and "up to date" is not claimed
+                report("page-says-what-next", shownText(Updates.nextStep("install").slice(0, 40)));
+                report("page-not-up-to-date", shownText(I18n.t("последнее обновление не установилось", "the last update did not install")) && !shownText(I18n.t("у тебя последняя версия", "you are up to date")));
+                // the page says it once, not "the installer failed: the installer failed (code 1)"
+                report("page-no-doubled-reason", !shownText(Updates.stageText("install") + ": " + Updates.stageText("install")));
+                // a check that can't reach the repository says so in words
+                const e = Updates.checkError("fetch Could not resolve host: github.com");
+                report("check-error-in-words", e.indexOf("github.com") >= 0 && e.length > 40, e);
             }
         },
         {
@@ -121,6 +129,36 @@ Scope {
                 report("update-ok-state", Updates.lastRun === "ok" && Updates.lastStatus === "ok" && !Updates.failure && !Updates.canRestore, state());
                 report("update-ok-restart-offered", Updates.needsRestart && Updates.askRestart && Updates.landed === 2 && !Updates.restored, state());
                 report("page-says-installed", shownText("Новая версия установлена") || shownText("The new version is installed"));
+            }
+        },
+        {
+            "name": "local-commits",
+            "run": () => Updates.update(),
+            "check": () => {
+                report("local-commits-state", Updates.lastRun === "failed" && Updates.failedStage === "local-commits" && !Updates.canRestore, state());
+                report("page-local-commits-reason", shownText(Updates.stageText("local-commits")) && shownText("обновлять нечего"));
+                report("page-local-commits-next", shownText(Updates.nextStep("local-commits").slice(0, 40)));
+            }
+        },
+        {
+            "name": "install-dies",
+            "run": () => Updates.update(),
+            "check": () => {
+                report("install-dies-reason", Updates.failedStage === "install" && Updates.failure.indexOf("disk on fire") >= 0, state());
+                report("log-without-colour-codes", !Updates.log.some(l => l.indexOf("\x1b") >= 0) && Updates.log.some(l => l.indexOf("[dotfiles] ERROR: disk on fire") >= 0), JSON.stringify(Updates.log));
+                report("page-install-dies-reason", shownText("disk on fire"));
+            }
+        },
+        {
+            "name": "update-same",
+            "run": () => {
+                Updates.needsRestart = false;
+                Updates.askRestart = false;
+                Updates.update();
+            },
+            "check": () => {
+                // the same commit again after a failed attempt: that one may have half-installed
+                report("retry-offers-restart", Updates.lastRun === "ok" && Updates.needsRestart && Updates.askRestart, state());
             }
         }
     ]

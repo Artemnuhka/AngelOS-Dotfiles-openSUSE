@@ -87,12 +87,29 @@ case "$step" in
     echo "UPDATED aaa ccc 2"
     printf 'LAST ok done %s aaa ccc\n' "$HOME/.local/state/angelos/backups/20260101-130000-update" >"$S/last"
     exit 0 ;;
+  local-commits)
+    echo "» git fetch (main)"
+    echo "» в репозитории 2 своих коммит(а/ов), которых нет в origin/main, а нового там нет — обновлять нечего"
+    echo "FAILED local-commits в репозитории 2 своих коммит(а/ов), которых нет в origin/main, а нового там нет — обновлять нечего. Ничего не менялось."
+    exit 7 ;;
+  install-dies)
+    G="$HOME/.local/state/angelos/backups/20991231-235958-update"
+    echo "BACKUP $G"
+    printf '\033[1;31m[dotfiles] ERROR:\033[0m disk on fire\n'
+    echo "FAILED install установщик остановился (код 1): disk on fire"
+    printf 'LAST failed install %s ccc ccc\nMESSAGE установщик остановился (код 1): disk on fire\n' "$G" >"$S/last"
+    exit 10 ;;
+  update-same)
+    echo "BACKUP $HOME/.local/state/angelos/backups/20991231-235959-update"
+    echo "UPDATED ccc ccc 0"
+    printf 'LAST ok done %s ccc ccc\n' "$HOME/.local/state/angelos/backups/20991231-235959-update" >"$S/last"
+    exit 0 ;;
 esac
 echo "unexpected run: $*"
 exit 99
 SH
 chmod +x "$T/root/scripts/dotfiles-update.sh"
-printf '%s\n' dirty install-fails claims-then-fails restore-fails restore-ok update-ok >"$H/stub/plan"
+printf '%s\n' dirty install-fails claims-then-fails restore-fails restore-ok update-ok local-commits install-dies update-same >"$H/stub/plan"
 # quiet, offline settings (as test-ui.sh)
 cat >"$H/.config/angelos/settings.json" <<'JSON'
 {"setup": {"complete": true}, "stream": {"auto": false}, "y2k": {"sounds": false, "helper": false, "boot": false},

@@ -214,7 +214,7 @@ check "invalid niri: niri's own error is shown" grep -q 'unexpected node NIRI-IN
 restore "$BACKUP"
 if ((RC == 0)); then pass "invalid niri: restore exit 0"; else fail "invalid niri: restore exit $RC"; show "$W/$CASE.restore.out"; fi
 fingerprint >"$W/after"
-check "invalid niri: after the restore every file is as before the update" diff -q "$W/before" "$W/after"
+check "invalid niri: after the restore every file is as before the update" diff -u "$W/before" "$W/after"
 check "invalid niri: repository back on v1" head_is "$V1"
 
 # ── 4. niri is not installed: the update cannot be confirmed ─────────────────

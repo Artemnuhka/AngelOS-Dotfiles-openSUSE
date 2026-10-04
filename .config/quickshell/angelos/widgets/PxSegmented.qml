@@ -1,8 +1,10 @@
 import QtQuick
 import qs.config
 
-// Row of toggle buttons; model: [{label, value, icon}]
-Row {
+// Row of toggle buttons; model: [{label, value, icon}]. In a settings row (a parent with
+// fixedWidth, SettingRow's control column) the buttons wrap onto the next line when they don't
+// fit (big fonts, a big art pixel) instead of running out of it.
+Flow {
     id: root
 
     property var model: []
@@ -10,6 +12,16 @@ Row {
     signal activated(var value)
 
     spacing: Theme.u * 2
+    readonly property real natural: {
+        let w = 0, n = 0;
+        for (const c of children)
+            if (c.visible && c.checkable !== undefined) {
+                w += c.implicitWidth;
+                n++;
+            }
+        return w + Math.max(0, n - 1) * spacing;
+    }
+    width: parent && parent.fixedWidth === true ? Math.min(natural, parent.width) : natural
 
     Repeater {
         model: root.model

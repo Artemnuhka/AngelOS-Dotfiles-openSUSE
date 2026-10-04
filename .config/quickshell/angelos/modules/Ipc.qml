@@ -133,7 +133,9 @@ IpcHandler {
     }
     // the game's debug panel (services/GameDebug), developer mode or the dev stand only:
     // `angelos debug open | close | toggle | snapshot | restore | restart | tab <id> | status`,
-    // and what its buttons do: hell [circle] | heaven (at once) | skin <circle|-|> | look <circle|base|>
+    // and what its buttons do: hell [circle] | heaven (at once) | circle <id> (in hell, at once) |
+    // skin <circle|-|> | look <circle|base|>; theme = how the export to the apps stands
+    // (scripts/theme-cycles.py waits for "settled" before it compares the files)
     function debug(line: string): string {
         if (!GameDebug.allowed)
             return "developer mode only (Settings → System)";
@@ -162,6 +164,19 @@ IpcHandler {
             return GameDebug.toHellNow(a[1] || "");
         case "heaven":
             return GameDebug.toHeavenNow();
+        case "circle":
+            return Story.order.includes(a[1]) ? GameDebug.circleNow(a[1]) : "circles: " + Story.order.join(" ");
+        case "theme":
+            return JSON.stringify({
+                "settled": ThemeExport.settled,
+                "realm": Theme.realm,
+                "demon": Angel.demon,
+                "transition": Angel.transition || (DesktopWidgets.burning ? "burn" : ""),
+                "accent": Theme.hex(Theme.accent),
+                "palette": Qt.md5(ThemeExport.paletteText),       // = palette.json's once settled
+                "cursor": Cursors.active,                          // heaven's follows the angel's mood
+                "cursorBusy": Cursors.busy
+            });
         case "skin":
             GameDebug.skin = a[1] || "";
             return "skin: " + (GameDebug.skin || "the circle's");
@@ -177,7 +192,7 @@ IpcHandler {
                 "log": GameDebug.log
             });
         }
-        return "open | close | toggle | snapshot | restore | restart | tab <id> | hell [circle] | heaven | skin <circle|-|> | look <circle|base|> | status";
+        return "open | close | toggle | snapshot | restore | restart | tab <id> | hell [circle] | heaven | circle <id> | skin <circle|-|> | look <circle|base|> | theme | status";
     }
     // the corner helper: `angelos helper "tip | joke | hint | ask <text> | plea | talk | gift | stay | status"`
     // (owner: angel — the demon leaves at once; dev or owner: prank, ascend, fx,
@@ -647,15 +662,38 @@ IpcHandler {
             Owner.jobs.publish(true);
         return "ok";
     }
-    // Settings → Updates: check | update | prompt (the restart question an update ends with) | later | status
+    // Settings → Updates: check | update | prompt (the restart question an update ends with) | later |
+    // restart | status | log N (the log lines from number N on: {"next": …, "lines": […]}).
+    // `angelos updates check|update` follows these until the run ends (scripts/updates-cli.py)
     function updates(cmd: string): string {
-        if (cmd === "check") {
+        const a = String(cmd || "").trim().split(/\s+/);
+        if (a[0] === "check") {
+            if (Updates.busy)
+                return "busy " + Updates.state;
+            if (!Updates.repo)
+                return "no repository";
             Updates.check();
             return "checking";
         }
-        if (cmd === "update") {
+        if (a[0] === "update") {
+            if (Updates.busy)
+                return "busy " + Updates.state;
+            if (!Updates.repo)
+                return "no repository";
             Updates.update();
-            return Updates.repo ? "updating " + Updates.repo : "no repository";
+            return "updating " + Updates.repo;
+        }
+        if (a[0] === "log") {
+            const from = Math.max(0, parseInt(a[1]) || 0);
+            const first = Updates.logTotal - Updates.log.length;       // older lines were dropped
+            return JSON.stringify({
+                "next": Updates.logTotal,
+                "lines": Updates.log.slice(Math.max(0, from - first))
+            });
+        }
+        if (a[0] === "restart") {
+            Updates.restartShell();
+            return "ok";
         }
         if (cmd === "prompt") {
             Updates.askRestart = true;
@@ -668,8 +706,20 @@ IpcHandler {
         return JSON.stringify({
             "state": Updates.state,
             "behind": Updates.behind,
+            "ahead": Updates.ahead,
+            "dirty": Updates.dirty,
+            "trusted": Updates.trusted,
+            "error": Updates.error,
             "needsRestart": Updates.needsRestart,
-            "repo": Updates.repo
+            "repo": Updates.repo,
+            "lastRun": Updates.lastRun,
+            "lastStatus": Updates.lastStatus,
+            "stage": Updates.failedStage,
+            "failure": Updates.failure ? Updates.failureText(Updates.failedStage, Updates.failure) : "",
+            "next": Updates.failure ? Updates.nextStep(Updates.failedStage) : "",
+            "backup": Updates.backupDir,
+            "landed": Updates.landed,
+            "incoming": Updates.incoming.length
         });
     }
     // used by ~/.local/bin/polkit-agent-guard to hand the session slot back to angelOS

@@ -508,9 +508,20 @@ Singleton {
 
     // ---- metrics ----
     readonly property int u: Math.max(1, Config.appearance.px)   // one art pixel
-    readonly property int fs: Math.max(1, Config.appearance.fontScale)
+    // the font scale: ×1, ×1.25 … ×2 (fontPx keeps every size on its font's pixel grid)
+    readonly property real fs: Math.max(1, Math.min(3, Config.appearance.fontScale || 1))
     readonly property int gap: u * 4
     readonly property int pad: u * 5
+    // How much the text has outgrown the art pixel. Rows, bars and title strips were drawn for
+    // body text of 6.5 art pixels (13 px at px 2); bigger fonts (×2) or a smaller pixel (px 1)
+    // overflow them. fit(n) = n art pixels, grown with the text when it is bigger than that:
+    // the size for anything that holds a line of text. (px 4 with ×1 text: 1, nothing grows.)
+    readonly property real textGrowth: Math.max(1, sizeBody / (u * 6.5))
+    function fit(n) {
+        return Math.round(u * n * textGrowth);
+    }
+    // the bars (taskbar, top bar, island…): a two-line clock and the Start wordmark fit
+    readonly property int barHeight: fit(20)
 
     // ---- fonts (sizes are native multiples so glyphs stay crisp) ----
     readonly property string defaultTitleFont: "Pixeloid Sans"
@@ -537,13 +548,23 @@ Singleton {
         const n = fontNative[family] || 0;
         return n > 0 ? Math.max(n, Math.round(base / n) * n) : base;
     }
-    readonly property int sizeTiny: crisp(9, fontTitle) * fs
-    readonly property int sizeBody: crisp(13, fontBody) * fs
-    readonly property int sizeTitle: crisp(18, fontTitle) * fs
-    readonly property int sizeBig: crisp(27, fontTitle) * fs
-    readonly property int sizeHuge: crisp(36, fontTitle) * fs
-    readonly property int sizeMono: crisp(18, fontMono) * fs
-    readonly property int sizeMonoSmall: crisp(13, fontMono) * fs
+    // `base` at the font scale, on the font's pixel grid: a pixel font is only sharp at whole
+    // multiples of its cell, so ×1.5 makes a 9 px cell font 27 px (×3 of the cell) where the
+    // 13 px body font can only stay 13 or go 26 — each size moves at its own step, none blurs.
+    // Fonts of no known grid (vector fonts) scale exactly.
+    function fontPx(base, family) {
+        const n = fontNative[family] || 0;
+        if (n <= 0)
+            return Math.max(1, Math.round(base * fs));
+        return n * Math.max(1, Math.round(Math.max(1, Math.round(base / n)) * fs));
+    }
+    readonly property int sizeTiny: fontPx(9, fontTitle)
+    readonly property int sizeBody: fontPx(13, fontBody)
+    readonly property int sizeTitle: fontPx(18, fontTitle)
+    readonly property int sizeBig: fontPx(27, fontTitle)
+    readonly property int sizeHuge: fontPx(36, fontTitle)
+    readonly property int sizeMono: fontPx(18, fontMono)
+    readonly property int sizeMonoSmall: fontPx(13, fontMono)
 
     // ---- motion: stepped easing feels "pixel" ----
     readonly property int fast: 140
